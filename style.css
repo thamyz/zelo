@@ -240,7 +240,8 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0 0 12px;
+  gap: 12px;
+  padding: 0 0 4px;
 }
 
 /* Brand hero — anchored at top of the page */
@@ -450,7 +451,6 @@ textarea { font-family: inherit; }
   align-items: center;
   gap: 13px;
   width: 100%;
-  margin-top: 20px;
   padding: 14px 16px;
   background: var(--s1);
   border: 1px solid var(--border);
@@ -515,7 +515,6 @@ textarea { font-family: inherit; }
   justify-content: center;
   gap: 8px;
   width: 100%;
-  margin-top: 20px;
   padding: 17px 24px;
   background: var(--accent);
   color: #fff;
@@ -2364,6 +2363,33 @@ textarea { font-family: inherit; }
   justify-content: center;
   padding: 0 32px;
   transition: opacity 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.onboarding-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-3);
+  padding: 8px;
+  cursor: pointer;
+  line-height: 1;
+  touch-action: manipulation;
+}
+
+/* Hide the progress bar — replaced by tap-anywhere UX */
+.onboarding-progress { display: none; }
+
+.onboarding-tap-hint {
+  margin-top: 40px;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  letter-spacing: 0.03em;
 }
 
 .onboarding.hidden {
@@ -3231,9 +3257,9 @@ textarea { font-family: inherit; }
    FEATURE 5 — SCAN THREADS
    ================================================================ */
 .thread-section {
-  padding: 8px 0 0;
+  padding: 10px 0 0;
   border-top: 1px solid rgba(0,0,0,0.06);
-  margin-top: 8px;
+  margin-top: 20px;
 }
 
 .thread-row-wrapper {
@@ -3302,9 +3328,10 @@ textarea { font-family: inherit; }
   font-size: 14px;
   font-weight: 500;
   color: var(--accent, #e91e8c);
-  padding: 4px 0;
+  padding: 8px 4px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .thread-edit-new-btn {

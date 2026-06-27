@@ -1320,7 +1320,11 @@ const TELLZELO_STEPS = [
 ];
 
 // Open the flow — always start at the first step, keep prior selections.
-function openTellZelo() {}
+function openTellZelo() {
+  state.tzStep = 0;
+  pushScreen('tellzelo');
+  renderTellZeloStep();
+}
 
 function renderTellZeloStep() {
   const step = TELLZELO_STEPS[state.tzStep];
@@ -1399,14 +1403,32 @@ function tellZeloNext() {
     renderTellZeloStep();
   } else {
     updateTellZeloSummary();
-    showTab("assistant");                        // back to Scan, context in hand
+    popScreen();
   }
 }
 
 function tellZeloBack() {
+  if (state.tzStep > 0) {
+    state.tzStep--;
+    renderTellZeloStep();
+  } else {
+    popScreen();
+  }
 }
 
-function updateTellZeloSummary() {}
+function updateTellZeloSummary() {
+  const sub  = document.getElementById('tellzelo-sub');
+  const card = document.getElementById('tellzelo-card');
+  if (!sub || !card) return;
+  const ctx = scanContextString();
+  if (ctx) {
+    sub.textContent = ctx;
+    card.classList.add('filled');
+  } else {
+    sub.textContent = 'Add details for better analysis';
+    card.classList.remove('filled');
+  }
+}
 
 // Build a single context string for generation from the structured selections.
 function scanContextString() {
@@ -1776,6 +1798,67 @@ let onboardingSlide = 0;
 const ONBOARDING_TOTAL = 3;
 let threadEditMode = false;
 
+let _obTypeTimer = null;
+let _obTyping    = false;
+let _obTextReady = false;
+
+function _obType(titleEl, descEl, titleText, descText) {
+  _obTyping = true;
+  _obTextReady = false;
+  if (_obTypeTimer) clearTimeout(_obTypeTimer);
+  titleEl.textContent = '';
+  descEl.textContent  = '';
+  let i = 0;
+  const total = titleText.length + 1 + descText.length;
+  function tick() {
+    if (i < titleText.length) {
+      titleEl.textContent = titleText.slice(0, ++i);
+      navigator.vibrate?.(1);
+      _obTypeTimer = setTimeout(tick, 32);
+    } else if (i === titleText.length) {
+      i++;
+      _obTypeTimer = setTimeout(tick, 180);
+    } else {
+      const di = i - titleText.length - 1;
+      if (di < descText.length) {
+        descEl.textContent = descText.slice(0, di + 1);
+        i++;
+        navigator.vibrate?.(1);
+        _obTypeTimer = setTimeout(tick, 28);
+      } else {
+        _obTyping = false;
+        _obTextReady = true;
+        _obTypeTimer = null;
+        navigator.vibrate?.(10);
+      }
+    }
+  }
+  tick();
+}
+
+function _obRevealAll(titleEl, descEl, titleText, descText) {
+  if (_obTypeTimer) { clearTimeout(_obTypeTimer); _obTypeTimer = null; }
+  _obTyping = false;
+  _obTextReady = true;
+  titleEl.textContent = titleText;
+  descEl.textContent  = descText;
+}
+
+function onboardingTap(e) {
+  if (e && e.target.closest('.onboarding-close-btn')) return;
+  const slide = document.querySelectorAll('.onboarding-slide')[onboardingSlide];
+  if (!slide) { onboardingNext(); return; }
+  const titleEl = slide.querySelector('.onboarding-title');
+  const descEl  = slide.querySelector('.onboarding-desc');
+  if (_obTyping) {
+    _obRevealAll(titleEl, descEl,
+      titleEl.dataset.full || titleEl.textContent,
+      descEl.dataset.full  || descEl.textContent);
+  } else if (_obTextReady) {
+    onboardingNext();
+  }
+}
+
 function initOnboarding() {
   const tabBar = document.getElementById('tab-bar');
   onboardingSlide = 0;
@@ -1791,11 +1874,18 @@ function showOnboardingSlide(index) {
   document.querySelectorAll('.onboarding-dot').forEach((el, i) => {
     el.classList.toggle('active', i === index);
   });
-  const btn = document.getElementById('onboarding-btn');
-  btn.textContent = index === ONBOARDING_TOTAL - 1 ? 'Get Started' : 'Next';
 
-  const fill = document.getElementById('onboarding-progress-fill');
-  if (fill) fill.style.width = ((index + 1) / ONBOARDING_TOTAL * 100) + '%';
+  const slide = document.querySelectorAll('.onboarding-slide')[index];
+  if (slide) {
+    const titleEl = slide.querySelector('.onboarding-title');
+    const descEl  = slide.querySelector('.onboarding-desc');
+    if (titleEl && descEl) {
+      if (!titleEl.dataset.full) titleEl.dataset.full = titleEl.textContent.trim();
+      if (!descEl.dataset.full)  descEl.dataset.full  = descEl.textContent.trim();
+      _obTextReady = false;
+      setTimeout(() => _obType(titleEl, descEl, titleEl.dataset.full, descEl.dataset.full), 80);
+    }
+  }
 }
 
 function onboardingNext() {
@@ -2904,7 +2994,7 @@ function showDeleteConfirm(message, onConfirm) {
 
 function attachSwipeDelete(row, _confirmMsg, onDelete) {
   const wrapper = row.parentElement;
-  const FULL = 160;  // row offset needed to trigger popup (finger travels 320px at 0.5x)
+  const FULL = 160;  // visual fill reference (half-speed, so row moves FULL px when finger moves 2×FULL)
   let startX = 0, curX = 0, active = false, delEl = null;
 
   function getDelEl(leftSwipe) {
@@ -2973,8 +3063,8 @@ function attachSwipeDelete(row, _confirmMsg, onDelete) {
   }
 
   function finish() {
-    const rowDx = curX * 0.5;
-    if (Math.abs(rowDx) >= FULL) {
+    const rowWidth = row.getBoundingClientRect().width || 300;
+    if (Math.abs(curX) >= rowWidth * 0.3) {
       showPopup();
     } else {
       snapBack();
