@@ -234,11 +234,6 @@ function selectChatMode(mode) {
 
   document.getElementById("chat-mode-modal").hidden = true;
 
-  if (mode === 'realistic' && !localStorage.getItem('zelo_realistic_intro_seen')) {
-    localStorage.setItem('zelo_realistic_intro_seen', '1');
-    const modal = document.getElementById('realistic-intro-modal');
-    if (modal) modal.hidden = false;
-  }
 
   const diff = state.difficulty;
   const openerText = (state.character && state.character.opener) || OPENINGS[diff];
@@ -250,10 +245,7 @@ function selectChatMode(mode) {
   }, openingDelay);
 }
 
-function closeRealisticIntro() {
-  const modal = document.getElementById('realistic-intro-modal');
-  if (modal) modal.hidden = true;
-}
+function closeRealisticIntro() {}
 
 function openChatSettings() {
   const sheet = document.getElementById('chat-settings-sheet');
@@ -1038,36 +1030,8 @@ function enableSwipeButtons() {
 // this does NOT use pushScreen()/the .screen takeover system.
 // ================================================================
 
-function openProfileDetail() {
-  const profile = state.swipeProfiles[state.swipeIndex];
-  if (!profile) return;
-
-  document.getElementById('pd-photo').style.background =
-    `linear-gradient(145deg, ${profile.gradientColors[0]}, ${profile.gradientColors[1]})`;
-  document.getElementById('pd-name').textContent       = profile.name;
-  document.getElementById('pd-age').textContent        = profile.age;
-  document.getElementById('pd-occupation').textContent = profile.occupation;
-  document.getElementById('pd-bio').textContent        = profile.bio;
-  document.getElementById('pd-interests').innerHTML    = buildInterestTagsHTML(profile.interests);
-
-  const currentMode = state.cardModes[profile.name] || CARD_MODE_DEFAULT;
-  const modePillsEl = document.getElementById('pd-mode-pills');
-  modePillsEl.innerHTML = CARD_MODES.map(m => `
-    <button type="button" class="card-mode-pill${m.key === currentMode ? ' active' : ''}${(!m.free && !isColdAvailable()) ? ' locked' : ''}" data-mode="${m.key}">
-      ${m.label}${(!m.free && !isColdAvailable()) ? ' 🔒' : ''}
-    </button>`).join('');
-  document.getElementById('pd-mode-desc').textContent =
-    CARD_MODES.find(m => m.key === currentMode).desc;
-  attachProfileDetailModeListeners(profile);
-
-  document.getElementById('profile-detail-modal').hidden = false;
-}
-
-function closeProfileDetail() {
-  const sheet = document.querySelector('.profile-detail-sheet');
-  if (sheet) sheet.style.transform = '';
-  document.getElementById('profile-detail-modal').hidden = true;
-}
+function openProfileDetail() {}
+function closeProfileDetail() {}
 
 // Fix 2: Swipe-down-to-dismiss on the profile detail sheet.
 // Supports both touch (mobile) and mouse (desktop). Only activates
@@ -1333,11 +1297,7 @@ const TELLZELO_STEPS = [
 ];
 
 // Open the flow — always start at the first step, keep prior selections.
-function openTellZelo() {
-  state.tzStep = 0;
-  renderTellZeloStep();
-  pushScreen("tellzelo");
-}
+function openTellZelo() {}
 
 function renderTellZeloStep() {
   const step = TELLZELO_STEPS[state.tzStep];
@@ -1420,31 +1380,10 @@ function tellZeloNext() {
   }
 }
 
-// Back: step backwards through the flow, then out to Scan.
 function tellZeloBack() {
-  if (state.tzStep > 0) {
-    state.tzStep--;
-    renderTellZeloStep();
-  } else {
-    showTab("assistant");
-  }
 }
 
-// Reflect the collected context on the Scan card so the page stays informative.
-function updateTellZeloSummary() {
-  const card = document.getElementById("tellzelo-card");
-  const sub  = document.getElementById("tellzelo-sub");
-  const order = ["who", "situation", "goal", "extra"];
-  const parts = order.map(k => state.scanContext[k]).filter(Boolean);
-
-  if (parts.length) {
-    sub.textContent = parts.join(" · ");
-    card.classList.add("filled");
-  } else {
-    sub.textContent = "Add details for better analysis";
-    card.classList.remove("filled");
-  }
-}
+function updateTellZeloSummary() {}
 
 // Build a single context string for generation from the structured selections.
 function scanContextString() {
@@ -1485,13 +1424,15 @@ function handleUpload(input) {
   const dzSub       = document.getElementById("scan-dropzone-sub");
   const dzThumb     = document.getElementById("scan-dropzone-thumb");
 
-  const clearBtn = document.getElementById("scan-upload-clear-btn");
+  const clearBtn  = document.getElementById("scan-upload-clear-btn");
+  const minusBtn  = document.getElementById("scan-photo-minus-btn");
 
   if (file) {
     row.classList.add("has-file");
     footer.classList.add("has-thumb");
     dropzone.classList.add("has-file");
     if (clearBtn) clearBtn.hidden = false;
+    if (minusBtn) minusBtn.hidden = false;
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -1523,6 +1464,7 @@ function handleUpload(input) {
     dzTitle.hidden = false;
     dzSub.hidden   = false;
     if (clearBtn) clearBtn.hidden = true;
+    if (minusBtn) minusBtn.hidden = true;
   }
 
   checkGenerateReady();
@@ -1861,20 +1803,9 @@ function finishOnboarding() {
 
 let scanIntroShown = false;
 
-function maybeShowScanIntro() {
-  if (scanIntroShown) return;
-  scanIntroShown = true;
-  document.getElementById('scan-beginner-modal').classList.add('visible');
-}
-
-function scanBeginnerYes() {
-  closeScanModal();
-  startTour();
-}
-
-function closeScanModal() {
-  document.getElementById('scan-beginner-modal').classList.remove('visible');
-}
+function maybeShowScanIntro() {}
+function scanBeginnerYes() {}
+function closeScanModal() {}
 
 
 // ================================================================
@@ -1902,7 +1833,6 @@ const TOUR_STEPS = [
   // — SCAN: location (tab) → message → tell zelo more (context) → screenshot → generate —
   { tab: 'assistant', sel: '.scan-fab', dwell: 2000, kicker: 'Scan', text: 'This is Scan.' },
   { tab: 'assistant', sel: '#asst-message-preview', dwell: 2000, kicker: 'Scan', text: "Drop in a message and we'll help you figure it out." },
-  { tab: 'assistant', sel: '#tellzelo-card',     dwell: 2000, kicker: 'Scan', text: 'Tap "Tell Zelo More" to add context in a few quick taps.' },
   { tab: 'assistant', sel: '#upload-row',        dwell: 2000, secondary: true, kicker: 'Scan', text: 'Or just drop a screenshot.' },
   { tab: 'assistant', sel: '#asst-generate-btn', dwell: 2000, kicker: 'Scan', text: 'Hit generate for your reply.' },
   // — HOME: where am I? (tab) → what's it for? (cards) → how? (swipe demos) —
@@ -1946,11 +1876,13 @@ function _tourType(text) {
       function tick() {
         if (i < text.length) {
           el.textContent = text.slice(0, ++i);
+          navigator.vibrate?.(1);
           _tourTypeTimer = setTimeout(tick, 32);
         } else {
           _tourTyping = false;
           _tourTextReady = true;
           _tourTypeTimer = null;
+          navigator.vibrate?.(10);
         }
       }
       tick();
@@ -2067,7 +1999,6 @@ function positionTour(el, snap) {
 
   const spotlight = document.getElementById('tour-spotlight');
   const tooltip   = document.getElementById('tour-tooltip');
-  const arrow     = document.getElementById('tour-arrow');
 
   // On the first step there is no previous position to glide from, so snap
   // straight to the target instead of sweeping in from the top-left corner.
@@ -2123,12 +2054,6 @@ function positionTour(el, snap) {
 
   tooltip.style.top  = tipTop  + 'px';
   tooltip.style.left = tipLeft + 'px';
-
-  // Arrow points at the highlighted element's horizontal center
-  const centerX = left + rect.width / 2;
-  let arrowLeft = centerX - tipLeft - 6;   // 6 = half the arrow's 12px width
-  arrowLeft = Math.max(margin, Math.min(arrowLeft, assumedW - 26));
-  arrow.style.left = arrowLeft + 'px';
 
   // Restore transitions after the snap so subsequent steps glide.
   if (snap) {
@@ -2912,37 +2837,24 @@ function deleteThread(threadId) {
 function openAddThread() {
   const count = getThreadCount();
   if (!isPaidUser() && count >= 2) {
-    // DEV — connect to paywall before release
-    document.getElementById('thread-upgrade-modal').hidden = false;
+    document.getElementById('thread-upgrade-modal')?.hidden === false;
     return;
   }
-  const modal = document.getElementById('add-thread-modal');
-  const input = document.getElementById('add-thread-name-input');
-  if (input) input.value = '';
-  modal.hidden = false;
-  if (input) setTimeout(() => input.focus(), 50);
-}
-
-function cancelAddThread() {
-  document.getElementById('add-thread-modal').hidden = true;
-}
-
-function confirmAddThread() {
-  const input = document.getElementById('add-thread-name-input');
-  const name  = input ? input.value.trim() : '';
+  const name = (prompt('Name:') || '').trim();
   if (!name) return;
-  const count   = getThreadCount();
   const threads = getThreads();
-  const norm    = name.toLowerCase();
+  const norm = name.toLowerCase();
   if (!threads.some(t => t.name.toLowerCase() === norm)) {
     const thread = { id: 'thread_' + Date.now(), name, createdAt: Date.now(), scans: [], chat: [] };
     threads.unshift(thread);
     setThreadCount(count + 1);
     saveThreads(threads);
   }
-  cancelAddThread();
   renderThreadList();
 }
+
+function cancelAddThread() {}
+function confirmAddThread() {}
 
 function dismissThreadUpgrade() {
   document.getElementById('thread-upgrade-modal').hidden = true;
@@ -3147,6 +3059,13 @@ function renderThreadList() {
     const row = document.createElement('div');
     row.className = 'thread-row';
 
+    const info = document.createElement('div');
+    info.className = 'thread-row-info';
+    info.innerHTML = `
+      <span class="thread-row-name">${thread.name}</span>
+      <span class="thread-row-count">${thread.scans.length} scan${thread.scans.length !== 1 ? 's' : ''}</span>`;
+    row.appendChild(info);
+
     if (threadEditMode) {
       const minus = document.createElement('button');
       minus.className = 'thread-row-minus-btn';
@@ -3157,13 +3076,6 @@ function renderThreadList() {
       });
       row.appendChild(minus);
     }
-
-    const info = document.createElement('div');
-    info.className = 'thread-row-info';
-    info.innerHTML = `
-      <span class="thread-row-name">${thread.name}</span>
-      <span class="thread-row-count">${thread.scans.length} scan${thread.scans.length !== 1 ? 's' : ''}</span>`;
-    row.appendChild(info);
 
     if (!threadEditMode) {
       const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

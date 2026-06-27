@@ -89,24 +89,7 @@
             </div>
           </div>
 
-          <!-- TELL ZELO MORE — progressive disclosure; context lives in its own flow -->
-          <button class="tellzelo-card" id="tellzelo-card" type="button" onclick="openTellZelo()">
-            <span class="tellzelo-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-              </svg>
-            </span>
-            <span class="tellzelo-copy">
-              <span class="tellzelo-title">Tell Zelo More</span>
-              <span class="tellzelo-sub" id="tellzelo-sub">Add details for better analysis</span>
-            </span>
-            <svg class="tellzelo-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </button>
-
-          <!-- ANALYZE — the terminal action of the page -->
+<!-- ANALYZE — the terminal action of the page -->
           <button
             class="generate-btn"
             id="asst-generate-btn"
@@ -237,63 +220,6 @@
       </div>
 
 
-      <!-- ============================================================
-           PROFILE DETAIL  (modal-style overlay — dims Home behind it,
-           does not use the .screen/.tab takeover system so Home stays
-           rendered, visible-but-dimmed underneath)
-           ============================================================ -->
-      <div class="profile-detail-modal" id="profile-detail-modal" hidden>
-        <div class="profile-detail-sheet">
-
-          <div class="screen-header">
-            <button class="back-btn" onclick="closeProfileDetail()">‹</button>
-            <span class="screen-title">Profile</span>
-          </div>
-
-          <div class="profile-detail-scroll">
-            <div class="profile-detail-photo" id="pd-photo"></div>
-
-            <div class="profile-detail-body">
-              <div class="profile-name-row">
-                <span class="profile-name" id="pd-name"></span>
-                <span class="profile-age"  id="pd-age"></span>
-              </div>
-              <span class="profile-occ" id="pd-occupation"></span>
-
-              <div class="profile-detail-section">
-                <span class="block-label">About Me</span>
-                <p class="profile-bio" id="pd-bio"></p>
-              </div>
-
-              <div class="profile-detail-section">
-                <span class="block-label">Likes</span>
-                <div class="profile-tags" id="pd-interests"></div>
-              </div>
-
-              <div class="card-mode-section" id="pd-mode-section">
-                <div class="card-mode-pills" id="pd-mode-pills"></div>
-                <p class="card-mode-desc" id="pd-mode-desc"></p>
-              </div>
-            </div>
-          </div>
-
-          <div class="swipe-actions profile-detail-actions">
-            <button class="swipe-action-btn swipe-action-btn--skip" id="pd-skip-btn" onclick="onProfileDetailSkip()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              Skip
-            </button>
-            <button class="swipe-action-btn swipe-action-btn--like" id="pd-like-btn" onclick="onProfileDetailLike()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-              I'm Interested
-            </button>
-          </div>
-
-        </div>
-      </div>
 
 
       <!-- ============================================================
@@ -494,38 +420,6 @@
       </div>
 
 
-      <!-- ============================================================
-           SCREEN: TELL ZELO MORE  (overlay — quick context flow)
-           ============================================================ -->
-      <div class="screen" id="screen-tellzelo">
-
-        <div class="screen-header">
-          <button class="back-btn" onclick="tellZeloBack()">‹</button>
-          <span class="screen-title">Tell Zelo More</span>
-        </div>
-
-        <div class="tz-layout">
-          <!-- Step progress -->
-          <div class="tz-progress" id="tz-progress" aria-hidden="true"></div>
-
-          <!-- Question + quick choices (rendered by JS) -->
-          <h2 class="tz-question" id="tz-question"></h2>
-          <p class="tz-help" id="tz-help"></p>
-          <div class="tz-options" id="tz-options"></div>
-
-          <span class="tz-spacer"></span>
-
-          <!-- Advance -->
-          <button class="generate-btn tz-next" id="tz-next" onclick="tellZeloNext()" disabled>
-            <span id="tz-next-label">Next</span>
-            <svg class="tz-next-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-            </svg>
-          </button>
-          <p class="tz-foot-note">You can change this anytime</p>
-        </div>
-      </div>
 
 
       <!-- ============================================================
@@ -570,6 +464,7 @@
         </div>
 
         <div class="scan-upload-layout">
+          <div class="scan-dropzone-wrap">
           <button class="scan-dropzone" id="scan-dropzone" type="button" onclick="triggerUpload()">
             <span class="scan-dropzone-icon" id="scan-dropzone-icon">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
@@ -583,6 +478,9 @@
             <span class="scan-dropzone-sub" id="scan-dropzone-sub">Upload your screenshot to get a response.</span>
             <img class="scan-dropzone-thumb" id="scan-dropzone-thumb" alt="Uploaded screenshot" hidden />
           </button>
+          <button class="scan-photo-minus-btn" id="scan-photo-minus-btn" type="button"
+                  onclick="event.stopPropagation(); clearUploadedPhoto()" hidden>−</button>
+          </div>
 
           <!-- Hidden real file input -->
           <input
@@ -713,23 +611,6 @@
       </div>
 
 
-      <!-- ============================================================
-           SCAN BEGINNER POP-UP
-           ============================================================ -->
-      <div class="scan-modal" id="scan-beginner-modal">
-        <div class="scan-modal-card">
-
-          <!-- Question state -->
-          <div class="scan-modal-state" id="scan-modal-question">
-            <div class="scan-modal-emoji">👋</div>
-            <h2 class="scan-modal-title">New to Zelo?</h2>
-            <p class="scan-modal-sub">Want a quick tour of Scan?</p>
-            <button class="scan-modal-btn scan-modal-btn--primary" onclick="scanBeginnerYes()">Yes, show me</button>
-            <button class="scan-modal-btn scan-modal-btn--ghost" onclick="closeScanModal()">No thanks</button>
-          </div>
-
-        </div>
-      </div>
 
 
       <!-- ============================================================
@@ -744,7 +625,6 @@
         <div class="tour-swipe-feedback" id="tour-swipe-feedback" hidden></div>
         <div class="tour-tooltip" id="tour-tooltip" onclick="tourTooltipTap(event)">
           <button class="tour-close-btn" onclick="event.stopPropagation(); endTour()" aria-label="Close tour">✕</button>
-          <div class="tour-arrow" id="tour-arrow"></div>
           <span class="tour-kicker" id="tour-kicker">Zelo</span>
           <p class="tour-text" id="tour-text"></p>
           <div class="tour-controls">
@@ -918,29 +798,6 @@
         </button>
       </nav>
 
-      <!-- Add-thread modal: shown when + is tapped and a slot is available -->
-      <div class="mini-modal-overlay" id="add-thread-modal" hidden>
-        <div class="mini-modal-card">
-          <h3 class="mini-modal-title">New Person</h3>
-          <input class="thread-save-input" id="add-thread-name-input" type="text"
-                 placeholder="Name…"
-                 onkeydown="if(event.key==='Enter')confirmAddThread()" />
-          <div class="mini-modal-actions">
-            <button class="mini-modal-cancel" onclick="cancelAddThread()">Cancel</button>
-            <button class="mini-modal-confirm" onclick="confirmAddThread()">Add</button>
-          </div>
-        </div>
-      </div>
-
-
-
-      <!-- Realistic mode one-time intro popup -->
-      <div class="mini-modal-overlay" id="realistic-intro-modal" hidden>
-        <div class="mini-modal-card">
-          <button class="realistic-intro-close" onclick="closeRealisticIntro()" aria-label="Close">✕</button>
-          <p class="mini-modal-body" style="padding-top:8px">Heads up — replies might take a while in Realistic mode. Switch back to Instant anytime for faster replies.</p>
-        </div>
-      </div>
 
       <!-- ============================================================
            AUTH OVERLAY — provider picker

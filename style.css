@@ -1123,6 +1123,37 @@ textarea { font-family: inherit; }
 
 .scan-dropzone-thumb[hidden] { display: none; }
 
+/* Wrapper so the minus button can be positioned over the photo */
+.scan-dropzone-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+/* Minus button — top-right corner of the uploaded photo, only visible when has-file */
+.scan-photo-minus-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(28, 25, 23, 0.65);
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scan-photo-minus-btn[hidden] { display: none; }
+
 
 /* ----------------------------------------------------------------
    SCREEN: SCAN — RESULT
@@ -2168,23 +2199,6 @@ textarea { font-family: inherit; }
   animation: modalPop 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Pointer arrow — sits on the tooltip's top edge (tooltip below element),
-   or bottom edge when the tooltip is placed above the element */
-.tour-arrow {
-  position: absolute;
-  top: -6px;
-  left: 24px;
-  width: 12px;
-  height: 12px;
-  background: var(--s1);
-  transform: rotate(45deg);
-}
-
-.tour-tooltip.above .tour-arrow {
-  top: auto;
-  bottom: -6px;
-}
-
 /* Branded header — small pink kicker that ties the card to the Zelo wordmark */
 .tour-kicker {
   display: block;
@@ -2331,10 +2345,8 @@ textarea { font-family: inherit; }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
 }
 
-/* Completion: full dim (cutout collapsed to a point), centered card, no ring
-   or arrow — a clean branded wrap-up rather than a pointer step. */
+/* Completion: full dim (cutout collapsed to a point), centered card, no ring */
 .tour--final .tour-spotlight::after { display: none; }
-.tour--final .tour-arrow { display: none; }
 
 
 /* ================================================================
@@ -3243,7 +3255,7 @@ textarea { font-family: inherit; }
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  margin-right: 6px;
+  margin-left: 6px;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
 }
