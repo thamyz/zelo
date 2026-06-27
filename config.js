@@ -1,2 +1,1 @@
-// Store your DeepSeek API key here. Never commit a real key to version control.
-const DEEPSEEK_API_KEY = "";
+// DeepSeek API key is stored in Supabase Edge Function secrets — never in client code.

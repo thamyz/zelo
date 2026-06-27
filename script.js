@@ -2,6 +2,8 @@
 // ChatPractice — script.js
 // ================================================================
 
+const DEV_MODE = false; // DEV — set to false before release
+
 
 // ================================================================
 // APP STATE
@@ -26,7 +28,9 @@ const state = {
 
   // Assistant
   asstStyle:      "smooth",
-  asstCurrentSet: null,
+  asstCurrentSet: null,  // cache: tone → reply text, populated on demand
+  asstMessage:    "",    // message text for the current scan
+  asstContext:    "",    // scanContextString() snapshot for the current scan
   scanContext:    {},   // structured "Tell Zelo More" selections { where, who, goal, vibe }
   tzStep:         0,    // current step in the Tell Zelo More flow
 
@@ -60,27 +64,9 @@ const state = {
   scanSkippedSave:   false,
 };
 
-// Run after DOM is ready
-// DEV ONLY — temporary scaffolding, clears scan/example state on every
-// refresh so first-run behavior can be retested without manual cleanup.
-function devResetAll() {
-  localStorage.removeItem('zelo_scan_count');
-  localStorage.removeItem('zelo_scan_date');
-  localStorage.removeItem('zelo_scan_exhausted');
-  localStorage.removeItem('zelo_ad_used_today');
-  localStorage.removeItem('zelo_example_prefilled');
-  localStorage.removeItem('zelo_scan_first_run');
-  // DEV — remove this wipe before release
-  localStorage.removeItem('zelo_threads');
-  localStorage.removeItem('zelo_thread_count');
-}
-
 window.addEventListener('DOMContentLoaded', () => {
   AUTH.init(); // session check — must run before any auth triggers fire
   // TODO — merge anonymous scan history on signup
-
-  // DEV ONLY — remove before release
-  devResetAll();
 
   ensureTrialStarted();
   initScanCountForToday();
@@ -102,7 +88,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function showTab(name) {
   if ((name === 'practice' || name === 'chats') && !AUTH.signedIn()) {
-    AUTH.requireAuth(name, () => showTab(name));
+    if (!DEV_MODE) AUTH.requireAuth(name, () => showTab(name));
+    else showTab(name);
     return;
   }
 
@@ -243,19 +230,73 @@ function selectChatMode(mode) {
     if (chat) chat.mode = mode;
   }
 
-  // Fix 4: the "Now"/"Real" labels are unresolved — leave the pill blank.
-  // state.mode / chat.mode still drive the real timing logic untouched.
-  document.getElementById("chat-mode-pill").textContent = "";
+  document.getElementById("chat-mode-pill").textContent = mode === 'realistic' ? 'Realistic' : 'Instant';
 
   document.getElementById("chat-mode-modal").hidden = true;
 
+  if (mode === 'realistic' && !localStorage.getItem('zelo_realistic_intro_seen')) {
+    localStorage.setItem('zelo_realistic_intro_seen', '1');
+    const modal = document.getElementById('realistic-intro-modal');
+    if (modal) modal.hidden = false;
+  }
+
   const diff = state.difficulty;
+  const openerText = (state.character && state.character.opener) || OPENINGS[diff];
   const openingDelay = mode === "training" ? 700 : 1500;
   setTimeout(() => {
-    appendAIBubble(OPENINGS[diff]);
+    appendAIBubble(openerText);
     setSendEnabled(true);
     document.getElementById("message-input").focus();
   }, openingDelay);
+}
+
+function closeRealisticIntro() {
+  const modal = document.getElementById('realistic-intro-modal');
+  if (modal) modal.hidden = true;
+}
+
+function openChatSettings() {
+  const sheet = document.getElementById('chat-settings-sheet');
+  if (!sheet) return;
+  const label = document.getElementById('chat-settings-timing-label');
+  if (label) {
+    label.textContent = state.mode === 'realistic' ? 'Switch to Instant' : 'Switch to Realistic';
+  }
+  sheet.hidden = false;
+}
+
+function closeChatSettings() {
+  const sheet = document.getElementById('chat-settings-sheet');
+  if (sheet) sheet.hidden = true;
+}
+
+function chatSettingsToggleInstant() {
+  closeChatSettings();
+  const newMode = state.mode === 'realistic' ? 'training' : 'realistic';
+  state.mode = newMode;
+  const pill = document.getElementById('chat-mode-pill');
+  if (pill) pill.textContent = newMode === 'realistic' ? 'Realistic' : 'Instant';
+}
+
+function chatSettingsReset() {
+  closeChatSettings();
+  const container = document.getElementById('chat-messages');
+  if (container) container.innerHTML = '';
+  const cid = state.character?.id || state.character?.name;
+  if (cid) {
+    localStorage.removeItem('chat_' + cid);
+    delete state.chatHistory;
+  }
+  setSendEnabled(false);
+  appendAIBubble((state.character?.opener) || OPENINGS[state.difficulty] || 'hey');
+  setSendEnabled(true);
+}
+
+function chatSettingsDelete() {
+  closeChatSettings();
+  const cid = state.character?.id || state.character?.name;
+  if (cid) localStorage.removeItem('chat_' + cid);
+  exitChat();
 }
 
 function exitChat() {
@@ -557,7 +598,7 @@ function initSwipeDeck() {
   if (state.swipeIndex >= state.swipeProfiles.length) {
     const age = parseInt(localStorage.getItem('zelo_user_age') || '0', 10);
     let pool;
-    if      (age >= 16 && age <= 20) pool = PROFILES.filter(p => p.age_pool === '16-20');
+    if      (age >= 18 && age <= 20) pool = PROFILES.filter(p => p.age_pool === '18-20');
     else if (age >= 21 && age <= 29) pool = PROFILES.filter(p => p.age_pool === '21-29');
     else if (age >= 30)              pool = PROFILES.filter(p => p.age_pool === '30+');
     if (!pool || pool.length === 0)  pool = PROFILES; // fallback: no age set or pool empty
@@ -627,25 +668,39 @@ function renderDeck() {
 // ================================================================
 
 const INTEREST_ICONS = {
-  'Coffee': '☕', 'Specialty coffee': '☕', 'Matcha': '🍵',
-  'Running': '🏃', 'Hiking': '🥾', 'Cycling': '🚴', 'Fitness': '💪', 'Yoga': '🧘', 'Boxing': '🥊', 'Cold plunges': '🧊', 'Rock climbing': '🧗',
-  'Live music': '🎵', 'Indie music': '🎸', 'Podcasts': '🎧',
-  'Travel': '✈️', 'Art': '🎨', 'Photography': '📷', 'Film photography': '📷',
-  'Cooking': '🍳', 'Wine': '🍷', 'Nutrition': '🥗',
-  'Books': '📚', 'Reading': '📖', 'Writing': '✍️',
-  'K-dramas': '📺', 'Reality TV': '📺', 'Documentaries': '📺',
-  'Board games': '🎲', 'Dogs': '🐶',
-  'Thrifting': '🛍️', 'Vintage clothing': '👗',
-  'Interior design': '🏠', 'Art galleries': '🖼️',
-  'Entrepreneurship': '💡', 'Politics': '🗞️',
-  'Rock climbing': '🧗', 'Entrepreneurship': '💡'
+  // Food & drink
+  'Coffee': '☕', 'Specialty coffee': '☕', 'Matcha': '🍵', 'Boba': '🧋', 'Bubble tea': '🧋',
+  'Cooking': '🍳', 'Baking': '🧁', 'Wine': '🍷', 'Nutrition': '🥗', 'Sushi': '🍣', 'Brunch': '🥂',
+  // Fitness & outdoors
+  'Running': '🏃', 'Hiking': '🥾', 'Cycling': '🚴', 'Fitness': '💪', 'Yoga': '🧘',
+  'Boxing': '🥊', 'Cold plunges': '🧊', 'Rock climbing': '🧗', 'Surfing': '🏄', 'Dancing': '💃',
+  // Music & media
+  'Music': '🎵', 'Live music': '🎵', 'Indie music': '🎸', 'Podcasts': '🎧', 'K-pop': '🎤',
+  'Piano': '🎹', 'K-dramas': '📺', 'Reality TV': '📺', 'Documentaries': '📺', 'Anime': '🎌',
+  // Arts & creativity
+  'Art': '🎨', 'Photography': '📷', 'Film photography': '📷', 'Writing': '✍️',
+  'Art galleries': '🖼️', 'Interior design': '🏠',
+  // Books & learning
+  'Books': '📚', 'Reading': '📖', 'Entrepreneurship': '💡', 'Politics': '🗞️',
+  // Travel
+  'Travel': '✈️', 'Japanese culture': '🏯',
+  // Fashion & lifestyle
+  'Fashion': '👗', 'Thrifting': '🛍️', 'Vintage clothing': '👗', 'Makeup': '💄', 'Skincare': '🧴',
+  // Pets
+  'Dogs': '🐶', 'Cats': '🐱',
+  // Gaming & hobbies
+  'Gaming': '🎮', 'Nintendo': '🎮', 'Board games': '🎲',
+  // Nature
+  'Plants': '🌿', 'Aquariums': '🐠',
+  // Misc
+  'Formula 1': '🏎️'
 };
 
 // Shared by the swipe card and the full-screen profile detail page.
 function buildInterestTagsHTML(interests) {
   return interests
     .map(i => {
-      const icon = INTEREST_ICONS[i] || '•';
+      const icon = INTEREST_ICONS[i] || '✨';
       return `<span class="interest-tag">${icon} ${i}</span>`;
     })
     .join('');
@@ -1408,6 +1463,12 @@ function triggerUpload() {
   document.getElementById("screenshot-input").click();
 }
 
+function clearUploadedPhoto() {
+  const input = document.getElementById("screenshot-input");
+  if (input) input.value = "";
+  handleUpload({ files: [] });
+}
+
 // Called when the user selects a file. Updates both the dropzone (its own
 // page — shown as a thumbnail, no filename/label needed) and the upload
 // row preview (back on the main Scan page — also just a thumbnail, no text).
@@ -1424,10 +1485,13 @@ function handleUpload(input) {
   const dzSub       = document.getElementById("scan-dropzone-sub");
   const dzThumb     = document.getElementById("scan-dropzone-thumb");
 
+  const clearBtn = document.getElementById("scan-upload-clear-btn");
+
   if (file) {
     row.classList.add("has-file");
     footer.classList.add("has-thumb");
     dropzone.classList.add("has-file");
+    if (clearBtn) clearBtn.hidden = false;
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -1458,6 +1522,7 @@ function handleUpload(input) {
     dzIcon.hidden  = false;
     dzTitle.hidden = false;
     dzSub.hidden   = false;
+    if (clearBtn) clearBtn.hidden = true;
   }
 
   checkGenerateReady();
@@ -1465,25 +1530,48 @@ function handleUpload(input) {
 
 
 // ================================================================
+// ASSISTANT: DEEPSEEK API
+// ================================================================
+
+const TONE_LABELS = { smooth: 'Smooth', funny: 'Funny', flirty: 'Flirty', confident: 'Confident' };
+
+async function _fetchDeepSeekReply(tone) {
+  let userPrompt = `Message I received: "${state.asstMessage}"\nTone: ${TONE_LABELS[tone]}`;
+  if (state.asstContext) userPrompt += `\nContext: ${state.asstContext}`;
+
+  const { data, error } = await zeloSupabase.functions.invoke('deepseek-proxy', {
+    body: {
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are Zelo, a witty and confident texting coach. Generate a reply to the message the user received. Keep it short, natural, and conversational — the way a real person texts. Do not use emojis unless the tone specifically calls for it.'
+        },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: 150,
+      temperature: 0.85
+    }
+  });
+
+  if (error) throw new Error(`DeepSeek proxy error: ${error.message}`);
+  return data.choices[0].message.content.trim();
+}
+
+
+// ================================================================
 // ASSISTANT: GENERATE
-// Picks a random reply set and renders the selected style.
-// Future API hook: replace ASSISTANT_REPLIES lookup with
-//   fetch('/api/reply', { body: { message: userInput, context, style } })
-// The `context` field is collected now so the future call is context-aware.
 // ================================================================
 
 function generateReplies() {
-  // Stop the Generate button's bounce the instant it's tapped.
   document.getElementById("asst-generate-btn").classList.remove('generate-btn--bounce');
 
   const userInput = document.getElementById("asst-input").value.trim();
   const context   = scanContextString();
   const hasImage  = document.getElementById("screenshot-input").files?.length > 0;
 
-  // Allow either a pasted message or a screenshot to drive generation.
   if (!userInput && !hasImage) return;
 
-  // Reset save-tracking state for this new result
   state.scanSavedToThread = false;
   state.scanSkippedSave   = false;
 
@@ -1492,109 +1580,104 @@ function generateReplies() {
     return;
   }
 
-  // Store the message in the preview bubble (fall back to screenshot label)
   document.getElementById("asst-preview-bubble").textContent =
     userInput || "📷 Screenshot uploaded";
 
-  // Track for the dashboard — prefer the situation, fall back to the message
   recordScan(context || userInput || "Screenshot scan");
 
   // The pre-filled onboarding example must not cost a scan credit — only
   // the user's own scans count against the daily limit. Captured before
   // any state changes below so it reflects this specific generate.
-  const wasFirstRunScan = isFirstRunScan();
-
-  // Only the exact, untouched example text is exempt from the scan cost —
-  // compared at the moment Generate is tapped, not before. If the user
-  // deleted or modified it, this still counts as their first-run scan for
-  // the banner/completion logic below, but it costs normally like any
-  // other scan.
+  const wasFirstRunScan    = isFirstRunScan();
   const isExactExampleText = userInput === EXAMPLE_SCAN_MESSAGE;
   if (!(wasFirstRunScan && isExactExampleText)) {
     decrementScanCount();
   }
 
-  // Pick a random reply set
-  state.asstCurrentSet =
-    ASSISTANT_REPLIES[Math.floor(Math.random() * ASSISTANT_REPLIES.length)];
+  // Snapshot message + context for this scan — used by per-tone API calls
+  state.asstCurrentSet = {};  // cache: tone → reply text, filled on demand
+  state.asstMessage    = userInput;
+  state.asstContext    = context;
 
   // Reset to Smooth style on each new generate
   state.asstStyle = "smooth";
   updateStylePills("smooth");
 
-  // The result gets its own page so the main Scan tab never scrolls. It opens
-  // on a sparkle-pulse loading state, then reveals the reply a beat later —
-  // long enough to feel earned, not instant.
   const loading = document.getElementById("scan-result-loading");
   const content = document.getElementById("scan-result-content");
   loading.hidden = false;
   content.hidden = true;
   pushScreen("scan-result");
 
-  setTimeout(() => {
-    renderReplyCard();
-    loading.hidden = true;
-    content.hidden = false;
+  // Fetch the default (Smooth) reply immediately; reveal when it arrives
+  _fetchDeepSeekReply("smooth")
+    .catch(() => "Couldn't reach Zelo right now. Try again.")
+    .then(reply => {
+      state.asstCurrentSet["smooth"] = reply;
+      renderReplyCard();
+      loading.hidden = true;
+      content.hidden = false;
+      _onReplyRevealed(wasFirstRunScan, isExactExampleText);
+    });
+}
 
-    // Reset the thread-save prompt so it appears fresh on every new scan
-    const tsp = document.getElementById('thread-save-prompt');
-    if (tsp) {
-      tsp.hidden = false;
-      const main   = document.getElementById('thread-save-main');
-      const picker = document.getElementById('thread-picker');
-      if (main)   main.hidden = false;
-      if (picker) { picker.hidden = true; picker.innerHTML = ''; }
-    }
+// Runs once per scan after the first reply is revealed.
+function _onReplyRevealed(wasFirstRunScan, isExactExampleText) {
+  // Reset the thread-save prompt so it appears fresh on every new scan
+  const tsp = document.getElementById('thread-save-prompt');
+  if (tsp) {
+    tsp.hidden = false;
+    const main   = document.getElementById('thread-save-main');
+    const picker = document.getElementById('thread-picker');
+    if (main)   main.hidden = false;
+    if (picker) { picker.hidden = true; picker.innerHTML = ''; }
+  }
 
-    // If a thread was pre-selected on the typing screen, auto-save now
-    if (state.preselectThreadId) {
-      const preMsg    = document.getElementById('asst-preview-bubble').textContent;
-      const preReply  = document.getElementById('reply-text').textContent;
-      const allThr    = getThreads();
-      const preThr    = allThr.find(t => t.id === state.preselectThreadId);
-      if (preThr) {
-        preThr.scans.push({ id: 'scan_' + Date.now(), message: preMsg, reply: preReply, time: Date.now() });
-        saveThreads(allThr);
-        renderThreadList();
-        state.scanSavedToThread = true;
-        if (tsp) {
-          tsp.innerHTML = `<p class="thread-save-q thread-save-success">Saved to "${preThr.name}" ✓</p>`;
-          setTimeout(() => { tsp.hidden = true; }, 1500);
-        }
+  // If a thread was pre-selected on the typing screen, auto-save now
+  if (state.preselectThreadId) {
+    const preMsg   = document.getElementById('asst-preview-bubble').textContent;
+    const preReply = document.getElementById('reply-text').textContent;
+    const allThr   = getThreads();
+    const preThr   = allThr.find(t => t.id === state.preselectThreadId);
+    if (preThr) {
+      preThr.scans.push({ id: 'scan_' + Date.now(), message: preMsg, reply: preReply, time: Date.now() });
+      saveThreads(allThr);
+      renderThreadList();
+      state.scanSavedToThread = true;
+      if (tsp) {
+        tsp.innerHTML = `<p class="thread-save-q thread-save-success">Saved to "${preThr.name}" ✓</p>`;
+        setTimeout(() => { tsp.hidden = true; }, 1500);
       }
-      state.preselectThreadId = null;
     }
+    state.preselectThreadId = null;
+  }
 
-    // Exactly one of two mutually exclusive prompts: "Your turn. Type
-    // anything." shows once, on the result screen for the first-run
-    // pre-populated message, and never again after that — even if the user
-    // backs out without tapping "Got it". So the completion flag is marked
-    // the moment this result is shown, not on dismissal. Every subsequent
-    // result instead gets the plain "Go back" nav hint. Only the chosen
-    // markup is ever built — the other one is never inserted into the DOM.
-    const promptEl = document.getElementById("scan-post-result-prompt");
-    if (wasFirstRunScan && isExactExampleText) {
-      // Only show "Your turn" for the very first analyze of the untouched example
-      promptEl.innerHTML = `
-        <div class="example-banner">
-          <span>Your turn. Type anything.</span>
-          <button type="button" onclick="dismissExampleScan()">Got it</button>
-        </div>`;
+  // Exactly one of two mutually exclusive prompts: "Your turn. Type
+  // anything." shows once, on the result screen for the first-run
+  // pre-populated message, and never again after that — even if the user
+  // backs out without tapping "Got it". So the completion flag is marked
+  // the moment this result is shown, not on dismissal. Every subsequent
+  // result instead gets the plain "Go back" nav hint.
+  const promptEl = document.getElementById("scan-post-result-prompt");
+  if (wasFirstRunScan && isExactExampleText) {
+    promptEl.innerHTML = `
+      <div class="example-banner">
+        <span>Your turn. Type anything.</span>
+        <button type="button" onclick="dismissExampleScan()">Got it</button>
+      </div>`;
+    localStorage.setItem('zelo_scan_first_run', 'true');
+  } else {
+    if (wasFirstRunScan) {
+      state.exampleScanActive = false;
       localStorage.setItem('zelo_scan_first_run', 'true');
-    } else {
-      // All other cases — including modified example text — show Go Back
-      if (wasFirstRunScan) {
-        state.exampleScanActive = false;
-        localStorage.setItem('zelo_scan_first_run', 'true');
-      }
-      promptEl.innerHTML = `
-        <button type="button" class="scan-back-hint" onclick="goBackFromResult()">
-          <span class="scan-back-hint-arrow" aria-hidden="true">↩</span>
-          <span>Go back</span>
-        </button>`;
     }
-    promptEl.hidden = false;
-  }, 1700);
+    promptEl.innerHTML = `
+      <button type="button" class="scan-back-hint" onclick="goBackFromResult()">
+        <span class="scan-back-hint-arrow" aria-hidden="true">↩</span>
+        <span>Go back</span>
+      </button>`;
+  }
+  promptEl.hidden = false;
 }
 
 // Clears the pre-filled onboarding example so the next scan is the user's own.
@@ -1639,7 +1722,26 @@ function selectStyle(style) {
 
   state.asstStyle = style;
   updateStylePills(style);
-  renderReplyCard();
+
+  if (state.asstCurrentSet[style]) {
+    // Already cached — render immediately, no usage charge
+    renderReplyCard();
+  } else {
+    // Gate: new tone fetch counts against the shared daily limit
+    if (!isPaidUser() && scansRemainingToday() <= 0) {
+      refreshScanLimitBanner();
+      return;
+    }
+    // Show placeholder while fetching
+    document.getElementById("reply-text").textContent = "…";
+    decrementScanCount();
+    _fetchDeepSeekReply(style)
+      .catch(() => "Couldn't reach Zelo right now. Try again.")
+      .then(reply => {
+        state.asstCurrentSet[style] = reply;
+        if (state.asstStyle === style) renderReplyCard();
+      });
+  }
 }
 
 function updateStylePills(activeStyle) {
@@ -1707,13 +1809,12 @@ function copyCurrentReply() {
 
 let onboardingSlide = 0;
 const ONBOARDING_TOTAL = 3;
+let threadEditMode = false;
 
 function initOnboarding() {
   const tabBar = document.getElementById('tab-bar');
-  // Show onboarding every time (no "seen once" state persisted yet).
   onboardingSlide = 0;
   initChatsTab();
-  // Hide tab bar during onboarding
   if (tabBar) tabBar.style.display = 'none';
   showOnboardingSlide(0);
 }
@@ -1728,7 +1829,6 @@ function showOnboardingSlide(index) {
   const btn = document.getElementById('onboarding-btn');
   btn.textContent = index === ONBOARDING_TOTAL - 1 ? 'Get Started' : 'Next';
 
-  // Grow the progress line for forward momentum (visual only — Next stays free)
   const fill = document.getElementById('onboarding-progress-fill');
   if (fill) fill.style.width = ((index + 1) / ONBOARDING_TOTAL * 100) + '%';
 }
@@ -1743,14 +1843,12 @@ function onboardingNext() {
 }
 
 function finishOnboarding() {
-  // Note: intentionally not persisting a "seen once" flag yet.
   const overlay = document.getElementById('onboarding');
   overlay.classList.add('hidden');
   setTimeout(() => { overlay.style.display = 'none'; }, 300);
   const tabBar = document.getElementById('tab-bar');
   if (tabBar) tabBar.style.display = '';
   initChatsTab();
-  // User lands on Scan after onboarding — offer the quick tour
   maybeShowScanIntro();
 }
 
@@ -1806,7 +1904,7 @@ const TOUR_STEPS = [
   { tab: 'assistant', sel: '#asst-message-preview', dwell: 2000, kicker: 'Scan', text: "Drop in a message and we'll help you figure it out." },
   { tab: 'assistant', sel: '#tellzelo-card',     dwell: 2000, kicker: 'Scan', text: 'Tap "Tell Zelo More" to add context in a few quick taps.' },
   { tab: 'assistant', sel: '#upload-row',        dwell: 2000, secondary: true, kicker: 'Scan', text: 'Or just drop a screenshot.' },
-  { tab: 'assistant', sel: '#asst-generate-btn', act: 'click', dwell: 2000, kicker: 'Scan', text: 'Hit generate for your reply.' },
+  { tab: 'assistant', sel: '#asst-generate-btn', dwell: 2000, kicker: 'Scan', text: 'Hit generate for your reply.' },
   // — HOME: where am I? (tab) → what's it for? (cards) → how? (swipe demos) —
   { tab: 'practice',  sel: '#tabbtn-practice', dwell: 2000, kicker: 'Home', text: 'This is Home. Pick someone you like and say hi.' },
   { tab: 'practice',  sel: '#card-deck', dwell: 2000, kicker: 'Home', text: 'Browse profiles and find someone to chat with.' },
@@ -1822,14 +1920,66 @@ const TOUR_STEPS = [
 const TOUR_ARM_DEFAULT = 2000;   // fallback dwell if a step omits one
 
 let tourIndex       = 0;
-let tourArmed       = false;      // ignore advances until the step settles
+let tourArmed       = false;
 let tourArmTimer    = null;
-let tourStepBinding = null;       // { el, evt, handler } for the live target
-let tourScrollEl    = null;       // current tab's scroll container (for reposition)
-let tourSwitchingTab = false;     // true while the tour itself drives showTab
-let tourSwipeArmed  = false;      // true on a Home swipe step — a real swipe advances
-let tourSwipeDir    = null;       // 'right' | 'left' — the direction this step teaches
-let tourDemoTimeout = null;       // pending "card returns to center" timer
+let tourStepBinding = null;
+let tourScrollEl    = null;
+let tourSwitchingTab = false;
+let tourSwipeArmed  = false;
+let tourSwipeDir    = null;
+let tourDemoTimeout = null;
+let _tourTypeTimer  = null;
+let _tourTyping     = false;
+let _tourTextReady  = false;
+
+function _tourType(text) {
+  _tourTyping = true;
+  _tourTextReady = false;
+  if (_tourTypeTimer) clearTimeout(_tourTypeTimer);
+  const el = document.getElementById('tour-text');
+  el.textContent = '';
+  el.classList.add('tour-text--entering');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.classList.remove('tour-text--entering');
+      let i = 0;
+      function tick() {
+        if (i < text.length) {
+          el.textContent = text.slice(0, ++i);
+          _tourTypeTimer = setTimeout(tick, 32);
+        } else {
+          _tourTyping = false;
+          _tourTextReady = true;
+          _tourTypeTimer = null;
+        }
+      }
+      tick();
+    });
+  });
+}
+
+function _tourRevealAll() {
+  if (_tourTypeTimer) { clearTimeout(_tourTypeTimer); _tourTypeTimer = null; }
+  _tourTyping = false;
+  _tourTextReady = true;
+  const el = document.getElementById('tour-text');
+  if (el) el.textContent = TOUR_STEPS[tourIndex].text;
+}
+
+function tourTooltipTap(e) {
+  if (e.target.closest('.tour-close-btn, .tour-back')) return;
+  const step = TOUR_STEPS[tourIndex];
+  if (!step) return;
+  if (_tourTyping) {
+    _tourRevealAll();
+  } else if (_tourTextReady) {
+    goNextStep();
+  }
+}
+
+function tourBackdropTap(e) {
+  tourTooltipTap(e);
+}
 
 function startTour() {
   tourIndex = 0;
@@ -1871,33 +2021,24 @@ function renderTourStep(i) {
   const tour = document.getElementById('tour');
 
   // Card content + branded header
-  document.getElementById('tour-kicker').textContent     = step.kicker || 'Zelo';
-  document.getElementById('tour-text').textContent       = step.text;
-  document.getElementById('tour-next-label').textContent = step.final ? 'Get Started' : 'Next';
-  document.getElementById('tour-back').hidden = (i === 0);   // nothing before the first step
+  document.getElementById('tour-kicker').textContent = step.kicker || 'Zelo';
+  _tourType(step.text);
+  document.getElementById('tour-back').hidden = (i === 0);
   tour.classList.toggle('tour--secondary', !!step.secondary);
   tour.classList.toggle('tour--final', !!step.final);
-  updateTourProgress(i);
 
-  // A real swipe (Home), live typing/tapping (Scan), or the Situation expand
-  // needs the UI underneath to stay live; overview steps block the background
-  // so nothing stray fires until there's actually something to do.
   const live = !!step.act || !!step.swipeDir || !!step.expand;
-  tour.style.pointerEvents = live ? 'none' : 'auto';
+  const backdrop = document.getElementById('tour-backdrop');
+  if (backdrop) backdrop.style.pointerEvents = 'auto';
   tourSwipeArmed = !!step.swipeDir;
   tourSwipeDir   = step.swipeDir || null;
 
-  // Situation step starts collapsed so the demo can show it open.
   if (step.expand) closeSituation();
 
-  // Spotlight shape + the transparent tap-target proxy (Scan button step)
   document.getElementById('tour-spotlight').style.borderRadius = step.round ? '50%' : '';
   const hit = document.getElementById('tour-hit');
   hit.hidden = !step.tapTarget;
   hit.dataset.active = step.tapTarget ? '1' : '0';
-
-  // Re-arm: the Next button "fills" over this step's dwell as it settles in.
-  armTourButton(step.dwell || TOUR_ARM_DEFAULT);
 
   // The completion state is a centered branded card over a full dim.
   if (step.final) {
@@ -1954,32 +2095,39 @@ function positionTour(el, snap) {
     hit.style.height = (rect.height + pad * 2) + 'px';
   }
 
-  // Tooltip: below the element unless there isn't room inside the app
-  const gap     = 16;
-  const tipRect = tooltip.getBoundingClientRect();
+  // Tooltip: below the element unless there isn't room inside the app.
+  // Use the CSS max-width (250px) as the assumed width — tipRect.width is
+  // measured while the typewriter has cleared the text, so it underestimates
+  // the final rendered width and would allow right-edge overflow once text
+  // fills in. Similarly pad the height estimate so the placeAbove decision
+  // doesn't flip incorrectly when text hasn't typed yet.
+  const gap       = 16;
+  const margin    = 14;
+  const tipRect   = tooltip.getBoundingClientRect();
+  const assumedW  = 250;                              // matches CSS max-width
+  const assumedH  = Math.max(tipRect.height, 120);   // conservative when empty
+
   const spaceBelow = appRect.height - (top + rect.height);
-  const placeAbove = spaceBelow < tipRect.height + gap + 24;
+  const placeAbove = spaceBelow < assumedH + gap + 24;
 
   tooltip.classList.toggle('above', placeAbove);
 
   let tipTop = placeAbove
-    ? top - pad - gap - tipRect.height
+    ? top - pad - gap - assumedH
     : top + rect.height + pad + gap;
 
-  // Clamp fully inside the app, vertically and horizontally
-  tipTop = Math.max(12, Math.min(tipTop, appRect.height - tipRect.height - 12));
-
+  // Clamp all four edges inside the app
+  tipTop  = Math.max(margin, Math.min(tipTop,  appRect.height - assumedH - margin));
   let tipLeft = left;
-  const maxLeft = appRect.width - tipRect.width - 14;
-  tipLeft = Math.max(14, Math.min(tipLeft, maxLeft));
+  tipLeft = Math.max(margin, Math.min(tipLeft, appRect.width  - assumedW - margin));
 
-  tooltip.style.top  = tipTop + 'px';
+  tooltip.style.top  = tipTop  + 'px';
   tooltip.style.left = tipLeft + 'px';
 
   // Arrow points at the highlighted element's horizontal center
-  const centerX  = left + rect.width / 2;
-  let arrowLeft  = centerX - tipLeft - 6;   // 6 = half the arrow's width
-  arrowLeft = Math.max(14, Math.min(arrowLeft, tipRect.width - 26));
+  const centerX = left + rect.width / 2;
+  let arrowLeft = centerX - tipLeft - 6;   // 6 = half the arrow's 12px width
+  arrowLeft = Math.max(margin, Math.min(arrowLeft, assumedW - 26));
   arrow.style.left = arrowLeft + 'px';
 
   // Restore transitions after the snap so subsequent steps glide.
@@ -1994,10 +2142,7 @@ function positionTour(el, snap) {
 // the real UI, not a slideshow. Guarded by the arm flag so a stray tap as the
 // step appears can't skip ahead.
 function bindStepTarget(el, evt) {
-  const handler = () => {
-    if (!tourArmed) return;
-    tourAdvance();
-  };
+  const handler = () => { goNextStep(); };
   el.addEventListener(evt, handler);
   tourStepBinding = { el, evt, handler };
 }
@@ -2034,19 +2179,19 @@ function tourAdvance() {
 }
 
 function goNextStep() {
+  _tourRevealAll();
   clearStepBinding();
   if (tourIndex >= TOUR_STEPS.length - 1) {
-    endTour();   // final "Get Started" — onboarding journey complete
+    endTour();
   } else {
     tourIndex++;
     renderTourStep(tourIndex);
   }
 }
 
-// Back steps to the previous tutorial step, keeping progress. Never gated — it
-// should always respond instantly.
 function tourBack() {
   if (tourIndex <= 0) return;
+  _tourRevealAll();
   clearStepBinding();
   tourIndex--;
   renderTourStep(tourIndex);
@@ -2144,6 +2289,8 @@ function flashSwipeFeedback(direction) {
 }
 
 function endTour() {
+  if (_tourTypeTimer) { clearTimeout(_tourTypeTimer); _tourTypeTimer = null; }
+  _tourTyping = false;
   clearStepBinding();
   clearTimeout(tourArmTimer);
   unbindTourReposition();
@@ -2156,13 +2303,6 @@ function endTour() {
   tour.classList.remove('tour--secondary', 'tour--final');
   const hit = document.getElementById('tour-hit');
   if (hit) { hit.hidden = true; hit.dataset.active = '0'; }
-}
-
-// A single thin progress line — calmer than a row of dots, matches the
-// onboarding progress bar's visual language.
-function updateTourProgress(activeIndex) {
-  const fill = document.getElementById('tour-progress-fill');
-  if (fill) fill.style.width = ((activeIndex + 1) / TOUR_STEPS.length * 100) + '%';
 }
 
 // Keep the current step glued to its target while the window resizes or the
@@ -2256,8 +2396,7 @@ function openChatFromStore(chat) {
   headerAvatar.textContent = chat.profile.initial;
   document.getElementById('chat-header-name').textContent = chat.profile.name;
   setHeaderStatus('online');
-  // Fix 4: leave the pill blank — chat.mode still drives timing untouched.
-  document.getElementById('chat-mode-pill').textContent = "";
+  document.getElementById('chat-mode-pill').textContent = chat.mode === 'realistic' ? 'Realistic' : 'Instant';
 
   // Replay messages
   const messagesEl = document.getElementById('chat-messages');
@@ -2828,16 +2967,16 @@ function showDeleteConfirm(message, onConfirm) {
   overlay.querySelector('.mini-modal-confirm').onclick = () => { overlay.remove(); onConfirm(); };
 }
 
-function attachSwipeDelete(row, confirmMsg, onDelete) {
+function attachSwipeDelete(row, _confirmMsg, onDelete) {
   const wrapper = row.parentElement;
-  const FULL = 160;   // drag distance that triggers full-fill + delete confirm
-  let startX = 0, curX = 0, active = false, snapped = false, delEl = null;
+  const FULL = 160;  // row offset needed to trigger popup (finger travels 320px at 0.5x)
+  let startX = 0, curX = 0, active = false, delEl = null;
 
   function getDelEl(leftSwipe) {
     if (delEl) return delEl;
     delEl = document.createElement('div');
     delEl.className = 'swipe-del-reveal';
-    const origin   = leftSwipe ? 'right' : 'left';
+    const origin    = leftSwipe ? 'right' : 'left';
     const labelSide = leftSwipe ? 'right' : 'left';
     delEl.innerHTML = `
       <div class="swipe-del-fill" style="transform-origin:${origin} center"></div>
@@ -2846,74 +2985,91 @@ function attachSwipeDelete(row, confirmMsg, onDelete) {
     return delEl;
   }
 
-  function updateDel(dx) {
-    if (snapped) return;
-    const abs = Math.abs(dx);
-    if (abs < 4) return;
-    const d        = getDelEl(dx < 0);
-    const progress = Math.min(1, abs / FULL);
-    d.querySelector('.swipe-del-fill').style.transform = `scaleX(${progress})`;
-    if (progress >= 1) {
-      // Snap row off-screen so entire row shows as pink
-      const off = dx < 0 ? -1200 : 1200;
-      row.style.transition = 'transform 0.12s ease-in';
-      row.style.transform  = `translateX(${off}px)`;
-      snapped = true;
-    } else {
-      row.style.transform = `translateX(${dx}px)`;
-    }
-  }
-
-  function snap() {
-    if (snapped) return;
-    row.style.transition = 'transform 0.25s cubic-bezier(0.175,0.885,0.32,1.275)';
+  function snapBack() {
+    row.style.transition = 'transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275)';
     row.style.transform  = '';
     if (delEl) {
       const fill = delEl.querySelector('.swipe-del-fill');
-      if (fill) { fill.style.transition = 'transform 0.25s'; fill.style.transform = 'scaleX(0)'; }
+      if (fill) { fill.style.transition = 'transform 0.3s'; fill.style.transform = 'scaleX(0)'; }
     }
     setTimeout(() => {
       row.style.transition = '';
       if (delEl) { delEl.remove(); delEl = null; }
-    }, 270);
+    }, 310);
+  }
+
+  function showPopup() {
+    const app = document.getElementById('app');
+    const overlay = document.createElement('div');
+    overlay.className = 'mini-modal-overlay';
+    overlay.innerHTML = `
+      <div class="mini-modal-card">
+        <p class="mini-modal-body">Delete this?</p>
+        <div class="mini-modal-actions">
+          <button class="mini-modal-cancel">Cancel</button>
+          <button class="mini-modal-confirm mini-modal-confirm--danger">Delete</button>
+        </div>
+      </div>`;
+    app.appendChild(overlay);
+    overlay.querySelector('.mini-modal-cancel').onclick = () => {
+      overlay.remove();
+      snapBack();
+    };
+    overlay.querySelector('.mini-modal-confirm').onclick = () => {
+      overlay.remove();
+      row.style.transition = 'opacity 0.15s';
+      row.style.opacity = '0';
+      setTimeout(() => {
+        row.remove();
+        if (delEl) { delEl.remove(); delEl = null; }
+      }, 150);
+      onDelete();
+    };
+  }
+
+  function updateDel(dx) {
+    const abs = Math.abs(dx);
+    if (abs < 4) return;
+    const d        = getDelEl(dx < 0);
+    const rowDx    = dx * 0.5;  // half-speed
+    const progress = Math.min(1, Math.abs(rowDx) / FULL);
+    d.querySelector('.swipe-del-fill').style.transform = `scaleX(${progress})`;
+    row.style.transform = `translateX(${rowDx}px)`;
   }
 
   function finish() {
-    if (snapped || Math.abs(curX) >= FULL) {
-      row.style.transition = '';
-      row.style.transform  = '';
-      if (delEl) { delEl.remove(); delEl = null; }
-      snapped = false;
-      showDeleteConfirm(confirmMsg, onDelete);
+    const rowDx = curX * 0.5;
+    if (Math.abs(rowDx) >= FULL) {
+      showPopup();
     } else {
-      snap();
+      snapBack();
     }
   }
 
   // Touch
   row.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX; curX = 0; active = true; snapped = false;
+    startX = e.touches[0].clientX; curX = 0; active = true;
   }, { passive: true });
   row.addEventListener('touchmove', e => {
     if (!active) return;
     curX = e.touches[0].clientX - startX;
     updateDel(curX);
   }, { passive: true });
-  row.addEventListener('touchend',   () => { if (!active) return; active = false; finish(); });
-  row.addEventListener('touchcancel',() => { if (!active) return; active = false; snap(); });
+  row.addEventListener('touchend',    () => { if (!active) return; active = false; finish(); });
+  row.addEventListener('touchcancel', () => { if (!active) return; active = false; snapBack(); });
 
   // Mouse (desktop)
   row.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
-    startX = e.clientX; curX = 0; active = true; snapped = false;
+    startX = e.clientX; curX = 0; active = true;
     row.style.userSelect = 'none';
     const onMove = ev => { if (!active) return; curX = ev.clientX - startX; updateDel(curX); };
     const onUp   = () => {
-      if (!active) { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); return; }
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      if (!active) return;
       active = false;
       row.style.userSelect = '';
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
       finish();
     };
     document.addEventListener('mousemove', onMove);
@@ -2923,6 +3079,47 @@ function attachSwipeDelete(row, confirmMsg, onDelete) {
 
 // ─── Thread list ────────────────────────────────────────────────────────────
 
+let _activeThreadDeleteRow = null;
+
+function _dismissActiveThreadDelete() {
+  if (!_activeThreadDeleteRow) return;
+  const del = _activeThreadDeleteRow.querySelector('.thread-row-inline-del');
+  if (del) { del.classList.remove('visible'); }
+  _activeThreadDeleteRow = null;
+}
+
+function _showThreadRowDelete(wrapper, threadId) {
+  if (_activeThreadDeleteRow === wrapper) {
+    _dismissActiveThreadDelete();
+    return;
+  }
+  _dismissActiveThreadDelete();
+  _activeThreadDeleteRow = wrapper;
+
+  let del = wrapper.querySelector('.thread-row-inline-del');
+  if (!del) {
+    del = document.createElement('button');
+    del.className = 'thread-row-inline-del';
+    del.textContent = 'Delete';
+    del.onclick = (e) => {
+      e.stopPropagation();
+      _activeThreadDeleteRow = null;
+      deleteThread(threadId);
+      renderThreadList();
+    };
+    wrapper.appendChild(del);
+  }
+  requestAnimationFrame(() => del.classList.add('visible'));
+}
+
+function toggleThreadEditMode() {
+  _dismissActiveThreadDelete();
+  threadEditMode = !threadEditMode;
+  const btn = document.getElementById('thread-edit-btn');
+  if (btn) btn.textContent = threadEditMode ? 'Done' : 'Edit';
+  renderThreadList();
+}
+
 function renderThreadList() {
   const listEl = document.getElementById('thread-list');
   if (!listEl) return;
@@ -2930,25 +3127,16 @@ function renderThreadList() {
   const threads = getThreads();
   listEl.innerHTML = '';
 
-  function makeAddBtn() {
-    const btn = document.createElement('button');
-    btn.className = 'thread-add-btn';
-    btn.setAttribute('aria-label', 'Add person thread');
-    btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-    btn.onclick = openAddThread;
-    return btn;
-  }
-
   if (threads.length === 0) {
-    // + button inline at top with empty-state label
-    const row = document.createElement('div');
-    row.className = 'thread-add-row--top';
+    if (threadEditMode) {
+      threadEditMode = false;
+      const btn = document.getElementById('thread-edit-btn');
+      if (btn) btn.textContent = 'Edit';
+    }
     const label = document.createElement('p');
     label.className = 'thread-empty-label';
-    label.textContent = 'No threads yet. Tap + to add someone.';
-    row.appendChild(makeAddBtn());
-    row.appendChild(label);
-    listEl.appendChild(row);
+    label.textContent = 'No threads yet.';
+    listEl.appendChild(label);
     return;
   }
 
@@ -2958,26 +3146,55 @@ function renderThreadList() {
 
     const row = document.createElement('div');
     row.className = 'thread-row';
-    row.innerHTML = `
-      <div class="thread-row-info">
-        <span class="thread-row-name">${thread.name}</span>
-        <span class="thread-row-count">${thread.scans.length} scan${thread.scans.length !== 1 ? 's' : ''}</span>
-      </div>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-    `;
-    row.onclick = () => openThreadDetail(thread.id);
+
+    if (threadEditMode) {
+      const minus = document.createElement('button');
+      minus.className = 'thread-row-minus-btn';
+      minus.textContent = '−';
+      minus.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _showThreadRowDelete(wrapper, thread.id);
+      });
+      row.appendChild(minus);
+    }
+
+    const info = document.createElement('div');
+    info.className = 'thread-row-info';
+    info.innerHTML = `
+      <span class="thread-row-name">${thread.name}</span>
+      <span class="thread-row-count">${thread.scans.length} scan${thread.scans.length !== 1 ? 's' : ''}</span>`;
+    row.appendChild(info);
+
+    if (!threadEditMode) {
+      const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      chevron.setAttribute('width', '14');
+      chevron.setAttribute('height', '14');
+      chevron.setAttribute('viewBox', '0 0 24 24');
+      chevron.setAttribute('fill', 'none');
+      chevron.setAttribute('stroke', 'currentColor');
+      chevron.setAttribute('stroke-width', '2.5');
+      chevron.setAttribute('stroke-linecap', 'round');
+      chevron.setAttribute('stroke-linejoin', 'round');
+      chevron.innerHTML = '<polyline points="9 18 15 12 9 6"/>';
+      row.appendChild(chevron);
+      row.onclick = () => openThreadDetail(thread.id);
+    }
 
     wrapper.appendChild(row);
     listEl.appendChild(wrapper);
 
-    attachSwipeDelete(row, 'Delete this thread? This cannot be undone.', () => deleteThread(thread.id));
+    if (!threadEditMode) {
+      attachSwipeDelete(row, 'Delete this thread? This cannot be undone.', () => deleteThread(thread.id));
+    }
   });
 
-  // + button at bottom of list, with padding to clear the nav bar
-  const bottomRow = document.createElement('div');
-  bottomRow.className = 'thread-add-row--bottom';
-  bottomRow.appendChild(makeAddBtn());
-  listEl.appendChild(bottomRow);
+  if (threadEditMode) {
+    const newBtn = document.createElement('button');
+    newBtn.className = 'thread-edit-new-btn';
+    newBtn.textContent = '+ New';
+    newBtn.onclick = openAddThread;
+    listEl.appendChild(newBtn);
+  }
 }
 
 // Back button on result screen — check if scan has been saved first
@@ -3145,7 +3362,8 @@ function showSaveBeforeLeave() {
 // "Save" tapped in scan result: show existing threads or go straight to name input
 function openThreadPicker() {
   if (!AUTH.signedIn()) {
-    AUTH.requireAuth('save-thread', () => openThreadPicker());
+    if (!DEV_MODE) AUTH.requireAuth('save-thread', () => openThreadPicker());
+    else openThreadPicker();
     return;
   }
 
@@ -3265,24 +3483,89 @@ function openThreadDetail(threadId) {
 
   state.activeThreadId = threadId;
   state.threadChat     = thread.chat || [];
+  state.scanEditMode   = false;
 
   document.getElementById('thread-detail-name').textContent = thread.name;
+  const editBtn = document.getElementById('scan-edit-btn');
+  const toolbar = document.getElementById('scan-edit-toolbar');
+  if (editBtn) { editBtn.textContent = 'Edit'; }
+  if (toolbar) toolbar.hidden = true;
 
+  _renderThreadScans();
+  renderThreadChat();
+  pushScreen('thread-detail');
+}
+
+function _renderThreadScans() {
+  const threads = getThreads();
+  const thread  = threads.find(t => t.id === state.activeThreadId);
+  if (!thread) return;
   const scansEl = document.getElementById('thread-scans');
   scansEl.innerHTML = '';
-  thread.scans.forEach(scan => {
+  thread.scans.forEach((scan, idx) => {
     const entry = document.createElement('div');
     entry.className = 'thread-scan-entry';
-    entry.innerHTML = `
+    entry.dataset.scanIdx = idx;
+    if (state.scanEditMode) {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'scan-select-cb';
+      cb.onchange = _updateScanEditCount;
+      entry.appendChild(cb);
+    }
+    const body = document.createElement('div');
+    body.className = 'thread-scan-body';
+    body.innerHTML = `
       <div class="thread-scan-msg">${scan.message}</div>
       <div class="thread-scan-reply">${scan.reply}</div>
       <div class="thread-scan-time">${formatTime(scan.time)}</div>
     `;
+    entry.appendChild(body);
+    if (!state.scanEditMode) {
+      attachSwipeDelete(entry, 'Delete this scan entry?', () => {
+        _deleteScanAtIndex(idx);
+      });
+    }
     scansEl.appendChild(entry);
   });
+}
 
-  renderThreadChat();
-  pushScreen('thread-detail');
+function _updateScanEditCount() {
+  const checked = document.querySelectorAll('.scan-select-cb:checked').length;
+  const countEl = document.getElementById('scan-edit-count');
+  const delBtn  = document.getElementById('scan-edit-delete-btn');
+  if (countEl) countEl.textContent = checked + ' selected';
+  if (delBtn)  delBtn.disabled = checked === 0;
+}
+
+function toggleScanEditMode() {
+  state.scanEditMode = !state.scanEditMode;
+  const editBtn = document.getElementById('scan-edit-btn');
+  const toolbar = document.getElementById('scan-edit-toolbar');
+  if (editBtn) editBtn.textContent = state.scanEditMode ? 'Done' : 'Edit';
+  if (toolbar) toolbar.hidden = !state.scanEditMode;
+  _renderThreadScans();
+  if (state.scanEditMode) _updateScanEditCount();
+}
+
+function deleteSelectedScans() {
+  const threads = getThreads();
+  const thread  = threads.find(t => t.id === state.activeThreadId);
+  if (!thread) return;
+  const checked = [...document.querySelectorAll('.scan-select-cb:checked')];
+  const indices = checked.map(cb => Number(cb.closest('.thread-scan-entry').dataset.scanIdx));
+  indices.sort((a, b) => b - a).forEach(i => thread.scans.splice(i, 1));
+  saveThreads(threads);
+  toggleScanEditMode();
+}
+
+function _deleteScanAtIndex(idx) {
+  const threads = getThreads();
+  const thread  = threads.find(t => t.id === state.activeThreadId);
+  if (!thread) return;
+  thread.scans.splice(idx, 1);
+  saveThreads(threads);
+  _renderThreadScans();
 }
 
 function closeThreadDetail() {
@@ -3351,33 +3634,26 @@ async function sendThreadMessage() {
 
   const systemPrompt = `You are Zelo, a witty and warm texting coach. The user is asking for advice about their conversation with ${thread ? thread.name : 'someone'}.\n\nConversation history:\n${context || 'No scans yet.'}\n\nGive concise, practical advice in 1-3 sentences. Stay casual and direct.`;
 
-  const apiKey = typeof DEEPSEEK_API_KEY !== 'undefined' ? DEEPSEEK_API_KEY : '';
-
   // Placeholder bubble while waiting
   const placeholder = { role: 'assistant', content: '…' };
   state.threadChat.push(placeholder);
   renderThreadChat();
 
   try {
-    if (!apiKey) throw new Error('No API key');
-    const resp = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({
+    const { data, error } = await zeloSupabase.functions.invoke('deepseek-proxy', {
+      body: {
         model: 'deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
           ...state.threadChat.filter(m => m !== placeholder).map(m => ({ role: m.role, content: m.content }))
         ],
         max_tokens: 200
-      })
+      }
     });
-    const data = await resp.json();
+    if (error) throw error;
     placeholder.content = data.choices[0].message.content;
   } catch {
-    placeholder.content = apiKey
-      ? "Hmm, I couldn't reach Zelo right now. Try again in a moment."
-      : "Add your DeepSeek API key to config.js to enable Ask Zelo.";
+    placeholder.content = "Hmm, I couldn't reach Zelo right now. Try again in a moment.";
   }
 
   // Persist chat back to thread store

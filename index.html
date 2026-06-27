@@ -17,42 +17,38 @@
            TAB: REPLY  (homepage / assistant)
            ============================================================ -->
       <div class="tab active" id="tab-assistant">
+
+        <!-- Fixed header — stays at top, does not scroll -->
+        <header class="app-header app-header--pad">
+          <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span class="online-dot" aria-hidden="true"></span>
+          </button>
+          <h1 class="home-brand">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </h1>
+          <button class="settings-btn" onclick="openDashboard()" aria-label="Settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+        </header>
+
         <div class="tab-scroll">
 
-          <!-- Header -->
-          <header class="app-header">
-            <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="1.8"
-                   stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              <span class="online-dot" aria-hidden="true"></span>
-            </button>
-            <span class="header-spacer"></span>
-            <button class="settings-btn" onclick="openDashboard()" aria-label="Settings">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="1.8"
-                   stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-              </svg>
-            </button>
-          </header>
-
-          <!-- Brand hero — anchored at the top -->
-          <div class="scan-hero">
-            <h1 class="scan-brand">
-              Zelo<span class="scan-spark" aria-hidden="true">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-                </svg>
-              </span>
-            </h1>
-          </div>
-
-          <!-- Input block — vertically centered in remaining space -->
+          <!-- Input block -->
           <div class="scan-main">
 
           <!-- Free-tier daily scan counter + mocked rewarded-ad upsell.
@@ -123,9 +119,12 @@
           </button>
           </div><!-- /.scan-main -->
 
-          <!-- People Threads — always visible; + button created by renderThreadList() -->
+          <!-- History — always visible; + button created by renderThreadList() -->
           <div class="thread-section" id="thread-section">
-            <span class="block-label" style="padding:0 16px 6px;">People Threads</span>
+            <div class="thread-section-header">
+              <span class="block-label">History</span>
+              <button class="thread-edit-btn" id="thread-edit-btn" onclick="toggleThreadEditMode()">Edit</button>
+            </div>
             <div class="thread-list" id="thread-list"></div>
           </div>
 
@@ -203,19 +202,29 @@
            TAB: CHATS
            ============================================================ -->
       <div class="tab" id="tab-chats">
-        <div class="tab-scroll">
-          <header class="app-header">
-            <button class="profile-btn" onclick="openDashboard()" aria-label="Profile">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="1.8"
-                   stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
+
+        <!-- Fixed header — stays at top, does not scroll -->
+        <header class="app-header app-header--pad">
+          <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span class="online-dot" aria-hidden="true"></span>
+          </button>
+          <h1 class="home-brand">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
               </svg>
-            </button>
-            <span class="wordmark">Zelo</span>
-            <span class="header-spacer"></span>
-          </header>
+            </span>
+          </h1>
+          <span class="header-spacer"></span>
+        </header>
+
+        <div class="tab-scroll">
           <h2 class="chats-title">Chats</h2>
           <div class="chats-empty" id="chats-empty">
             <div class="chats-empty-icon">💬</div>
@@ -354,6 +363,13 @@
             </div>
           </div>
 
+          <!-- Sign out -->
+          <div class="dash-section">
+            <button class="dash-menu-row dash-signout-btn" onclick="AUTH.signOut()">
+              Sign out <span>›</span>
+            </button>
+          </div>
+
         </div>
       </div>
 
@@ -402,6 +418,29 @@
             <span class="chat-hstatus" id="chat-header-status">online</span>
           </div>
           <div class="mode-pill" id="chat-mode-pill"></div>
+          <button class="chat-settings-btn" onclick="openChatSettings()" aria-label="Chat settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/>
+              <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
+              <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Chat settings sheet -->
+        <div class="chat-settings-sheet" id="chat-settings-sheet" hidden>
+          <div class="chat-settings-backdrop" onclick="closeChatSettings()"></div>
+          <div class="chat-settings-panel">
+            <button class="chat-settings-row" id="chat-settings-timing-btn" onclick="chatSettingsToggleInstant()">
+              <span id="chat-settings-timing-label">Switch to Instant</span>
+            </button>
+            <div class="chat-settings-divider"></div>
+            <button class="chat-settings-row" onclick="chatSettingsReset()">Reset Chat</button>
+            <div class="chat-settings-divider"></div>
+            <button class="chat-settings-row chat-settings-row--danger" onclick="chatSettingsDelete()">Delete Chat</button>
+          </div>
         </div>
 
         <div class="chat-messages" id="chat-messages"></div>
@@ -556,6 +595,10 @@
 
           <span class="scan-type-spacer"></span>
 
+          <button class="scan-upload-clear-btn" id="scan-upload-clear-btn" onclick="clearUploadedPhoto()" hidden>
+            Remove Photo
+          </button>
+
           <button class="generate-btn" id="scan-upload-continue-btn" onclick="popScreen()">
             Done
           </button>
@@ -693,24 +736,19 @@
            GUIDED SPOTLIGHT TOUR  (Scan)
            ============================================================ -->
       <div class="tour" id="tour" hidden>
+        <div class="tour-backdrop" id="tour-backdrop" onclick="tourBackdropTap(event)"></div>
         <div class="tour-spotlight" id="tour-spotlight"></div>
         <!-- transparent tap-target over a highlighted control (e.g. Scan button) -->
         <button class="tour-hit" id="tour-hit" data-active="0" onclick="tourAdvance()" hidden aria-label="Continue"></button>
         <!-- big heart / X that pops on a guided swipe -->
         <div class="tour-swipe-feedback" id="tour-swipe-feedback" hidden></div>
-        <div class="tour-tooltip" id="tour-tooltip">
+        <div class="tour-tooltip" id="tour-tooltip" onclick="tourTooltipTap(event)">
+          <button class="tour-close-btn" onclick="event.stopPropagation(); endTour()" aria-label="Close tour">✕</button>
           <div class="tour-arrow" id="tour-arrow"></div>
-          <div class="tour-progress" id="tour-progress" aria-hidden="true">
-            <div class="tour-progress-fill" id="tour-progress-fill"></div>
-          </div>
           <span class="tour-kicker" id="tour-kicker">Zelo</span>
           <p class="tour-text" id="tour-text"></p>
           <div class="tour-controls">
-            <button class="tour-back" id="tour-back" onclick="tourBack()">Back</button>
-            <button class="tour-next" id="tour-next" onclick="tourAdvance()">
-              <span class="tour-next-fill" id="tour-next-fill"></span>
-              <span class="tour-next-label" id="tour-next-label">Next</span>
-            </button>
+            <button class="tour-back" id="tour-back" onclick="event.stopPropagation(); tourBack()">Back</button>
           </div>
         </div>
       </div>
@@ -896,6 +934,14 @@
 
 
 
+      <!-- Realistic mode one-time intro popup -->
+      <div class="mini-modal-overlay" id="realistic-intro-modal" hidden>
+        <div class="mini-modal-card">
+          <button class="realistic-intro-close" onclick="closeRealisticIntro()" aria-label="Close">✕</button>
+          <p class="mini-modal-body" style="padding-top:8px">Heads up — replies might take a while in Realistic mode. Switch back to Instant anytime for faster replies.</p>
+        </div>
+      </div>
+
       <!-- ============================================================
            AUTH OVERLAY — provider picker
            ============================================================ -->
@@ -1017,6 +1063,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <script src="personas.js"></script>
     <script src="data.js"></script>
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>

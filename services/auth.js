@@ -181,8 +181,25 @@ const AUTH = (() => {
     if (!localStorage.getItem('zelo_setup_done')) {
       _showSetupScreen();
     } else {
-      _hideAll();
-      _resolvePending();
+      // Returning user — sync profile from Supabase into localStorage then navigate
+      _loadProfileIntoLocalStorage().then(() => {
+        _hideAll();
+        _resolvePending();
+      });
+    }
+  }
+
+  async function _loadProfileIntoLocalStorage() {
+    const userId = _session?.user?.id;
+    if (!userId) return;
+    const { data, error } = await zeloSupabase
+      .from('profiles')
+      .select('display_name, age')
+      .eq('id', userId)
+      .single();
+    if (data && !error) {
+      if (data.display_name) localStorage.setItem('zelo_display_name', data.display_name);
+      if (data.age != null)  localStorage.setItem('zelo_user_age', String(data.age));
     }
   }
 
@@ -199,29 +216,29 @@ const AUTH = (() => {
     roller.removeEventListener('scroll', _onRollerScroll);
     roller.innerHTML = '';
 
-    // 2 ghost items top → age 16 can sit at center when scrollTop=0
+    // 2 ghost items top → age 18 can sit at center when scrollTop=0
     for (let i = 0; i < 2; i++) {
       const g = document.createElement('div');
       g.className = 'age-roller-item age-roller-ghost';
       roller.appendChild(g);
     }
-    for (let age = 16; age <= 100; age++) {
+    for (let age = 18; age <= 40; age++) {
       const item = document.createElement('div');
       item.className = 'age-roller-item';
       item.dataset.age = age;
       item.textContent = age;
       roller.appendChild(item);
     }
-    // 2 ghost items bottom → age 100 can sit at center when scrollTop=max
+    // 2 ghost items bottom → age 40 can sit at center when scrollTop=max
     for (let i = 0; i < 2; i++) {
       const g = document.createElement('div');
       g.className = 'age-roller-item age-roller-ghost';
       roller.appendChild(g);
     }
 
-    // Default: age 22  (scrollTop = (22-16) * 44 = 264)
+    // Default: age 22  (scrollTop = (22-18) * 44 = 176)
     requestAnimationFrame(() => {
-      roller.scrollTop = (22 - 16) * 44;
+      roller.scrollTop = (22 - 18) * 44;
     });
     roller.addEventListener('scroll', _onRollerScroll, { passive: true });
   }
@@ -231,25 +248,22 @@ const AUTH = (() => {
     if (!roller) return;
     const age    = _readAge(roller);
     const warnEl = document.getElementById('age-warn');
-    if (warnEl) warnEl.textContent = age < 16 ? 'Zelo is for users 16 and older.' : '';
+    if (warnEl) warnEl.textContent = age < 18 ? 'Zelo is for users 18 and older.' : '';
   }
 
   function _readAge(roller) {
     const r   = roller || document.getElementById('age-roller');
     if (!r) return 22;
     const idx = Math.round(r.scrollTop / 44);
-    return Math.max(16, 16 + idx);
+    return Math.max(18, 18 + idx);
   }
 
-  function handleSetupContinue() {
-    const raw = (document.getElementById('setup-username-input')?.value || '').trim();
-    if (!raw) {
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      localStorage.setItem('zelo_display_name', 'Player #' + rand);
-    } else {
-      localStorage.setItem('zelo_display_name', raw);
-    }
+  async function handleSetupContinue() {
+    const raw         = (document.getElementById('setup-username-input')?.value || '').trim();
+    const displayName = raw || ('Player #' + Math.floor(1000 + Math.random() * 9000));
 
+    // 1. Write to localStorage first
+    localStorage.setItem('zelo_display_name', displayName);
     const age = _readAge();
     localStorage.setItem('zelo_user_age', String(age));
     localStorage.setItem('zelo_setup_done', '1');
@@ -257,6 +271,16 @@ const AUTH = (() => {
     // Force deck to re-filter by age pool on next practice tab visit
     if (typeof state !== 'undefined' && state.swipeProfiles) {
       state.swipeIndex = state.swipeProfiles.length;
+    }
+
+    // 2. Insert profile row to Supabase after localStorage is written
+    const userId = _session?.user?.id;
+    if (userId) {
+      const { error } = await zeloSupabase.from('profiles').insert({
+        id:           userId,
+        display_name: displayName,
+        age:          age
+      });
     }
 
     _hideAll();
@@ -279,6 +303,13 @@ const AUTH = (() => {
     if (typeof cb === 'function') cb();
   }
 
+  // ── Sign out ───────────────────────────────────────────────────
+
+  async function signOut() {
+    await zeloSupabase.auth.signOut();
+    location.reload();
+  }
+
   // ── Public API ─────────────────────────────────────────────────
 
   return {
@@ -292,6 +323,7 @@ const AUTH = (() => {
     toggleEmailMode,
     signInWithApple,
     signInWithGoogle,
-    handleSetupContinue
+    handleSetupContinue,
+    signOut
   };
 })();
