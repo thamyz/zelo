@@ -1866,7 +1866,7 @@ function initOnboarding() {
 
   if (localStorage.getItem('zelo_onboarding_done')) {
     const el = document.getElementById('onboarding');
-    if (el) el.style.display = 'none';
+    if (el) el.setAttribute('hidden', '');
     showInstructions();
     return;
   }
@@ -1897,7 +1897,7 @@ function finishOnboarding() {
   localStorage.setItem('zelo_onboarding_done', '1');
   const overlay = document.getElementById('onboarding');
   overlay.classList.add('hidden');
-  setTimeout(() => { overlay.style.display = 'none'; }, 300);
+  setTimeout(() => { overlay.setAttribute('hidden', ''); overlay.classList.remove('hidden'); }, 300);
   showInstructions();
 }
 
@@ -1920,7 +1920,7 @@ function showInstructions() {
   }
   instructionSlide = 0;
   _obTextReady = false;
-  el.style.display = '';
+  el.removeAttribute('hidden');
   el.classList.remove('hidden');
   showInstructionSlide(0);
 }
@@ -1979,7 +1979,7 @@ function finishInstructions() {
   const overlay = document.getElementById('instructions');
   if (overlay) {
     overlay.classList.add('hidden');
-    setTimeout(() => { overlay.style.display = 'none'; }, 300);
+    setTimeout(() => { overlay.setAttribute('hidden', ''); overlay.classList.remove('hidden'); }, 300);
   }
   const tabBar = document.getElementById('tab-bar');
   if (tabBar) tabBar.style.display = '';

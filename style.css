@@ -4581,3 +4581,7 @@ textarea { font-family: inherit; }
   width: 18px;
   border-radius: 3px;
 }
+
+/* Ensure hidden attribute wins over display:flex on overlay elements */
+.onboarding[hidden],
+.instructions[hidden] { display: none !important; }
