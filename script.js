@@ -1861,9 +1861,17 @@ function onboardingTap(e) {
 
 function initOnboarding() {
   const tabBar = document.getElementById('tab-bar');
-  onboardingSlide = 0;
-  initChatsTab();
   if (tabBar) tabBar.style.display = 'none';
+  initChatsTab();
+
+  if (localStorage.getItem('zelo_onboarding_done')) {
+    const el = document.getElementById('onboarding');
+    if (el) el.style.display = 'none';
+    showInstructions();
+    return;
+  }
+
+  onboardingSlide = 0;
   showOnboardingSlide(0);
 }
 
@@ -1874,18 +1882,6 @@ function showOnboardingSlide(index) {
   document.querySelectorAll('.onboarding-dot').forEach((el, i) => {
     el.classList.toggle('active', i === index);
   });
-
-  const slide = document.querySelectorAll('.onboarding-slide')[index];
-  if (slide) {
-    const titleEl = slide.querySelector('.onboarding-title');
-    const descEl  = slide.querySelector('.onboarding-desc');
-    if (titleEl && descEl) {
-      if (!titleEl.dataset.full) titleEl.dataset.full = titleEl.textContent.trim();
-      if (!descEl.dataset.full)  descEl.dataset.full  = descEl.textContent.trim();
-      _obTextReady = false;
-      setTimeout(() => _obType(titleEl, descEl, titleEl.dataset.full, descEl.dataset.full), 80);
-    }
-  }
 }
 
 function onboardingNext() {
@@ -1898,12 +1894,95 @@ function onboardingNext() {
 }
 
 function finishOnboarding() {
+  localStorage.setItem('zelo_onboarding_done', '1');
   const overlay = document.getElementById('onboarding');
   overlay.classList.add('hidden');
   setTimeout(() => { overlay.style.display = 'none'; }, 300);
+  showInstructions();
+}
+
+
+// ================================================================
+// INSTRUCTIONS (separate from onboarding — shown every launch)
+// Typewriter animation, tap-anywhere, X close, Back button.
+// ================================================================
+
+let instructionSlide = 0;
+const INSTRUCTIONS_TOTAL = 3;
+
+function showInstructions() {
+  const el = document.getElementById('instructions');
+  if (!el) {
+    const tabBar = document.getElementById('tab-bar');
+    if (tabBar) tabBar.style.display = '';
+    maybeShowScanIntro();
+    return;
+  }
+  instructionSlide = 0;
+  _obTextReady = false;
+  el.style.display = '';
+  el.classList.remove('hidden');
+  showInstructionSlide(0);
+}
+
+function showInstructionSlide(index) {
+  document.querySelectorAll('.instructions-slide').forEach((sl, i) => {
+    sl.classList.toggle('active', i === index);
+  });
+  document.querySelectorAll('.instructions-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === index);
+  });
+  const backBtn = document.getElementById('instructions-back-btn');
+  if (backBtn) backBtn.hidden = (index === 0);
+
+  const slide = document.querySelectorAll('.instructions-slide')[index];
+  if (slide) {
+    const titleEl = slide.querySelector('.instructions-title');
+    const descEl  = slide.querySelector('.instructions-desc');
+    if (titleEl && descEl) {
+      if (!titleEl.dataset.full) titleEl.dataset.full = titleEl.textContent.trim();
+      if (!descEl.dataset.full)  descEl.dataset.full  = descEl.textContent.trim();
+      _obTextReady = false;
+      setTimeout(() => _obType(titleEl, descEl, titleEl.dataset.full, descEl.dataset.full), 80);
+    }
+  }
+}
+
+function instructionsTap(e) {
+  if (e && (e.target.closest('.instructions-close-btn') || e.target.closest('#instructions-back-btn'))) return;
+  const slide = document.querySelectorAll('.instructions-slide')[instructionSlide];
+  if (!slide) { finishInstructions(); return; }
+  const titleEl = slide.querySelector('.instructions-title');
+  const descEl  = slide.querySelector('.instructions-desc');
+  if (_obTyping) {
+    _obRevealAll(titleEl, descEl, titleEl.dataset.full || '', descEl.dataset.full || '');
+  } else if (_obTextReady) {
+    if (instructionSlide < INSTRUCTIONS_TOTAL - 1) {
+      instructionSlide++;
+      showInstructionSlide(instructionSlide);
+    } else {
+      finishInstructions();
+    }
+  }
+}
+
+function instructionsBack() {
+  if (instructionSlide > 0) {
+    instructionSlide--;
+    showInstructionSlide(instructionSlide);
+  }
+}
+
+function finishInstructions() {
+  if (_obTypeTimer) { clearTimeout(_obTypeTimer); _obTypeTimer = null; }
+  _obTyping = false;
+  const overlay = document.getElementById('instructions');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    setTimeout(() => { overlay.style.display = 'none'; }, 300);
+  }
   const tabBar = document.getElementById('tab-bar');
   if (tabBar) tabBar.style.display = '';
-  initChatsTab();
   maybeShowScanIntro();
 }
 
@@ -3065,7 +3144,16 @@ function attachSwipeDelete(row, _confirmMsg, onDelete) {
   function finish() {
     const rowWidth = row.getBoundingClientRect().width || 300;
     if (Math.abs(curX) >= rowWidth * 0.3) {
-      showPopup();
+      const isLeft = curX < 0;
+      const d    = getDelEl(isLeft);
+      const fill = d ? d.querySelector('.swipe-del-fill') : null;
+      row.style.transition = 'transform 0.22s ease-out';
+      row.style.transform  = `translateX(${isLeft ? -FULL : FULL}px)`;
+      if (fill) {
+        fill.style.transition = 'transform 0.22s ease-out';
+        fill.style.transform  = 'scaleX(1)';
+      }
+      setTimeout(showPopup, 230);
     } else {
       snapBack();
     }
@@ -3158,14 +3246,19 @@ function renderThreadList() {
 
   if (threads.length === 0) {
     if (threadEditMode) {
-      threadEditMode = false;
+      const newBtn = document.createElement('button');
+      newBtn.className = 'thread-edit-new-btn';
+      newBtn.textContent = '+ New';
+      newBtn.onclick = openAddThread;
+      listEl.appendChild(newBtn);
       const btn = document.getElementById('thread-edit-btn');
-      if (btn) btn.textContent = 'Edit';
+      if (btn) btn.textContent = 'Done';
+    } else {
+      const label = document.createElement('p');
+      label.className = 'thread-empty-label';
+      label.textContent = 'No threads yet.';
+      listEl.appendChild(label);
     }
-    const label = document.createElement('p');
-    label.className = 'thread-empty-label';
-    label.textContent = 'No threads yet.';
-    listEl.appendChild(label);
     return;
   }
 

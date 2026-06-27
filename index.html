@@ -679,10 +679,72 @@
 
 
       <!-- ============================================================
-           ONBOARDING (shown every launch)
+           INSTRUCTIONS (shown every launch — typewriter animation)
            ============================================================ -->
-      <div class="onboarding" id="onboarding" onclick="onboardingTap(event)">
-        <button class="onboarding-close-btn" onclick="event.stopPropagation(); finishOnboarding()" aria-label="Skip">✕</button>
+      <div class="instructions" id="instructions" onclick="instructionsTap(event)" style="display:none">
+        <button class="instructions-close-btn" onclick="event.stopPropagation(); finishInstructions()" aria-label="Skip">✕</button>
+        <div class="instructions-content">
+
+          <div class="onboarding-wordmark">Zelo</div>
+
+          <div class="instructions-slide active" data-slide="0">
+            <div class="onboarding-icon" style="background:radial-gradient(circle,rgba(236,72,153,0.14) 0%,transparent 65%)">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
+                   stroke="#ec4899" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <circle cx="8.5" cy="10" r="0.8" fill="#ec4899" stroke="none"/>
+                <circle cx="12"  cy="10" r="0.8" fill="#ec4899" stroke="none"/>
+                <circle cx="15.5" cy="10" r="0.8" fill="#ec4899" stroke="none"/>
+              </svg>
+            </div>
+            <h2 class="instructions-title">Get reply suggestions</h2>
+            <p class="instructions-desc">Never get left on read again.</p>
+          </div>
+
+          <div class="instructions-slide" data-slide="1">
+            <div class="onboarding-icon" style="background:radial-gradient(circle,rgba(244,63,94,0.12) 0%,transparent 65%)">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
+                   stroke="#f43f5e" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" fill="rgba(244,63,94,0.06)"/>
+                <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>
+              </svg>
+            </div>
+            <h2 class="instructions-title">Practice conversations</h2>
+            <p class="instructions-desc">Rehearse real chats, zero pressure.</p>
+          </div>
+
+          <div class="instructions-slide" data-slide="2">
+            <div class="onboarding-icon" style="background:radial-gradient(circle,rgba(245,158,11,0.14) 0%,transparent 65%)">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
+                   stroke="#d97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+                <polyline points="16 7 22 7 22 13"/>
+              </svg>
+            </div>
+            <h2 class="instructions-title">Improve your texting</h2>
+            <p class="instructions-desc">Go from overthinking to effortless.</p>
+          </div>
+
+          <div class="onboarding-dots">
+            <span class="instructions-dot active" data-dot="0"></span>
+            <span class="instructions-dot" data-dot="1"></span>
+            <span class="instructions-dot" data-dot="2"></span>
+          </div>
+
+          <p class="onboarding-tap-hint">tap anywhere to continue</p>
+
+          <button class="instructions-back-btn" id="instructions-back-btn"
+                  onclick="event.stopPropagation(); instructionsBack()" hidden>Back</button>
+
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           ONBOARDING (first launch only — simple, Next button)
+           ============================================================ -->
+      <div class="onboarding" id="onboarding">
+        <button class="onboarding-close-btn" onclick="finishOnboarding()" aria-label="Skip">✕</button>
         <div class="onboarding-content">
 
           <div class="onboarding-wordmark">Zelo</div>
@@ -731,7 +793,7 @@
             <span class="onboarding-dot" data-dot="2"></span>
           </div>
 
-          <p class="onboarding-tap-hint">tap anywhere to continue</p>
+          <button class="onboarding-btn" onclick="onboardingNext()" style="touch-action:manipulation;margin-top:20px">Next</button>
 
         </div>
       </div>
