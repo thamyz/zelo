@@ -19,6 +19,6 @@ class Server(socketserver.TCPServer):
     allow_reuse_address = True
 
 
-with Server(("127.0.0.1", PORT), Handler) as httpd:
-    print(f"Serving {ROOT} at http://127.0.0.1:{PORT}")
+with Server(("0.0.0.0", PORT), Handler) as httpd:
+    print(f"Serving {ROOT} at http://0.0.0.0:{PORT}")
     httpd.serve_forever()

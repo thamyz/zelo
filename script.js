@@ -396,11 +396,20 @@ function doTypingAndReply(timing) {
   const typingDuration = randBetween(timing.typingMin, timing.typingMax);
   setHeaderStatus("typing");
   showTypingIndicator();
-  state.pendingTimer = setTimeout(() => {
+
+  // Start the DeepSeek fetch concurrently while the typing indicator shows
+  const replyPromise = _fetchAIGirlReply();
+
+  state.pendingTimer = setTimeout(async () => {
+    let aiReply;
+    try {
+      aiReply = await replyPromise;
+    } catch (_) {
+      aiReply = "sorry got distracted lol";
+    }
     hideTypingIndicator();
     setHeaderStatus("online");
     removeSeenStatus();
-    const aiReply = getNextReply();
     appendAIBubble(aiReply);
     syncChatToStore(aiReply, 'ai');
     state.awaitingReply = false;
@@ -410,11 +419,25 @@ function doTypingAndReply(timing) {
   }, typingDuration);
 }
 
-function getNextReply() {
-  const pool  = REPLIES[state.difficulty];
-  const reply = pool[state.replyIndex % pool.length];
-  state.replyIndex++;
-  return reply;
+async function _fetchAIGirlReply() {
+  const systemPrompt = state.character?.systemPrompt || '';
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const history = chat ? chat.messages : [];
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...history.map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.text
+    }))
+  ];
+
+  const { data, error } = await zeloSupabase.functions.invoke('deepseek-proxy', {
+    body: { model: 'deepseek-chat', messages, max_tokens: 200, temperature: 1.0 }
+  });
+
+  if (error) throw new Error(error.message);
+  return data.choices[0].message.content.trim();
 }
 
 function cancelPendingReply() {
@@ -3035,6 +3058,10 @@ function toggleThreadEditMode() {
 function renderThreadList() {
   const listEl = document.getElementById('thread-list');
   if (!listEl) return;
+
+  // Edit button is always visible regardless of thread count
+  const editBtnEl = document.getElementById('thread-edit-btn');
+  if (editBtnEl) editBtnEl.hidden = false;
 
   const threads = getThreads();
   listEl.innerHTML = '';
