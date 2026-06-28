@@ -4935,43 +4935,53 @@ textarea { font-family: inherit; }
 /* ================================================================
    AI COACH — entry card on the Scan page  (Fix 5)
    ================================================================ */
+.scan-ai-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-2);
+  margin-top: 8px;
+  margin-bottom: 0;
+  padding: 0 4px;
+  line-height: 1.4;
+}
+
 .aicoach-card {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 18px;
-  margin-top: 18px;
-  box-shadow: 0 4px 18px rgba(236, 72, 153, 0.06);
+  border-radius: 18px;
+  padding: 13px 14px;
+  margin-top: 14px;
+  box-shadow: 0 2px 12px rgba(236, 72, 153, 0.05);
   cursor: pointer;
 }
 .aicoach-card-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 .aicoach-card-titles { min-width: 0; }
 .aicoach-card-title {
   display: flex;
   align-items: center;
-  font-size: 1.05rem;
+  font-size: 0.97rem;
   font-weight: 800;
   color: var(--text);
 }
 .aicoach-card-sub {
   display: block;
-  margin-top: 3px;
-  font-size: 0.82rem;
+  margin-top: 2px;
+  font-size: 0.78rem;
   color: var(--text-2);
 }
 .aicoach-beta {
-  margin-left: 8px;
+  margin-left: 7px;
   background: rgba(236, 72, 153, 0.12);
   color: var(--accent);
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 999px;
   text-transform: none;
 }
@@ -4979,15 +4989,15 @@ textarea { font-family: inherit; }
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: #fff;
   border: 1px solid var(--border-2);
-  border-radius: 11px;
-  padding: 8px 11px;
-  font-size: 0.78rem;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-2);
-  max-width: 150px;
+  max-width: 140px;
 }
 .aicoach-thread-dropdown span {
   white-space: nowrap;
@@ -4998,17 +5008,17 @@ textarea { font-family: inherit; }
 
 .aicoach-card-body {
   display: flex;
-  gap: 12px;
-  margin-top: 15px;
-  background: rgba(236, 72, 153, 0.035);
-  border: 1px solid rgba(236, 72, 153, 0.10);
-  border-radius: 16px;
-  padding: 15px;
+  gap: 10px;
+  margin-top: 10px;
+  background: rgba(236, 72, 153, 0.03);
+  border: 1px solid rgba(236, 72, 153, 0.09);
+  border-radius: 13px;
+  padding: 11px 12px;
 }
 .aicoach-avatar {
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: rgba(236, 72, 153, 0.12);
   color: var(--accent);
@@ -5020,31 +5030,31 @@ textarea { font-family: inherit; }
 .aicoach-intro-hi {
   color: var(--accent);
   font-weight: 700;
-  font-size: 0.98rem;
-  margin-bottom: 4px;
+  font-size: 0.88rem;
+  margin-bottom: 3px;
 }
 .aicoach-intro-text {
   color: var(--text);
-  font-size: 0.92rem;
-  line-height: 1.5;
-  margin-bottom: 4px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin-bottom: 2px;
 }
 .aicoach-card-actions {
   display: flex;
-  gap: 9px;
-  margin-top: 12px;
+  gap: 7px;
+  margin-top: 9px;
 }
 .aicoach-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: #fff;
   border: 1px solid var(--accent-border);
   color: var(--accent);
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 6px 12px;
 }
 .aicoach-pill:hover { background: var(--accent-soft); }
 
