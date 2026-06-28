@@ -4958,8 +4958,12 @@ textarea { font-family: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+.aicoach-card-titles {
   cursor: pointer;
   user-select: none;
+  flex: 1;
+  min-width: 0;
 }
 .aicoach-card-chevron {
   margin-left: 5px;
@@ -4970,7 +4974,6 @@ textarea { font-family: inherit; }
 .aicoach-card-chevron--open {
   transform: rotate(180deg);
 }
-.aicoach-card-titles { min-width: 0; }
 .aicoach-card-title {
   display: flex;
   align-items: center;

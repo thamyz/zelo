@@ -122,8 +122,8 @@
 
           <!-- AI COACH — entry card. Header toggles expand; body tap opens full page. -->
           <div class="aicoach-card" id="aicoach-card">
-            <div class="aicoach-card-head" onclick="toggleAiCoachCard()">
-              <div class="aicoach-card-titles">
+            <div class="aicoach-card-head">
+              <div class="aicoach-card-titles" onclick="toggleAiCoachCard()">
                 <span class="aicoach-card-title">
                   AI Coach
                   <svg class="aicoach-card-chevron" id="aicoach-card-chevron" width="13" height="13"
@@ -135,7 +135,7 @@
                 <span class="aicoach-card-sub">Get personalized advice and reply suggestions</span>
               </div>
               <button class="aicoach-thread-dropdown" id="aicoach-thread-dropdown"
-                      type="button" onclick="event.stopPropagation(); openThreadLinkPicker()">
+                      type="button" onclick="openThreadLinkPicker()">
                 <span id="aicoach-thread-dropdown-label">No thread linked</span>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
