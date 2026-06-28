@@ -87,7 +87,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // ================================================================
 
 function showTab(name) {
-  if ((name === 'practice' || name === 'chats') && !AUTH.signedIn()) {
+  if ((name === 'practice' || name === 'chats') && !AUTH.signedIn() && !tourSwitchingTab) {
     if (!DEV_MODE) AUTH.requireAuth(name, () => showTab(name));
     else showTab(name);
     return;
