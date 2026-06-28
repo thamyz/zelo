@@ -1197,6 +1197,30 @@ function onAsstInput() {
 
 // Keeps the message preview button on the main Scan page in sync with
 // whatever was typed on the dedicated typing page.
+function clearScanInput() {
+  state.asstMessage = '';
+  state.asstContext = '';
+  state.scanContext = {};
+  state.exampleScanActive = false;
+  const input = document.getElementById('asst-input');
+  if (input) input.value = '';
+  updateScanMessagePreview();
+  // Reset Tell Zelo More sub-label
+  const sub = document.getElementById('tellzelo-sub');
+  if (sub) sub.textContent = 'Add details for better analysis';
+  const card = document.getElementById('tellzelo-card');
+  if (card) card.classList.remove('filled');
+  // Reset upload row
+  const thumb = document.getElementById('upload-row-thumb');
+  const label = document.getElementById('upload-label-text');
+  const icon  = document.getElementById('upload-icon-sm');
+  const row   = document.getElementById('upload-row');
+  if (thumb) { thumb.hidden = true; thumb.src = ''; }
+  if (label) label.hidden = false;
+  if (icon)  icon.hidden  = false;
+  if (row)   row.classList.remove('has-file');
+}
+
 function updateScanMessagePreview() {
   const text    = document.getElementById("asst-input").value.trim();
   const previewEl = document.getElementById("asst-message-preview-text");
@@ -1671,12 +1695,10 @@ function _onReplyRevealed(wasFirstRunScan, isExactExampleText) {
 // zelo_scan_first_run is already marked complete by the time this runs (see
 // generateReplies' result-reveal step) — this just resets the input/UI.
 function dismissExampleScan() {
-  state.exampleScanActive = false;
   const promptEl = document.getElementById("scan-post-result-prompt");
   promptEl.hidden = true;
   promptEl.innerHTML = "";
-  document.getElementById("asst-input").value = "";
-  updateScanMessagePreview();
+  clearScanInput();
   checkGenerateReady();
   popScreen();
 }
@@ -3295,6 +3317,7 @@ function renderThreadList() {
 // Back button on result screen — check if scan has been saved first
 function goBackFromResult() {
   if (state.scanSavedToThread || state.scanSkippedSave) {
+    clearScanInput();
     popScreen();
     return;
   }
@@ -3314,7 +3337,7 @@ function showSaveBeforeLeave() {
     const el = document.getElementById('save-reminder-overlay');
     if (el) el.remove();
   }
-  function leaveAnyway() { close(); popScreen(); }
+  function leaveAnyway() { close(); clearScanInput(); popScreen(); }
 
   function getCard() { return document.getElementById('save-reminder-card'); }
 
@@ -3369,7 +3392,7 @@ function showSaveBeforeLeave() {
               renderThreadList();
             }
             state.scanSavedToThread = true;
-            close(); popScreen();
+            close(); clearScanInput(); popScreen();
           };
           card.querySelector('.save-reminder-leave-btn').onclick = close;
         };
