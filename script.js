@@ -4137,10 +4137,12 @@ function openThreadLinkPicker() {
 
 function toggleAiCoachCard() {
   const body    = document.getElementById('aicoach-card-body');
+  const sub     = document.getElementById('aicoach-card-sub');
   const chevron = document.getElementById('aicoach-card-chevron');
   if (!body) return;
   const opening = body.hidden;
   body.hidden = !opening;
+  if (sub)     sub.hidden = !opening;
   if (chevron) chevron.classList.toggle('aicoach-card-chevron--open', opening);
 }
 
