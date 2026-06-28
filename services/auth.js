@@ -303,6 +303,14 @@ const AUTH = (() => {
     if (typeof cb === 'function') cb();
   }
 
+  // ── Dismiss ────────────────────────────────────────────────────
+
+  function dismiss() {
+    _pending = null;
+    sessionStorage.removeItem('zelo_auth_dest');
+    _hideAll();
+  }
+
   // ── Sign out ───────────────────────────────────────────────────
 
   async function signOut() {
@@ -324,6 +332,7 @@ const AUTH = (() => {
     signInWithApple,
     signInWithGoogle,
     handleSetupContinue,
-    signOut
+    signOut,
+    dismiss
   };
 })();

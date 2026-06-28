@@ -4132,6 +4132,28 @@ textarea { font-family: inherit; }
 
 .auth-back-btn:hover { background: var(--border); }
 
+.auth-dismiss-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-dismiss-btn:hover { background: var(--border); color: var(--text); }
+
 /* ── Email form ── */
 .auth-form {
   display: flex;
