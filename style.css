@@ -5070,6 +5070,8 @@ textarea { font-family: inherit; }
   padding: 6px 12px;
 }
 .aicoach-pill:hover { background: var(--accent-soft); }
+.aicoach-card-body[hidden] { display: none; }
+.aicoach-card-sub[hidden] { display: none; }
 
 
 /* ================================================================
