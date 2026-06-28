@@ -65,6 +65,12 @@ const state = {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
+  // DEV — clear first-run keys on every load for testing. Remove before release.
+  localStorage.removeItem('zelo_onboarding_done');
+  localStorage.removeItem('zelo_example_prefilled');
+  localStorage.removeItem('zelo_scan_first_run');
+  localStorage.removeItem('zelo_tour_seen');
+
   AUTH.init(); // session check — must run before any auth triggers fire
   // TODO — merge anonymous scan history on signup
 
