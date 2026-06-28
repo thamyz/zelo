@@ -59,16 +59,15 @@
             </button>
           </div>
 
-          <!-- MESSAGE — tapping navigates to its own typing page (not editable inline) -->
+          <!-- MESSAGE — inline editable textarea -->
           <div class="input-card scan-message">
-            <button
-              type="button"
-              class="msg-preview-btn"
-              id="asst-message-preview"
-              onclick="openScanType()"
-            >
-              <span class="msg-preview-text msg-preview-placeholder" id="asst-message-preview-text">Paste a message, describe the situation, or upload a screenshot…</span>
-            </button>
+            <textarea
+              id="asst-input"
+              class="msg-textarea scan-inline-textarea"
+              placeholder="Paste a message, describe the situation, or upload a screenshot…"
+              maxlength="4000"
+              oninput="onAsstInput()"
+            ></textarea>
 
             <!-- Footer: screenshot upload — tapping navigates to its own upload page -->
             <div class="msg-footer">
@@ -497,11 +496,9 @@
 
         <div class="scan-type-layout">
           <textarea
-            id="asst-input"
             class="msg-textarea msg-textarea--primary scan-type-textarea"
             placeholder="Paste a message, describe the situation…"
             maxlength="4000"
-            oninput="onAsstInput()"
           ></textarea>
 
           <!-- Thread pre-select — rendered by renderScanTypeThreadPicker() -->
@@ -712,6 +709,7 @@
         <!-- big heart / X that pops on a guided swipe -->
         <div class="tour-swipe-feedback" id="tour-swipe-feedback" hidden></div>
         <div class="tour-tooltip" id="tour-tooltip" onclick="tourTooltipTap(event)">
+          <button class="tour-close-x" onclick="event.stopPropagation(); endTour()" aria-label="Close tour">✕</button>
           <span class="tour-kicker" id="tour-kicker">Zelo</span>
           <p class="tour-text" id="tour-text"></p>
           <div class="tour-controls">
@@ -1143,6 +1141,56 @@
             </div>
             <button class="auth-submit-btn"
                     onclick="AUTH.handleSetupContinue()">Let's go</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Detail Modal — lives at #app level so it covers the tab bar -->
+      <div class="profile-detail-modal" id="profile-detail-modal" hidden>
+        <div class="profile-detail-sheet">
+          <div class="profile-detail-scroll">
+            <div class="profile-detail-photo" id="pd-photo"></div>
+            <div class="profile-detail-body">
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <span class="swipe-card-name" id="pd-name" style="font-size:1.35rem;font-weight:700;"></span>
+                <span class="swipe-card-occ" id="pd-age" style="font-size:1.05rem;"></span>
+              </div>
+              <span class="swipe-card-occ" id="pd-occ" style="margin-top:2px;"></span>
+              <div class="profile-detail-section">
+                <span class="swipe-card-section-head">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  About Me
+                </span>
+                <p class="swipe-card-bio" id="pd-bio"></p>
+              </div>
+              <div class="profile-detail-section">
+                <span class="swipe-card-section-head">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  Likes
+                </span>
+                <div class="swipe-card-tags" id="pd-tags"></div>
+              </div>
+              <div class="card-mode-section profile-detail-section">
+                <div class="card-mode-pills" id="pd-mode-pills"></div>
+                <p class="card-mode-desc" id="pd-mode-desc"></p>
+              </div>
+            </div>
+          </div>
+          <div class="profile-detail-actions">
+            <div style="display:flex;gap:10px;">
+              <button class="swipe-action-btn swipe-action-btn--skip" style="flex:1;" onclick="closeProfileDetail();onSkipBtn();">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Skip
+              </button>
+              <button class="swipe-action-btn swipe-action-btn--like" style="flex:1;" onclick="closeProfileDetail();onLikeBtn();">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                I'm Interested
+              </button>
+            </div>
           </div>
         </div>
       </div>

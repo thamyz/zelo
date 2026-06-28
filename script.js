@@ -1064,8 +1064,48 @@ function enableSwipeButtons() {
 // this does NOT use pushScreen()/the .screen takeover system.
 // ================================================================
 
-function openProfileDetail() {}
-function closeProfileDetail() {}
+function openProfileDetail() {
+  const profile = state.swipeProfiles[state.swipeIndex];
+  if (!profile) return;
+
+  const modal = document.getElementById('profile-detail-modal');
+  if (!modal) return;
+
+  // Populate gradient photo area
+  const photo = document.getElementById('pd-photo');
+  photo.style.background = `linear-gradient(145deg, ${profile.gradientColors[0]}, ${profile.gradientColors[1]})`;
+  photo.innerHTML = `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:4rem;font-weight:700;color:rgba(255,255,255,0.9);">${profile.initial}</span>`;
+  photo.style.position = 'relative';
+
+  // Populate text fields
+  document.getElementById('pd-name').textContent = profile.name;
+  document.getElementById('pd-age').textContent  = profile.age;
+  document.getElementById('pd-occ').textContent  = profile.occupation;
+  document.getElementById('pd-bio').textContent  = profile.bio;
+  document.getElementById('pd-tags').innerHTML   = buildInterestTagsHTML(profile.interests);
+
+  // Mode pills
+  const currentMode = state.cardModes[profile.name] || CARD_MODE_DEFAULT;
+  const currentModeDesc = CARD_MODES.find(m => m.key === currentMode).desc;
+  document.getElementById('pd-mode-pills').innerHTML = CARD_MODES.map(m => {
+    const locked = !m.free && !isColdAvailable();
+    return `<button type="button" class="card-mode-pill${m.key === currentMode ? ' active' : ''}${locked ? ' locked' : ''}" data-mode="${m.key}">
+      ${m.label}${locked ? ' 🔒' : ''}
+    </button>`;
+  }).join('');
+  document.getElementById('pd-mode-desc').textContent = currentModeDesc;
+  attachProfileDetailModeListeners(profile);
+
+  // Tap backdrop to close
+  modal.onclick = e => { if (e.target === modal) closeProfileDetail(); };
+
+  modal.removeAttribute('hidden');
+}
+
+function closeProfileDetail() {
+  const modal = document.getElementById('profile-detail-modal');
+  if (modal) modal.setAttribute('hidden', '');
+}
 
 // Fix 2: Swipe-down-to-dismiss on the profile detail sheet.
 // Supports both touch (mobile) and mouse (desktop). Only activates
@@ -1202,6 +1242,8 @@ function onAsstInput() {
   }
   const cc = document.getElementById("char-count");
   if (cc) cc.textContent = `${el.value.length}/4000`;
+  // Remove bounce animation as soon as the user types or deletes anything
+  document.getElementById('asst-generate-btn')?.classList.remove('generate-btn--bounce');
   updateScanMessagePreview();
   checkGenerateReady();
 }
@@ -1233,8 +1275,9 @@ function clearScanInput() {
 }
 
 function updateScanMessagePreview() {
-  const text    = document.getElementById("asst-input").value.trim();
+  const text    = document.getElementById("asst-input")?.value.trim();
   const previewEl = document.getElementById("asst-message-preview-text");
+  if (!previewEl) return;
   if (text) {
     previewEl.textContent = text;
     previewEl.classList.remove("msg-preview-placeholder");
@@ -1257,20 +1300,12 @@ function closeSituation() { document.getElementById('situation')?.classList.remo
 // ================================================================
 
 function openScanType() {
-  state.preselectThreadId = null;
-  pushScreen('scan-type');
-  const input = document.getElementById('asst-input');
-  requestAnimationFrame(() => {
-    input.focus();
-    renderScanTypeThreadPicker();
-  });
+  document.getElementById('asst-input')?.focus();
 }
 
-// "Continue" / back-arrow on the typing page — saves the preview and returns.
 function confirmScanType() {
   updateScanMessagePreview();
   checkGenerateReady();
-  popScreen();
 }
 
 function renderScanTypeThreadPicker() {
@@ -1976,14 +2011,13 @@ function closeScanModal() {}
 //   expand    → Situation step: auto-demos the collapse→expand interaction
 const TOUR_STEPS = [
   // — SCAN —
-  { tab: 'assistant', sel: '#asst-message-preview', kicker: 'Scan', text: 'Paste their message here.' },
-  { tab: 'assistant', sel: '#asst-message-preview', kicker: 'Scan', text: 'Who are you texting? What happened? What do you want?', secondary: true },
+  { tab: 'assistant', sel: '#asst-input', kicker: 'Scan', text: 'Paste their message here.' },
   { tab: 'assistant', sel: '#tellzelo-card', kicker: 'Scan', text: 'Add a little context.' },
   { tab: 'assistant', sel: '#upload-row', kicker: 'Scan', text: 'Or just drop a screenshot.', secondary: true },
   { tab: 'assistant', sel: '#asst-generate-btn', kicker: 'Scan', text: 'Hit generate for your reply.' },
   { tab: 'assistant', sel: '#aicoach-card', kicker: 'AI Coach', text: 'Meet AI Coach — tap for personalized advice and reply suggestions.' },
   // — HOME —
-  { tab: 'practice',  sel: '#tabbtn-practice', kicker: 'Home', text: 'This is Home — meet new people here.' },
+  { tab: 'practice',  sel: '#tabbtn-practice', kicker: 'Home', text: 'This is Home — practice with AI matches.' },
   { tab: 'practice',  sel: '#card-deck', kicker: 'Home', text: 'Browse profiles and find someone to chat with.' },
   { tab: 'practice',  sel: '#card-deck', swipeDir: 'right', kicker: 'Home', text: 'Swipe right to like.' },
   { tab: 'practice',  sel: '#card-deck', swipeDir: 'left',  kicker: 'Home', text: 'Now swipe left to pass.' },
