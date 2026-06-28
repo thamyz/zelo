@@ -429,8 +429,8 @@ textarea { font-family: inherit; }
   text-align: left;
   background: transparent;
   border: none;
-  padding: 12px 16px;
-  min-height: 50px;
+  padding: 16px 18px;
+  min-height: 72px;
 }
 
 .msg-preview-text {
