@@ -384,7 +384,7 @@ Quiet, creative, dry humor, observant, slightly awkward in a comfortable way, ne
     id: 'camila',
     name: 'Camila',
     age: 22,
-    occupation: 'Graphic Designer',
+    occupation: 'Kindergarten Teacher',
     bio: 'Mario Kart ruins friendships.',
     interests: ['Nintendo', 'Baking', 'Picnics'],
     initial: 'C',
