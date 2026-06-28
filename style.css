@@ -352,7 +352,7 @@ textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 14px 9px 10px;
+  padding: 12px 14px 12px 10px;
   border-top: 1px solid var(--border);
   transition: padding 0.12s;
 }
@@ -406,7 +406,7 @@ textarea { font-family: inherit; }
 .upload-row-thumb[hidden] { display: none; }
 
 .upload-label-text {
-  font-size: 0.8rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: inherit;
 }
@@ -429,12 +429,12 @@ textarea { font-family: inherit; }
   text-align: left;
   background: transparent;
   border: none;
-  padding: 16px 18px 14px;
-  min-height: 60px;
+  padding: 20px 18px 18px;
+  min-height: 72px;
 }
 
 .msg-preview-text {
-  font-size: 0.92rem;
+  font-size: 1rem;
   line-height: 1.6;
   color: var(--text);
   overflow-wrap: break-word;
@@ -451,7 +451,7 @@ textarea { font-family: inherit; }
   align-items: center;
   gap: 13px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 17px 18px;
   background: var(--s1);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
@@ -466,8 +466,8 @@ textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--accent-soft);
@@ -483,13 +483,13 @@ textarea { font-family: inherit; }
 }
 
 .tellzelo-title {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text);
 }
 
 .tellzelo-sub {
-  font-size: 0.76rem;
+  font-size: 0.86rem;
   color: var(--text-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -515,10 +515,10 @@ textarea { font-family: inherit; }
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 17px 24px;
+  padding: 21px 24px;
   background: var(--accent);
   color: #fff;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   border-radius: 99px;
   letter-spacing: 0.01em;
@@ -2224,19 +2224,24 @@ textarea { font-family: inherit; }
 }
 
 .tour-close-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
-  border: none;
-  font-size: 14px;
-  color: var(--text-3);
-  padding: 4px 6px;
-  line-height: 1;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  z-index: 1;
+  display: none !important;
 }
+
+.tour-get-started {
+  background: #ec4899;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  -webkit-tap-highlight-color: transparent;
+  margin-left: auto;
+}
+
+.tour-get-started[hidden] { display: none !important; }
 
 .tour-controls {
   display: flex;
@@ -2363,7 +2368,6 @@ textarea { font-family: inherit; }
   justify-content: center;
   padding: 0 32px;
   transition: opacity 0.3s ease;
-  cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -2382,8 +2386,7 @@ textarea { font-family: inherit; }
   touch-action: manipulation;
 }
 
-/* Hide the progress bar — replaced by tap-anywhere UX */
-.onboarding-progress { display: none; }
+/* Progress bar is visible — button-driven navigation */
 
 .onboarding-tap-hint {
   margin-top: 40px;
@@ -3529,6 +3532,17 @@ textarea { font-family: inherit; }
   font-weight: 600;
   cursor: pointer;
 }
+.thread-new-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 4px;
+}
+.thread-new-input-row .thread-save-input {
+  flex: 1;
+  color: var(--text, #1a1a1a);
+}
+
 .thread-save-skip {
   display: block;
   background: none;
@@ -4584,4 +4598,81 @@ textarea { font-family: inherit; }
 
 /* Ensure hidden attribute wins over display:flex on overlay elements */
 .onboarding[hidden],
-.instructions[hidden] { display: none !important; }
+.instructions[hidden],
+.tour-entry-overlay[hidden] { display: none !important; }
+
+/* ============================================================
+   TOUR ENTRY POPUP — "New to Zelo?" shown every launch
+   ============================================================ */
+.tour-entry-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 998;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tour-entry-card {
+  background: var(--bg);
+  border-radius: 20px;
+  padding: 32px 28px 28px;
+  width: calc(100% - 48px);
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}
+
+.tour-entry-icon {
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.tour-entry-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.tour-entry-sub {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  margin: 0 0 10px;
+}
+
+.tour-entry-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.tour-entry-yes {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 99px;
+  padding: 14px 24px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tour-entry-no {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 8px;
+  -webkit-tap-highlight-color: transparent;
+}

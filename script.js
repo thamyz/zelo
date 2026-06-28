@@ -1867,7 +1867,7 @@ function initOnboarding() {
   if (localStorage.getItem('zelo_onboarding_done')) {
     const el = document.getElementById('onboarding');
     if (el) el.setAttribute('hidden', '');
-    showInstructions();
+    startTour();
     return;
   }
 
@@ -1882,6 +1882,10 @@ function showOnboardingSlide(index) {
   document.querySelectorAll('.onboarding-dot').forEach((el, i) => {
     el.classList.toggle('active', i === index);
   });
+  const fill = document.getElementById('onboarding-progress-fill');
+  if (fill) fill.style.width = ((index + 1) / ONBOARDING_TOTAL * 100) + '%';
+  const btn = document.querySelector('.onboarding-btn');
+  if (btn) btn.textContent = (index === ONBOARDING_TOTAL - 1) ? 'Get Started' : 'Next';
 }
 
 function onboardingNext() {
@@ -1898,93 +1902,9 @@ function finishOnboarding() {
   const overlay = document.getElementById('onboarding');
   overlay.classList.add('hidden');
   setTimeout(() => { overlay.setAttribute('hidden', ''); overlay.classList.remove('hidden'); }, 300);
-  showInstructions();
+  startTour();
 }
 
-
-// ================================================================
-// INSTRUCTIONS (separate from onboarding — shown every launch)
-// Typewriter animation, tap-anywhere, X close, Back button.
-// ================================================================
-
-let instructionSlide = 0;
-const INSTRUCTIONS_TOTAL = 3;
-
-function showInstructions() {
-  const el = document.getElementById('instructions');
-  if (!el) {
-    const tabBar = document.getElementById('tab-bar');
-    if (tabBar) tabBar.style.display = '';
-    maybeShowScanIntro();
-    return;
-  }
-  instructionSlide = 0;
-  _obTextReady = false;
-  el.removeAttribute('hidden');
-  el.classList.remove('hidden');
-  showInstructionSlide(0);
-}
-
-function showInstructionSlide(index) {
-  document.querySelectorAll('.instructions-slide').forEach((sl, i) => {
-    sl.classList.toggle('active', i === index);
-  });
-  document.querySelectorAll('.instructions-dot').forEach((d, i) => {
-    d.classList.toggle('active', i === index);
-  });
-  const backBtn = document.getElementById('instructions-back-btn');
-  if (backBtn) backBtn.hidden = (index === 0);
-
-  const slide = document.querySelectorAll('.instructions-slide')[index];
-  if (slide) {
-    const titleEl = slide.querySelector('.instructions-title');
-    const descEl  = slide.querySelector('.instructions-desc');
-    if (titleEl && descEl) {
-      if (!titleEl.dataset.full) titleEl.dataset.full = titleEl.textContent.trim();
-      if (!descEl.dataset.full)  descEl.dataset.full  = descEl.textContent.trim();
-      _obTextReady = false;
-      setTimeout(() => _obType(titleEl, descEl, titleEl.dataset.full, descEl.dataset.full), 80);
-    }
-  }
-}
-
-function instructionsTap(e) {
-  if (e && (e.target.closest('.instructions-close-btn') || e.target.closest('#instructions-back-btn'))) return;
-  const slide = document.querySelectorAll('.instructions-slide')[instructionSlide];
-  if (!slide) { finishInstructions(); return; }
-  const titleEl = slide.querySelector('.instructions-title');
-  const descEl  = slide.querySelector('.instructions-desc');
-  if (_obTyping) {
-    _obRevealAll(titleEl, descEl, titleEl.dataset.full || '', descEl.dataset.full || '');
-  } else if (_obTextReady) {
-    if (instructionSlide < INSTRUCTIONS_TOTAL - 1) {
-      instructionSlide++;
-      showInstructionSlide(instructionSlide);
-    } else {
-      finishInstructions();
-    }
-  }
-}
-
-function instructionsBack() {
-  if (instructionSlide > 0) {
-    instructionSlide--;
-    showInstructionSlide(instructionSlide);
-  }
-}
-
-function finishInstructions() {
-  if (_obTypeTimer) { clearTimeout(_obTypeTimer); _obTypeTimer = null; }
-  _obTyping = false;
-  const overlay = document.getElementById('instructions');
-  if (overlay) {
-    overlay.classList.add('hidden');
-    setTimeout(() => { overlay.setAttribute('hidden', ''); overlay.classList.remove('hidden'); }, 300);
-  }
-  const tabBar = document.getElementById('tab-bar');
-  if (tabBar) tabBar.style.display = '';
-  maybeShowScanIntro();
-}
 
 
 // ================================================================
@@ -2022,21 +1942,22 @@ function closeScanModal() {}
 //   round     → spotlight is circular (for the round Scan/FAB buttons)
 //   expand    → Situation step: auto-demos the collapse→expand interaction
 const TOUR_STEPS = [
-  // — SCAN: location (tab) → message → tell zelo more (context) → screenshot → generate —
-  { tab: 'assistant', sel: '.scan-fab', dwell: 2000, kicker: 'Scan', text: 'This is Scan.' },
-  { tab: 'assistant', sel: '#asst-message-preview', dwell: 2000, kicker: 'Scan', text: "Drop in a message and we'll help you figure it out." },
-  { tab: 'assistant', sel: '#upload-row',        dwell: 2000, secondary: true, kicker: 'Scan', text: 'Or just drop a screenshot.' },
-  { tab: 'assistant', sel: '#asst-generate-btn', dwell: 2000, kicker: 'Scan', text: 'Hit generate for your reply.' },
-  // — HOME: where am I? (tab) → what's it for? (cards) → how? (swipe demos) —
-  { tab: 'practice',  sel: '#tabbtn-practice', dwell: 2000, kicker: 'Home', text: 'This is Home. Pick someone you like and say hi.' },
-  { tab: 'practice',  sel: '#card-deck', dwell: 2000, kicker: 'Home', text: 'Browse profiles and find someone to chat with.' },
-  { tab: 'practice',  sel: '#card-deck', swipeDir: 'right', dwell: 2000, kicker: 'Home', text: 'Swipe right to like.' },
-  { tab: 'practice',  sel: '#card-deck', swipeDir: 'left',  dwell: 2000, kicker: 'Home', text: 'Swipe left to pass.' },
-  // — CHATS: where am I? (tab) → what's it for? (list) → on to Scan —
-  { tab: 'chats',     sel: '#tabbtn-chats', dwell: 2000, kicker: 'Chats', text: 'This is Chats. Your conversations show up here.' },
-  { tab: 'chats',     sel: '#chats-list', selFallback: '#chats-empty', dwell: 2000, kicker: 'Chats', text: 'Matches show up here.' },
-  // — COMPLETION (engine quietly returns to Scan, no extra "tap Scan" step) —
-  { tab: 'assistant', final: true, dwell: 2000, kicker: 'All set', text: "You've got it from here" }
+  // — SCAN —
+  { tab: 'assistant', sel: '#asst-message-preview', kicker: 'Scan', text: 'Paste their message here.' },
+  { tab: 'assistant', sel: '#asst-message-preview', kicker: 'Scan', text: 'Who are you texting? What happened? What do you want?', secondary: true },
+  { tab: 'assistant', sel: '#tellzelo-card', kicker: 'Scan', text: 'Add a little context.' },
+  { tab: 'assistant', sel: '#upload-row', kicker: 'Scan', text: 'Or just drop a screenshot.', secondary: true },
+  { tab: 'assistant', sel: '#asst-generate-btn', kicker: 'Scan', text: 'Hit generate for your reply.' },
+  // — HOME —
+  { tab: 'practice',  sel: '#tabbtn-practice', kicker: 'Home', text: 'This is Home — meet new people here.' },
+  { tab: 'practice',  sel: '#card-deck', kicker: 'Home', text: 'Browse profiles and find someone to chat with.' },
+  { tab: 'practice',  sel: '#card-deck', swipeDir: 'right', kicker: 'Home', text: 'Swipe right to like.' },
+  { tab: 'practice',  sel: '#card-deck', swipeDir: 'left',  kicker: 'Home', text: 'Now swipe left to pass.' },
+  // — CHATS —
+  { tab: 'chats',     sel: '#tabbtn-chats', kicker: 'Chats', text: 'This is Chats — where your conversations live.' },
+  { tab: 'chats',     sel: '#chats-list', selFallback: '#chats-empty', kicker: 'Chats', text: 'Matches show up here. Jump back in anytime.' },
+  // — FINISH —
+  { tab: 'assistant', sel: '.scan-fab', round: true, kicker: 'All set', text: "You've got it from here.", last: true },
 ];
 
 const TOUR_ARM_DEFAULT = 2000;   // fallback dwell if a step omits one
@@ -2106,6 +2027,26 @@ function tourBackdropTap(e) {
 }
 
 function startTour() {
+  const tabBar = document.getElementById('tab-bar');
+  if (tabBar) tabBar.style.display = '';
+  const entry = document.getElementById('tour-entry-overlay');
+  if (entry) { entry.hidden = false; return; }
+  _launchTour();
+}
+
+function tourEntryYes() {
+  const entry = document.getElementById('tour-entry-overlay');
+  if (entry) entry.hidden = true;
+  _launchTour();
+}
+
+function tourEntryNo() {
+  const entry = document.getElementById('tour-entry-overlay');
+  if (entry) entry.hidden = true;
+  maybeShowScanIntro();
+}
+
+function _launchTour() {
   tourIndex = 0;
   const tour = document.getElementById('tour');
   tour.hidden = false;
@@ -2149,7 +2090,9 @@ function renderTourStep(i) {
   _tourType(step.text);
   document.getElementById('tour-back').hidden = (i === 0);
   tour.classList.toggle('tour--secondary', !!step.secondary);
-  tour.classList.toggle('tour--final', !!step.final);
+  tour.classList.toggle('tour--final', !!step.last);
+  const gsBtn = document.getElementById('tour-get-started');
+  if (gsBtn) gsBtn.hidden = !step.last;
 
   const live = !!step.act || !!step.swipeDir || !!step.expand;
   const backdrop = document.getElementById('tour-backdrop');
@@ -2163,12 +2106,6 @@ function renderTourStep(i) {
   const hit = document.getElementById('tour-hit');
   hit.hidden = !step.tapTarget;
   hit.dataset.active = step.tapTarget ? '1' : '0';
-
-  // The completion state is a centered branded card over a full dim.
-  if (step.final) {
-    requestAnimationFrame(() => requestAnimationFrame(() => positionFinal()));
-    return;
-  }
 
   const el = resolveStepEl(step);
   if (!el) { endTour(); return; }
@@ -2420,6 +2357,7 @@ function endTour() {
   tour.classList.remove('tour--secondary', 'tour--final');
   const hit = document.getElementById('tour-hit');
   if (hit) { hit.hidden = true; hit.dataset.active = '0'; }
+  maybeShowScanIntro();
 }
 
 // Keep the current step glued to its target while the window resizes or the
@@ -3025,24 +2963,59 @@ function deleteThread(threadId) {
   renderThreadList();
 }
 
-// + button: check free-tier slot then show name input or upgrade message
+// + button: check free-tier slot then show inline name input
 function openAddThread() {
   const count = getThreadCount();
   if (!isPaidUser() && count >= 2) {
-    document.getElementById('thread-upgrade-modal')?.hidden === false;
+    const modal = document.getElementById('thread-upgrade-modal');
+    if (modal) modal.hidden = false;
     return;
   }
-  const name = (prompt('Name:') || '').trim();
-  if (!name) return;
-  const threads = getThreads();
-  const norm = name.toLowerCase();
-  if (!threads.some(t => t.name.toLowerCase() === norm)) {
-    const thread = { id: 'thread_' + Date.now(), name, createdAt: Date.now(), scans: [], chat: [] };
-    threads.unshift(thread);
-    setThreadCount(count + 1);
-    saveThreads(threads);
+
+  // If an input row is already open, just focus it
+  const existing = document.getElementById('thread-new-input-row');
+  if (existing) { existing.querySelector('input')?.focus(); return; }
+
+  const listEl = document.getElementById('thread-list');
+  const newBtn = listEl?.querySelector('.thread-edit-new-btn');
+  if (!listEl) return;
+
+  const row = document.createElement('div');
+  row.id = 'thread-new-input-row';
+  row.className = 'thread-new-input-row';
+  row.innerHTML = `
+    <input class="thread-save-input thread-new-name-input"
+           type="text" placeholder="Thread name…" autocomplete="off" maxlength="50" />
+    <button class="thread-save-btn" type="button">Add</button>
+  `;
+
+  const input = row.querySelector('input');
+  const addBtn = row.querySelector('button');
+
+  function commit() {
+    const name = input.value.trim();
+    row.remove();
+    if (!name) return;
+    const threads = getThreads();
+    if (!threads.some(t => t.name.toLowerCase() === name.toLowerCase())) {
+      const thread = { id: 'thread_' + Date.now(), name, createdAt: Date.now(), scans: [], chat: [] };
+      threads.unshift(thread);
+      setThreadCount(count + 1);
+      saveThreads(threads);
+    }
+    renderThreadList();
   }
-  renderThreadList();
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { row.remove(); }
+  });
+  addBtn.addEventListener('click', commit);
+
+  if (newBtn) listEl.insertBefore(row, newBtn);
+  else listEl.appendChild(row);
+
+  setTimeout(() => input.focus(), 30);
 }
 
 function cancelAddThread() {}
