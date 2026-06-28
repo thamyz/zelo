@@ -120,13 +120,17 @@
           <p class="scan-ai-hint">AI Coach uses your scan + optional thread context for deeper advice</p>
           </div><!-- /.scan-main -->
 
-          <!-- AI COACH — entry card (Fix 5). Tapping anywhere opens the full page. -->
-          <div class="aicoach-card" id="aicoach-card" onclick="openAiCoach()">
-            <div class="aicoach-card-head">
+          <!-- AI COACH — entry card. Header toggles expand; body tap opens full page. -->
+          <div class="aicoach-card" id="aicoach-card">
+            <div class="aicoach-card-head" onclick="toggleAiCoachCard()">
               <div class="aicoach-card-titles">
                 <span class="aicoach-card-title">
                   AI Coach
-                  <span class="aicoach-beta">Beta</span>
+                  <svg class="aicoach-card-chevron" id="aicoach-card-chevron" width="13" height="13"
+                       viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
                 </span>
                 <span class="aicoach-card-sub">Get personalized advice and reply suggestions</span>
               </div>
@@ -140,7 +144,7 @@
               </button>
             </div>
 
-            <div class="aicoach-card-body">
+            <div class="aicoach-card-body" id="aicoach-card-body" onclick="openAiCoach()" hidden>
               <span class="aicoach-avatar" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>

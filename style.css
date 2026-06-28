@@ -429,13 +429,13 @@ textarea { font-family: inherit; }
   text-align: left;
   background: transparent;
   border: none;
-  padding: 20px 18px 18px;
-  min-height: 72px;
+  padding: 12px 16px;
+  min-height: 50px;
 }
 
 .msg-preview-text {
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.9rem;
+  line-height: 1.5;
   color: var(--text);
   overflow-wrap: break-word;
 }
@@ -4952,13 +4952,23 @@ textarea { font-family: inherit; }
   padding: 13px 14px;
   margin-top: 14px;
   box-shadow: 0 2px 12px rgba(236, 72, 153, 0.05);
-  cursor: pointer;
 }
 .aicoach-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.aicoach-card-chevron {
+  margin-left: 5px;
+  flex-shrink: 0;
+  transition: transform 0.22s ease;
+  color: var(--text-2);
+}
+.aicoach-card-chevron--open {
+  transform: rotate(180deg);
 }
 .aicoach-card-titles { min-width: 0; }
 .aicoach-card-title {
@@ -5408,6 +5418,9 @@ textarea { font-family: inherit; }
 .thread-link-name { flex: 1; font-weight: 600; color: var(--text); }
 .thread-link-count { color: var(--text-2); font-size: 0.82rem; }
 .thread-link-empty { color: var(--text-2); font-size: 0.9rem; text-align: center; padding: 16px 0; }
+.thread-link-row--remove { border-color: rgba(239,68,68,0.25); }
+.thread-link-row--remove .thread-link-avatar { background: rgba(239,68,68,0.1); color: #ef4444; font-size: 0.85rem; }
+.thread-link-row--remove .thread-link-name { color: #ef4444; }
 .thread-link-cancel {
   width: 100%;
   margin-top: 16px;

@@ -1981,6 +1981,7 @@ const TOUR_STEPS = [
   { tab: 'assistant', sel: '#tellzelo-card', kicker: 'Scan', text: 'Add a little context.' },
   { tab: 'assistant', sel: '#upload-row', kicker: 'Scan', text: 'Or just drop a screenshot.', secondary: true },
   { tab: 'assistant', sel: '#asst-generate-btn', kicker: 'Scan', text: 'Hit generate for your reply.' },
+  { tab: 'assistant', sel: '#aicoach-card', kicker: 'AI Coach', text: 'Meet AI Coach — tap for personalized advice and reply suggestions.' },
   // — HOME —
   { tab: 'practice',  sel: '#tabbtn-practice', kicker: 'Home', text: 'This is Home — meet new people here.' },
   { tab: 'practice',  sel: '#card-deck', kicker: 'Home', text: 'Browse profiles and find someone to chat with.' },
@@ -4095,16 +4096,30 @@ function hideAiCoachHowItWorks() { document.getElementById('aicoach-hiw-overlay'
 
 // ── Thread link picker (Fix 7) ─────────────────────────────────
 function openThreadLinkPicker() {
-  const overlay = document.getElementById('thread-link-overlay');
-  const list    = document.getElementById('thread-link-list');
+  const overlay  = document.getElementById('thread-link-overlay');
+  const list     = document.getElementById('thread-link-list');
   if (!overlay || !list) return;
-  const threads = getThreads();
+  const threads  = getThreads();
+  const linkedId = getLinkedThreadId();
   list.innerHTML = '';
 
+  // Remove option — only shown when a thread is currently linked
+  if (linkedId) {
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'thread-link-row thread-link-row--remove';
+    removeBtn.innerHTML = `
+      <span class="thread-link-avatar">✕</span>
+      <span class="thread-link-name">Remove thread</span>`;
+    removeBtn.onclick = () => linkThread(null);
+    list.appendChild(removeBtn);
+  }
+
   if (threads.length === 0) {
-    list.innerHTML = '<p class="thread-link-empty">No threads yet. Save a scan to a thread first.</p>';
+    const empty = document.createElement('p');
+    empty.className = 'thread-link-empty';
+    empty.textContent = 'No threads yet. Save a scan to a thread first.';
+    list.appendChild(empty);
   } else {
-    const linkedId = getLinkedThreadId();
     threads.forEach(t => {
       const btn = document.createElement('button');
       btn.className = 'thread-link-row' + (t.id === linkedId ? ' selected' : '');
@@ -4118,6 +4133,15 @@ function openThreadLinkPicker() {
     });
   }
   overlay.hidden = false;
+}
+
+function toggleAiCoachCard() {
+  const body    = document.getElementById('aicoach-card-body');
+  const chevron = document.getElementById('aicoach-card-chevron');
+  if (!body) return;
+  const opening = body.hidden;
+  body.hidden = !opening;
+  if (chevron) chevron.classList.toggle('aicoach-card-chevron--open', opening);
 }
 
 function closeThreadLinkPicker() {
