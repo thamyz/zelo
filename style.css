@@ -4698,3 +4698,712 @@ textarea { font-family: inherit; }
   padding: 8px;
   -webkit-tap-highlight-color: transparent;
 }
+
+
+/* ================================================================
+   HISTORY ICON  (Scan header, right) — replaces the old gear
+   ================================================================ */
+.history-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.history-btn:hover { background: var(--accent-soft); color: var(--accent); }
+
+
+/* ================================================================
+   HISTORY SCREEN  (Fix 2/3)
+   Full-screen overlay; tab bar stays visible (bottom inset).
+   ================================================================ */
+.screen--history {
+  bottom: var(--tab-h);
+  background: #fdf2f7;
+}
+
+.history-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.10);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+}
+.history-close-btn:hover { background: rgba(236, 72, 153, 0.18); }
+
+.history-layout {
+  padding: 0 22px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.history-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 6px 0 18px;
+}
+
+.history-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(236, 72, 153, 0.08);
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 18px;
+}
+.history-tab {
+  flex: 1;
+  padding: 11px 0;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-2);
+  transition: background 0.15s, color 0.15s;
+}
+.history-tab.active {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.12);
+}
+
+.history-counter {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  margin: 0 2px 16px;
+}
+.history-counter strong { color: var(--accent); font-weight: 700; }
+
+.history-list { display: flex; flex-direction: column; }
+
+.history-row-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  margin-bottom: 12px;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px 16px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 10px rgba(220, 38, 127, 0.05);
+}
+.history-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.history-avatar-dot {
+  position: absolute;
+  bottom: 1px;
+  left: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+}
+.history-row-main { flex: 1; min-width: 0; }
+.history-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.history-row-name {
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--text);
+}
+.history-row-time {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.history-row-preview {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-2);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-row-chevron { flex-shrink: 0; color: var(--text-3); }
+
+/* Limit card (free, at cap) */
+.history-limit-card {
+  border: 1.5px dashed var(--accent-border);
+  border-radius: 20px;
+  padding: 26px 22px;
+  text-align: center;
+  margin-top: 12px;
+}
+.history-limit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.10);
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.history-limit-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 7px;
+}
+.history-limit-sub {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0 auto 18px;
+}
+.history-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.98rem;
+  border-radius: 999px;
+  padding: 14px 32px;
+}
+.history-upgrade-btn:hover { background: var(--accent-deep); }
+
+.history-footer-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--text-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 14px 0 28px;
+}
+.history-footer-spark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.10);
+  color: var(--accent);
+}
+
+.history-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+.history-empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.history-empty-title { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.history-empty-sub { color: var(--text-2); font-size: 0.9rem; }
+
+
+/* ================================================================
+   AI COACH — entry card on the Scan page  (Fix 5)
+   ================================================================ */
+.aicoach-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 18px;
+  margin-top: 18px;
+  box-shadow: 0 4px 18px rgba(236, 72, 153, 0.06);
+  cursor: pointer;
+}
+.aicoach-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.aicoach-card-titles { min-width: 0; }
+.aicoach-card-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.aicoach-card-sub {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+.aicoach-beta {
+  margin-left: 8px;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: none;
+}
+.aicoach-thread-dropdown {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--border-2);
+  border-radius: 11px;
+  padding: 8px 11px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-2);
+  max-width: 150px;
+}
+.aicoach-thread-dropdown span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aicoach-thread-dropdown svg { flex-shrink: 0; }
+
+.aicoach-card-body {
+  display: flex;
+  gap: 12px;
+  margin-top: 15px;
+  background: rgba(236, 72, 153, 0.035);
+  border: 1px solid rgba(236, 72, 153, 0.10);
+  border-radius: 16px;
+  padding: 15px;
+}
+.aicoach-avatar {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aicoach-intro { min-width: 0; }
+.aicoach-intro-hi {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.98rem;
+  margin-bottom: 4px;
+}
+.aicoach-intro-text {
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.aicoach-card-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 12px;
+}
+.aicoach-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.82rem;
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+.aicoach-pill:hover { background: var(--accent-soft); }
+
+
+/* ================================================================
+   AI COACH — full page  (Fix 6)
+   ================================================================ */
+#screen-ai-coach { background: #fdeef4; }
+
+.aicoach-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  flex-shrink: 0;
+}
+.aicoach-back-btn,
+.aicoach-menu-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.10);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aicoach-back-btn:hover,
+.aicoach-menu-btn:hover { background: rgba(236, 72, 153, 0.18); }
+.aicoach-header-titles { flex: 1; min-width: 0; }
+.aicoach-header-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.aicoach-header-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.aicoach-context-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 18px 6px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 13px 15px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(220, 38, 127, 0.05);
+}
+.aicoach-context-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aicoach-context-info { flex: 1; min-width: 0; }
+.aicoach-context-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.aicoach-context-linked {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.aicoach-context-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.aicoach-change-btn {
+  flex-shrink: 0;
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.82rem;
+  border-radius: 999px;
+  padding: 8px 16px;
+}
+.aicoach-change-btn:hover { background: var(--accent-soft); }
+
+.aicoach-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 18px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.aicoach-messages::-webkit-scrollbar { width: 0; }
+
+.aicoach-msg { display: flex; flex-direction: column; }
+.aicoach-msg--zelo {
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 9px;
+}
+.aicoach-msg--user { align-items: flex-end; }
+
+.aicoach-msg-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+.aicoach-bubble {
+  max-width: 80%;
+  padding: 13px 15px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  border-radius: 18px;
+}
+.aicoach-bubble--zelo {
+  background: #fff;
+  color: var(--text);
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 10px rgba(220, 38, 127, 0.05);
+}
+.aicoach-bubble--user {
+  background: rgba(236, 72, 153, 0.16);
+  color: var(--text);
+  border-bottom-right-radius: 6px;
+}
+.aicoach-bubble-hi { color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+.aicoach-bubble-text { white-space: pre-wrap; }
+
+.aicoach-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+}
+.aicoach-msg-time { font-size: 0.74rem; color: var(--text-3); }
+.aicoach-msg--zelo .aicoach-msg-time { align-self: flex-end; margin-top: 4px; }
+.aicoach-tick { color: var(--accent); }
+
+.aicoach-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 86%;
+  text-align: left;
+  background: #fff;
+  border-radius: 16px;
+  padding: 13px 15px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text);
+  box-shadow: 0 2px 10px rgba(220, 38, 127, 0.05);
+  transition: transform 0.12s;
+}
+.aicoach-suggestion:active { transform: scale(0.98); }
+.aicoach-suggestion-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.aicoach-action-pills { display: flex; gap: 10px; margin-top: 2px; }
+.aicoach-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #fff;
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  padding: 10px 16px;
+}
+.aicoach-action-pill:hover { background: var(--accent-soft); }
+
+.aicoach-limit {
+  margin: 0 18px 8px;
+  padding: 12px 14px;
+  background: rgba(236, 72, 153, 0.10);
+  border-radius: 12px;
+  color: var(--accent-deep);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.aicoach-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 18px 0;
+  background: #fff;
+  border-radius: 18px;
+  padding: 8px 8px 8px 18px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(220, 38, 127, 0.06);
+}
+.aicoach-input {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  color: var(--text);
+  outline: none;
+}
+.aicoach-input::placeholder { color: var(--text-3); }
+.aicoach-send-btn {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aicoach-send-btn:hover { background: var(--accent-deep); }
+
+.aicoach-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 18px 16px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+
+/* ================================================================
+   AI COACH — "How it works" popup  (Fix 5)
+   ================================================================ */
+.aicoach-hiw-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.aicoach-hiw-overlay[hidden] { display: none; }
+.aicoach-hiw-card {
+  position: relative;
+  background: #fff;
+  border-radius: 22px;
+  padding: 30px 26px;
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+}
+.aicoach-hiw-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  color: var(--text-3);
+  font-size: 1rem;
+}
+.aicoach-hiw-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 8px; }
+.aicoach-hiw-text { color: var(--text-2); font-size: 0.92rem; }
+
+
+/* ================================================================
+   THREAD LINK PICKER  (Fix 7)
+   ================================================================ */
+.thread-link-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.thread-link-overlay[hidden] { display: none; }
+.thread-link-card {
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 22px calc(24px + env(safe-area-inset-bottom));
+  width: 100%;
+  max-width: 430px;
+  max-height: 70%;
+  overflow-y: auto;
+}
+.thread-link-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 5px; }
+.thread-link-sub { color: var(--text-2); font-size: 0.88rem; margin-bottom: 18px; }
+.thread-link-list { display: flex; flex-direction: column; gap: 10px; }
+.thread-link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.thread-link-row.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.thread-link-avatar {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thread-link-name { flex: 1; font-weight: 600; color: var(--text); }
+.thread-link-count { color: var(--text-2); font-size: 0.82rem; }
+.thread-link-empty { color: var(--text-2); font-size: 0.9rem; text-align: center; padding: 16px 0; }
+.thread-link-cancel {
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--s2);
+  color: var(--text-2);
+  font-weight: 600;
+}

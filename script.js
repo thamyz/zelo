@@ -80,7 +80,9 @@ window.addEventListener('DOMContentLoaded', () => {
   initOnboarding();
   maybePrefillExampleScan();
   refreshScanLimitBanner();
-  renderThreadList();         // Feature 5: show saved threads on Scan tab
+  // Drop a stale AI Coach link if its thread no longer exists
+  if (getLinkedThreadId() && !getLinkedThread()) setLinkedThreadId(null);
+  refreshAiCoachCard();       // Fix 5: sync the AI Coach card dropdown label
   attachProfileDetailDragToClose(); // Fix 4: swipe-down to dismiss profile detail
 });
 
@@ -98,6 +100,9 @@ function showTab(name) {
     else showTab(name);
     return;
   }
+
+  // History overlay keeps the tab bar visible — close it on any tab nav
+  closeHistory();
 
   // Cancel any chat timer if leaving
   cancelPendingReply();
@@ -2988,7 +2993,10 @@ function saveToThread(name, message, reply) {
 function deleteThread(threadId) {
   const threads = getThreads().filter(t => t.id !== threadId);
   saveThreads(threads);
+  // Fix 7: drop the AI Coach link if it pointed at the deleted thread
+  if (getLinkedThreadId() === threadId) setLinkedThreadId(null);
   renderThreadList();
+  refreshAiCoachCard();
 }
 
 // + button: check free-tier slot then show inline name input
@@ -3234,91 +3242,188 @@ function toggleThreadEditMode() {
   renderThreadList();
 }
 
+// History now lives on its own screen (Fix 2/3). Old call sites that
+// refreshed the inline Scan list now refresh the History screen instead.
 function renderThreadList() {
-  const listEl = document.getElementById('thread-list');
+  renderHistory();
+}
+
+
+// ================================================================
+// HISTORY SCREEN  (Fix 2/3)
+// Full-screen overlay opened from the Scan top-right icon. The bottom
+// tab bar stays visible; an X closes it back to whatever tab was active.
+// ================================================================
+
+let _historyTab = 'threads';
+
+function openHistory() {
+  const screen = document.getElementById('screen-history');
+  if (!screen) return;
+  _historyTab = 'threads';
+  setHistoryTab('threads');
+  screen.classList.add('active');
+}
+
+function closeHistory() {
+  const screen = document.getElementById('screen-history');
+  if (screen) screen.classList.remove('active');
+}
+
+function setHistoryTab(tab) {
+  _historyTab = tab;
+  const tEl = document.getElementById('history-tab-threads');
+  const fEl = document.getElementById('history-tab-favorites');
+  if (tEl) tEl.classList.toggle('active', tab === 'threads');
+  if (fEl) fEl.classList.toggle('active', tab === 'favorites');
+  renderHistory();
+}
+
+// Most recent activity on a thread: last AI Coach message, else last scan.
+function _threadLastActivity(thread) {
+  const coach = thread.coachChat || [];
+  if (coach.length) {
+    const last = coach[coach.length - 1];
+    return { text: last.content, time: last.time || thread.createdAt };
+  }
+  if (thread.scans && thread.scans.length) {
+    const last = thread.scans[thread.scans.length - 1];
+    return { text: last.message, time: last.time || thread.createdAt };
+  }
+  return { text: 'No messages yet', time: thread.createdAt };
+}
+
+// Compact timestamp for History rows: today → time, 1 day → "Yesterday",
+// otherwise "Nd ago".
+function historyTime(ts) {
+  if (!ts) return '';
+  const now = new Date();
+  const d   = new Date(ts);
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (ts >= startToday) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const daysAgo = Math.floor((startToday - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / dayMs) + 1;
+  if (daysAgo === 1) return 'Yesterday';
+  return `${daysAgo}d ago`;
+}
+
+function renderHistory() {
+  const listEl = document.getElementById('history-list');
   if (!listEl) return;
 
-  // Edit button is always visible regardless of thread count
-  const editBtnEl = document.getElementById('thread-edit-btn');
-  if (editBtnEl) editBtnEl.hidden = false;
+  // Favorites is a paid-only tab; free users only ever see Threads.
+  const favTab = document.getElementById('history-tab-favorites');
+  if (favTab) favTab.hidden = !isPaidUser();
+  if (_historyTab === 'favorites' && !isPaidUser()) _historyTab = 'threads';
 
-  const threads = getThreads();
+  const counterEl = document.getElementById('history-counter');
+  const threads   = getThreads();
+
   listEl.innerHTML = '';
 
-  if (threads.length === 0) {
-    if (threadEditMode) {
-      const newBtn = document.createElement('button');
-      newBtn.className = 'thread-edit-new-btn';
-      newBtn.textContent = '+ New';
-      newBtn.onclick = openAddThread;
-      listEl.appendChild(newBtn);
-      const btn = document.getElementById('thread-edit-btn');
-      if (btn) btn.textContent = 'Done';
+  // ── Favorites tab (paid) — no favoriting mechanism yet, show empty state.
+  if (_historyTab === 'favorites') {
+    if (counterEl) counterEl.hidden = true;
+    listEl.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-icon">✦</div>
+        <p class="history-empty-title">No favorites yet</p>
+        <p class="history-empty-sub">Star a thread to keep it here.</p>
+      </div>`;
+    return;
+  }
+
+  // ── Threads tab ────────────────────────────────────────────────
+  // Counter: free users only — "You've used X of 2 free threads"
+  if (counterEl) {
+    if (!isPaidUser()) {
+      counterEl.hidden = false;
+      counterEl.innerHTML =
+        `You've used <strong>${Math.min(threads.length, 2)}</strong> of <strong>2</strong> free threads`;
     } else {
-      const label = document.createElement('p');
-      label.className = 'thread-empty-label';
-      label.textContent = 'No threads yet.';
-      listEl.appendChild(label);
+      counterEl.hidden = true;
     }
+  }
+
+  if (threads.length === 0) {
+    listEl.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-icon">💬</div>
+        <p class="history-empty-title">No threads yet</p>
+        <p class="history-empty-sub">Save a scan to start a thread.</p>
+      </div>`;
     return;
   }
 
   threads.forEach(thread => {
     const wrapper = document.createElement('div');
-    wrapper.className = 'thread-row-wrapper';
+    wrapper.className = 'history-row-wrapper';
 
     const row = document.createElement('div');
-    row.className = 'thread-row';
+    row.className = 'history-row';
 
-    const info = document.createElement('div');
-    info.className = 'thread-row-info';
-    info.innerHTML = `
-      <span class="thread-row-name">${thread.name}</span>
-      <span class="thread-row-count">${thread.scans.length} scan${thread.scans.length !== 1 ? 's' : ''}</span>`;
-    row.appendChild(info);
+    const initial = (thread.name || '?').trim().charAt(0).toUpperCase();
+    const activity = _threadLastActivity(thread);
 
-    if (threadEditMode) {
-      const minus = document.createElement('button');
-      minus.className = 'thread-row-minus-btn';
-      minus.textContent = '−';
-      minus.addEventListener('click', (e) => {
-        e.stopPropagation();
-        _showThreadRowDelete(wrapper, thread.id);
-      });
-      row.appendChild(minus);
-    }
-
-    if (!threadEditMode) {
-      const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      chevron.setAttribute('width', '14');
-      chevron.setAttribute('height', '14');
-      chevron.setAttribute('viewBox', '0 0 24 24');
-      chevron.setAttribute('fill', 'none');
-      chevron.setAttribute('stroke', 'currentColor');
-      chevron.setAttribute('stroke-width', '2.5');
-      chevron.setAttribute('stroke-linecap', 'round');
-      chevron.setAttribute('stroke-linejoin', 'round');
-      chevron.innerHTML = '<polyline points="9 18 15 12 9 6"/>';
-      row.appendChild(chevron);
-      row.onclick = () => openThreadDetail(thread.id);
-    }
+    row.innerHTML = `
+      <div class="history-avatar">${initial}<span class="history-avatar-dot"></span></div>
+      <div class="history-row-main">
+        <div class="history-row-top">
+          <span class="history-row-name">${thread.name}</span>
+          <span class="history-row-time">${historyTime(activity.time)}</span>
+        </div>
+        <span class="history-row-preview">${activity.text}</span>
+      </div>
+      <svg class="history-row-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>`;
+    row.onclick = () => openThreadDetail(thread.id);
 
     wrapper.appendChild(row);
     listEl.appendChild(wrapper);
 
-    if (!threadEditMode) {
-      attachSwipeDelete(row, 'Delete this thread? This cannot be undone.', () => deleteThread(thread.id));
-    }
+    attachSwipeDelete(row, 'Delete this thread? This cannot be undone.',
+      () => { deleteThread(thread.id); renderHistory(); });
   });
 
-  if (threadEditMode) {
-    const newBtn = document.createElement('button');
-    newBtn.className = 'thread-edit-new-btn';
-    newBtn.textContent = '+ New';
-    newBtn.onclick = openAddThread;
-    listEl.appendChild(newBtn);
+  // Free user at the cap → dashed upgrade card (Fix 3)
+  if (!isPaidUser() && threads.length >= 2) {
+    const card = document.createElement('div');
+    card.className = 'history-limit-card';
+    card.innerHTML = `
+      <span class="history-limit-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </span>
+      <p class="history-limit-title">Free plan limit reached</p>
+      <p class="history-limit-sub">Upgrade to save unlimited threads and get full AI context.</p>
+      <button class="history-upgrade-btn" onclick="upgradeNow()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+        </svg>
+        Upgrade Now
+      </button>`;
+    listEl.appendChild(card);
+  } else {
+    // Paid / under cap → "✦ N threads" footer like the mockup
+    const footer = document.createElement('div');
+    footer.className = 'history-footer-count';
+    footer.innerHTML = `
+      <span class="history-footer-spark" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+        </svg>
+      </span>
+      ${threads.length} thread${threads.length !== 1 ? 's' : ''}`;
+    listEl.appendChild(footer);
   }
 }
+
+// TODO connect to paywall
+function upgradeNow() {}
 
 // Back button on result screen — check if scan has been saved first
 function goBackFromResult() {
@@ -3616,7 +3721,6 @@ function openThreadDetail(threadId) {
   if (toolbar) toolbar.hidden = true;
 
   _renderThreadScans();
-  renderThreadChat();
   pushScreen('thread-detail');
 }
 
@@ -3700,92 +3804,338 @@ function closeThreadDetail() {
 
 
 // ================================================================
-// FEATURE 6 — ASK ZELO INSIDE THREAD
-// DeepSeek API call with full thread context. 7 AI msgs/day free.
+// AI COACH  (Fix 5/6/7/8 — replaces the old Ask-Zelo-inside-thread)
+// Full-page coach. Real DeepSeek via the Supabase proxy. Counts toward
+// the shared 10/day scan limit. Optionally linked to a saved thread,
+// whose scans are fed as context.
 // ================================================================
 
-function aiMsgsToday() {
-  if (localStorage.getItem('zelo_ai_msg_date') !== todayKey()) return 0;
-  return Number(localStorage.getItem('zelo_ai_msg_count') || 0);
+// In-flight coach conversation for the currently open page.
+let _aiCoachChat = [];
+
+// ── Linked thread (Fix 7) ──────────────────────────────────────
+function getLinkedThreadId() { return localStorage.getItem('zelo_ai_coach_thread') || null; }
+function setLinkedThreadId(id) {
+  if (id) localStorage.setItem('zelo_ai_coach_thread', id);
+  else    localStorage.removeItem('zelo_ai_coach_thread');
 }
-function incrementAiMsgCount() {
-  if (localStorage.getItem('zelo_ai_msg_date') !== todayKey()) {
-    localStorage.setItem('zelo_ai_msg_date', todayKey());
-    localStorage.setItem('zelo_ai_msg_count', '0');
-  }
-  localStorage.setItem('zelo_ai_msg_count', String(aiMsgsToday() + 1));
+function getLinkedThread() {
+  const id = getLinkedThreadId();
+  if (!id) return null;
+  return getThreads().find(t => t.id === id) || null;
 }
 
-function renderThreadChat() {
-  const chatWrap = document.getElementById('thread-chat-messages');
-  if (!chatWrap) return;
-  chatWrap.innerHTML = '';
-  state.threadChat.forEach(msg => {
-    const el = document.createElement('div');
-    el.className = `thread-chat-bubble ${msg.role === 'user' ? 'user' : 'ai'}`;
-    el.textContent = msg.content;
-    chatWrap.appendChild(el);
+// Keeps the dropdown on the Scan-page AI Coach card in sync.
+function refreshAiCoachCard() {
+  const label = document.getElementById('aicoach-thread-dropdown-label');
+  if (!label) return;
+  const thread = getLinkedThread();
+  label.textContent = thread ? thread.name : 'No thread linked';
+}
+
+// ── Open / close the full page ─────────────────────────────────
+function openAiCoach() {
+  const thread = getLinkedThread();
+  _aiCoachChat = thread && Array.isArray(thread.coachChat) ? thread.coachChat.slice() : [];
+  renderAiCoachContext();
+  renderAiCoachChat();
+  const limit = document.getElementById('aicoach-limit');
+  if (limit) limit.hidden = true;
+  pushScreen('ai-coach');
+  setTimeout(() => document.getElementById('aicoach-input')?.focus(), 60);
+}
+
+function closeAiCoach() { popScreen(); }
+
+function renderAiCoachContext() {
+  const info   = document.getElementById('aicoach-context-info');
+  const btn    = document.getElementById('aicoach-change-btn');
+  const row    = document.getElementById('aicoach-context-row');
+  if (!info) return;
+  const thread = getLinkedThread();
+  if (thread) {
+    const msgCount = (thread.scans?.length || 0) * 2;
+    info.innerHTML =
+      `<span class="aicoach-context-title">Thread Context
+         <span class="aicoach-context-linked">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+           </svg>Linked</span></span>
+       <span class="aicoach-context-meta">${thread.name} • ${msgCount} message${msgCount !== 1 ? 's' : ''}</span>`;
+    if (btn) btn.textContent = 'Change';
+    if (row) row.classList.add('linked');
+  } else {
+    info.innerHTML =
+      `<span class="aicoach-context-title">No thread linked</span>
+       <span class="aicoach-context-meta">Link a thread for deeper context</span>`;
+    if (btn) btn.textContent = 'Link';
+    if (row) row.classList.remove('linked');
+  }
+}
+
+function _aiCoachGreeting() {
+  const thread = getLinkedThread();
+  return thread
+    ? `I've reviewed the full conversation with ${thread.name}. Ask me anything or get suggestions on how to reply.`
+    : `I can help you analyze this situation and suggest the best replies. Link a thread for deeper context.`;
+}
+
+function renderAiCoachChat() {
+  const wrap = document.getElementById('aicoach-messages');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  // Opening Zelo greeting (not part of the stored turns)
+  wrap.appendChild(_aiCoachZeloBubble(_aiCoachGreeting(), { greeting: true }));
+
+  _aiCoachChat.forEach(msg => {
+    if (msg.role === 'user') {
+      wrap.appendChild(_aiCoachUserBubble(msg));
+    } else {
+      wrap.appendChild(_aiCoachZeloBubble(msg.content, { time: msg.time }));
+      (msg.suggestions || []).forEach(s => wrap.appendChild(_aiCoachSuggestion(s)));
+    }
   });
-  chatWrap.scrollTop = chatWrap.scrollHeight;
-}
 
-function handleThreadKeyDown(e) {
-  if (e.key === 'Enter') sendThreadMessage();
-}
-
-async function sendThreadMessage() {
-  const input = document.getElementById('thread-message-input');
-  const text  = input.value.trim();
-  if (!text || !state.activeThreadId) return;
-
-  // DEV — restore paid gate before release
-  if (!isPaidUser() && aiMsgsToday() >= 7) {
-    const feedback = document.getElementById('thread-ai-limit');
-    if (feedback) { feedback.hidden = false; return; }
+  // Action pills after the latest Zelo answer
+  const last = _aiCoachChat[_aiCoachChat.length - 1];
+  if (last && last.role === 'assistant' && last.content !== '…') {
+    wrap.appendChild(_aiCoachActionPills());
   }
 
-  input.value = '';
-  state.threadChat.push({ role: 'user', content: text });
-  renderThreadChat();
-  incrementAiMsgCount();
+  wrap.scrollTop = wrap.scrollHeight;
+}
 
-  // Build system prompt from thread context
-  const threads = getThreads();
-  const thread  = threads.find(t => t.id === state.activeThreadId);
-  const context = (thread ? thread.scans : []).map((s, i) =>
-    `Scan ${i + 1}:\nMessage: ${s.message}\nReply used: ${s.reply}`
-  ).join('\n\n');
+function _aiCoachZeloBubble(text, opts = {}) {
+  const row = document.createElement('div');
+  row.className = 'aicoach-msg aicoach-msg--zelo';
+  const avatar = opts.greeting
+    ? `<span class="aicoach-msg-avatar" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>`
+    : '';
+  const hi = opts.greeting ? `<p class="aicoach-bubble-hi">Hi! I'm Zelo.</p>` : '';
+  const time = opts.time ? `<span class="aicoach-msg-time">${formatTime(opts.time)}</span>` : '';
+  row.innerHTML = `
+    ${avatar}
+    <div class="aicoach-bubble aicoach-bubble--zelo">
+      ${hi}
+      <p class="aicoach-bubble-text">${text}</p>
+    </div>
+    ${time}`;
+  return row;
+}
 
-  const systemPrompt = `You are Zelo, a witty and warm texting coach. The user is asking for advice about their conversation with ${thread ? thread.name : 'someone'}.\n\nConversation history:\n${context || 'No scans yet.'}\n\nGive concise, practical advice in 1-3 sentences. Stay casual and direct.`;
+function _aiCoachUserBubble(msg) {
+  const row = document.createElement('div');
+  row.className = 'aicoach-msg aicoach-msg--user';
+  row.innerHTML = `
+    <div class="aicoach-bubble aicoach-bubble--user">${msg.content}</div>
+    <div class="aicoach-msg-meta">
+      <span class="aicoach-msg-time">${formatTime(msg.time)}</span>
+      <svg class="aicoach-tick" width="16" height="12" viewBox="0 0 24 16" fill="none" stroke="currentColor"
+           stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="2 8 7 13 14 4"/><polyline points="10 13 17 4"/>
+      </svg>
+    </div>`;
+  return row;
+}
 
-  // Placeholder bubble while waiting
-  const placeholder = { role: 'assistant', content: '…' };
-  state.threadChat.push(placeholder);
-  renderThreadChat();
+function _aiCoachSuggestion(text) {
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.className = 'aicoach-suggestion';
+  card.onclick = () => {
+    navigator.clipboard?.writeText(text).catch(() => {});
+    flashLimitToast('Copied to clipboard');
+  };
+  card.innerHTML = `
+    <span class="aicoach-suggestion-icon" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+      </svg>
+    </span>
+    <span class="aicoach-suggestion-text">${text}</span>`;
+  return card;
+}
+
+function _aiCoachActionPills() {
+  const wrap = document.createElement('div');
+  wrap.className = 'aicoach-action-pills';
+  wrap.innerHTML = `
+    <button class="aicoach-action-pill" type="button" onclick="sendAiCoachMessage('Explain more')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      Explain more
+    </button>
+    <button class="aicoach-action-pill" type="button" onclick="sendAiCoachMessage('Show me more options')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Show more options
+    </button>`;
+  return wrap;
+}
+
+function handleAiCoachKeyDown(e) {
+  if (e.key === 'Enter') sendAiCoachMessage();
+}
+
+// Builds the proxy message list: system prompt + linked thread context as
+// prior history + the live coach turns.
+function _buildAiCoachMessages() {
+  const thread = getLinkedThread();
+  let system =
+    'You are Zelo, a casual texting coach. Never formal, never therapist-like. ' +
+    'You talk like a smart friend giving quick, honest advice. Keep replies short, direct, no fluff. ';
+  if (thread) {
+    system += `The user has linked their conversation with ${thread.name}. ` +
+      'The messages above show what they received and how they replied — use that context. ';
+  }
+  system +=
+    'Respond ONLY with a JSON object, no markdown fences, in exactly this shape: ' +
+    '{"advice": "your short take, 1-3 sentences", "suggestions": ["a ready-to-send reply", "another option", "a third option"]}. ' +
+    'suggestions are full reply texts the user could copy and send. Always include 2 or 3.';
+
+  const messages = [{ role: 'system', content: system }];
+
+  // Linked thread scans as conversation history (Fix 6)
+  if (thread) {
+    (thread.scans || []).forEach(s => {
+      messages.push({ role: 'user', content: `They texted me: "${s.message}". I replied: "${s.reply}".` });
+    });
+  }
+
+  // Live coach turns (assistant turns send only their advice text back)
+  _aiCoachChat.forEach(m => {
+    if (m.content === '…') return;
+    messages.push({ role: m.role, content: m.content });
+  });
+
+  return messages;
+}
+
+async function sendAiCoachMessage(preset) {
+  const input = document.getElementById('aicoach-input');
+  const text  = (preset != null ? preset : (input ? input.value : '')).trim();
+  if (!text) return;
+
+  // Daily limit (Fix 8) — AI Coach shares the 10/day scan budget
+  if (!isPaidUser() && scansRemainingToday() <= 0) {
+    const limit = document.getElementById('aicoach-limit');
+    if (limit) limit.hidden = false;
+    return;
+  }
+
+  if (input && preset == null) input.value = '';
+  _aiCoachChat.push({ role: 'user', content: text, time: Date.now() });
+  if (!isPaidUser()) decrementScanCount();
+
+  const placeholder = { role: 'assistant', content: '…', suggestions: [], time: Date.now() };
+  _aiCoachChat.push(placeholder);
+  renderAiCoachChat();
+
+  const apiMessages = _buildAiCoachMessages().slice(0, -1); // exclude placeholder
 
   try {
     const { data, error } = await zeloSupabase.functions.invoke('deepseek-proxy', {
-      body: {
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...state.threadChat.filter(m => m !== placeholder).map(m => ({ role: m.role, content: m.content }))
-        ],
-        max_tokens: 200
-      }
+      body: { model: 'deepseek-chat', messages: apiMessages, max_tokens: 320, temperature: 0.9 }
     });
     if (error) throw error;
-    placeholder.content = data.choices[0].message.content;
+    const raw = data.choices[0].message.content.trim();
+    const parsed = _parseAiCoachReply(raw);
+    placeholder.content     = parsed.advice;
+    placeholder.suggestions = parsed.suggestions;
   } catch {
-    placeholder.content = "Hmm, I couldn't reach Zelo right now. Try again in a moment.";
+    placeholder.content     = "Hmm, I couldn't reach Zelo right now. Try again in a moment.";
+    placeholder.suggestions = [];
   }
 
-  // Persist chat back to thread store
-  const threads2 = getThreads();
-  const t2 = threads2.find(t => t.id === state.activeThreadId);
-  if (t2) { t2.chat = state.threadChat; saveThreads(threads2); }
+  _persistAiCoachChat();
+  renderAiCoachChat();
+}
 
-  renderThreadChat();
+// Tolerant parse — DeepSeek may wrap JSON in ```json fences or add stray text.
+function _parseAiCoachReply(raw) {
+  let body = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const start = body.indexOf('{');
+  const end   = body.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    try {
+      const obj = JSON.parse(body.slice(start, end + 1));
+      const advice = (obj.advice || '').toString().trim();
+      const suggestions = Array.isArray(obj.suggestions)
+        ? obj.suggestions.map(s => String(s).trim()).filter(Boolean).slice(0, 3)
+        : [];
+      if (advice) return { advice, suggestions };
+    } catch (_) { /* fall through */ }
+  }
+  return { advice: raw, suggestions: [] };
+}
+
+// Persist coach chat onto the linked thread so History previews + a return
+// visit pick up where the user left off.
+function _persistAiCoachChat() {
+  const id = getLinkedThreadId();
+  if (!id) return;
+  const threads = getThreads();
+  const thread  = threads.find(t => t.id === id);
+  if (!thread) return;
+  thread.coachChat = _aiCoachChat;
+  saveThreads(threads);
+}
+
+// ── "How it works" popup (Fix 5 — blank for now) ───────────────
+function showAiCoachHowItWorks() { document.getElementById('aicoach-hiw-overlay').hidden = false; }
+function hideAiCoachHowItWorks() { document.getElementById('aicoach-hiw-overlay').hidden = true; }
+
+// ── Thread link picker (Fix 7) ─────────────────────────────────
+function openThreadLinkPicker() {
+  const overlay = document.getElementById('thread-link-overlay');
+  const list    = document.getElementById('thread-link-list');
+  if (!overlay || !list) return;
+  const threads = getThreads();
+  list.innerHTML = '';
+
+  if (threads.length === 0) {
+    list.innerHTML = '<p class="thread-link-empty">No threads yet. Save a scan to a thread first.</p>';
+  } else {
+    const linkedId = getLinkedThreadId();
+    threads.forEach(t => {
+      const btn = document.createElement('button');
+      btn.className = 'thread-link-row' + (t.id === linkedId ? ' selected' : '');
+      const initial = (t.name || '?').trim().charAt(0).toUpperCase();
+      btn.innerHTML = `
+        <span class="thread-link-avatar">${initial}</span>
+        <span class="thread-link-name">${t.name}</span>
+        <span class="thread-link-count">${t.scans.length} scan${t.scans.length !== 1 ? 's' : ''}</span>`;
+      btn.onclick = () => linkThread(t.id);
+      list.appendChild(btn);
+    });
+  }
+  overlay.hidden = false;
+}
+
+function closeThreadLinkPicker() {
+  const overlay = document.getElementById('thread-link-overlay');
+  if (overlay) overlay.hidden = true;
+}
+
+function linkThread(id) {
+  setLinkedThreadId(id);
+  closeThreadLinkPicker();
+  refreshAiCoachCard();
+  // If the AI Coach page is open, reload its context + conversation
+  if (state.activeScreen === 'ai-coach') {
+    const thread = getLinkedThread();
+    _aiCoachChat = thread && Array.isArray(thread.coachChat) ? thread.coachChat.slice() : [];
+    renderAiCoachContext();
+    renderAiCoachChat();
+  }
 }
 
 
