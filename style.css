@@ -5418,3 +5418,75 @@ textarea { font-family: inherit; }
   background: var(--accent-soft);
   color: var(--accent-deep);
 }
+
+/* ================================================================
+   CINEMATIC ONBOARDING — back button, required-Next, theme showcase
+   ================================================================ */
+.cine-back {
+  position: absolute;
+  top: 14px; left: 16px;
+  z-index: 30;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: rgba(0,0,0,0.05);
+  color: #8a8175;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-back:active { transform: scale(0.94); }
+
+/* Required-answer lock on the Next CTA */
+.cine-next--disabled { opacity: 0.4; pointer-events: none; }
+
+/* Theme screen: headline nudged up to make room for the live showcase */
+.cine-screen--theme { justify-content: flex-start; padding-top: 84px; }
+.cine-theme-head { margin-bottom: 22px; }
+
+.cine-theme-showcase {
+  margin-top: 28px;
+  width: 100%;
+  max-width: 300px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(28,25,23,0.08);
+}
+.cine-showcase-row { display: flex; align-items: center; gap: 6px; }
+.cine-showcase-spark { color: var(--accent); font-size: 0.95rem; }
+.cine-showcase-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+}
+.cine-showcase-bubble {
+  align-self: flex-start;
+  max-width: 92%;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: #1c1917;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.cine-showcase-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border: none;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.cine-showcase-btn-spark { font-size: 0.9rem; }

@@ -2071,6 +2071,10 @@ function cineGoTo(n) {
     d.classList.toggle('active', i === n - 1);
   });
 
+  // Back button — only on the last 3 screens (mode / theme / age).
+  const backBtn = document.getElementById('cine-back');
+  if (backBtn) backBtn.classList.toggle('cine-hidden', !(n >= 6 && n <= CINE_LAST));
+
   const nextBtn = document.getElementById('cine-next');
   if (nextBtn) {
     // Screen 3 (swipe/match) drives its own transition — no Next there.
@@ -2081,6 +2085,10 @@ function cineGoTo(n) {
     else nextBtn.textContent = 'Next';
   }
 
+  // Last 3 screens require an answer — lock Next until one is chosen.
+  const requiredKey = n === 6 ? 'zelo_mode' : n === 7 ? 'zelo_theme' : n === 8 ? 'zelo_age' : null;
+  cineSetNextEnabled(!requiredKey || !!localStorage.getItem(requiredKey));
+
   if (n === 1) cineRunScan();
   else if (n === 2) cineRunReply();
   else if (n === 3) cineRunSwipe();
@@ -2089,12 +2097,49 @@ function cineGoTo(n) {
   else if (n === 6) cineRunFade('cine-mode-grid');
   else if (n === 7) cineRunFade('cine-theme-grid');
   else if (n === 8) cineRunFade('cine-age-grid');
+
+  cineRestoreSelection(n);   // re-highlight a prior choice when revisiting
+}
+
+// Enable/disable the Next CTA (used to enforce required answers).
+function cineSetNextEnabled(on) {
+  const b = document.getElementById('cine-next');
+  if (!b) return;
+  b.disabled = !on;
+  b.classList.toggle('cine-next--disabled', !on);
+}
+
+// Re-apply the stored selection's highlight when a screen is shown.
+function cineRestoreSelection(n) {
+  if (n === 6) {
+    const m = localStorage.getItem('zelo_mode');
+    document.querySelectorAll('.cine-mode-card').forEach(c => c.classList.remove('selected'));
+    if (m) { const el = document.getElementById('cine-mode-' + m); if (el) el.classList.add('selected'); }
+  } else if (n === 7) {
+    const t = localStorage.getItem('zelo_theme');
+    document.querySelectorAll('.cine-theme-dot').forEach(c => c.classList.toggle('selected', c.dataset.theme === t));
+  } else if (n === 8) {
+    const a = localStorage.getItem('zelo_age');
+    document.querySelectorAll('.cine-age-pill').forEach(c => c.classList.toggle('selected', c.dataset.age === a));
+  }
+}
+
+function cineBack() {
+  if (cineStep > 1) cineGoTo(cineStep - 1);
 }
 
 function cineNext() {
   if (cineStep === 0) return;                 // Phase 1 is non-interactive
+  if (document.getElementById('cine-next')?.disabled) return;  // required answer not chosen
   if (cineStep === 4) requestNotifPermission(); // Continue triggers the prompt
   if (cineStep >= CINE_LAST) { finishNewOnboarding(); return; }
+  cineGoTo(cineStep + 1);
+}
+
+// iOS-style notification prompt buttons — Allow also fires the real request.
+function cineNotifChoice(e, allow) {
+  if (e) e.stopPropagation();
+  if (allow) requestNotifPermission();
   cineGoTo(cineStep + 1);
 }
 
@@ -2141,12 +2186,16 @@ function cineRunSwipe() {
   _cineDelay(() => { if (cineStep === 3) cineGoTo(4); }, 3100);
 }
 
-// ---- Screen 4 — notifications (sparkle, not a bell) ----
+// ---- Screen 4 — notifications (iOS-style prompt, same as tracking) ----
 function cineRunNotif() {
-  const icon = document.getElementById('cine-notif-icon');
-  const head = document.querySelector('.cine-notif-head');
-  if (icon) { icon.classList.remove('cine-pop-in'); void icon.offsetWidth; icon.classList.add('cine-pop-in'); }
-  if (head) { head.classList.remove('cine-fade-up'); void head.offsetWidth; head.classList.add('cine-fade-up'); }
+  const sheet  = document.getElementById('cine-notif-sheet');
+  const prompt = document.getElementById('cine-notif-prompt');
+  const head   = document.getElementById('cine-notif-head');
+  if (sheet)  { sheet.classList.remove('cine5-sheet--up'); void sheet.offsetWidth; sheet.classList.add('cine5-sheet--up'); }
+  if (prompt) prompt.classList.remove('cine-pop-in');
+  if (head)   head.classList.remove('cine-fade-up');
+  _cineDelay(() => { if (prompt) { void prompt.offsetWidth; prompt.classList.add('cine-pop-in'); } }, 460);
+  _cineDelay(() => { if (head) { void head.offsetWidth; head.classList.add('cine-fade-up'); } }, 740);
 }
 
 function requestNotifPermission() {
@@ -2190,6 +2239,7 @@ function cineSelectMode(mode, el) {
   localStorage.setItem('zelo_mode', mode);   // account-level preference
   document.querySelectorAll('.cine-mode-card').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
+  cineSetNextEnabled(true);                  // required answer satisfied
   navigator.vibrate?.(4);
 }
 
@@ -2199,6 +2249,7 @@ function cineSelectTheme(key, el) {
   applyTheme(key);
   document.querySelectorAll('.cine-theme-dot').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
+  cineSetNextEnabled(true);                  // required answer satisfied
   navigator.vibrate?.(4);
 }
 
@@ -2207,6 +2258,7 @@ function cineSelectAge(range, el) {
   localStorage.setItem('zelo_age', range);
   document.querySelectorAll('.cine-age-pill').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
+  cineSetNextEnabled(true);                  // required answer satisfied
   navigator.vibrate?.(4);
 }
 
