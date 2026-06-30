@@ -251,6 +251,7 @@ function selectChatMode(mode) {
   const openingDelay = mode === "training" ? 700 : 1500;
   setTimeout(() => {
     appendAIBubble(openerText);
+    syncChatToStore(openerText, 'ai');
     setSendEnabled(true);
     document.getElementById("message-input").focus();
   }, openingDelay);
@@ -290,8 +291,12 @@ function chatSettingsReset() {
     localStorage.removeItem('chat_' + cid);
     delete state.chatHistory;
   }
+  const resetChat = chatStore.find(c => c.id === state.activeChatId);
+  if (resetChat) resetChat.messages = [];
   setSendEnabled(false);
-  appendAIBubble((state.character?.opener) || OPENINGS[state.difficulty] || 'hey');
+  const resetOpenerText = (state.character?.opener) || OPENINGS[state.difficulty] || 'hey';
+  appendAIBubble(resetOpenerText);
+  syncChatToStore(resetOpenerText, 'ai');
   setSendEnabled(true);
 }
 
@@ -324,6 +329,7 @@ function sendMessage() {
   input.value = "";
   appendUserBubble(text);
   syncChatToStore(text, 'user');
+  state.lastUserWordCount = countWords(text);
 
   state.awaitingReply = true;
   setSendEnabled(false);
@@ -402,6 +408,27 @@ function scheduleReply() {
   }, SEEN_DELAY);
 }
 
+// Word-count guardrail helpers (code-level backstop for reply length).
+// The prompt-based length rule in _MASTER_SAFETY remains the first line of
+// defense; these enforce a hard limit when the model overshoots anyway.
+function countWords(text) {
+  return (text || '').trim().split(/\s+/).filter(Boolean).length;
+}
+
+function truncateToWordLimit(text, maxWords) {
+  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  let result = '';
+  let words = 0;
+  for (const sentence of sentences) {
+    const sentenceWords = countWords(sentence);
+    if (result && words + sentenceWords > maxWords) break;
+    result += sentence;
+    words += sentenceWords;
+    if (words >= maxWords) break;
+  }
+  return result.trim() || text;
+}
+
 // Shared: show typing indicator then deliver the AI reply
 function doTypingAndReply(timing) {
   const typingDuration = randBetween(timing.typingMin, timing.typingMax);
@@ -415,6 +442,18 @@ function doTypingAndReply(timing) {
     let aiReply;
     try {
       aiReply = await replyPromise;
+      const userWords = state.lastUserWordCount || 10;
+      const wordLimit = Math.max(userWords * 2, 12);
+      if (countWords(aiReply) > wordLimit) {
+        try {
+          const regenerated = await _fetchAIGirlReply(true);
+          aiReply = countWords(regenerated) <= wordLimit
+            ? regenerated
+            : truncateToWordLimit(regenerated, wordLimit);
+        } catch (_) {
+          aiReply = truncateToWordLimit(aiReply, wordLimit);
+        }
+      }
     } catch (_) {
       aiReply = "sorry got distracted lol";
     }
@@ -430,10 +469,13 @@ function doTypingAndReply(timing) {
   }, typingDuration);
 }
 
-async function _fetchAIGirlReply() {
+async function _fetchAIGirlReply(forceShort) {
   const systemPrompt = state.character?.systemPrompt || '';
   const chat = chatStore.find(c => c.id === state.activeChatId);
   const history = chat ? chat.messages : [];
+
+  const userWords  = state.lastUserWordCount || 10;
+  const maxTokens  = Math.max(40, Math.min(200, userWords * 12 + 20));
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -443,8 +485,15 @@ async function _fetchAIGirlReply() {
     }))
   ];
 
+  if (forceShort) {
+    messages.push({
+      role: 'system',
+      content: `Your last reply ran too long. Reply in roughly ${userWords} words or fewer this time — match the user's message length, do not exceed it.`
+    });
+  }
+
   const { data, error } = await zeloSupabase.functions.invoke('deepseek-proxy', {
-    body: { model: 'deepseek-chat', messages, max_tokens: 200, temperature: 1.0 }
+    body: { model: 'deepseek-chat', messages, max_tokens: maxTokens, temperature: 1.0 }
   });
 
   if (error) throw new Error(error.message);

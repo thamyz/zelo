@@ -157,7 +157,7 @@ const DIFFICULTY_CONFIG = {
 // ================================================================
 
 const OPENINGS = {
-  easy:    "Hey! I was hoping you'd message first 😊 how's your day going?",
+  easy:    "Hey! I was hoping you'd message first, how's your day going?",
   medium:  "Hey! What's up?",
   hard:    "hey",
   expert:  "oh hey"
