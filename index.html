@@ -705,8 +705,6 @@
            ============================================================ -->
       <div class="cine" id="cine-onboarding" hidden onclick="cineScreenTap(event)">
 
-        <button class="cine-close cine-hidden" id="cine-close" onclick="finishNewOnboarding()" aria-label="Skip onboarding">✕</button>
-
         <button class="cine-back cine-hidden" id="cine-back" onclick="cineBack()" aria-label="Back">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="15 18 9 12 15 6"/>
@@ -887,16 +885,44 @@
             <button type="button" class="cine-theme-dot" data-theme="sage"     style="background:#5b9279" onclick="cineSelectTheme('sage', this)" aria-label="Sage Green"></button>
           </div>
 
-          <!-- Live preview of the selected accent in use -->
-          <div class="cine-theme-showcase" aria-hidden="true">
-            <div class="cine-showcase-row">
-              <span class="cine-showcase-spark">✦</span>
-              <span class="cine-showcase-label">Zelo Suggests</span>
+          <!-- Live in-app demo — auto-cycles real screens, recolors with the pick -->
+          <div class="cine-demo" aria-hidden="true">
+            <div class="cine-demo-phone">
+
+              <!-- Scan -->
+              <div class="cine-demo-screen active" data-demo="0">
+                <div class="cine-demo-top"><span class="cine-demo-brand">Zelo<span class="cine-demo-spark">✦</span></span></div>
+                <div class="cine-demo-card">haha yeah I guess, idk what do you wanna do</div>
+                <div class="cine-demo-reply"><span class="cine-demo-reply-label">✦ Zelo suggests</span>How about tacos Friday, you in?</div>
+                <div class="cine-demo-btn">Analyze</div>
+              </div>
+
+              <!-- Home -->
+              <div class="cine-demo-screen" data-demo="1">
+                <div class="cine-demo-top"><span class="cine-demo-brand">Discover</span></div>
+                <div class="cine-demo-profile"><span class="cine-demo-profile-name">Emily, 20</span></div>
+                <div class="cine-demo-actions">
+                  <span class="cine-demo-pass">✕</span>
+                  <span class="cine-demo-like">♥</span>
+                </div>
+              </div>
+
+              <!-- Chat -->
+              <div class="cine-demo-screen" data-demo="2">
+                <div class="cine-demo-top"><span class="cine-demo-brand">Emily</span></div>
+                <div class="cine-demo-chat">
+                  <div class="cine-demo-bubble in">hey! how's your day</div>
+                  <div class="cine-demo-bubble out">pretty good — you free friday?</div>
+                  <div class="cine-demo-bubble in">maybe 👀 what'd you have in mind</div>
+                </div>
+              </div>
+
             </div>
-            <div class="cine-showcase-bubble">How about tacos Friday, you in?</div>
-            <button type="button" class="cine-showcase-btn" tabindex="-1">
-              <span class="cine-showcase-btn-spark">✦</span> Analyze
-            </button>
+            <div class="cine-demo-dots">
+              <span class="cine-demo-dot active"></span>
+              <span class="cine-demo-dot"></span>
+              <span class="cine-demo-dot"></span>
+            </div>
           </div>
         </section>
 

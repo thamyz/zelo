@@ -70,6 +70,10 @@ window.addEventListener('DOMContentLoaded', () => {
   localStorage.removeItem('zelo_example_prefilled');
   localStorage.removeItem('zelo_scan_first_run');
   localStorage.removeItem('zelo_tour_seen');
+  // Last-3 onboarding answers start blank each run — nothing pre-chosen.
+  localStorage.removeItem('zelo_mode');
+  localStorage.removeItem('zelo_theme');
+  localStorage.removeItem('zelo_age');
 
   AUTH.init(); // session check — must run before any auth triggers fire
   // TODO — merge anonymous scan history on signup
@@ -2000,7 +2004,8 @@ function startCineOnboarding() {
 
 // Toggle the interactive chrome (X, Next, dots) — hidden during Phase 1.
 function cineSetChrome(show) {
-  ['cine-close', 'cine-next', 'cine-dots'].forEach(id => {
+  // No skip/X — onboarding can't be closed early. Only Next/dots toggle.
+  ['cine-next', 'cine-dots'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('cine-hidden', !show);
   });
@@ -2089,16 +2094,39 @@ function cineGoTo(n) {
   const requiredKey = n === 6 ? 'zelo_mode' : n === 7 ? 'zelo_theme' : n === 8 ? 'zelo_age' : null;
   cineSetNextEnabled(!requiredKey || !!localStorage.getItem(requiredKey));
 
+  cineStopDemo();   // halt the theme demo when leaving screen 7
+
   if (n === 1) cineRunScan();
   else if (n === 2) cineRunReply();
   else if (n === 3) cineRunSwipe();
   else if (n === 4) cineRunNotif();
   else if (n === 5) cineRunTracking();
   else if (n === 6) cineRunFade('cine-mode-grid');
-  else if (n === 7) cineRunFade('cine-theme-grid');
+  else if (n === 7) { cineRunFade('cine-theme-grid'); cineStartDemo(); }
   else if (n === 8) cineRunFade('cine-age-grid');
 
   cineRestoreSelection(n);   // re-highlight a prior choice when revisiting
+}
+
+// ---- Theme screen — looping in-app demo (Scan -> Home -> Chat, ~3s each) ----
+let _cineDemoTimer = null;
+let _cineDemoIdx   = 0;
+
+function cineShowDemo(i) {
+  document.querySelectorAll('.cine-demo-screen').forEach((s, idx) => s.classList.toggle('active', idx === i));
+  document.querySelectorAll('.cine-demo-dot').forEach((d, idx) => d.classList.toggle('active', idx === i));
+}
+function cineStartDemo() {
+  cineStopDemo();
+  _cineDemoIdx = 0;
+  cineShowDemo(0);
+  _cineDemoTimer = setInterval(() => {
+    _cineDemoIdx = (_cineDemoIdx + 1) % 3;
+    cineShowDemo(_cineDemoIdx);
+  }, 3000);
+}
+function cineStopDemo() {
+  if (_cineDemoTimer) { clearInterval(_cineDemoTimer); _cineDemoTimer = null; }
 }
 
 // Enable/disable the Next CTA (used to enforce required answers).
@@ -2267,6 +2295,7 @@ function cineScreenTap() {}
 
 function finishNewOnboarding() {
   _cineClearTimers();
+  cineStopDemo();
   localStorage.setItem('zelo_onboarding_done', '1');
   const overlay = document.getElementById('cine-onboarding');
   if (overlay) {
