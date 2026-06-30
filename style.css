@@ -5259,3 +5259,162 @@ textarea { font-family: inherit; }
   transition: opacity 0.3s ease, transform 0.15s ease;
 }
 .cine-next:active { transform: scale(0.99); }
+
+
+/* ================================================================
+   CINEMATIC ONBOARDING — Phase 2 screens 4-8 (notif/mode/theme/age)
+   Selection states use var(--accent*) so the chosen theme flows through.
+   ================================================================ */
+
+/* Reply card label now carries a sparkle icon */
+.cine-reply-label { display: inline-flex; align-items: center; gap: 5px; }
+.cine-reply-spark { flex: none; }
+
+/* ---- Screen 4 — Notifications (Zelo sparkle, not a bell) ---- */
+.cine-notif-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+.cine-notif-icon {
+  position: relative;
+  width: 150px; height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ec4899;
+}
+.cine-notif-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(236,72,153,0.30) 0%, rgba(236,72,153,0) 68%);
+  animation: cineNotifPulse 2.2s ease-in-out infinite;
+}
+@keyframes cineNotifPulse {
+  0%, 100% { transform: scale(0.9);  opacity: 0.65; }
+  50%      { transform: scale(1.18); opacity: 1; }
+}
+.cine-notif-spark {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 8px 20px rgba(236,72,153,0.4));
+  animation: cineNotifFloat 3s ease-in-out infinite;
+}
+@keyframes cineNotifFloat {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50%      { transform: translateY(-8px) rotate(6deg); }
+}
+.cine-notif-head { margin: 0; }
+
+/* ---- Screen 6 — Mode selection ---- */
+.cine-mode-q { font-size: 1.4rem; line-height: 1.25; margin-bottom: 28px; }
+.cine-mode-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  width: 100%;
+  max-width: 300px;
+}
+.cine-mode-card {
+  flex: 1 1 calc(50% - 14px);
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 22px 14px;
+  border: 1.5px solid var(--border-2);
+  border-radius: 18px;
+  background: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.cine-mode-card:active { transform: scale(0.98); }
+.cine-mode-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 12px 32px var(--accent-soft);
+}
+.cine-mode-icon { font-size: 2.6rem; line-height: 1; color: #1c1917; }
+.cine-mode-card.selected .cine-mode-icon { color: var(--accent); }
+.cine-mode-main { font-size: 1.1rem; font-weight: 800; color: #1c1917; }
+.cine-mode-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #b9b0a2;
+}
+.cine-mode-card--both {
+  flex-basis: 100%;
+  flex-direction: row;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px;
+}
+.cine-mode-icon--both { display: inline-flex; align-items: center; }
+.cine-mode-icon-k { margin-left: -8px; }
+.cine-mode-both-text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+
+/* ---- Screen 7 — Theme picker ---- */
+.cine-theme-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  max-width: 280px;
+}
+.cine-theme-dot {
+  width: 66px; height: 66px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 6px 18px rgba(28,25,23,0.14);
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+.cine-theme-dot:active { transform: scale(0.95); }
+.cine-theme-dot.selected { border-color: #1c1917; transform: scale(1.06); }
+.cine-theme-dot.selected::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.35);
+}
+
+/* ---- Screen 8 — Age range ---- */
+.cine-age-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  max-width: 280px;
+}
+.cine-age-pill {
+  padding: 15px 26px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border-2);
+  background: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1c1917;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.cine-age-pill:active { transform: scale(0.97); }
+.cine-age-pill.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}

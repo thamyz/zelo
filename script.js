@@ -74,6 +74,7 @@ window.addEventListener('DOMContentLoaded', () => {
   AUTH.init(); // session check — must run before any auth triggers fire
   // TODO — merge anonymous scan history on signup
 
+  applySavedTheme();          // app-wide accent chosen during onboarding (screen 7)
   ensureTrialStarted();
   initScanCountForToday();
   initMatchSlots();           // Feature 7: restore expired deletion slots
@@ -1929,16 +1930,17 @@ function copyCurrentReply() {
 // ONBOARDING  (two-phase cinematic — active first-launch flow)
 //   PHASE 1 (auto, ~4-5s, no interaction):
 //     typewriter -> word morph (Confidence/Connection/Conversations) -> logo
-//   PHASE 2 (Next + X):
-//     1 scan demo - 2 reply demo (blank suggestion) - 3 swipe/match - 4 tracking
-//   On finish -> Scan page with the pre-filled example. No tour.
+//   PHASE 2 (Next + X, 8 screens):
+//     1 scan · 2 reply · 3 swipe/match · 4 notifications · 5 tracking
+//     6 mode · 7 theme · 8 age  ->  Scan page with the pre-filled example.
 // Legacy 3-slide onboarding + 12-step spotlight tour live in
 // archive/legacy-onboarding.js and never run.
 // ================================================================
 
 let threadEditMode = false;
 
-let cineStep    = 0;            // 0 = Phase 1; 1-4 = Phase 2 screens
+const CINE_LAST = 8;           // last Phase 2 screen
+let cineStep    = 0;           // 0 = Phase 1; 1-8 = Phase 2 screens
 let _cineTimers = [];
 
 function _cineClearTimers() {
@@ -1949,6 +1951,28 @@ function _cineDelay(fn, ms) {
   const t = setTimeout(fn, ms);
   _cineTimers.push(t);
   return t;
+}
+
+// ---- App-wide accent theme (set on screen 7, applied to CSS vars) ----
+const ZELO_THEMES = {
+  pink:     { accent: '#ec4899', deep: '#db2777', rgb: '236, 72, 153' },
+  berry:    { accent: '#a21caf', deep: '#86198f', rgb: '162, 28, 175' },
+  lavender: { accent: '#8b5cf6', deep: '#7c3aed', rgb: '139, 92, 246' },
+  coral:    { accent: '#fb7185', deep: '#f43f5e', rgb: '251, 113, 133' },
+  sky:      { accent: '#0ea5e9', deep: '#0284c7', rgb: '14, 165, 233' },
+  sage:     { accent: '#5b9279', deep: '#46735c', rgb: '91, 146, 121' },
+};
+function applyTheme(key) {
+  const t = ZELO_THEMES[key];
+  if (!t) return;
+  const r = document.documentElement.style;
+  r.setProperty('--accent', t.accent);
+  r.setProperty('--accent-deep', t.deep);
+  r.setProperty('--accent-soft', `rgba(${t.rgb}, 0.10)`);
+  r.setProperty('--accent-border', `rgba(${t.rgb}, 0.35)`);
+}
+function applySavedTheme() {
+  applyTheme(localStorage.getItem('zelo_theme') || 'pink');
 }
 
 function initOnboarding() {
@@ -2051,18 +2075,26 @@ function cineGoTo(n) {
   if (nextBtn) {
     // Screen 3 (swipe/match) drives its own transition — no Next there.
     nextBtn.classList.toggle('cine-hidden', n === 3);
-    nextBtn.textContent = n === 4 ? 'Get Started' : 'Next';
+    if (n === 4) nextBtn.textContent = 'Continue';
+    else if (n === 5) nextBtn.textContent = 'Know what to say';
+    else if (n === CINE_LAST) nextBtn.textContent = 'Get Started';
+    else nextBtn.textContent = 'Next';
   }
 
   if (n === 1) cineRunScan();
   else if (n === 2) cineRunReply();
   else if (n === 3) cineRunSwipe();
-  else if (n === 4) cineRunTracking();
+  else if (n === 4) cineRunNotif();
+  else if (n === 5) cineRunTracking();
+  else if (n === 6) cineRunFade('cine-mode-grid');
+  else if (n === 7) cineRunFade('cine-theme-grid');
+  else if (n === 8) cineRunFade('cine-age-grid');
 }
 
 function cineNext() {
-  if (cineStep === 0) return;          // Phase 1 is non-interactive
-  if (cineStep >= 4) { finishNewOnboarding(); return; }
+  if (cineStep === 0) return;                 // Phase 1 is non-interactive
+  if (cineStep === 4) requestNotifPermission(); // Continue triggers the prompt
+  if (cineStep >= CINE_LAST) { finishNewOnboarding(); return; }
   cineGoTo(cineStep + 1);
 }
 
@@ -2074,7 +2106,7 @@ function cineRunScan() {
   if (card) { card.classList.remove('cine-pop-in'); void card.offsetWidth; card.classList.add('cine-pop-in'); }
 }
 
-// ---- Screen 2 — reply demo (suggested reply intentionally blank) ----
+// ---- Screen 2 — reply demo ----
 function cineRunReply() {
   const head  = document.getElementById('cine3-head');
   const stack = document.getElementById('cine3-stack');
@@ -2109,7 +2141,24 @@ function cineRunSwipe() {
   _cineDelay(() => { if (cineStep === 3) cineGoTo(4); }, 3100);
 }
 
-// ---- Screen 4 — tracking permission + value reinforcement ----
+// ---- Screen 4 — notifications (sparkle, not a bell) ----
+function cineRunNotif() {
+  const icon = document.getElementById('cine-notif-icon');
+  const head = document.querySelector('.cine-notif-head');
+  if (icon) { icon.classList.remove('cine-pop-in'); void icon.offsetWidth; icon.classList.add('cine-pop-in'); }
+  if (head) { head.classList.remove('cine-fade-up'); void head.offsetWidth; head.classList.add('cine-fade-up'); }
+}
+
+function requestNotifPermission() {
+  try {
+    if (window.Notification && typeof Notification.requestPermission === 'function') {
+      const r = Notification.requestPermission();
+      if (r && typeof r.catch === 'function') r.catch(() => {});
+    }
+  } catch (_) {}
+}
+
+// ---- Screen 5 — tracking permission + value reinforcement ----
 function cineRunTracking() {
   const sheet  = document.getElementById('cine5-sheet');
   const prompt = document.getElementById('cine5-prompt');
@@ -2124,11 +2173,41 @@ function cineRunTracking() {
   _cineDelay(() => { if (sup) { void sup.offsetWidth; sup.classList.add('cine-fade-up'); } }, 900);
 }
 
-// The mock ATT buttons are now real, tappable controls (previously inert divs
-// with no handler — that was the bug). Either choice proceeds onward.
+// The mock ATT buttons are real, tappable controls (previously inert divs).
 function cineTrackingChoice(e) {
   if (e) e.stopPropagation();
   cineNext();
+}
+
+// ---- Screens 6-8 — simple fade-in for the option grid ----
+function cineRunFade(gridClass) {
+  const grid = document.querySelector('.cine-screen.active .' + gridClass);
+  if (grid) { grid.classList.remove('cine-fade-up'); void grid.offsetWidth; grid.classList.add('cine-fade-up'); }
+}
+
+// ---- Screen 6 — mode selection (account-level: Women/Men/Both) ----
+function cineSelectMode(mode, el) {
+  localStorage.setItem('zelo_mode', mode);   // account-level preference
+  document.querySelectorAll('.cine-mode-card').forEach(c => c.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  navigator.vibrate?.(4);
+}
+
+// ---- Screen 7 — theme picker (applies app-wide immediately) ----
+function cineSelectTheme(key, el) {
+  localStorage.setItem('zelo_theme', key);
+  applyTheme(key);
+  document.querySelectorAll('.cine-theme-dot').forEach(c => c.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  navigator.vibrate?.(4);
+}
+
+// ---- Screen 8 — age range ----
+function cineSelectAge(range, el) {
+  localStorage.setItem('zelo_age', range);
+  document.querySelectorAll('.cine-age-pill').forEach(c => c.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  navigator.vibrate?.(4);
 }
 
 // Phase 1 is fully non-interactive; taps anywhere are inert.

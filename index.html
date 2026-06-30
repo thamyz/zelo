@@ -712,6 +712,10 @@
           <span class="cine-dot"></span>
           <span class="cine-dot"></span>
           <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
         </div>
 
         <!-- ============ PHASE 1 — auto-playing intro (no interaction) ============ -->
@@ -742,7 +746,7 @@
           </div>
         </section>
 
-        <!-- ============ PHASE 2 · Screen 2 — Reply demo (suggested text intentionally blank) ============ -->
+        <!-- ============ PHASE 2 · Screen 2 — Reply demo ============ -->
         <section class="cine-screen" data-screen="2">
           <h2 class="cine-head cine3-head" id="cine3-head">
             <span class="cine-flip-face">Zelo helps you reply</span>
@@ -764,9 +768,13 @@
             </div>
           </div>
           <div class="cine-reply-card" id="cine3-reply">
-            <span class="cine-reply-label">Zelo suggests</span>
-            <!-- Suggested reply intentionally left blank for now -->
-            <p class="cine-reply-text" id="cine3-reply-text"></p>
+            <span class="cine-reply-label">
+              <svg class="cine-reply-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+              Zelo Suggests
+            </span>
+            <p class="cine-reply-text" id="cine3-reply-text">How about tacos Friday, you in?</p>
             <span class="cine-reply-copy" aria-hidden="true">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -798,8 +806,21 @@
           </div>
         </section>
 
-        <!-- ============ PHASE 2 · Screen 4 — Tracking permission + value ============ -->
+        <!-- ============ PHASE 2 · Screen 4 — Notifications ============ -->
         <section class="cine-screen" data-screen="4">
+          <div class="cine-notif-stage">
+            <div class="cine-notif-icon" id="cine-notif-icon" aria-hidden="true">
+              <span class="cine-notif-glow"></span>
+              <svg class="cine-notif-spark" width="84" height="84" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </div>
+            <h2 class="cine-head cine-notif-head">Get notified when she replies</h2>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 5 — Tracking permission + value ============ -->
+        <section class="cine-screen" data-screen="5">
           <div class="cine5-sheet" id="cine5-sheet" aria-hidden="true"></div>
           <div class="cine5-stage">
             <div class="cine5-prompt" id="cine5-prompt" role="group" aria-label="iOS tracking permission prompt">
@@ -815,6 +836,54 @@
             </div>
             <h2 class="cine-head cine5-head" id="cine5-head">Know what to say, every time.</h2>
             <p class="cine5-supporting" id="cine5-supporting">Stop staring at your phone wondering what to text.</p>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 6 — Mode selection ============ -->
+        <section class="cine-screen" data-screen="6">
+          <h2 class="cine-head cine-mode-q">Who do you want to practice your conversation with?</h2>
+          <div class="cine-mode-grid">
+            <button type="button" class="cine-mode-card" id="cine-mode-women" onclick="cineSelectMode('women', this)">
+              <span class="cine-mode-icon">♛</span>
+              <span class="cine-mode-main">Women</span>
+              <span class="cine-mode-label">Zelo</span>
+            </button>
+            <button type="button" class="cine-mode-card" id="cine-mode-men" onclick="cineSelectMode('men', this)">
+              <span class="cine-mode-icon">♚</span>
+              <span class="cine-mode-main">Men</span>
+              <span class="cine-mode-label">Zole</span>
+            </button>
+            <button type="button" class="cine-mode-card cine-mode-card--both" id="cine-mode-both" onclick="cineSelectMode('both', this)">
+              <span class="cine-mode-icon cine-mode-icon--both">♛<span class="cine-mode-icon-k">♚</span></span>
+              <span class="cine-mode-both-text">
+                <span class="cine-mode-main">Both</span>
+                <span class="cine-mode-label">Zelo &amp; Zole</span>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 7 — Theme picker ============ -->
+        <section class="cine-screen" data-screen="7">
+          <h2 class="cine-head">Pick your color</h2>
+          <div class="cine-theme-grid">
+            <button type="button" class="cine-theme-dot" data-theme="pink"     style="background:#ec4899" onclick="cineSelectTheme('pink', this)" aria-label="Pink"></button>
+            <button type="button" class="cine-theme-dot" data-theme="berry"    style="background:#a21caf" onclick="cineSelectTheme('berry', this)" aria-label="Berry"></button>
+            <button type="button" class="cine-theme-dot" data-theme="lavender" style="background:#8b5cf6" onclick="cineSelectTheme('lavender', this)" aria-label="Lavender"></button>
+            <button type="button" class="cine-theme-dot" data-theme="coral"    style="background:#fb7185" onclick="cineSelectTheme('coral', this)" aria-label="Coral"></button>
+            <button type="button" class="cine-theme-dot" data-theme="sky"      style="background:#0ea5e9" onclick="cineSelectTheme('sky', this)" aria-label="Sky Blue"></button>
+            <button type="button" class="cine-theme-dot" data-theme="sage"     style="background:#5b9279" onclick="cineSelectTheme('sage', this)" aria-label="Sage Green"></button>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 8 — Age range ============ -->
+        <section class="cine-screen" data-screen="8">
+          <h2 class="cine-head">How old are you?</h2>
+          <div class="cine-age-grid">
+            <button type="button" class="cine-age-pill" onclick="cineSelectAge('18-24', this)">18-24</button>
+            <button type="button" class="cine-age-pill" onclick="cineSelectAge('25-30', this)">25-30</button>
+            <button type="button" class="cine-age-pill" onclick="cineSelectAge('31-39', this)">31-39</button>
+            <button type="button" class="cine-age-pill" onclick="cineSelectAge('40+', this)">40+</button>
           </div>
         </section>
 
