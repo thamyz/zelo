@@ -1641,18 +1641,34 @@ function handleUpload(input) {
 
 const TONE_LABELS = { smooth: 'Smooth', funny: 'Funny', flirty: 'Flirty', confident: 'Confident' };
 
+// Turns the structured Tell Zelo More selections into plain-language
+// constraints the model is explicitly told to follow, rather than a bare
+// unlabeled string it has to guess the meaning of.
+function buildScanContextBlock() {
+  const ctx = state.asstContextObj || {};
+  const lines = [];
+  if (ctx.who)       lines.push(`This message is from a ${ctx.who}.`);
+  if (ctx.situation) lines.push(`The situation is: ${ctx.situation}.`);
+  if (ctx.goal)       lines.push(`The user wants to: ${ctx.goal}.`);
+  if (ctx.extra)      lines.push(`Additional context from the user: ${ctx.extra}`);
+  return lines.join(' ');
+}
+
 async function _fetchDeepSeekReply(tone) {
+  const contextBlock = buildScanContextBlock();
+
   let userPrompt = `Message I received: "${state.asstMessage}"\nTone: ${TONE_LABELS[tone]}`;
-  if (state.asstContext) userPrompt += `\nContext: ${state.asstContext}`;
+  if (contextBlock) userPrompt += `\nContext: ${contextBlock}`;
+
+  const systemPrompt = contextBlock
+    ? `You are Zelo, a witty and confident texting coach. Generate a reply to the message the user received. The user has told you who the message is from, what the situation is, and what they're trying to achieve — treat these as real constraints that must shape the reply's tone and content, not background flavor to ignore. A reply to an Ex during an Argument where the user wants to Fix Things should sound noticeably different from a reply to a Crush who is Flirting where the user wants to Be Funny. Keep it short, natural, and conversational — the way a real person texts. Do not use emojis unless the tone specifically calls for it.`
+    : `You are Zelo, a witty and confident texting coach. Generate a reply to the message the user received. Keep it short, natural, and conversational — the way a real person texts. Do not use emojis unless the tone specifically calls for it.`;
 
   const { data, error } = await zeloSupabase.functions.invoke('deepseek-proxy', {
     body: {
       model: 'deepseek-chat',
       messages: [
-        {
-          role: 'system',
-          content: 'You are Zelo, a witty and confident texting coach. Generate a reply to the message the user received. Keep it short, natural, and conversational — the way a real person texts. Do not use emojis unless the tone specifically calls for it.'
-        },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
       max_tokens: 150,
@@ -1704,6 +1720,7 @@ function generateReplies() {
   state.asstCurrentSet = {};  // cache: tone → reply text, filled on demand
   state.asstMessage    = userInput;
   state.asstContext    = context;
+  state.asstContextObj = { ...state.scanContext };  // structured who/situation/goal/extra, for prompt building
 
   // Reset to Smooth style on each new generate
   state.asstStyle = "smooth";
