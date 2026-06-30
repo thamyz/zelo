@@ -705,26 +705,26 @@
            ============================================================ -->
       <div class="cine" id="cine-onboarding" hidden onclick="cineScreenTap(event)">
 
-        <button class="cine-close" onclick="finishNewOnboarding()" aria-label="Skip onboarding">✕</button>
+        <button class="cine-close cine-hidden" id="cine-close" onclick="finishNewOnboarding()" aria-label="Skip onboarding">✕</button>
 
-        <div class="cine-dots" aria-hidden="true">
-          <span class="cine-dot active"></span>
+        <div class="cine-dots cine-hidden" id="cine-dots" aria-hidden="true">
           <span class="cine-dot"></span>
           <span class="cine-dot"></span>
           <span class="cine-dot"></span>
           <span class="cine-dot"></span>
         </div>
 
-        <!-- Screen 1 — typewriter intro -->
-        <section class="cine-screen active" data-screen="1">
-          <div class="cine1-wrap" id="cine1-wrap">
-            <h1 class="cine1-headline" id="cine1-headline"></h1>
-            <p class="cine1-sub" id="cine1-sub">Zelo gives you the words the moment you need them.</p>
+        <!-- ============ PHASE 1 — auto-playing intro (no interaction) ============ -->
+        <section class="cine-screen cine-phase1 active" data-screen="0">
+          <div class="cine-p1-stage">
+            <h1 class="cine-p1-type" id="cine-p1-type"></h1>
+            <div class="cine-p1-word" id="cine-p1-word" hidden></div>
+            <div class="cine-p1-logo" id="cine-p1-logo" hidden>Zelo<span class="cine-p1-spark">✦</span></div>
           </div>
         </section>
 
-        <!-- Screen 2 — scan mock -->
-        <section class="cine-screen" data-screen="2">
+        <!-- ============ PHASE 2 · Screen 1 — Scan demo ============ -->
+        <section class="cine-screen" data-screen="1">
           <h2 class="cine-head cine2-head" id="cine2-head">Paste a message or upload a screenshot</h2>
           <div class="cine-mock-card" id="cine2-card">
             <div class="cine-mock-msg">haha yeah I guess, idk what do you wanna do</div>
@@ -742,8 +742,8 @@
           </div>
         </section>
 
-        <!-- Screen 3 — reply reveal -->
-        <section class="cine-screen" data-screen="3">
+        <!-- ============ PHASE 2 · Screen 2 — Reply demo (suggested text intentionally blank) ============ -->
+        <section class="cine-screen" data-screen="2">
           <h2 class="cine-head cine3-head" id="cine3-head">
             <span class="cine-flip-face">Zelo helps you reply</span>
           </h2>
@@ -765,7 +765,8 @@
           </div>
           <div class="cine-reply-card" id="cine3-reply">
             <span class="cine-reply-label">Zelo suggests</span>
-            <p class="cine-reply-text">Let's do something better than "whatever you want" — pick: tacos or a walk?</p>
+            <!-- Suggested reply intentionally left blank for now -->
+            <p class="cine-reply-text" id="cine3-reply-text"></p>
             <span class="cine-reply-copy" aria-hidden="true">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -776,36 +777,48 @@
           </div>
         </section>
 
-        <!-- Screen 4 — black word-flash → logo -->
-        <section class="cine-screen cine-screen--black" data-screen="4">
-          <div class="cine4-word" id="cine4-word"></div>
-          <div class="cine4-stack" id="cine4-stack" hidden>
-            <span>Conversations</span>
-            <span>Conversations</span>
-            <span>Conversations</span>
-            <span>Conversations</span>
-            <span>Conversations</span>
-            <span>Conversations</span>
+        <!-- ============ PHASE 2 · Screen 3 — Swipe / match demo ============ -->
+        <section class="cine-screen" data-screen="3">
+          <h2 class="cine-head">Find someone to practice with</h2>
+          <div class="cine-swipe-stage">
+            <div class="cine-swipe-card cine-swipe-card--back"></div>
+            <div class="cine-swipe-card" id="cine-swipe-card">
+              <div class="cine-swipe-photo">E</div>
+              <div class="cine-swipe-grad"></div>
+              <div class="cine-swipe-like" id="cine-swipe-like">LIKE</div>
+              <div class="cine-swipe-info">
+                <span class="cine-swipe-name">Emily, 20</span>
+                <span class="cine-swipe-occ">Nursing Student</span>
+              </div>
+            </div>
+            <div class="cine-match-flash" id="cine-match-flash" hidden>
+              <span class="cine-match-spark">✦</span>
+              <span class="cine-match-title">It's a Match</span>
+            </div>
           </div>
-          <div class="cine4-logo" id="cine4-logo" hidden>Zelo<span class="cine4-spark">✦</span></div>
         </section>
 
-        <!-- Screen 5 — tracking prompt + CTA -->
-        <section class="cine-screen" data-screen="5">
+        <!-- ============ PHASE 2 · Screen 4 — Tracking permission + value ============ -->
+        <section class="cine-screen" data-screen="4">
           <div class="cine5-sheet" id="cine5-sheet" aria-hidden="true"></div>
           <div class="cine5-stage">
-            <div class="cine5-prompt" id="cine5-prompt" role="img" aria-label="iOS tracking permission prompt mock">
-              <div class="cine5-prompt-icon" aria-hidden="true"></div>
+            <div class="cine5-prompt" id="cine5-prompt" role="group" aria-label="iOS tracking permission prompt">
+              <div class="cine5-prompt-icon" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff">
+                  <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+                </svg>
+              </div>
               <p class="cine5-prompt-title">Allow “Zelo” to track your activity across other companies’ apps and websites?</p>
               <p class="cine5-prompt-sub">We ask to track activity to measure ads and improve your experience.</p>
-              <div class="cine5-prompt-btn">Ask App Not to Track</div>
-              <div class="cine5-prompt-btn">Allow</div>
+              <button type="button" class="cine5-prompt-btn" onclick="cineTrackingChoice(event)">Ask App Not to Track</button>
+              <button type="button" class="cine5-prompt-btn" onclick="cineTrackingChoice(event)">Allow</button>
             </div>
             <h2 class="cine-head cine5-head" id="cine5-head">Know what to say, every time.</h2>
+            <p class="cine5-supporting" id="cine5-supporting">Stop staring at your phone wondering what to text.</p>
           </div>
         </section>
 
-        <button class="cine-next" id="cine-next" onclick="cineNext()">Next</button>
+        <button class="cine-next cine-hidden" id="cine-next" onclick="cineNext()">Next</button>
       </div>
 
 

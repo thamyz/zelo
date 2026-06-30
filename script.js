@@ -1926,23 +1926,20 @@ function copyCurrentReply() {
 
 
 // ================================================================
-// ONBOARDING
-// ================================================================
-
-// ================================================================
-// ONBOARDING  (5-screen cinematic — active first-launch flow)
-//   Screens: 1 typewriter intro · 2 scan mock · 3 reply reveal
-//            4 black word-flash → logo · 5 tracking prompt + CTA
+// ONBOARDING  (two-phase cinematic — active first-launch flow)
+//   PHASE 1 (auto, ~4-5s, no interaction):
+//     typewriter -> word morph (Confidence/Connection/Conversations) -> logo
+//   PHASE 2 (Next + X):
+//     1 scan demo - 2 reply demo (blank suggestion) - 3 swipe/match - 4 tracking
+//   On finish -> Scan page with the pre-filled example. No tour.
 // Legacy 3-slide onboarding + 12-step spotlight tour live in
 // archive/legacy-onboarding.js and never run.
 // ================================================================
 
 let threadEditMode = false;
 
-let cineStep      = 0;
-let _cineTimers   = [];
-let _cineTyping   = false;
-let _cineTypeDone = false;
+let cineStep    = 0;            // 0 = Phase 1; 1-4 = Phase 2 screens
+let _cineTimers = [];
 
 function _cineClearTimers() {
   _cineTimers.forEach(t => clearTimeout(t));
@@ -1970,14 +1967,79 @@ function initOnboarding() {
 
 function startCineOnboarding() {
   cineStep = 0;
-  cineGoTo(1);
+  cineSetChrome(false);  // no X / Next / dots during the auto intro
+  document.querySelectorAll('.cine-screen').forEach(s => {
+    s.classList.toggle('active', s.dataset.screen === '0');
+  });
+  cinePhase1();
 }
 
-// Reveal a screen, hide the rest, and fire its entrance choreography.
+// Toggle the interactive chrome (X, Next, dots) — hidden during Phase 1.
+function cineSetChrome(show) {
+  ['cine-close', 'cine-next', 'cine-dots'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('cine-hidden', !show);
+  });
+}
+
+// ---- PHASE 1 — typewriter -> word morph -> logo -> auto-advance ----
+function cinePhase1() {
+  const type = document.getElementById('cine-p1-type');
+  const word = document.getElementById('cine-p1-word');
+  const logo = document.getElementById('cine-p1-logo');
+  if (!type) { cineGoTo(1); return; }
+
+  type.textContent = '';  type.hidden = false;
+  word.textContent = '';  word.hidden = true;  word.classList.remove('cine-p1-word--in');
+  logo.hidden = true;     logo.classList.remove('cine-p1-logo--in');
+
+  // 1) Typewriter "Never freeze up again."
+  const text = 'Never freeze up again.';
+  let i = 0;
+  function tick() {
+    if (i < text.length) {
+      type.textContent = text.slice(0, ++i);
+      navigator.vibrate?.(1);
+      _cineDelay(tick, 38);
+    } else {
+      _cineDelay(runWords, 500);   // hold half a second
+    }
+  }
+  tick();
+
+  // 2) Word morph — crossfade in the same position, light bg / pink text
+  function runWords() {
+    type.hidden = true;
+    word.hidden = false;
+    const words = ['Confidence', 'Connection', 'Conversations'];
+    words.forEach((w, idx) => {
+      _cineDelay(() => {
+        word.textContent = w;
+        word.classList.remove('cine-p1-word--in'); void word.offsetWidth;
+        word.classList.add('cine-p1-word--in');
+        navigator.vibrate?.(4);
+      }, idx * 620);
+    });
+    _cineDelay(runLogo, words.length * 620 + 80);
+  }
+
+  // 3) Zelo logo with sparkle, then advance into Phase 2
+  function runLogo() {
+    word.hidden = true;
+    logo.hidden = false;
+    void logo.offsetWidth;
+    logo.classList.add('cine-p1-logo--in');
+    navigator.vibrate?.(12);
+    _cineDelay(() => { cineGoTo(1); }, 1000);
+  }
+}
+
+// ---- PHASE 2 navigation ----
 function cineGoTo(n) {
   _cineClearTimers();
   cineStep = n;
 
+  cineSetChrome(true);
   document.querySelectorAll('.cine-screen').forEach(s => {
     s.classList.toggle('active', Number(s.dataset.screen) === n);
   });
@@ -1985,179 +2047,92 @@ function cineGoTo(n) {
     d.classList.toggle('active', i === n - 1);
   });
 
-  const overlay = document.getElementById('cine-onboarding');
-  if (overlay) overlay.classList.toggle('cine-dark', n === 4);
-
   const nextBtn = document.getElementById('cine-next');
   if (nextBtn) {
-    // Screen 4 is fully auto; its Next appears only after the logo lands.
-    nextBtn.classList.toggle('cine-next--hidden', n === 4);
-    nextBtn.textContent = n === 5 ? 'Know what to say' : 'Next';
+    // Screen 3 (swipe/match) drives its own transition — no Next there.
+    nextBtn.classList.toggle('cine-hidden', n === 3);
+    nextBtn.textContent = n === 4 ? 'Get Started' : 'Next';
   }
 
-  if (n === 1) cineRunScreen1();
-  else if (n === 2) cineRunScreen2();
-  else if (n === 3) cineRunScreen3();
-  else if (n === 4) cineRunScreen4();
-  else if (n === 5) cineRunScreen5();
+  if (n === 1) cineRunScan();
+  else if (n === 2) cineRunReply();
+  else if (n === 3) cineRunSwipe();
+  else if (n === 4) cineRunTracking();
 }
 
 function cineNext() {
-  if (cineStep === 1 && _cineTyping) { cineFinishType(); return; }
-  if (cineStep >= 5) { finishNewOnboarding(); return; }
+  if (cineStep === 0) return;          // Phase 1 is non-interactive
+  if (cineStep >= 4) { finishNewOnboarding(); return; }
   cineGoTo(cineStep + 1);
 }
 
-// ---- Screen 1 — character-by-character typewriter, each char slides in ----
-function cineRunScreen1() {
-  const headline = document.getElementById('cine1-headline');
-  const sub      = document.getElementById('cine1-sub');
-  const wrap     = document.getElementById('cine1-wrap');
-  if (!headline) return;
-
-  wrap.classList.remove('cine1-wrap--lifted');
-  sub.classList.remove('cine1-sub--in');
-  headline.innerHTML = '';
-  _cineTyping   = true;
-  _cineTypeDone = false;
-
-  const text  = 'Never freeze up again.';
-  const chars = text.split('');
-  let i = 0;
-
-  function step() {
-    if (i >= chars.length) {
-      _cineTyping = false;
-      _cineTypeDone = true;
-      _cineDelay(() => {
-        wrap.classList.add('cine1-wrap--lifted');
-        sub.classList.add('cine1-sub--in');
-      }, 260);
-      return;
-    }
-    const span = document.createElement('span');
-    span.className = 'cine1-char';
-    span.textContent = chars[i] === ' ' ? ' ' : chars[i];
-    headline.appendChild(span);
-    navigator.vibrate?.(1);
-    i++;
-    _cineDelay(step, 38);
-  }
-  step();
-}
-
-// Tap-to-complete: dump the whole line instantly, then reveal the subline.
-function cineFinishType() {
-  _cineClearTimers();
-  _cineTyping = false;
-  _cineTypeDone = true;
-  const headline = document.getElementById('cine1-headline');
-  const sub      = document.getElementById('cine1-sub');
-  const wrap     = document.getElementById('cine1-wrap');
-  if (headline) {
-    headline.innerHTML = '';
-    'Never freeze up again.'.split('').forEach(c => {
-      const span = document.createElement('span');
-      span.className = 'cine1-char cine1-char--instant';
-      span.textContent = c === ' ' ? ' ' : c;
-      headline.appendChild(span);
-    });
-  }
-  wrap.classList.add('cine1-wrap--lifted');
-  sub.classList.add('cine1-sub--in');
-}
-
-// ---- Screen 2 — scan mock card slides up into frame ----
-function cineRunScreen2() {
+// ---- Screen 1 — scan demo ----
+function cineRunScan() {
   const card = document.getElementById('cine2-card');
   const head = document.getElementById('cine2-head');
-  if (card) { card.classList.remove('cine-pop-in'); void card.offsetWidth; card.classList.add('cine-pop-in'); }
   if (head) { head.classList.remove('cine-fade-up'); void head.offsetWidth; head.classList.add('cine-fade-up'); }
+  if (card) { card.classList.remove('cine-pop-in'); void card.offsetWidth; card.classList.add('cine-pop-in'); }
 }
 
-// ---- Screen 3 — headline scoreboard-flips, card lifts, reply card drops in ----
-function cineRunScreen3() {
+// ---- Screen 2 — reply demo (suggested reply intentionally blank) ----
+function cineRunReply() {
   const head  = document.getElementById('cine3-head');
   const stack = document.getElementById('cine3-stack');
   const reply = document.getElementById('cine3-reply');
   if (head)  { head.classList.remove('cine-flip-in'); void head.offsetWidth; head.classList.add('cine-flip-in'); }
-  if (stack) { stack.classList.remove('cine3-stack--lifted'); }
-  if (reply) { reply.classList.remove('cine-reply-in'); }
-
+  if (stack) stack.classList.remove('cine3-stack--lifted');
+  if (reply) reply.classList.remove('cine-reply-in');
   _cineDelay(() => { if (stack) stack.classList.add('cine3-stack--lifted'); }, 520);
   _cineDelay(() => { if (reply) reply.classList.add('cine-reply-in'); }, 820);
 }
 
-// ---- Screen 4 — black; flash words, scroll a stack, reveal the logo ----
-function cineRunScreen4() {
-  const word  = document.getElementById('cine4-word');
-  const stack = document.getElementById('cine4-stack');
-  const logo  = document.getElementById('cine4-logo');
-  const nextBtn = document.getElementById('cine-next');
-  if (!word) return;
+// ---- Screen 3 — swipe right -> "It's a Match" -> auto-advance ----
+function cineRunSwipe() {
+  const card  = document.getElementById('cine-swipe-card');
+  const like  = document.getElementById('cine-swipe-like');
+  const flash = document.getElementById('cine-match-flash');
+  if (!card) return;
 
-  word.textContent = '';
-  word.classList.remove('cine4-word--in');
-  stack.classList.remove('cine4-stack--run');
-  stack.hidden = true;
-  logo.classList.remove('cine4-logo--in');
-  logo.hidden = true;
+  card.classList.remove('cine-swipe-card--fly');
+  if (like) like.classList.remove('cine-swipe-like--show');
+  if (flash) { flash.hidden = true; flash.classList.remove('cine-match-flash--in'); }
+  void card.offsetWidth;
 
-  const flash = (w, at) => {
-    _cineDelay(() => {
-      word.textContent = w;
-      word.classList.remove('cine4-word--in'); void word.offsetWidth;
-      word.classList.add('cine4-word--in');
-      navigator.vibrate?.(6);
-    }, at);
-    _cineDelay(() => { word.classList.remove('cine4-word--in'); }, at + 640);
-  };
-
-  flash('Confidence', 260);
-  flash('Connection', 1160);
-  flash('Conversations', 2060);
-
-  // Stack of "Conversations" scrolling upward for a beat
+  _cineDelay(() => { if (like) like.classList.add('cine-swipe-like--show'); }, 650);
+  _cineDelay(() => { card.classList.add('cine-swipe-card--fly'); navigator.vibrate?.(8); }, 1000);
   _cineDelay(() => {
-    word.textContent = '';
-    stack.hidden = false;
-    void stack.offsetWidth;
-    stack.classList.add('cine4-stack--run');
-  }, 2900);
-
-  // Logo replaces the stack
-  _cineDelay(() => {
-    stack.classList.remove('cine4-stack--run');
-    stack.hidden = true;
-    logo.hidden = false;
-    void logo.offsetWidth;
-    logo.classList.add('cine4-logo--in');
-    navigator.vibrate?.(12);
-    if (nextBtn) nextBtn.classList.remove('cine-next--hidden');
-  }, 4700);
-
-  // Auto-advance shortly after the logo settles
-  _cineDelay(() => { if (cineStep === 4) cineGoTo(5); }, 6400);
+    if (!flash) return;
+    flash.hidden = false; void flash.offsetWidth;
+    flash.classList.add('cine-match-flash--in');
+    navigator.vibrate?.(16);
+  }, 1550);
+  _cineDelay(() => { if (cineStep === 3) cineGoTo(4); }, 3100);
 }
 
-// ---- Screen 5 — pink/cream overlay rises, tracking prompt, CTA ----
-function cineRunScreen5() {
+// ---- Screen 4 — tracking permission + value reinforcement ----
+function cineRunTracking() {
   const sheet  = document.getElementById('cine5-sheet');
   const prompt = document.getElementById('cine5-prompt');
   const head   = document.getElementById('cine5-head');
+  const sup    = document.getElementById('cine5-supporting');
   if (sheet)  { sheet.classList.remove('cine5-sheet--up'); void sheet.offsetWidth; sheet.classList.add('cine5-sheet--up'); }
-  if (prompt) { prompt.classList.remove('cine-pop-in'); }
-  if (head)   { head.classList.remove('cine-fade-up'); }
-  _cineDelay(() => { if (prompt) prompt.classList.add('cine-pop-in'); }, 480);
-  _cineDelay(() => { if (head) head.classList.add('cine-fade-up'); }, 760);
+  if (prompt) prompt.classList.remove('cine-pop-in');
+  if (head)   head.classList.remove('cine-fade-up');
+  if (sup)    sup.classList.remove('cine-fade-up');
+  _cineDelay(() => { if (prompt) { void prompt.offsetWidth; prompt.classList.add('cine-pop-in'); } }, 460);
+  _cineDelay(() => { if (head) { void head.offsetWidth; head.classList.add('cine-fade-up'); } }, 740);
+  _cineDelay(() => { if (sup) { void sup.offsetWidth; sup.classList.add('cine-fade-up'); } }, 900);
 }
 
-// Tap anywhere on screen 1 completes the typewriter; elsewhere is inert
-// (advancing is via the Next button) so stray taps don't skip scenes.
-function cineScreenTap(e) {
-  if (e && e.target.closest('.cine-next, .cine-close')) return;
-  if (cineStep === 1 && _cineTyping) cineFinishType();
+// The mock ATT buttons are now real, tappable controls (previously inert divs
+// with no handler — that was the bug). Either choice proceeds onward.
+function cineTrackingChoice(e) {
+  if (e) e.stopPropagation();
+  cineNext();
 }
+
+// Phase 1 is fully non-interactive; taps anywhere are inert.
+function cineScreenTap() {}
 
 function finishNewOnboarding() {
   _cineClearTimers();
@@ -2167,7 +2142,7 @@ function finishNewOnboarding() {
     overlay.classList.add('cine-out');
     setTimeout(() => {
       overlay.setAttribute('hidden', '');
-      overlay.classList.remove('cine-out', 'cine-dark');
+      overlay.classList.remove('cine-out');
     }, 360);
   }
   // Land on Scan with the pre-filled example — no tour, no extra layer.
