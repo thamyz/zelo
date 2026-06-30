@@ -2120,431 +2120,6 @@ textarea { font-family: inherit; }
 
 .scan-modal-btn--ghost:hover { color: var(--text); }
 
-/* ================================================================
-   GUIDED SPOTLIGHT TOUR  (Scan)
-   ================================================================ */
-.tour {
-  /* Anchored inside #app (position:relative + overflow:hidden), so the dim
-     layer and tooltip are clipped to the phone frame — never the page. */
-  position: absolute;
-  inset: 0;
-  z-index: 950;
-  pointer-events: none;   /* let the spotlit element stay interactive;
-                             only the tooltip (below) captures taps */
-}
-
-.tour[hidden] { display: none; }
-
-.tour-backdrop {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-/* The cutout: a transparent box whose massive shadow dims everything else */
-.tour-spotlight {
-  position: absolute;
-  top: 0; left: 0;
-  width: 0; height: 0;
-  border-radius: var(--r-md);
-  pointer-events: none;
-  box-shadow: 0 0 0 9999px rgba(28, 25, 23, 0.7);
-  transition: top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Accent ring with a soft pulse — anchored to the cutout */
-.tour-spotlight::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border: 3px solid var(--accent);
-  border-radius: inherit;
-  animation: tourPulse 1.8s ease-in-out infinite;
-}
-
-@keyframes tourPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
-  70%  { box-shadow: 0 0 0 9px rgba(236, 72, 153, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
-}
-
-.tour-tooltip {
-  position: absolute;
-  width: max-content;
-  max-width: 250px;
-  background: var(--s1);
-  border-radius: var(--r-md);
-  padding: 14px 14px 10px;
-  box-shadow: 0 16px 40px rgba(28, 25, 23, 0.32);
-  pointer-events: auto;
-  transition: top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: modalPop 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.tour-close-x {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  color: var(--text-3);
-  background: none;
-  border: none;
-  cursor: pointer;
-  border-radius: 50%;
-  line-height: 1;
-}
-.tour-close-x:hover { color: var(--text); }
-
-/* Branded header — small pink kicker that ties the card to the Zelo wordmark */
-.tour-kicker {
-  display: block;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 5px;
-}
-
-.tour-text {
-  font-size: 0.92rem;
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--text);
-  margin-bottom: 12px;
-  transition: transform 0.22s ease-out, opacity 0.22s ease-out;
-}
-
-.tour-text--entering {
-  transform: translateX(-8px);
-  opacity: 0;
-}
-
-.tour-close-btn {
-  display: none !important;
-}
-
-.tour-get-started {
-  background: #ec4899;
-  color: #fff;
-  border: none;
-  border-radius: 20px;
-  padding: 8px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  letter-spacing: 0.01em;
-  -webkit-tap-highlight-color: transparent;
-  margin-left: auto;
-}
-
-.tour-get-started[hidden] { display: none !important; }
-
-.tour-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: flex-start;
-}
-
-
-.tour-back {
-  margin-right: auto;          /* push Next to the right; Back sits at the left */
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-3);
-  background: none;
-  padding: 6px 2px;
-  transition: color 0.12s;
-}
-
-.tour-back:hover { color: var(--text-2); }
-
-.tour-back[hidden] { display: none; }
-
-.tour-next {
-  position: relative;
-  overflow: hidden;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #fff;
-  background: var(--accent);
-  border-radius: var(--r-sm);
-  padding: 9px 22px;
-  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.25);
-  transition: transform 0.1s;
-}
-
-.tour-next:active { transform: scale(0.97); }
-
-/* Settling fill — sweeps across the button as the step arms. Visual only;
-   the button is always tappable, the fill just makes it feel like it's
-   settling in rather than forcing a wait. */
-.tour-next-fill {
-  position: absolute;
-  inset: 0;
-  background: var(--accent-deep);
-  transform-origin: left center;
-  transform: scaleX(0);
-  /* animation (with per-step duration) is applied in JS via armTourButton */
-}
-
-@keyframes tourFill {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
-}
-
-.tour-next-label {
-  position: relative;   /* sits above the fill */
-  z-index: 1;
-  white-space: nowrap;  /* keep "Get Started" on one line */
-}
-
-/* Secondary step (screenshot upload) — calmer than the core workflow steps:
-   no pulsing ring, thinner accent, muted instruction. Communicates "optional"
-   visually so Message / Context / Generate read as the priority. */
-.tour--secondary .tour-spotlight::after {
-  border-width: 2px;
-  opacity: 0.55;
-  animation: none;
-}
-
-
-/* Transparent tap-target over a highlighted control (e.g. the Scan button).
-   Sits above the dim so the real button underneath can't be triggered twice. */
-.tour-hit {
-  position: absolute;
-  background: transparent;
-  border-radius: 50%;
-  pointer-events: auto;
-  cursor: pointer;
-  z-index: 2;
-}
-
-.tour-hit[hidden] { display: none; }
-
-/* Swipe feedback — a big heart (like) or X (pass) that pops over the card as
-   the guided card demo / real swipe happens. Motion + colour carry the meaning. */
-.tour-swipe-feedback {
-  position: absolute;
-  z-index: 3;
-  pointer-events: none;
-  font-size: 5rem;
-  font-weight: 800;
-  line-height: 1;
-  transform: translate(-50%, -50%);
-  animation: tourFbPop 0.65s ease-out forwards;
-}
-
-.tour-swipe-feedback.like { color: var(--green); }
-.tour-swipe-feedback.nope { color: var(--red); }
-.tour-swipe-feedback[hidden] { display: none; }
-
-@keyframes tourFbPop {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
-  35%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
-}
-
-/* Completion: full dim (cutout collapsed to a point), centered card, no ring */
-.tour--final .tour-spotlight::after { display: none; }
-
-
-/* ================================================================
-   ONBOARDING OVERLAY
-   ================================================================ */
-
-.onboarding {
-  position: absolute;
-  inset: 0;
-  z-index: 999;
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 32px;
-  transition: opacity 0.3s ease;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.onboarding-close-btn {
-  position: absolute;
-  top: 18px;
-  right: 20px;
-  background: none;
-  border: none;
-  font-size: 1.1rem;
-  color: var(--text-3);
-  padding: 8px;
-  cursor: pointer;
-  line-height: 1;
-  touch-action: manipulation;
-}
-
-/* Progress bar is visible — button-driven navigation */
-
-.onboarding-tap-hint {
-  margin-top: 40px;
-  font-size: 0.78rem;
-  color: var(--text-3);
-  letter-spacing: 0.03em;
-}
-
-.onboarding.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.onboarding-content {
-  position: relative;
-  width: 100%;
-  max-width: 340px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-
-/* Thin progress line — visual momentum only, never gates navigation */
-.onboarding-progress {
-  width: 100%;
-  height: 3px;
-  border-radius: 99px;
-  background: var(--border-2);
-  overflow: hidden;
-  margin-bottom: 30px;
-}
-
-.onboarding-progress-fill {
-  width: 0;            /* JS sets to (slide+1)/total — animates from here */
-  height: 100%;
-  border-radius: 99px;
-  background: var(--accent);
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Individual slide — hidden by default, shown when .active */
-.onboarding-slide {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 100%;
-}
-
-.onboarding-slide.active {
-  display: flex;
-  animation: obSlideIn 0.28s ease;
-}
-
-@keyframes obSlideIn {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Icon container */
-.onboarding-icon {
-  width: 168px;
-  height: 168px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 36px;
-  animation: obFloat 4s ease-in-out infinite;
-}
-
-/* Gentle, premium float so the screens feel alive, not empty */
-@keyframes obFloat {
-  0%, 100% { transform: translateY(0)    scale(1);    }
-  50%      { transform: translateY(-8px) scale(1.03); }
-}
-
-/* Re-trigger the float each time a slide animates in */
-.onboarding-slide.active .onboarding-icon {
-  animation: obIconIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards,
-             obFloat 4s ease-in-out 0.45s infinite;
-}
-
-@keyframes obIconIn {
-  from { opacity: 0; transform: scale(0.7); }
-  to   { opacity: 1; transform: scale(1);   }
-}
-
-/* Wordmark inside onboarding */
-.onboarding-wordmark {
-  font-size: 2.6rem;
-  font-weight: 800;
-  letter-spacing: -1px;
-  color: var(--accent);
-  margin-bottom: 36px;
-}
-
-.onboarding-title {
-  font-size: 1.7rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--text);
-  line-height: 1.15;
-  margin-bottom: 12px;
-}
-
-.onboarding-desc {
-  font-size: 0.92rem;
-  color: var(--text-2);
-  line-height: 1.6;
-  max-width: 260px;
-}
-
-/* Dots */
-.onboarding-dots {
-  display: flex;
-  gap: 7px;
-  margin-top: 36px;
-  margin-bottom: 32px;
-}
-
-.onboarding-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--border-2);
-  transition: background 0.2s, width 0.2s;
-}
-
-.onboarding-dot.active {
-  background: var(--text);
-  width: 18px;
-  border-radius: 3px;
-}
-
-/* Button */
-.onboarding-btn {
-  width: 100%;
-  padding: 16px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 700;
-  border-radius: var(--r-md);
-  letter-spacing: 0.01em;
-  box-shadow: 0 4px 16px rgba(236, 72, 153, 0.25);
-  transition: background 0.15s, transform 0.1s;
-}
-
-.onboarding-btn:hover  { background: var(--accent-deep); }
-.onboarding-btn:active { transform: scale(0.99); }
 
 
 /* ================================================================
@@ -4514,196 +4089,6 @@ textarea { font-family: inherit; }
 .scan-upload-clear-btn:active { opacity: 0.7; }
 
 
-/* ================================================================
-   INSTRUCTIONS OVERLAY (shown every launch — typewriter animation)
-   ================================================================ */
-
-.instructions {
-  position: absolute;
-  inset: 0;
-  z-index: 999;
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 32px;
-  transition: opacity 0.3s ease;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.instructions.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.instructions-content {
-  position: relative;
-  width: 100%;
-  max-width: 340px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-
-.instructions-slide {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 100%;
-}
-
-.instructions-slide.active {
-  display: flex;
-  animation: obSlideIn 0.28s ease;
-}
-
-.instructions-slide.active .onboarding-icon {
-  animation: obIconIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards,
-             obFloat 4s ease-in-out 0.45s infinite;
-}
-
-.instructions-title {
-  font-size: 1.7rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--text);
-  line-height: 1.15;
-  margin-bottom: 12px;
-  min-height: 1.2em;
-}
-
-.instructions-desc {
-  font-size: 0.92rem;
-  color: var(--text-2);
-  line-height: 1.6;
-  max-width: 260px;
-  min-height: 1.6em;
-}
-
-.instructions-close-btn {
-  position: absolute;
-  top: 18px;
-  right: 20px;
-  background: none;
-  border: none;
-  font-size: 1.1rem;
-  color: var(--text-3);
-  padding: 8px;
-  cursor: pointer;
-  line-height: 1;
-  touch-action: manipulation;
-}
-
-.instructions-back-btn {
-  margin-top: 20px;
-  font-size: 0.82rem;
-  color: var(--text-3);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px 12px;
-  touch-action: manipulation;
-}
-
-.instructions-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--border-2);
-  transition: background 0.2s, width 0.2s;
-}
-
-.instructions-dot.active {
-  background: var(--text);
-  width: 18px;
-  border-radius: 3px;
-}
-
-/* Ensure hidden attribute wins over display:flex on overlay elements */
-.onboarding[hidden],
-.instructions[hidden],
-.tour-entry-overlay[hidden] { display: none !important; }
-
-/* ============================================================
-   TOUR ENTRY POPUP — "New to Zelo?" shown every launch
-   ============================================================ */
-.tour-entry-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 998;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tour-entry-card {
-  background: var(--bg);
-  border-radius: 20px;
-  padding: 32px 28px 28px;
-  width: calc(100% - 48px);
-  max-width: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
-}
-
-.tour-entry-icon {
-  color: var(--accent);
-  margin-bottom: 6px;
-}
-
-.tour-entry-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text);
-  margin: 0;
-}
-
-.tour-entry-sub {
-  font-size: 0.9rem;
-  color: var(--text-2);
-  margin: 0 0 10px;
-}
-
-.tour-entry-btns {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  margin-top: 4px;
-}
-
-.tour-entry-yes {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 99px;
-  padding: 14px 24px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  width: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.tour-entry-no {
-  background: none;
-  border: none;
-  color: var(--text-3);
-  font-size: 0.88rem;
-  cursor: pointer;
-  padding: 8px;
-  -webkit-tap-highlight-color: transparent;
-}
 
 
 /* ================================================================
@@ -5441,3 +4826,374 @@ textarea { font-family: inherit; }
   color: var(--text-2);
   font-weight: 600;
 }
+
+
+/* ================================================================
+   CINEMATIC ONBOARDING  (5-screen first-launch flow)
+   Spring easing, cream base, pink accents. Black only on screen 4.
+   Legacy onboarding/tour CSS archived in archive/legacy-onboarding.js
+   ================================================================ */
+.cine {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  background: #faf6f0;
+  overflow: hidden;
+  transition: opacity 0.36s ease, background 0.5s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine[hidden] { display: none !important; }
+.cine.cine-dark { background: #000; }
+.cine.cine-out { opacity: 0; }
+
+.cine-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  z-index: 30;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: rgba(0,0,0,0.05);
+  color: #8a8175;
+  font-size: 0.8rem; line-height: 1;
+  cursor: pointer;
+}
+.cine.cine-dark .cine-close { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+
+.cine-dots {
+  position: absolute;
+  top: 22px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex; gap: 7px;
+}
+.cine-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(0,0,0,0.14);
+  transition: all 0.3s ease;
+}
+.cine-dot.active { width: 20px; border-radius: 4px; background: #ec4899; }
+.cine.cine-dark .cine-dot { background: rgba(255,255,255,0.2); }
+.cine.cine-dark .cine-dot.active { background: #ec4899; }
+
+.cine-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 30px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+.cine-screen.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.cine-screen--black { color: #fff; }
+
+.cine-head {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.18;
+  text-align: center;
+  color: #1c1917;
+  margin: 0 0 26px;
+  max-width: 320px;
+}
+
+/* shared entrance helpers */
+@keyframes cinePopIn {
+  0%   { opacity: 0; transform: translateY(28px) scale(0.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.cine-pop-in { animation: cinePopIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes cineFadeUp {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.cine-fade-up { animation: cineFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ---- Screen 1 — typewriter ---- */
+.cine1-wrap {
+  position: absolute;
+  top: 30%;
+  left: 0; right: 0;
+  padding: 0 30px;
+  text-align: center;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cine1-wrap--lifted { transform: translateY(-46px); }
+.cine1-headline {
+  font-size: 2.15rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  color: #1c1917;
+  margin: 0;
+  min-height: 2.4rem;
+  white-space: pre-wrap;
+}
+@keyframes cineCharIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.cine1-char {
+  display: inline-block;
+  white-space: pre;
+  animation: cineCharIn 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.cine1-char--instant { animation: none; opacity: 1; transform: none; }
+.cine1-sub {
+  margin: 18px auto 0;
+  max-width: 300px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #8a8175;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.cine1-sub--in { opacity: 1; transform: translateY(0); }
+
+/* ---- Scan mock card (screens 2 & 3) — mirrors the real scan card ---- */
+.cine-mock-card {
+  width: 100%;
+  max-width: 320px;
+  background: #ffffff;
+  border: 1px solid #ece5da;
+  border-radius: 18px;
+  padding: 18px 18px 14px;
+  box-shadow: 0 12px 40px rgba(28,25,23,0.10);
+  text-align: left;
+}
+.cine-mock-msg {
+  font-size: 1rem;
+  line-height: 1.45;
+  color: #1c1917;
+  min-height: 56px;
+}
+.cine-mock-foot {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3ede4;
+}
+.cine-mock-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ec4899;
+}
+
+/* ---- Screen 3 — flip + lift + reply ---- */
+@keyframes cineFlipIn {
+  0%   { transform: rotateX(90deg); opacity: 0; }
+  55%  { transform: rotateX(-14deg); opacity: 1; }
+  100% { transform: rotateX(0); opacity: 1; }
+}
+.cine-flip-in .cine-flip-face {
+  display: inline-block;
+  transform-origin: center;
+  animation: cineFlipIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.cine3-stack {
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.cine3-stack--lifted { transform: translateY(-21vh); }
+.cine-reply-card {
+  position: absolute;
+  top: 56%;
+  left: 50%;
+  width: calc(100% - 60px);
+  max-width: 320px;
+  transform: translate(-50%, 24px);
+  background: rgba(236, 72, 153, 0.08);
+  border: 1px solid rgba(236, 72, 153, 0.30);
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: 0 12px 40px rgba(236, 72, 153, 0.14);
+  opacity: 0;
+  text-align: left;
+}
+.cine-reply-in {
+  animation: cineReplyIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes cineReplyIn {
+  0%   { opacity: 0; transform: translate(-50%, 40px) scale(0.95); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+.cine-reply-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #db2777;
+  margin-bottom: 6px;
+}
+.cine-reply-text {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  color: #1c1917;
+  padding-right: 22px;
+}
+.cine-reply-copy {
+  position: absolute;
+  top: 14px; right: 14px;
+  color: #db2777;
+}
+
+/* ---- Screen 4 — black word-flash → logo ---- */
+.cine4-word {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: #fff;
+  text-align: center;
+  opacity: 0;
+}
+@keyframes cineWordIn {
+  0%   { opacity: 0; transform: scale(0.86); filter: blur(6px); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+.cine4-word--in { animation: cineWordIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+.cine4-stack {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-top: 100%;
+}
+.cine4-stack[hidden] { display: none; }
+.cine4-stack span {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: rgba(255,255,255,0.5);
+}
+.cine4-stack span:nth-child(odd) { color: #ec4899; }
+@keyframes cineStackScroll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-120%); }
+}
+.cine4-stack--run { animation: cineStackScroll 1.8s linear both; }
+
+.cine4-logo {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  color: #fff;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+.cine4-logo[hidden] { display: none; }
+.cine4-spark { color: #ec4899; font-size: 1.6rem; }
+@keyframes cineLogoIn {
+  0%   { opacity: 0; transform: scale(0.7); }
+  60%  { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.cine4-logo--in { animation: cineLogoIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* ---- Screen 5 — rising sheet + tracking prompt + CTA ---- */
+.cine5-sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 60%;
+  background: linear-gradient(to top,
+              rgba(236, 72, 153, 0.22) 0%,
+              rgba(250, 222, 230, 0.18) 45%,
+              rgba(250, 246, 240, 0) 100%);
+  transform: translateY(100%);
+  pointer-events: none;
+}
+.cine5-sheet--up {
+  animation: cineSheetRise 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes cineSheetRise {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.cine5-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+}
+.cine5-prompt {
+  width: 300px;
+  max-width: calc(100vw - 60px);
+  background: #1c1c1e;
+  border-radius: 22px;
+  padding: 22px 20px 14px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.30);
+}
+.cine5-prompt-icon {
+  width: 56px; height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 13px;
+  background: #000;          /* black block in place of any face/icon */
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.cine5-prompt-title {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #fff;
+}
+.cine5-prompt-sub {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: rgba(255,255,255,0.55);
+}
+.cine5-prompt-btn {
+  padding: 11px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #4da3ff;
+}
+.cine5-head { margin: 0; }
+
+/* ---- Shared bottom CTA ---- */
+.cine-next {
+  position: absolute;
+  left: 24px; right: 24px;
+  bottom: 30px;
+  z-index: 30;
+  padding: 16px;
+  border: none;
+  border-radius: 99px;
+  background: #ec4899;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.35);
+  transition: opacity 0.3s ease, transform 0.15s ease;
+}
+.cine-next:active { transform: scale(0.99); }
+.cine-next--hidden { opacity: 0; pointer-events: none; }
+.cine.cine-dark .cine-next { box-shadow: 0 8px 24px rgba(236, 72, 153, 0.5); }

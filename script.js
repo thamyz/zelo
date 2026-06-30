@@ -1929,115 +1929,249 @@ function copyCurrentReply() {
 // ONBOARDING
 // ================================================================
 
-let onboardingSlide = 0;
-const ONBOARDING_TOTAL = 3;
+// ================================================================
+// ONBOARDING  (5-screen cinematic — active first-launch flow)
+//   Screens: 1 typewriter intro · 2 scan mock · 3 reply reveal
+//            4 black word-flash → logo · 5 tracking prompt + CTA
+// Legacy 3-slide onboarding + 12-step spotlight tour live in
+// archive/legacy-onboarding.js and never run.
+// ================================================================
+
 let threadEditMode = false;
 
-let _obTypeTimer = null;
-let _obTyping    = false;
-let _obTextReady = false;
+let cineStep      = 0;
+let _cineTimers   = [];
+let _cineTyping   = false;
+let _cineTypeDone = false;
 
-function _obType(titleEl, descEl, titleText, descText) {
-  _obTyping = true;
-  _obTextReady = false;
-  if (_obTypeTimer) clearTimeout(_obTypeTimer);
-  titleEl.textContent = '';
-  descEl.textContent  = '';
-  let i = 0;
-  const total = titleText.length + 1 + descText.length;
-  function tick() {
-    if (i < titleText.length) {
-      titleEl.textContent = titleText.slice(0, ++i);
-      navigator.vibrate?.(1);
-      _obTypeTimer = setTimeout(tick, 32);
-    } else if (i === titleText.length) {
-      i++;
-      _obTypeTimer = setTimeout(tick, 180);
-    } else {
-      const di = i - titleText.length - 1;
-      if (di < descText.length) {
-        descEl.textContent = descText.slice(0, di + 1);
-        i++;
-        navigator.vibrate?.(1);
-        _obTypeTimer = setTimeout(tick, 28);
-      } else {
-        _obTyping = false;
-        _obTextReady = true;
-        _obTypeTimer = null;
-        navigator.vibrate?.(10);
-      }
-    }
-  }
-  tick();
+function _cineClearTimers() {
+  _cineTimers.forEach(t => clearTimeout(t));
+  _cineTimers = [];
 }
-
-function _obRevealAll(titleEl, descEl, titleText, descText) {
-  if (_obTypeTimer) { clearTimeout(_obTypeTimer); _obTypeTimer = null; }
-  _obTyping = false;
-  _obTextReady = true;
-  titleEl.textContent = titleText;
-  descEl.textContent  = descText;
-}
-
-function onboardingTap(e) {
-  if (e && e.target.closest('.onboarding-close-btn')) return;
-  const slide = document.querySelectorAll('.onboarding-slide')[onboardingSlide];
-  if (!slide) { onboardingNext(); return; }
-  const titleEl = slide.querySelector('.onboarding-title');
-  const descEl  = slide.querySelector('.onboarding-desc');
-  if (_obTyping) {
-    _obRevealAll(titleEl, descEl,
-      titleEl.dataset.full || titleEl.textContent,
-      descEl.dataset.full  || descEl.textContent);
-  } else if (_obTextReady) {
-    onboardingNext();
-  }
+function _cineDelay(fn, ms) {
+  const t = setTimeout(fn, ms);
+  _cineTimers.push(t);
+  return t;
 }
 
 function initOnboarding() {
-  const tabBar = document.getElementById('tab-bar');
-  if (tabBar) tabBar.style.display = 'none';
   initChatsTab();
+  const overlay = document.getElementById('cine-onboarding');
 
   if (localStorage.getItem('zelo_onboarding_done')) {
-    const el = document.getElementById('onboarding');
-    if (el) el.setAttribute('hidden', '');
-    startTour();
+    if (overlay) overlay.setAttribute('hidden', '');
     return;
   }
+  if (!overlay) return;
 
-  onboardingSlide = 0;
-  showOnboardingSlide(0);
+  overlay.removeAttribute('hidden');
+  startCineOnboarding();
 }
 
-function showOnboardingSlide(index) {
-  document.querySelectorAll('.onboarding-slide').forEach((el, i) => {
-    el.classList.toggle('active', i === index);
-  });
-  document.querySelectorAll('.onboarding-dot').forEach((el, i) => {
-    el.classList.toggle('active', i === index);
-  });
-  const fill = document.getElementById('onboarding-progress-fill');
-  if (fill) fill.style.width = ((index + 1) / ONBOARDING_TOTAL * 100) + '%';
-  const btn = document.querySelector('.onboarding-btn');
-  if (btn) btn.textContent = (index === ONBOARDING_TOTAL - 1) ? 'Get Started' : 'Next';
+function startCineOnboarding() {
+  cineStep = 0;
+  cineGoTo(1);
 }
 
-function onboardingNext() {
-  if (onboardingSlide < ONBOARDING_TOTAL - 1) {
-    onboardingSlide++;
-    showOnboardingSlide(onboardingSlide);
-  } else {
-    finishOnboarding();
+// Reveal a screen, hide the rest, and fire its entrance choreography.
+function cineGoTo(n) {
+  _cineClearTimers();
+  cineStep = n;
+
+  document.querySelectorAll('.cine-screen').forEach(s => {
+    s.classList.toggle('active', Number(s.dataset.screen) === n);
+  });
+  document.querySelectorAll('.cine-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === n - 1);
+  });
+
+  const overlay = document.getElementById('cine-onboarding');
+  if (overlay) overlay.classList.toggle('cine-dark', n === 4);
+
+  const nextBtn = document.getElementById('cine-next');
+  if (nextBtn) {
+    // Screen 4 is fully auto; its Next appears only after the logo lands.
+    nextBtn.classList.toggle('cine-next--hidden', n === 4);
+    nextBtn.textContent = n === 5 ? 'Know what to say' : 'Next';
   }
+
+  if (n === 1) cineRunScreen1();
+  else if (n === 2) cineRunScreen2();
+  else if (n === 3) cineRunScreen3();
+  else if (n === 4) cineRunScreen4();
+  else if (n === 5) cineRunScreen5();
 }
 
-function finishOnboarding() {
+function cineNext() {
+  if (cineStep === 1 && _cineTyping) { cineFinishType(); return; }
+  if (cineStep >= 5) { finishNewOnboarding(); return; }
+  cineGoTo(cineStep + 1);
+}
+
+// ---- Screen 1 — character-by-character typewriter, each char slides in ----
+function cineRunScreen1() {
+  const headline = document.getElementById('cine1-headline');
+  const sub      = document.getElementById('cine1-sub');
+  const wrap     = document.getElementById('cine1-wrap');
+  if (!headline) return;
+
+  wrap.classList.remove('cine1-wrap--lifted');
+  sub.classList.remove('cine1-sub--in');
+  headline.innerHTML = '';
+  _cineTyping   = true;
+  _cineTypeDone = false;
+
+  const text  = 'Never freeze up again.';
+  const chars = text.split('');
+  let i = 0;
+
+  function step() {
+    if (i >= chars.length) {
+      _cineTyping = false;
+      _cineTypeDone = true;
+      _cineDelay(() => {
+        wrap.classList.add('cine1-wrap--lifted');
+        sub.classList.add('cine1-sub--in');
+      }, 260);
+      return;
+    }
+    const span = document.createElement('span');
+    span.className = 'cine1-char';
+    span.textContent = chars[i] === ' ' ? ' ' : chars[i];
+    headline.appendChild(span);
+    navigator.vibrate?.(1);
+    i++;
+    _cineDelay(step, 38);
+  }
+  step();
+}
+
+// Tap-to-complete: dump the whole line instantly, then reveal the subline.
+function cineFinishType() {
+  _cineClearTimers();
+  _cineTyping = false;
+  _cineTypeDone = true;
+  const headline = document.getElementById('cine1-headline');
+  const sub      = document.getElementById('cine1-sub');
+  const wrap     = document.getElementById('cine1-wrap');
+  if (headline) {
+    headline.innerHTML = '';
+    'Never freeze up again.'.split('').forEach(c => {
+      const span = document.createElement('span');
+      span.className = 'cine1-char cine1-char--instant';
+      span.textContent = c === ' ' ? ' ' : c;
+      headline.appendChild(span);
+    });
+  }
+  wrap.classList.add('cine1-wrap--lifted');
+  sub.classList.add('cine1-sub--in');
+}
+
+// ---- Screen 2 — scan mock card slides up into frame ----
+function cineRunScreen2() {
+  const card = document.getElementById('cine2-card');
+  const head = document.getElementById('cine2-head');
+  if (card) { card.classList.remove('cine-pop-in'); void card.offsetWidth; card.classList.add('cine-pop-in'); }
+  if (head) { head.classList.remove('cine-fade-up'); void head.offsetWidth; head.classList.add('cine-fade-up'); }
+}
+
+// ---- Screen 3 — headline scoreboard-flips, card lifts, reply card drops in ----
+function cineRunScreen3() {
+  const head  = document.getElementById('cine3-head');
+  const stack = document.getElementById('cine3-stack');
+  const reply = document.getElementById('cine3-reply');
+  if (head)  { head.classList.remove('cine-flip-in'); void head.offsetWidth; head.classList.add('cine-flip-in'); }
+  if (stack) { stack.classList.remove('cine3-stack--lifted'); }
+  if (reply) { reply.classList.remove('cine-reply-in'); }
+
+  _cineDelay(() => { if (stack) stack.classList.add('cine3-stack--lifted'); }, 520);
+  _cineDelay(() => { if (reply) reply.classList.add('cine-reply-in'); }, 820);
+}
+
+// ---- Screen 4 — black; flash words, scroll a stack, reveal the logo ----
+function cineRunScreen4() {
+  const word  = document.getElementById('cine4-word');
+  const stack = document.getElementById('cine4-stack');
+  const logo  = document.getElementById('cine4-logo');
+  const nextBtn = document.getElementById('cine-next');
+  if (!word) return;
+
+  word.textContent = '';
+  word.classList.remove('cine4-word--in');
+  stack.classList.remove('cine4-stack--run');
+  stack.hidden = true;
+  logo.classList.remove('cine4-logo--in');
+  logo.hidden = true;
+
+  const flash = (w, at) => {
+    _cineDelay(() => {
+      word.textContent = w;
+      word.classList.remove('cine4-word--in'); void word.offsetWidth;
+      word.classList.add('cine4-word--in');
+      navigator.vibrate?.(6);
+    }, at);
+    _cineDelay(() => { word.classList.remove('cine4-word--in'); }, at + 640);
+  };
+
+  flash('Confidence', 260);
+  flash('Connection', 1160);
+  flash('Conversations', 2060);
+
+  // Stack of "Conversations" scrolling upward for a beat
+  _cineDelay(() => {
+    word.textContent = '';
+    stack.hidden = false;
+    void stack.offsetWidth;
+    stack.classList.add('cine4-stack--run');
+  }, 2900);
+
+  // Logo replaces the stack
+  _cineDelay(() => {
+    stack.classList.remove('cine4-stack--run');
+    stack.hidden = true;
+    logo.hidden = false;
+    void logo.offsetWidth;
+    logo.classList.add('cine4-logo--in');
+    navigator.vibrate?.(12);
+    if (nextBtn) nextBtn.classList.remove('cine-next--hidden');
+  }, 4700);
+
+  // Auto-advance shortly after the logo settles
+  _cineDelay(() => { if (cineStep === 4) cineGoTo(5); }, 6400);
+}
+
+// ---- Screen 5 — pink/cream overlay rises, tracking prompt, CTA ----
+function cineRunScreen5() {
+  const sheet  = document.getElementById('cine5-sheet');
+  const prompt = document.getElementById('cine5-prompt');
+  const head   = document.getElementById('cine5-head');
+  if (sheet)  { sheet.classList.remove('cine5-sheet--up'); void sheet.offsetWidth; sheet.classList.add('cine5-sheet--up'); }
+  if (prompt) { prompt.classList.remove('cine-pop-in'); }
+  if (head)   { head.classList.remove('cine-fade-up'); }
+  _cineDelay(() => { if (prompt) prompt.classList.add('cine-pop-in'); }, 480);
+  _cineDelay(() => { if (head) head.classList.add('cine-fade-up'); }, 760);
+}
+
+// Tap anywhere on screen 1 completes the typewriter; elsewhere is inert
+// (advancing is via the Next button) so stray taps don't skip scenes.
+function cineScreenTap(e) {
+  if (e && e.target.closest('.cine-next, .cine-close')) return;
+  if (cineStep === 1 && _cineTyping) cineFinishType();
+}
+
+function finishNewOnboarding() {
+  _cineClearTimers();
   localStorage.setItem('zelo_onboarding_done', '1');
-  const overlay = document.getElementById('onboarding');
-  overlay.classList.add('hidden');
-  setTimeout(() => { overlay.setAttribute('hidden', ''); overlay.classList.remove('hidden'); }, 300);
-  startTour();
+  const overlay = document.getElementById('cine-onboarding');
+  if (overlay) {
+    overlay.classList.add('cine-out');
+    setTimeout(() => {
+      overlay.setAttribute('hidden', '');
+      overlay.classList.remove('cine-out', 'cine-dark');
+    }, 360);
+  }
+  // Land on Scan with the pre-filled example — no tour, no extra layer.
+  if (state.activeTab !== 'assistant') showTab('assistant');
 }
 
 
@@ -2055,464 +2189,6 @@ function scanBeginnerYes() {}
 function closeScanModal() {}
 
 
-// ================================================================
-// GUIDED SPOTLIGHT TOUR  (one continuous journey: Scan → Home → Chats)
-// Every step uses the SAME language: spotlight cutout, dimmed
-// background, anchored callout with a pointer arrow. The Scan steps
-// keep the real UI live (typing/tapping the target advances). The
-// Home / Chats / completion steps are purposeful overviews — the
-// background is blocked so a stray swipe can't fire, and the user
-// moves on with Next.
-//
-//   tab       → which app tab the step lives on (engine switches to it)
-//   act       → 'input' | 'click' makes the live target auto-advance
-//   secondary → calmer visual (lower-priority step)
-//   dwell     → ms the step "settles" before it accepts advancing
-//   final     → the completion step (button reads "Get Started")
-// ================================================================
-
-//   kicker    → small branded label at the top of the card (e.g. "Scan")
-//   swipe     → Home step: shows a swipe hint; a real swipe advances
-//   tapTarget → a transparent hit sits over the target; tapping it advances
-//   round     → spotlight is circular (for the round Scan/FAB buttons)
-//   expand    → Situation step: auto-demos the collapse→expand interaction
-const TOUR_STEPS = [
-  // — SCAN —
-  { tab: 'assistant', sel: '#asst-input', kicker: 'Scan', text: 'Paste their message here.' },
-  { tab: 'assistant', sel: '#tellzelo-card', kicker: 'Scan', text: 'Add a little context.' },
-  { tab: 'assistant', sel: '#upload-row', kicker: 'Scan', text: 'Or just drop a screenshot.', secondary: true },
-  { tab: 'assistant', sel: '#asst-generate-btn', kicker: 'Scan', text: 'Hit generate for your reply.' },
-  { tab: 'assistant', sel: '#aicoach-card', kicker: 'AI Coach', text: 'Meet AI Coach — tap for personalized advice and reply suggestions.' },
-  // — HOME —
-  { tab: 'practice',  sel: '#tabbtn-practice', kicker: 'Home', text: 'This is Home — practice with AI matches.' },
-  { tab: 'practice',  sel: '#card-deck', kicker: 'Home', text: 'Browse profiles and find someone to chat with.' },
-  { tab: 'practice',  sel: '#card-deck', swipeDir: 'right', kicker: 'Home', text: 'Swipe right to like.' },
-  { tab: 'practice',  sel: '#card-deck', swipeDir: 'left',  kicker: 'Home', text: 'Now swipe left to pass.' },
-  // — CHATS —
-  { tab: 'chats',     sel: '#tabbtn-chats', kicker: 'Chats', text: 'This is Chats — where your conversations live.' },
-  { tab: 'chats',     sel: '#chats-list', selFallback: '#chats-empty', kicker: 'Chats', text: 'Matches show up here. Jump back in anytime.' },
-  // — FINISH —
-  { tab: 'assistant', sel: '.scan-fab', round: true, kicker: 'All set', text: "You've got it from here.", last: true },
-];
-
-const TOUR_ARM_DEFAULT = 2000;   // fallback dwell if a step omits one
-
-let tourIndex       = 0;
-let tourArmed       = false;
-let tourArmTimer    = null;
-let tourStepBinding = null;
-let tourScrollEl    = null;
-let tourSwitchingTab = false;
-let tourSwipeArmed  = false;
-let tourSwipeDir    = null;
-let tourDemoTimeout = null;
-let _tourTypeTimer  = null;
-let _tourTyping     = false;
-let _tourTextReady  = false;
-
-function _tourType(text) {
-  _tourTyping = true;
-  _tourTextReady = false;
-  if (_tourTypeTimer) clearTimeout(_tourTypeTimer);
-  const el = document.getElementById('tour-text');
-  el.textContent = '';
-  el.classList.add('tour-text--entering');
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      el.classList.remove('tour-text--entering');
-      let i = 0;
-      function tick() {
-        if (i < text.length) {
-          el.textContent = text.slice(0, ++i);
-          navigator.vibrate?.(1);
-          _tourTypeTimer = setTimeout(tick, 32);
-        } else {
-          _tourTyping = false;
-          _tourTextReady = true;
-          _tourTypeTimer = null;
-          navigator.vibrate?.(10);
-        }
-      }
-      tick();
-    });
-  });
-}
-
-function _tourRevealAll() {
-  if (_tourTypeTimer) { clearTimeout(_tourTypeTimer); _tourTypeTimer = null; }
-  _tourTyping = false;
-  _tourTextReady = true;
-  const el = document.getElementById('tour-text');
-  if (el) el.textContent = TOUR_STEPS[tourIndex].text;
-}
-
-function tourTooltipTap(e) {
-  if (e.target.closest('.tour-close-btn, .tour-back')) return;
-  const step = TOUR_STEPS[tourIndex];
-  if (!step) return;
-  if (_tourTyping) {
-    _tourRevealAll();
-  } else if (_tourTextReady) {
-    goNextStep();
-  }
-}
-
-function tourBackdropTap(e) {
-  tourTooltipTap(e);
-}
-
-function startTour() {
-  const tabBar = document.getElementById('tab-bar');
-  if (tabBar) tabBar.style.display = '';
-  const entry = document.getElementById('tour-entry-overlay');
-  if (entry) { entry.hidden = false; return; }
-  _launchTour();
-}
-
-function tourEntryYes() {
-  const entry = document.getElementById('tour-entry-overlay');
-  if (entry) entry.hidden = true;
-  _launchTour();
-}
-
-function tourEntryNo() {
-  const entry = document.getElementById('tour-entry-overlay');
-  if (entry) entry.hidden = true;
-  maybeShowScanIntro();
-}
-
-function _launchTour() {
-  tourIndex = 0;
-  const tour = document.getElementById('tour');
-  tour.hidden = false;
-  renderTourStep(0);
-}
-
-// Resolve a step's element, falling back when the primary target is absent or
-// collapsed (e.g. an empty Chats list on a brand-new account).
-function resolveStepEl(step) {
-  let el = document.querySelector(step.sel);
-  if ((!el || el.getBoundingClientRect().height < 8) && step.selFallback) {
-    const fb = document.querySelector(step.selFallback);
-    if (fb) el = fb;
-  }
-  return el;
-}
-
-function renderTourStep(i) {
-  const step = TOUR_STEPS[i];
-
-  clearStepBinding();
-  unbindTourReposition();
-  cancelSwipeDemo();
-  cancelSituationDemo();
-
-  // Move to the step's tab without ending the tour, then re-track that tab's
-  // scroll container for repositioning.
-  if (step.tab && state.activeTab !== step.tab) {
-    tourSwitchingTab = true;
-    showTab(step.tab);
-    tourSwitchingTab = false;
-  }
-  tourScrollEl = document.getElementById('tab-' + (step.tab || state.activeTab));
-  if (tourScrollEl) tourScrollEl.scrollTop = 0;
-  bindTourReposition();
-
-  const tour = document.getElementById('tour');
-
-  // Card content + branded header
-  document.getElementById('tour-kicker').textContent = step.kicker || 'Zelo';
-  _tourType(step.text);
-  document.getElementById('tour-back').hidden = (i === 0);
-  tour.classList.toggle('tour--secondary', !!step.secondary);
-  tour.classList.toggle('tour--final', !!step.last);
-  const gsBtn = document.getElementById('tour-get-started');
-  if (gsBtn) gsBtn.hidden = !step.last;
-
-  const live = !!step.act || !!step.swipeDir || !!step.expand;
-  const backdrop = document.getElementById('tour-backdrop');
-  if (backdrop) backdrop.style.pointerEvents = 'auto';
-  tourSwipeArmed = !!step.swipeDir;
-  tourSwipeDir   = step.swipeDir || null;
-
-  if (step.expand) closeSituation();
-
-  document.getElementById('tour-spotlight').style.borderRadius = step.round ? '50%' : '';
-  const hit = document.getElementById('tour-hit');
-  hit.hidden = !step.tapTarget;
-  hit.dataset.active = step.tapTarget ? '1' : '0';
-
-  const el = resolveStepEl(step);
-  if (!el) { endTour(); return; }
-
-  // Bring the target into view, then measure after layout has committed.
-  el.scrollIntoView({ block: 'center', behavior: 'auto' });
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    positionTour(el, i === 0);                  // snap (no transition) on the first step
-    if (step.act) bindStepTarget(el, step.act); // typing/tapping the real element advances
-    if (step.swipeDir) runSwipeDemo(step.swipeDir); // the card itself shows the move
-    if (step.expand) runSituationDemo();        // show the collapse → expand interaction
-  }));
-}
-
-function positionTour(el, snap) {
-  // All coordinates are relative to #app so the tour stays anchored inside
-  // the phone frame on desktop and the full screen on mobile.
-  const appRect = document.getElementById('app').getBoundingClientRect();
-  const rect    = el.getBoundingClientRect();
-
-  const spotlight = document.getElementById('tour-spotlight');
-  const tooltip   = document.getElementById('tour-tooltip');
-
-  // On the first step there is no previous position to glide from, so snap
-  // straight to the target instead of sweeping in from the top-left corner.
-  if (snap) {
-    spotlight.style.transition = 'none';
-    tooltip.style.transition   = 'none';
-  }
-
-  const pad  = 6;
-  const top  = rect.top  - appRect.top;
-  const left = rect.left - appRect.left;
-
-  // Spotlight cutout around the element
-  spotlight.style.top    = (top  - pad) + 'px';
-  spotlight.style.left   = (left - pad) + 'px';
-  spotlight.style.width  = (rect.width  + pad * 2) + 'px';
-  spotlight.style.height = (rect.height + pad * 2) + 'px';
-
-  // Keep the tap-target proxy aligned with the cutout, when active
-  const hit = document.getElementById('tour-hit');
-  if (hit && hit.dataset.active === '1') {
-    hit.style.top    = (top  - pad) + 'px';
-    hit.style.left   = (left - pad) + 'px';
-    hit.style.width  = (rect.width  + pad * 2) + 'px';
-    hit.style.height = (rect.height + pad * 2) + 'px';
-  }
-
-  // Tooltip: below the element unless there isn't room inside the app.
-  // Use the CSS max-width (250px) as the assumed width — tipRect.width is
-  // measured while the typewriter has cleared the text, so it underestimates
-  // the final rendered width and would allow right-edge overflow once text
-  // fills in. Similarly pad the height estimate so the placeAbove decision
-  // doesn't flip incorrectly when text hasn't typed yet.
-  const gap       = 16;
-  const margin    = 14;
-  const tipRect   = tooltip.getBoundingClientRect();
-  const assumedW  = 250;                              // matches CSS max-width
-  const assumedH  = Math.max(tipRect.height, 120);   // conservative when empty
-
-  const spaceBelow = appRect.height - (top + rect.height);
-  const placeAbove = spaceBelow < assumedH + gap + 24;
-
-  tooltip.classList.toggle('above', placeAbove);
-
-  let tipTop = placeAbove
-    ? top - pad - gap - assumedH
-    : top + rect.height + pad + gap;
-
-  // Clamp all four edges inside the app
-  tipTop  = Math.max(margin, Math.min(tipTop,  appRect.height - assumedH - margin));
-  let tipLeft = left;
-  tipLeft = Math.max(margin, Math.min(tipLeft, appRect.width  - assumedW - margin));
-
-  tooltip.style.top  = tipTop  + 'px';
-  tooltip.style.left = tipLeft + 'px';
-
-  // Restore transitions after the snap so subsequent steps glide.
-  if (snap) {
-    spotlight.offsetHeight;   // force reflow to lock in the snapped position
-    spotlight.style.transition = '';
-    tooltip.style.transition   = '';
-  }
-}
-
-// Wire the live target so typing/tapping it advances — the user is touching
-// the real UI, not a slideshow. Guarded by the arm flag so a stray tap as the
-// step appears can't skip ahead.
-function bindStepTarget(el, evt) {
-  const handler = () => { goNextStep(); };
-  el.addEventListener(evt, handler);
-  tourStepBinding = { el, evt, handler };
-}
-
-function clearStepBinding() {
-  if (!tourStepBinding) return;
-  const { el, evt, handler } = tourStepBinding;
-  el.removeEventListener(evt, handler);
-  tourStepBinding = null;
-}
-
-// The Next/Done button doubles as the "settling" indicator: a subtle fill
-// sweeps across it, and only once full does the step accept advancing. No
-// numbers, no countdown — it just looks like the button is settling in.
-function armTourButton(dwell) {
-  tourArmed = false;
-  clearTimeout(tourArmTimer);
-
-  // Stretch the fill to the full dwell so the button visibly settles in over
-  // ~2s. Premium easing (not linear) makes it feel intentional, not a timer.
-  const fill = document.getElementById('tour-next-fill');
-  fill.style.animation = 'none';
-  fill.offsetHeight;                 // reflow cancels the previous run
-  fill.style.animation = `tourFill ${dwell}ms cubic-bezier(0.33, 0, 0.2, 1) forwards`;
-
-  tourArmTimer = setTimeout(() => { tourArmed = true; }, dwell);
-}
-
-// Forward progression. tourAdvance is the arm-gated path (Next button, target
-// tap, input); goNextStep is the unguarded mover the guided swipe uses.
-function tourAdvance() {
-  if (!tourArmed) return;
-  goNextStep();
-}
-
-function goNextStep() {
-  _tourRevealAll();
-  clearStepBinding();
-  if (tourIndex >= TOUR_STEPS.length - 1) {
-    endTour();
-  } else {
-    tourIndex++;
-    renderTourStep(tourIndex);
-  }
-}
-
-function tourBack() {
-  if (tourIndex <= 0) return;
-  _tourRevealAll();
-  clearStepBinding();
-  tourIndex--;
-  renderTourStep(tourIndex);
-}
-
-// Completion: collapse the cutout to a point (its shadow dims everything) and
-// center the branded card — no element to anchor to.
-function positionFinal() {
-  const appRect   = document.getElementById('app').getBoundingClientRect();
-  const spotlight = document.getElementById('tour-spotlight');
-  const tooltip   = document.getElementById('tour-tooltip');
-
-  spotlight.style.width  = '0';
-  spotlight.style.height = '0';
-  spotlight.style.top    = (appRect.height / 2) + 'px';
-  spotlight.style.left   = (appRect.width  / 2) + 'px';
-
-  const tipRect = tooltip.getBoundingClientRect();
-  tooltip.classList.remove('above');
-  tooltip.style.left = Math.round((appRect.width  - tipRect.width)  / 2) + 'px';
-  tooltip.style.top  = Math.round((appRect.height - tipRect.height) / 2) + 'px';
-}
-
-// The CARD is the instructor: gently slide the top card the way the user should
-// swipe, surface its like/pass stamp + a big heart/X, then let it spring back to
-// center. No arrows — the motion itself shows what the gesture does.
-function runSwipeDemo(direction) {
-  const top = document.querySelector('#card-deck [data-stack="0"]');
-  if (!top) return;
-
-  const dx    = direction === 'right' ? 96 : -96;
-  const rot   = direction === 'right' ? 9  : -9;
-  const stamp = top.querySelector(direction === 'right' ? '.swipe-stamp--like' : '.swipe-stamp--nope');
-
-  top.style.transition = 'transform 0.55s cubic-bezier(0.33, 0, 0.2, 1)';
-  top.style.transform  = `translate(${dx}px, 0) rotate(${rot}deg)`;
-  if (stamp) stamp.style.opacity = '1';
-  flashSwipeFeedback(direction);
-
-  tourDemoTimeout = setTimeout(() => {
-    top.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    top.style.transform  = '';
-    if (stamp) stamp.style.opacity = '0';
-  }, 720);
-}
-
-function cancelSwipeDemo() {
-  clearTimeout(tourDemoTimeout);
-  tourDemoTimeout = null;
-  const top = document.querySelector('#card-deck [data-stack="0"]');
-  if (top) {
-    top.style.transition = '';
-    top.style.transform  = '';
-    top.querySelectorAll('.swipe-stamp').forEach(s => s.style.opacity = '0');
-  }
-}
-
-// Situation step: start collapsed, then auto-expand so the user SEES the
-// tap-to-open interaction. The spotlight glides to the taller, expanded row.
-let tourSituationTimeout = null;
-function runSituationDemo() {
-  clearTimeout(tourSituationTimeout);
-  tourSituationTimeout = setTimeout(() => {
-    openSituation();
-    tourSituationTimeout = setTimeout(() => {
-      const el = document.getElementById('situation');
-      if (el && !document.getElementById('tour').hidden) positionTour(el, false); // animate growth
-    }, 360);
-  }, 700);
-}
-
-function cancelSituationDemo() {
-  clearTimeout(tourSituationTimeout);
-  tourSituationTimeout = null;
-}
-
-// Big heart / X that pops over the card on a guided swipe — confirms meaning
-// through motion (green like, red pass) without extra words.
-function flashSwipeFeedback(direction) {
-  const fb = document.getElementById('tour-swipe-feedback');
-  if (!fb) return;
-  const appRect = document.getElementById('app').getBoundingClientRect();
-  const deck    = document.getElementById('card-deck') || document.getElementById('app');
-  const r       = deck.getBoundingClientRect();
-  fb.textContent = direction === 'right' ? '♥' : '✕';
-  fb.className   = 'tour-swipe-feedback ' + (direction === 'right' ? 'like' : 'nope');
-  fb.style.left  = (r.left - appRect.left + r.width / 2) + 'px';
-  fb.style.top   = (r.top  - appRect.top  + r.height / 2) + 'px';
-  fb.hidden = false;
-  fb.style.animation = 'none';
-  fb.offsetHeight;                 // restart the pop each time
-  fb.style.animation = '';
-  clearTimeout(fb._hideTimer);
-  fb._hideTimer = setTimeout(() => { fb.hidden = true; }, 650);
-}
-
-function endTour() {
-  if (_tourTypeTimer) { clearTimeout(_tourTypeTimer); _tourTypeTimer = null; }
-  _tourTyping = false;
-  clearStepBinding();
-  clearTimeout(tourArmTimer);
-  unbindTourReposition();
-  cancelSwipeDemo();
-  cancelSituationDemo();
-  tourSwipeArmed = false;
-  tourSwipeDir   = null;
-  const tour = document.getElementById('tour');
-  tour.hidden = true;
-  tour.classList.remove('tour--secondary', 'tour--final');
-  const hit = document.getElementById('tour-hit');
-  if (hit) { hit.hidden = true; hit.dataset.active = '0'; }
-  maybeShowScanIntro();
-}
-
-// Keep the current step glued to its target while the window resizes or the
-// Scan content scrolls. Snap (no transition) so the spotlight tracks 1:1.
-function repositionTour() {
-  const tour = document.getElementById('tour');
-  if (!tour || tour.hidden) return;
-  const el = resolveStepEl(TOUR_STEPS[tourIndex]);
-  if (el) positionTour(el, true);
-}
-
-function bindTourReposition() {
-  window.addEventListener('resize', repositionTour);
-  if (tourScrollEl) tourScrollEl.addEventListener('scroll', repositionTour, { passive: true });
-}
-
-function unbindTourReposition() {
-  window.removeEventListener('resize', repositionTour);
-  if (tourScrollEl) tourScrollEl.removeEventListener('scroll', repositionTour);
-}
 
 
 // ================================================================

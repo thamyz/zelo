@@ -699,106 +699,113 @@
 
 
       <!-- ============================================================
-           GUIDED SPOTLIGHT TOUR  (Scan)
+           CINEMATIC ONBOARDING — 5-screen first-launch flow
+           (legacy 3-slide onboarding + spotlight tour archived in
+            archive/legacy-onboarding.js — disabled, kept for rollback)
            ============================================================ -->
-      <div class="tour" id="tour" hidden>
-        <div class="tour-backdrop" id="tour-backdrop" onclick="tourBackdropTap(event)"></div>
-        <div class="tour-spotlight" id="tour-spotlight"></div>
-        <!-- transparent tap-target over a highlighted control (e.g. Scan button) -->
-        <button class="tour-hit" id="tour-hit" data-active="0" onclick="tourAdvance()" hidden aria-label="Continue"></button>
-        <!-- big heart / X that pops on a guided swipe -->
-        <div class="tour-swipe-feedback" id="tour-swipe-feedback" hidden></div>
-        <div class="tour-tooltip" id="tour-tooltip" onclick="tourTooltipTap(event)">
-          <button class="tour-close-x" onclick="event.stopPropagation(); endTour()" aria-label="Close tour">✕</button>
-          <span class="tour-kicker" id="tour-kicker">Zelo</span>
-          <p class="tour-text" id="tour-text"></p>
-          <div class="tour-controls">
-            <button class="tour-back" id="tour-back" onclick="event.stopPropagation(); tourBack()">Back</button>
-            <button class="tour-get-started" id="tour-get-started" onclick="event.stopPropagation(); endTour()" hidden>Get Started</button>
-          </div>
+      <div class="cine" id="cine-onboarding" hidden onclick="cineScreenTap(event)">
+
+        <button class="cine-close" onclick="finishNewOnboarding()" aria-label="Skip onboarding">✕</button>
+
+        <div class="cine-dots" aria-hidden="true">
+          <span class="cine-dot active"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
         </div>
-      </div>
 
-
-
-      <!-- ============================================================
-           TOUR ENTRY POPUP — "New to Zelo?" shown every launch
-           ============================================================ -->
-      <div class="tour-entry-overlay" id="tour-entry-overlay" hidden>
-        <div class="tour-entry-card">
-          <span class="tour-entry-icon" aria-hidden="true">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-            </svg>
-          </span>
-          <h2 class="tour-entry-title">New to Zelo?</h2>
-          <p class="tour-entry-sub">Want a quick tour?</p>
-          <div class="tour-entry-btns">
-            <button class="tour-entry-yes" onclick="tourEntryYes()">Yes, show me</button>
-            <button class="tour-entry-no" onclick="tourEntryNo()">No thanks</button>
+        <!-- Screen 1 — typewriter intro -->
+        <section class="cine-screen active" data-screen="1">
+          <div class="cine1-wrap" id="cine1-wrap">
+            <h1 class="cine1-headline" id="cine1-headline"></h1>
+            <p class="cine1-sub" id="cine1-sub">Zelo gives you the words the moment you need them.</p>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <!-- ============================================================
-           ONBOARDING (first launch only — simple, no animation)
-           ============================================================ -->
-      <div class="onboarding" id="onboarding">
-        <div class="onboarding-content">
-
-          <div class="onboarding-progress" id="onboarding-progress-bar">
-            <div class="onboarding-progress-fill" id="onboarding-progress-fill"></div>
-          </div>
-
-          <div class="onboarding-wordmark">Zelo</div>
-
-          <div class="onboarding-slide active" data-slide="0">
-            <div class="onboarding-icon" style="background:radial-gradient(circle,rgba(236,72,153,0.14) 0%,transparent 65%)">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
-                   stroke="#ec4899" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                <circle cx="8.5" cy="10" r="0.8" fill="#ec4899" stroke="none"/>
-                <circle cx="12"  cy="10" r="0.8" fill="#ec4899" stroke="none"/>
-                <circle cx="15.5" cy="10" r="0.8" fill="#ec4899" stroke="none"/>
-              </svg>
+        <!-- Screen 2 — scan mock -->
+        <section class="cine-screen" data-screen="2">
+          <h2 class="cine-head cine2-head" id="cine2-head">Paste a message or upload a screenshot</h2>
+          <div class="cine-mock-card" id="cine2-card">
+            <div class="cine-mock-msg">haha yeah I guess, idk what do you wanna do</div>
+            <div class="cine-mock-foot">
+              <span class="cine-mock-upload">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                Upload Screenshot
+              </span>
             </div>
-            <h2 class="onboarding-title">Get reply suggestions</h2>
-            <p class="onboarding-desc">Never get left on read again.</p>
           </div>
+        </section>
 
-          <div class="onboarding-slide" data-slide="1">
-            <div class="onboarding-icon" style="background:radial-gradient(circle,rgba(244,63,94,0.12) 0%,transparent 65%)">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
-                   stroke="#f43f5e" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" fill="rgba(244,63,94,0.06)"/>
-                <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>
-              </svg>
+        <!-- Screen 3 — reply reveal -->
+        <section class="cine-screen" data-screen="3">
+          <h2 class="cine-head cine3-head" id="cine3-head">
+            <span class="cine-flip-face">Zelo helps you reply</span>
+          </h2>
+          <div class="cine3-stack" id="cine3-stack">
+            <div class="cine-mock-card">
+              <div class="cine-mock-msg">haha yeah I guess, idk what do you wanna do</div>
+              <div class="cine-mock-foot">
+                <span class="cine-mock-upload">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  Upload Screenshot
+                </span>
+              </div>
             </div>
-            <h2 class="onboarding-title">Practice conversations</h2>
-            <p class="onboarding-desc">Rehearse real chats, zero pressure.</p>
           </div>
-
-          <div class="onboarding-slide" data-slide="2">
-            <div class="onboarding-icon" style="background:radial-gradient(circle,rgba(245,158,11,0.14) 0%,transparent 65%)">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
-                   stroke="#d97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-                <polyline points="16 7 22 7 22 13"/>
+          <div class="cine-reply-card" id="cine3-reply">
+            <span class="cine-reply-label">Zelo suggests</span>
+            <p class="cine-reply-text">Let's do something better than "whatever you want" — pick: tacos or a walk?</p>
+            <span class="cine-reply-copy" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
               </svg>
+            </span>
+          </div>
+        </section>
+
+        <!-- Screen 4 — black word-flash → logo -->
+        <section class="cine-screen cine-screen--black" data-screen="4">
+          <div class="cine4-word" id="cine4-word"></div>
+          <div class="cine4-stack" id="cine4-stack" hidden>
+            <span>Conversations</span>
+            <span>Conversations</span>
+            <span>Conversations</span>
+            <span>Conversations</span>
+            <span>Conversations</span>
+            <span>Conversations</span>
+          </div>
+          <div class="cine4-logo" id="cine4-logo" hidden>Zelo<span class="cine4-spark">✦</span></div>
+        </section>
+
+        <!-- Screen 5 — tracking prompt + CTA -->
+        <section class="cine-screen" data-screen="5">
+          <div class="cine5-sheet" id="cine5-sheet" aria-hidden="true"></div>
+          <div class="cine5-stage">
+            <div class="cine5-prompt" id="cine5-prompt" role="img" aria-label="iOS tracking permission prompt mock">
+              <div class="cine5-prompt-icon" aria-hidden="true"></div>
+              <p class="cine5-prompt-title">Allow “Zelo” to track your activity across other companies’ apps and websites?</p>
+              <p class="cine5-prompt-sub">We ask to track activity to measure ads and improve your experience.</p>
+              <div class="cine5-prompt-btn">Ask App Not to Track</div>
+              <div class="cine5-prompt-btn">Allow</div>
             </div>
-            <h2 class="onboarding-title">Improve your texting</h2>
-            <p class="onboarding-desc">Go from overthinking to effortless.</p>
+            <h2 class="cine-head cine5-head" id="cine5-head">Know what to say, every time.</h2>
           </div>
+        </section>
 
-          <div class="onboarding-dots">
-            <span class="onboarding-dot active" data-dot="0"></span>
-            <span class="onboarding-dot" data-dot="1"></span>
-            <span class="onboarding-dot" data-dot="2"></span>
-          </div>
-
-          <button class="onboarding-btn" onclick="onboardingNext()" style="touch-action:manipulation;margin-top:20px">Next</button>
-
-        </div>
+        <button class="cine-next" id="cine-next" onclick="cineNext()">Next</button>
       </div>
 
 
@@ -1203,6 +1210,7 @@
     <script src="data.js"></script>
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
+    <script src="archive/legacy-onboarding.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
