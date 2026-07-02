@@ -5109,17 +5109,17 @@ textarea { font-family: inherit; }
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 230px;
-  height: 320px;
-  transform: translate(-50%, -50%);
-  border-radius: 24px;
+  width: 224px;
+  height: 312px;
+  transform: translate(-50%, -50%) rotate(4deg);
+  border-radius: 26px;
   overflow: hidden;
   background: linear-gradient(155deg, #f7a8d0 0%, #ec4899 55%, #db2777 100%);
-  box-shadow: 0 20px 50px rgba(236,72,153,0.28);
+  box-shadow: 0 22px 50px rgba(236,72,153,0.30);
 }
 .cine-swipe-card--back {
-  transform: translate(-50%, -50%) scale(0.93) translateY(16px) rotate(-5deg);
-  opacity: 0.55;
+  transform: translate(-50%, -50%) scale(0.96) translate(-16px, 10px) rotate(-5deg);
+  opacity: 0.5;
   filter: saturate(0.9);
 }
 .cine-swipe-like {
@@ -5179,8 +5179,8 @@ textarea { font-family: inherit; }
   position: absolute;
   left: 50%; top: 50%;
   width: 210px; height: 300px;
-  transform: translate(-50%, -50%) rotate(4deg);
-  border-radius: 24px;
+  transform: translate(-50%, -50%) rotate(6deg);
+  border-radius: 26px;
   overflow: hidden;
   background: linear-gradient(155deg, #f7a8d0 0%, #ec4899 55%, #db2777 100%);
   box-shadow: 0 20px 50px rgba(236,72,153,0.30);
@@ -5255,9 +5255,9 @@ textarea { font-family: inherit; }
 }
 .cine-bell-glow {
   position: absolute;
-  inset: -8px;
+  inset: -50px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-soft) 0%, rgba(236,72,153,0) 68%);
+  background: radial-gradient(circle, var(--accent-soft) 0%, rgba(236,72,153,0.05) 46%, rgba(236,72,153,0) 70%);
 }
 .cine-bell-body { position: relative; z-index: 1; filter: drop-shadow(0 10px 20px rgba(236,72,153,0.35)); }
 .cine-bell-badge {
