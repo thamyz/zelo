@@ -5260,16 +5260,15 @@ textarea { font-family: inherit; }
   background: radial-gradient(circle, var(--accent-soft) 0%, rgba(236,72,153,0) 68%);
 }
 .cine-bell-body { position: relative; z-index: 1; filter: drop-shadow(0 10px 20px rgba(236,72,153,0.35)); }
-.cine-bell-spark { position: absolute; z-index: 2; color: #fff; top: 50%; left: 50%; transform: translate(-50%, -58%); }
 .cine-bell-badge {
   position: absolute;
-  top: 8px; right: 18px;
+  top: 6px; right: 14px;
   z-index: 3;
   min-width: 30px; height: 30px;
   padding: 0 8px;
   border-radius: 99px;
   background: #fff;
-  color: #1c1917;
+  color: var(--accent-deep);
   font-size: 0.95rem;
   font-weight: 800;
   display: flex; align-items: center; justify-content: center;
