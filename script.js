@@ -2105,7 +2105,14 @@ function cineGoTo(n) {
   cineRestoreSelection(n);   // re-highlight prior choices when revisiting screen 7
 }
 
-// ---- Screen 1 — card + chips pop in, then auto-advance after a 2s pause ----
+// Forces the browser to paint the "before" state (classes just removed)
+// before adding the entrance classes on the next frame, so the CSS
+// animation reliably restarts every time instead of racing a reflow.
+function _cineNextFrame(fn) {
+  requestAnimationFrame(() => requestAnimationFrame(fn));
+}
+
+// ---- Screen 1 — card + chips pop in, then auto-advance after a 3.5s pause ----
 function cineRunScanEntrance() {
   const scope = document.querySelector('.cine-screen[data-screen="1"]');
   if (!scope) return;
@@ -2113,17 +2120,16 @@ function cineRunScanEntrance() {
   const chips = scope.querySelectorAll('.cine-float-chip');
   const text  = scope.querySelector('.cine-textblock');
   [card, text, ...chips].forEach(el => el && el.classList.remove('cine-anim-in'));
-  if (card) void card.offsetWidth;
-  _cineDelay(() => {
+  _cineNextFrame(() => {
     if (card) card.classList.add('cine-anim-in');
     chips.forEach(c => c.classList.add('cine-anim-in'));
     if (text) text.classList.add('cine-anim-in');
-  }, 20);
+  });
   _cineDelay(() => { if (cineStep === 1) cineGoTo(2); }, 3500);
 }
 
-// ---- Screen 2 — reply card slides up, arrow + sparkle pop in together,
-//      then the connecting arrow fades away once the reply has landed ----
+// ---- Screen 2 — reply card zooms in big → settles, arrow + sparkle pop in
+//      together, then the connecting arrow fades away once the reply lands ----
 function cineRunReplyEntrance() {
   const scope = document.querySelector('.cine-screen[data-screen="2"]');
   if (!scope) return;
@@ -2133,15 +2139,14 @@ function cineRunReplyEntrance() {
   const spark = scope.querySelector('.cine-reply-spark');
   const text  = scope.querySelector('.cine-textblock');
   [card, reply, arrow, spark, text].forEach(el => el && el.classList.remove('cine-anim-in', 'cine-anim-out'));
-  if (card) void card.offsetWidth;
-  _cineDelay(() => {
+  _cineNextFrame(() => {
     if (card)  card.classList.add('cine-anim-in');   // carried-over message card, pops in first
     if (arrow) arrow.classList.add('cine-anim-in');
     if (reply) reply.classList.add('cine-anim-in');
     if (spark) spark.classList.add('cine-anim-in');
     if (text)  text.classList.add('cine-anim-in');
-  }, 20);
-  _cineDelay(() => { if (arrow) arrow.classList.add('cine-anim-out'); }, 750);
+  });
+  _cineDelay(() => { if (arrow) arrow.classList.add('cine-anim-out'); }, 1050);
 }
 
 // Enable/disable the active CTA (used to enforce required answers on screen 7).
