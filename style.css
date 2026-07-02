@@ -5018,7 +5018,7 @@ textarea { font-family: inherit; }
 }
 /* Screen 2 keeps its top cluster (card + arrow) compact so the reply-wrap
    below has real room to center the result vertically. */
-.cine-screen[data-screen="2"] .cine-demo-stage { padding-top: 14px; }
+.cine-screen[data-screen="2"] .cine-demo-stage { padding-top: 50px; }
 .cine-demo-top {
   width: 100%;
   display: flex;
