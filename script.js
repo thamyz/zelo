@@ -1937,7 +1937,8 @@ function copyCurrentReply() {
 //   PHASE 2 (Next + X-to-skip, 7 screens):
 //     1 scan · 2 reply · 3 swipe · 4 match · 5 notifications ·
 //     6 tracking · 7 personalize (practice mode + accent color + age,
-//     one scrollable screen)  ->  Scan page with the pre-filled example.
+//     one screen)  ->  Scan page with the pre-filled example.
+// Static layout — every screen fits the viewport (no scroll, no animation).
 // Selections persist as zelo_practice_mode / zelo_accent_color / zelo_age_range.
 // Legacy 3-slide onboarding + 12-step spotlight tour live in
 // archive/legacy-onboarding.js and never run.
@@ -2084,7 +2085,7 @@ function cineGoTo(n) {
     // Screen 3 (swipe → auto), 4 (tap to advance) and 7 (in-flow button) hide the shared CTA.
     nextBtn.classList.toggle('cine-hidden', n === 3 || n === 4 || n === CINE_LAST);
     if (n === 5) nextBtn.textContent = 'Continue';
-    else if (n === 6) nextBtn.textContent = 'Know what to say';
+    else if (n === 6) nextBtn.textContent = 'Allow & continue';
     else nextBtn.textContent = 'Next';
   }
 
@@ -2092,13 +2093,9 @@ function cineGoTo(n) {
   if (n === CINE_LAST) cineSetNextEnabled(cinePersonaReady());
   else cineSetNextEnabled(true);
 
-  if (n === 1) cineRunScan();
-  else if (n === 2) cineRunReply();
-  else if (n === 3) cineRunSwipe();
-  else if (n === 4) cineRunMatch();
-  else if (n === 5) cineRunNotif();
-  else if (n === 6) cineRunTracking();
-  else if (n === 7) cineRunPersonalize();
+  // Static layout (no per-screen animation). Screen 7 just needs the live
+  // accent applied so its color swatches / selection glow reflect the pick.
+  if (n === CINE_LAST) applySavedTheme();
 
   cineRestoreSelection(n);   // re-highlight prior choices when revisiting screen 7
 }
@@ -2149,53 +2146,10 @@ function cineScreenTap(e) {
   if (cineStep === 4) cineGoTo(5);
 }
 
-// ---- Screen 1 — scan demo ----
-function cineRunScan() {
-  const card = document.querySelector('.cine-screen[data-screen="1"] .cine-mock-card');
-  const text = document.querySelector('.cine-screen[data-screen="1"] .cine-textblock');
-  if (card) { card.classList.remove('cine-pop-in'); void card.offsetWidth; card.classList.add('cine-pop-in'); }
-  if (text) { text.classList.remove('cine-fade-up'); void text.offsetWidth; text.classList.add('cine-fade-up'); }
-}
-
-// ---- Screen 2 — reply demo (lift card → down arrow → reply → text) ----
-function cineRunReply() {
-  const stack = document.getElementById('cine3-stack');
-  const arrow = document.getElementById('cine3-arrow');
-  const reply = document.getElementById('cine3-reply');
-  const text  = document.querySelector('.cine-screen[data-screen="2"] .cine-textblock');
-  if (reply) reply.classList.remove('cine-reply-in');
-  if (arrow) arrow.classList.remove('show');
-  _cineDelay(() => { if (arrow) arrow.classList.add('show'); }, 360);
-  _cineDelay(() => { if (reply) reply.classList.add('cine-reply-in'); }, 620);
-  if (text) { text.classList.remove('cine-fade-up'); void text.offsetWidth; text.classList.add('cine-fade-up'); }
-}
-
-// ---- Screen 3 — swipe right → auto-advance to the match screen ----
-function cineRunSwipe() {
-  const card = document.getElementById('cine-swipe-card');
-  const like = document.getElementById('cine-swipe-like');
-  if (!card) return;
-  card.classList.remove('cine-swipe-card--fly');
-  if (like) like.classList.remove('cine-swipe-like--show');
-  void card.offsetWidth;
-  _cineDelay(() => { if (like) like.classList.add('cine-swipe-like--show'); }, 700);
-  _cineDelay(() => { card.classList.add('cine-swipe-card--fly'); navigator.vibrate?.(8); }, 1150);
-  _cineDelay(() => { if (cineStep === 3) cineGoTo(4); }, 1750);
-}
-
-// ---- Screen 4 — "It's a Match" flash (tap anywhere to continue) ----
-function cineRunMatch() {
-  const card = document.getElementById('cine-match-card');
-  if (!card) return;
-  card.classList.remove('cine-match-flash--in'); void card.offsetWidth;
-  card.classList.add('cine-match-flash--in');
-  navigator.vibrate?.(16);
-}
-
-// ---- Screen 5 — notifications (bell + feature rows) ----
-function cineRunNotif() {
-  const stage = document.querySelector('.cine-screen[data-screen="5"] .cine-notif-stage');
-  if (stage) { stage.classList.remove('cine-fade-up'); void stage.offsetWidth; stage.classList.add('cine-fade-up'); }
+// ---- Screen 3 — tapping any swipe control advances to the match screen ----
+function cineSwipeAdvance(e) {
+  if (e) e.stopPropagation();
+  if (cineStep === 3) { navigator.vibrate?.(8); cineGoTo(4); }
 }
 
 function requestNotifPermission() {
@@ -2205,25 +2159,6 @@ function requestNotifPermission() {
       if (r && typeof r.catch === 'function') r.catch(() => {});
     }
   } catch (_) {}
-}
-
-// ---- Screen 6 — tracking permission (feature rows) ----
-function cineRunTracking() {
-  const att = document.querySelector('.cine-screen[data-screen="6"] .cine-att');
-  if (att) { att.classList.remove('cine-pop-in'); void att.offsetWidth; att.classList.add('cine-pop-in'); }
-}
-
-// Both ATT links (Ask App Not to Track / Allow) are real controls that advance.
-function cineTrackingChoice(e) {
-  if (e) e.stopPropagation();
-  if (cineStep === 6) cineGoTo(7);
-}
-
-// ---- Screen 7 — personalization (mode + color + age in one scroll) ----
-function cineRunPersonalize() {
-  const persona = document.querySelector('.cine-screen[data-screen="7"] .cine-persona');
-  if (persona) { persona.classList.remove('cine-fade-up'); void persona.offsetWidth; persona.classList.add('cine-fade-up'); }
-  applySavedTheme();   // ensure the accent (default pink) is live for the preview
 }
 
 // True once the required personalization answers (mode + age) are chosen.
