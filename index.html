@@ -705,14 +705,14 @@
            ============================================================ -->
       <div class="cine" id="cine-onboarding" hidden onclick="cineScreenTap(event)">
 
-        <button class="cine-back cine-hidden" id="cine-back" onclick="cineBack()" aria-label="Back">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6"/>
+        <!-- Skip — top right on every Phase 2 screen -->
+        <button class="cine-skip cine-hidden" id="cine-skip" onclick="cineSkip(event)" aria-label="Skip onboarding">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
+            <line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>
           </svg>
         </button>
 
         <div class="cine-dots cine-hidden" id="cine-dots" aria-hidden="true">
-          <span class="cine-dot"></span>
           <span class="cine-dot"></span>
           <span class="cine-dot"></span>
           <span class="cine-dot"></span>
@@ -733,207 +733,261 @@
 
         <!-- ============ PHASE 2 · Screen 1 — Scan demo ============ -->
         <section class="cine-screen" data-screen="1">
-          <h2 class="cine-head cine2-head" id="cine2-head">Paste a message or upload a screenshot</h2>
-          <div class="cine-mock-card" id="cine2-card">
-            <div class="cine-mock-msg">haha yeah I guess, idk what do you wanna do</div>
-            <div class="cine-mock-foot">
-              <span class="cine-mock-upload">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                  <polyline points="21 15 16 10 5 21"/>
-                </svg>
-                Upload Screenshot
-              </span>
-            </div>
-          </div>
-        </section>
+          <span class="cine-deco cine-spark-deco" style="top:20%;left:16%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-swirl" style="bottom:33%;right:14%;transform:rotate(-8deg)"><svg width="54" height="54" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M50 52 C 54 30, 34 14, 18 24 C 10 29, 12 40, 20 39 C 27 38, 26 30, 19 32"/><path d="M50 52 L44 43 M50 52 L58 47"/></svg></span>
 
-        <!-- ============ PHASE 2 · Screen 2 — Reply demo ============ -->
-        <section class="cine-screen" data-screen="2">
-          <h2 class="cine-head cine3-head" id="cine3-head">
-            <span class="cine-flip-face">Zelo helps you reply</span>
-          </h2>
-          <div class="cine3-stack" id="cine3-stack">
+          <div class="cine-scan-stage" id="cine1-stage">
             <div class="cine-mock-card">
+              <span class="cine-float-chip bubble" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.2 1.1 4.2 3 5.6V21l3.9-2.1c1 .3 2.1.5 3.1.5 5.5 0 10-3.6 10-8s-4.5-8-10-8z"/><circle cx="8.5" cy="11" r="1.2" fill="#fff"/><circle cx="12" cy="11" r="1.2" fill="#fff"/><circle cx="15.5" cy="11" r="1.2" fill="#fff"/></svg>
+              </span>
+              <span class="cine-float-chip img" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.6"/><polyline points="21 15 16 10 5 21"/></svg>
+              </span>
               <div class="cine-mock-msg">haha yeah I guess, idk what do you wanna do</div>
               <div class="cine-mock-foot">
                 <span class="cine-mock-upload">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                   Upload Screenshot
                 </span>
               </div>
             </div>
           </div>
-          <div class="cine-reply-card" id="cine3-reply">
-            <span class="cine-reply-label">
-              <svg class="cine-reply-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-              </svg>
-              Zelo Suggests
-            </span>
-            <p class="cine-reply-text" id="cine3-reply-text">How about tacos Friday, you in?</p>
-            <span class="cine-reply-copy" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-              </svg>
-            </span>
+
+          <div class="cine-textblock">
+            <h2 class="cine-head">Paste a message or<br>upload a screenshot</h2>
+            <p class="cine-sub">Add any message or screenshot and Zelo will understand the context.</p>
           </div>
         </section>
 
-        <!-- ============ PHASE 2 · Screen 3 — Swipe / match demo ============ -->
+        <!-- ============ PHASE 2 · Screen 2 — Reply demo ============ -->
+        <section class="cine-screen" data-screen="2">
+          <span class="cine-deco cine-spark-deco" style="top:16%;left:14%"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-spark-deco sm" style="top:44%;right:12%"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-spark-deco sm" style="top:52%;left:10%"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+
+          <div class="cine3-stack" id="cine3-stack">
+            <div class="cine-mock-card">
+              <div class="cine-mock-msg">haha yeah I guess, idk what do you wanna do</div>
+              <div class="cine-mock-foot">
+                <span class="cine-mock-upload">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  Upload Screenshot
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <span class="cine-down-arrow" id="cine3-arrow" aria-hidden="true">
+            <svg width="40" height="46" viewBox="0 0 40 46" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4 C 27 15, 13 24, 20 40"/><path d="M12 32 L20 42 L28 32"/></svg>
+          </span>
+
+          <div class="cine-reply-card" id="cine3-reply">
+            <span class="cine-reply-label">
+              <svg class="cine-reply-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
+              Zelo Suggests
+            </span>
+            <p class="cine-reply-text">How about tacos Friday, you in?</p>
+            <span class="cine-reply-copy" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </span>
+          </div>
+
+          <div class="cine-textblock">
+            <h2 class="cine-head">Zelo helps you reply</h2>
+            <p class="cine-sub">Get smart reply suggestions that fit the vibe and keep the conversation going.</p>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 3 — Swipe demo ============ -->
         <section class="cine-screen" data-screen="3">
-          <h2 class="cine-head">Find someone to practice with</h2>
+          <h2 class="cine-head">Find someone to<br><span class="hl">practice</span> with</h2>
+          <p class="cine-sub" style="margin-bottom:20px">Swipe to find people to chat and practice real conversations.</p>
+
+          <span class="cine-deco cine-spark-deco" style="top:34%;left:12%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-spark-deco sm" style="bottom:30%;right:12%"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-swirl" style="top:38%;right:6%;transform:rotate(160deg)"><svg width="48" height="48" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M50 52 C 54 30, 34 14, 18 24 C 10 29, 12 40, 20 39 C 27 38, 26 30, 19 32"/><path d="M50 52 L44 43 M50 52 L58 47"/></svg></span>
+
           <div class="cine-swipe-stage">
             <div class="cine-swipe-card cine-swipe-card--back"></div>
             <div class="cine-swipe-card" id="cine-swipe-card">
-              <div class="cine-swipe-photo">E</div>
-              <div class="cine-swipe-grad"></div>
               <div class="cine-swipe-like" id="cine-swipe-like">LIKE</div>
-              <div class="cine-swipe-info">
-                <span class="cine-swipe-name">Emily, 20</span>
-                <span class="cine-swipe-occ">Nursing Student</span>
-              </div>
             </div>
-            <div class="cine-match-flash" id="cine-match-flash" hidden>
-              <span class="cine-match-spark">✦</span>
-              <span class="cine-match-title">It's a Match</span>
-            </div>
+          </div>
+
+          <div class="cine-swipe-controls">
+            <span class="cine-swipe-btn pass"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+            <span class="cine-swipe-hint"><b>Swipe right</b><span>to like</span></span>
+            <span class="cine-swipe-btn like"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.4-8.6C.9 9.3 2.4 6 5.6 6c2 0 3.3 1.2 4.4 2.6C11 7.2 12.4 6 14.4 6c3.2 0 4.7 3.3 3 6.4C19 16.4 12 21 12 21z"/></svg></span>
           </div>
         </section>
 
-        <!-- ============ PHASE 2 · Screen 4 — Notifications (iOS-style prompt) ============ -->
+        <!-- ============ PHASE 2 · Screen 4 — Match flash ============ -->
         <section class="cine-screen" data-screen="4">
-          <div class="cine5-sheet" id="cine-notif-sheet" aria-hidden="true"></div>
-          <div class="cine5-stage">
-            <div class="cine5-prompt" id="cine-notif-prompt" role="group" aria-label="iOS notification permission prompt">
-              <div class="cine5-prompt-icon" aria-hidden="true">
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff">
-                  <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-                </svg>
-              </div>
-              <p class="cine5-prompt-title">“Zelo” Would Like to Send You Notifications</p>
-              <p class="cine5-prompt-sub">Notifications may include alerts, sounds, and icon badges. These can be configured in Settings.</p>
-              <button type="button" class="cine5-prompt-btn" onclick="cineNotifChoice(event, false)">Don't Allow</button>
-              <button type="button" class="cine5-prompt-btn" onclick="cineNotifChoice(event, true)">Allow</button>
+          <h2 class="cine-head">Find someone to<br><span class="hl">practice</span> with</h2>
+          <p class="cine-sub" style="margin-bottom:20px">Swipe to find people to chat and practice real conversations.</p>
+
+          <span class="cine-deco cine-spark-deco" style="top:36%;right:14%"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+
+          <div class="cine-match-stage">
+            <div class="cine-match-card cine-match-card--back"></div>
+            <div class="cine-match-card" id="cine-match-card">
+              <span class="cine-match-spark">✦</span>
+              <span class="cine-match-title">It's a<br>Match!</span>
             </div>
-            <h2 class="cine-head" id="cine-notif-head">Get notified when she replies</h2>
+          </div>
+
+          <div class="cine-match-cta">
+            <b>Start practicing</b>
+            <span>and improve your replies</span>
           </div>
         </section>
 
-        <!-- ============ PHASE 2 · Screen 5 — Tracking permission + value ============ -->
+        <!-- ============ PHASE 2 · Screen 5 — Notifications ============ -->
         <section class="cine-screen" data-screen="5">
-          <div class="cine5-sheet" id="cine5-sheet" aria-hidden="true"></div>
-          <div class="cine5-stage">
-            <div class="cine5-prompt" id="cine5-prompt" role="group" aria-label="iOS tracking permission prompt">
-              <div class="cine5-prompt-icon" aria-hidden="true">
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff">
-                  <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-                </svg>
-              </div>
-              <p class="cine5-prompt-title">Allow “Zelo” to track your activity across other companies’ apps and websites?</p>
-              <p class="cine5-prompt-sub">We ask to track activity to measure ads and improve your experience.</p>
-              <button type="button" class="cine5-prompt-btn" onclick="cineTrackingChoice(event)">Ask App Not to Track</button>
-              <button type="button" class="cine5-prompt-btn" onclick="cineTrackingChoice(event)">Allow</button>
-            </div>
-            <h2 class="cine-head cine5-head" id="cine5-head">Know what to say, every time.</h2>
-            <p class="cine5-supporting" id="cine5-supporting">Stop staring at your phone wondering what to text.</p>
-          </div>
-        </section>
+          <span class="cine-deco cine-spark-deco" style="top:14%;right:22%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-spark-deco sm" style="top:22%;left:20%"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-annot" style="top:20%;left:8%;transform:rotate(-10deg)">Tap the icon!</span>
+          <span class="cine-deco cine-swirl" style="top:24%;left:22%;transform:rotate(30deg)"><svg width="46" height="46" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 46 C 4 24, 24 8, 40 18 C 48 23, 46 34, 38 33 C 31 32, 32 24, 39 26"/><path d="M8 46 L14 37 M8 46 L0 41"/></svg></span>
 
-        <!-- ============ PHASE 2 · Screen 6 — Mode selection ============ -->
-        <section class="cine-screen" data-screen="6">
-          <h2 class="cine-head cine-mode-q">Who do you want to practice your conversation with?</h2>
-          <div class="cine-mode-grid">
-            <button type="button" class="cine-mode-card" id="cine-mode-women" onclick="cineSelectMode('women', this)">
-              <span class="cine-mode-icon">♛</span>
-              <span class="cine-mode-main">Women</span>
-              <span class="cine-mode-label">Zelo</span>
-            </button>
-            <button type="button" class="cine-mode-card" id="cine-mode-men" onclick="cineSelectMode('men', this)">
-              <span class="cine-mode-icon">♚</span>
-              <span class="cine-mode-main">Men</span>
-              <span class="cine-mode-label">Zole</span>
-            </button>
-            <button type="button" class="cine-mode-card cine-mode-card--both" id="cine-mode-both" onclick="cineSelectMode('both', this)">
-              <span class="cine-mode-icon cine-mode-icon--both">♛<span class="cine-mode-icon-k">♚</span></span>
-              <span class="cine-mode-both-text">
-                <span class="cine-mode-main">Both</span>
-                <span class="cine-mode-label">Zelo &amp; Zole</span>
+          <div class="cine-notif-stage">
+            <div class="cine-bell">
+              <span class="cine-bell-glow"></span>
+              <span class="cine-bell-ic">
+                <svg width="82" height="82" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6c0 3.6-1.3 5.2-2.1 6.1-.5.6-.1 1.4.7 1.4h14.8c.8 0 1.2-.8.7-1.4C19.3 13.2 18 11.6 18 8a6 6 0 0 0-6-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg>
               </span>
+              <span class="cine-bell-ic" style="position:absolute;color:#fff;filter:none;animation:none;z-index:2"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style="transform:translateY(-4px)"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+              <span class="cine-bell-badge">1</span>
+            </div>
+
+            <h2 class="cine-head" style="margin-bottom:8px"><span class="hl">Get notified</span> when<br>she replies</h2>
+            <p class="cine-sub" style="margin-bottom:6px">"Zelo" would like to send you notifications so you never miss an important reply.</p>
+
+            <div class="cine-feat-card">
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6c0 3.6-1.3 5.2-2.1 6.1-.5.6-.1 1.4.7 1.4h14.8c.8 0 1.2-.8.7-1.4C19.3 13.2 18 11.6 18 8a6 6 0 0 0-6-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">Instant alerts</span><span class="cine-feat-sub">Know right away when she replies.</span></span>
+              </div>
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">Sounds &amp; badges</span><span class="cine-feat-sub">Customize how you get notified.</span></span>
+              </div>
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V5l8-3z"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">You're in control</span><span class="cine-feat-sub">Manage your preferences anytime in Settings.</span></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 6 — Tracking permission ============ -->
+        <section class="cine-screen cine-screen--scroll" data-screen="6">
+          <span class="cine-deco cine-spark-deco" style="top:8%;left:12%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-annot" style="top:30%;right:8%;transform:rotate(8deg)">Tap Allow</span>
+          <span class="cine-deco cine-swirl" style="top:22%;right:20%;transform:rotate(200deg) scaleX(-1)"><svg width="44" height="44" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 46 C 4 24, 24 8, 40 18 C 48 23, 46 34, 38 33 C 31 32, 32 24, 39 26"/><path d="M8 46 L14 37 M8 46 L0 41"/></svg></span>
+
+          <div class="cine-att" role="group" aria-label="Tracking permission prompt">
+            <div class="cine-att-icon" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
+            </div>
+            <p class="cine-att-title">Allow "Zelo" to track your activity across other companies' apps and websites?</p>
+            <p class="cine-att-sub">We ask to track activity to measure ads and improve your experience.</p>
+            <button type="button" class="cine-att-btn" onclick="cineTrackingChoice(event)">Ask App Not to Track</button>
+            <button type="button" class="cine-att-btn" onclick="cineTrackingChoice(event)">Allow</button>
+          </div>
+
+          <h2 class="cine-head" style="margin-bottom:8px">Know what to say,<br><span class="hl">every time.</span></h2>
+          <p class="cine-sub" style="margin-bottom:18px">Allow "Zelo" to track activity across apps and websites so we can personalize your experience and show you better suggestions.</p>
+
+          <div class="cine-feat-card">
+            <div class="cine-feat-row">
+              <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="4"/></svg></span>
+              <span class="cine-feat-txt"><span class="cine-feat-title">Better suggestions</span><span class="cine-feat-sub">We learn what works best for you.</span></span>
+            </div>
+            <div class="cine-feat-row">
+              <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></span>
+              <span class="cine-feat-txt"><span class="cine-feat-title">More relevant experience</span><span class="cine-feat-sub">See examples and tips that fit your style.</span></span>
+            </div>
+            <div class="cine-feat-row">
+              <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V5l8-3z"/></svg></span>
+              <span class="cine-feat-txt"><span class="cine-feat-title">Your privacy matters</span><span class="cine-feat-sub">You're in control. You can change this anytime in settings.</span></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 7 — Personalization (scrollable) ============ -->
+        <section class="cine-screen cine-screen--scroll" data-screen="7">
+          <div class="cine-persona">
+            <h2 class="cine-head cine-persona-head">Let's personalize<br>your Zelo experience</h2>
+            <p class="cine-sub cine-persona-sub">These quick choices help us give you better and more relevant suggestions.</p>
+
+            <!-- Section 1 — practice with -->
+            <div class="cine-sec">
+              <div class="cine-sec-title"><span class="cine-sec-num">1</span>Who do you want to practice with?</div>
+              <div class="cine-mode-grid">
+                <button type="button" class="cine-mode-card" id="cine-mode-women" onclick="cineSelectMode('women', this)">
+                  <span class="cine-mode-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg></span>
+                  <span class="cine-mode-main">Women</span>
+                  <span class="cine-mode-tag">Zelo</span>
+                </button>
+                <button type="button" class="cine-mode-card" id="cine-mode-men" onclick="cineSelectMode('men', this)">
+                  <span class="cine-mode-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg></span>
+                  <span class="cine-mode-main">Men</span>
+                  <span class="cine-mode-tag">Zole</span>
+                </button>
+                <button type="button" class="cine-mode-card" id="cine-mode-both" onclick="cineSelectMode('both', this)">
+                  <span class="cine-mode-orb both">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg>
+                  </span>
+                  <span class="cine-mode-main">Both</span>
+                  <span class="cine-mode-tag">Zelo &amp; Zole</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="cine-divider"></div>
+
+            <!-- Section 2 — color -->
+            <div class="cine-sec">
+              <div class="cine-sec-title"><span class="cine-sec-num">2</span>Pick your color</div>
+              <div class="cine-color-row">
+                <button type="button" class="cine-color-dot" data-color="pink"     style="background:#ec4899" onclick="cineSelectColor('pink', this)" aria-label="Pink"></button>
+                <button type="button" class="cine-color-dot" data-color="berry"    style="background:#a21caf" onclick="cineSelectColor('berry', this)" aria-label="Berry"></button>
+                <button type="button" class="cine-color-dot" data-color="lavender" style="background:#8b5cf6" onclick="cineSelectColor('lavender', this)" aria-label="Lavender"></button>
+                <button type="button" class="cine-color-dot" data-color="coral"    style="background:#fb7185" onclick="cineSelectColor('coral', this)" aria-label="Coral"></button>
+                <button type="button" class="cine-color-dot" data-color="sky"      style="background:#0ea5e9" onclick="cineSelectColor('sky', this)" aria-label="Sky Blue"></button>
+                <button type="button" class="cine-color-dot" data-color="sage"     style="background:#5b9279" onclick="cineSelectColor('sage', this)" aria-label="Sage Green"></button>
+              </div>
+
+              <div class="cine-prev-card">
+                <span class="cine-prev-brand">Zelo <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+                <div class="cine-prev-input">haha yeah I guess, idk what do you wanna do</div>
+                <div class="cine-prev-reply">
+                  <span class="cine-prev-reply-label">✦ Zelo Suggests</span>
+                  <span class="cine-prev-reply-text">How about tacos Friday, you in?</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="cine-divider"></div>
+
+            <!-- Section 3 — age -->
+            <div class="cine-sec">
+              <div class="cine-sec-title"><span class="cine-sec-num">3</span>How old are you?</div>
+              <div class="cine-age-grid">
+                <button type="button" class="cine-age-pill" data-age="18-24" onclick="cineSelectAge('18-24', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>18-24<span class="cine-age-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
+                <button type="button" class="cine-age-pill" data-age="25-30" onclick="cineSelectAge('25-30', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>25-30<span class="cine-age-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
+                <button type="button" class="cine-age-pill" data-age="31-39" onclick="cineSelectAge('31-39', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>31-39<span class="cine-age-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
+                <button type="button" class="cine-age-pill" data-age="40+" onclick="cineSelectAge('40+', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>40+<span class="cine-age-check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
+              </div>
+            </div>
+
+            <button class="cine-getstarted cine-next--disabled" id="cine-getstarted" onclick="cineNext()">
+              Get Started
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </button>
-          </div>
-        </section>
-
-        <!-- ============ PHASE 2 · Screen 7 — Theme picker (with live showcase) ============ -->
-        <section class="cine-screen cine-screen--theme" data-screen="7">
-          <h2 class="cine-head cine-theme-head">Pick your color</h2>
-          <div class="cine-theme-grid">
-            <button type="button" class="cine-theme-dot" data-theme="pink"     style="background:#ec4899" onclick="cineSelectTheme('pink', this)" aria-label="Pink"></button>
-            <button type="button" class="cine-theme-dot" data-theme="berry"    style="background:#a21caf" onclick="cineSelectTheme('berry', this)" aria-label="Berry"></button>
-            <button type="button" class="cine-theme-dot" data-theme="lavender" style="background:#8b5cf6" onclick="cineSelectTheme('lavender', this)" aria-label="Lavender"></button>
-            <button type="button" class="cine-theme-dot" data-theme="coral"    style="background:#fb7185" onclick="cineSelectTheme('coral', this)" aria-label="Coral"></button>
-            <button type="button" class="cine-theme-dot" data-theme="sky"      style="background:#0ea5e9" onclick="cineSelectTheme('sky', this)" aria-label="Sky Blue"></button>
-            <button type="button" class="cine-theme-dot" data-theme="sage"     style="background:#5b9279" onclick="cineSelectTheme('sage', this)" aria-label="Sage Green"></button>
-          </div>
-
-          <!-- Live in-app demo — auto-cycles real screens, recolors with the pick -->
-          <div class="cine-demo" aria-hidden="true">
-            <div class="cine-demo-phone">
-
-              <!-- Scan -->
-              <div class="cine-demo-screen active" data-demo="0">
-                <div class="cine-demo-top"><span class="cine-demo-brand">Zelo<span class="cine-demo-spark">✦</span></span></div>
-                <div class="cine-demo-card">haha yeah I guess, idk what do you wanna do</div>
-                <div class="cine-demo-reply"><span class="cine-demo-reply-label">✦ Zelo suggests</span>How about tacos Friday, you in?</div>
-                <div class="cine-demo-btn">Analyze</div>
-              </div>
-
-              <!-- Home -->
-              <div class="cine-demo-screen" data-demo="1">
-                <div class="cine-demo-top"><span class="cine-demo-brand">Discover</span></div>
-                <div class="cine-demo-profile"><span class="cine-demo-profile-name">Emily, 20</span></div>
-                <div class="cine-demo-actions">
-                  <span class="cine-demo-pass">✕</span>
-                  <span class="cine-demo-like">♥</span>
-                </div>
-              </div>
-
-              <!-- Chat -->
-              <div class="cine-demo-screen" data-demo="2">
-                <div class="cine-demo-top"><span class="cine-demo-brand">Emily</span></div>
-                <div class="cine-demo-chat">
-                  <div class="cine-demo-bubble in">hey! how's your day</div>
-                  <div class="cine-demo-bubble out">pretty good — you free friday?</div>
-                  <div class="cine-demo-bubble in">maybe 👀 what'd you have in mind</div>
-                </div>
-              </div>
-
-            </div>
-            <div class="cine-demo-dots">
-              <span class="cine-demo-dot active"></span>
-              <span class="cine-demo-dot"></span>
-              <span class="cine-demo-dot"></span>
-            </div>
-          </div>
-        </section>
-
-        <!-- ============ PHASE 2 · Screen 8 — Age range ============ -->
-        <section class="cine-screen" data-screen="8">
-          <h2 class="cine-head">How old are you?</h2>
-          <div class="cine-age-grid">
-            <button type="button" class="cine-age-pill" data-age="18-24" onclick="cineSelectAge('18-24', this)">18-24</button>
-            <button type="button" class="cine-age-pill" data-age="25-30" onclick="cineSelectAge('25-30', this)">25-30</button>
-            <button type="button" class="cine-age-pill" data-age="31-39" onclick="cineSelectAge('31-39', this)">31-39</button>
-            <button type="button" class="cine-age-pill" data-age="40+" onclick="cineSelectAge('40+', this)">40+</button>
+            <p class="cine-persona-foot">You can change these anytime in Settings.</p>
           </div>
         </section>
 

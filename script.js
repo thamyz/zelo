@@ -70,10 +70,10 @@ window.addEventListener('DOMContentLoaded', () => {
   localStorage.removeItem('zelo_example_prefilled');
   localStorage.removeItem('zelo_scan_first_run');
   localStorage.removeItem('zelo_tour_seen');
-  // Last-3 onboarding answers start blank each run — nothing pre-chosen.
-  localStorage.removeItem('zelo_mode');
-  localStorage.removeItem('zelo_theme');
-  localStorage.removeItem('zelo_age');
+  // Personalization answers start blank each run — nothing pre-chosen.
+  localStorage.removeItem('zelo_practice_mode');
+  localStorage.removeItem('zelo_accent_color');
+  localStorage.removeItem('zelo_age_range');
 
   AUTH.init(); // session check — must run before any auth triggers fire
   // TODO — merge anonymous scan history on signup
@@ -1934,17 +1934,19 @@ function copyCurrentReply() {
 // ONBOARDING  (two-phase cinematic — active first-launch flow)
 //   PHASE 1 (auto, ~4-5s, no interaction):
 //     typewriter -> word morph (Confidence/Connection/Conversations) -> logo
-//   PHASE 2 (Next + X, 8 screens):
-//     1 scan · 2 reply · 3 swipe/match · 4 notifications · 5 tracking
-//     6 mode · 7 theme · 8 age  ->  Scan page with the pre-filled example.
+//   PHASE 2 (Next + X-to-skip, 7 screens):
+//     1 scan · 2 reply · 3 swipe · 4 match · 5 notifications ·
+//     6 tracking · 7 personalize (practice mode + accent color + age,
+//     one scrollable screen)  ->  Scan page with the pre-filled example.
+// Selections persist as zelo_practice_mode / zelo_accent_color / zelo_age_range.
 // Legacy 3-slide onboarding + 12-step spotlight tour live in
 // archive/legacy-onboarding.js and never run.
 // ================================================================
 
 let threadEditMode = false;
 
-const CINE_LAST = 8;           // last Phase 2 screen
-let cineStep    = 0;           // 0 = Phase 1; 1-8 = Phase 2 screens
+const CINE_LAST = 7;           // last Phase 2 screen
+let cineStep    = 0;           // 0 = Phase 1; 1-7 = Phase 2 screens
 let _cineTimers = [];
 
 function _cineClearTimers() {
@@ -1957,7 +1959,7 @@ function _cineDelay(fn, ms) {
   return t;
 }
 
-// ---- App-wide accent theme (set on screen 7, applied to CSS vars) ----
+// ---- App-wide accent theme (chosen on screen 7, applied to CSS vars) ----
 const ZELO_THEMES = {
   pink:     { accent: '#ec4899', deep: '#db2777', rgb: '236, 72, 153' },
   berry:    { accent: '#a21caf', deep: '#86198f', rgb: '162, 28, 175' },
@@ -1976,7 +1978,7 @@ function applyTheme(key) {
   r.setProperty('--accent-border', `rgba(${t.rgb}, 0.35)`);
 }
 function applySavedTheme() {
-  applyTheme(localStorage.getItem('zelo_theme') || 'pink');
+  applyTheme(localStorage.getItem('zelo_accent_color') || 'pink');
 }
 
 function initOnboarding() {
@@ -1995,23 +1997,24 @@ function initOnboarding() {
 
 function startCineOnboarding() {
   cineStep = 0;
-  cineSetChrome(false);  // no X / Next / dots during the auto intro
+  cineSetChrome(false);  // no skip / Next / dots during the auto intro
   document.querySelectorAll('.cine-screen').forEach(s => {
     s.classList.toggle('active', s.dataset.screen === '0');
   });
   cinePhase1();
 }
 
-// Toggle the interactive chrome (X, Next, dots) — hidden during Phase 1.
+// Toggle the interactive chrome (skip, Next, dots) — hidden during Phase 1.
 function cineSetChrome(show) {
-  // No skip/X — onboarding can't be closed early. Only Next/dots toggle.
-  ['cine-next', 'cine-dots'].forEach(id => {
+  ['cine-next', 'cine-dots', 'cine-skip'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('cine-hidden', !show);
   });
 }
 
 // ---- PHASE 1 — typewriter -> word morph -> logo -> auto-advance ----
+// (unchanged original sequence: "Never freeze up again." ->
+//  Confidence / Connection / Conversations -> Zelo logo)
 function cinePhase1() {
   const type = document.getElementById('cine-p1-type');
   const word = document.getElementById('cine-p1-word');
@@ -2076,154 +2079,123 @@ function cineGoTo(n) {
     d.classList.toggle('active', i === n - 1);
   });
 
-  // Back button — only on the last 3 screens (mode / theme / age).
-  const backBtn = document.getElementById('cine-back');
-  if (backBtn) backBtn.classList.toggle('cine-hidden', !(n >= 6 && n <= CINE_LAST));
-
   const nextBtn = document.getElementById('cine-next');
   if (nextBtn) {
-    // Screen 3 (swipe/match) drives its own transition — no Next there.
-    nextBtn.classList.toggle('cine-hidden', n === 3);
-    if (n === 4) nextBtn.textContent = 'Continue';
-    else if (n === 5) nextBtn.textContent = 'Know what to say';
-    else if (n === CINE_LAST) nextBtn.textContent = 'Get Started';
+    // Screen 3 (swipe → auto), 4 (tap to advance) and 7 (in-flow button) hide the shared CTA.
+    nextBtn.classList.toggle('cine-hidden', n === 3 || n === 4 || n === CINE_LAST);
+    if (n === 5) nextBtn.textContent = 'Continue';
+    else if (n === 6) nextBtn.textContent = 'Know what to say';
     else nextBtn.textContent = 'Next';
   }
 
-  // Last 3 screens require an answer — lock Next until one is chosen.
-  const requiredKey = n === 6 ? 'zelo_mode' : n === 7 ? 'zelo_theme' : n === 8 ? 'zelo_age' : null;
-  cineSetNextEnabled(!requiredKey || !!localStorage.getItem(requiredKey));
-
-  cineStopDemo();   // halt the theme demo when leaving screen 7
+  // Screen 7 requires a practice mode + age (color defaults to pink).
+  if (n === CINE_LAST) cineSetNextEnabled(cinePersonaReady());
+  else cineSetNextEnabled(true);
 
   if (n === 1) cineRunScan();
   else if (n === 2) cineRunReply();
   else if (n === 3) cineRunSwipe();
-  else if (n === 4) cineRunNotif();
-  else if (n === 5) cineRunTracking();
-  else if (n === 6) cineRunFade('cine-mode-grid');
-  else if (n === 7) { cineRunFade('cine-theme-grid'); cineStartDemo(); }
-  else if (n === 8) cineRunFade('cine-age-grid');
+  else if (n === 4) cineRunMatch();
+  else if (n === 5) cineRunNotif();
+  else if (n === 6) cineRunTracking();
+  else if (n === 7) cineRunPersonalize();
 
-  cineRestoreSelection(n);   // re-highlight a prior choice when revisiting
+  cineRestoreSelection(n);   // re-highlight prior choices when revisiting screen 7
 }
 
-// ---- Theme screen — looping in-app demo (Scan -> Home -> Chat, ~3s each) ----
-let _cineDemoTimer = null;
-let _cineDemoIdx   = 0;
-
-function cineShowDemo(i) {
-  document.querySelectorAll('.cine-demo-screen').forEach((s, idx) => s.classList.toggle('active', idx === i));
-  document.querySelectorAll('.cine-demo-dot').forEach((d, idx) => d.classList.toggle('active', idx === i));
-}
-function cineStartDemo() {
-  cineStopDemo();
-  _cineDemoIdx = 0;
-  cineShowDemo(0);
-  _cineDemoTimer = setInterval(() => {
-    _cineDemoIdx = (_cineDemoIdx + 1) % 3;
-    cineShowDemo(_cineDemoIdx);
-  }, 3000);
-}
-function cineStopDemo() {
-  if (_cineDemoTimer) { clearInterval(_cineDemoTimer); _cineDemoTimer = null; }
-}
-
-// Enable/disable the Next CTA (used to enforce required answers).
+// Enable/disable the active CTA (used to enforce required answers on screen 7).
 function cineSetNextEnabled(on) {
-  const b = document.getElementById('cine-next');
-  if (!b) return;
-  b.disabled = !on;
-  b.classList.toggle('cine-next--disabled', !on);
+  ['cine-next', 'cine-getstarted'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.disabled = !on;
+    b.classList.toggle('cine-next--disabled', !on);
+  });
 }
 
-// Re-apply the stored selection's highlight when a screen is shown.
+// Re-apply the stored selections' highlight when screen 7 is shown.
 function cineRestoreSelection(n) {
-  if (n === 6) {
-    const m = localStorage.getItem('zelo_mode');
-    document.querySelectorAll('.cine-mode-card').forEach(c => c.classList.remove('selected'));
-    if (m) { const el = document.getElementById('cine-mode-' + m); if (el) el.classList.add('selected'); }
-  } else if (n === 7) {
-    const t = localStorage.getItem('zelo_theme');
-    document.querySelectorAll('.cine-theme-dot').forEach(c => c.classList.toggle('selected', c.dataset.theme === t));
-  } else if (n === 8) {
-    const a = localStorage.getItem('zelo_age');
-    document.querySelectorAll('.cine-age-pill').forEach(c => c.classList.toggle('selected', c.dataset.age === a));
-  }
-}
-
-function cineBack() {
-  if (cineStep > 1) cineGoTo(cineStep - 1);
+  if (n !== CINE_LAST) return;
+  const mode  = localStorage.getItem('zelo_practice_mode');
+  const color = localStorage.getItem('zelo_accent_color') || 'pink';
+  const age   = localStorage.getItem('zelo_age_range');
+  document.querySelectorAll('.cine-mode-card').forEach(c => c.classList.remove('selected'));
+  if (mode) { const el = document.getElementById('cine-mode-' + mode); if (el) el.classList.add('selected'); }
+  document.querySelectorAll('.cine-color-dot').forEach(c => c.classList.toggle('selected', c.dataset.color === color));
+  document.querySelectorAll('.cine-age-pill').forEach(c => c.classList.toggle('selected', c.dataset.age === age));
 }
 
 function cineNext() {
-  if (cineStep === 0) return;                 // Phase 1 is non-interactive
-  if (document.getElementById('cine-next')?.disabled) return;  // required answer not chosen
-  if (cineStep === 4) requestNotifPermission(); // Continue triggers the prompt
+  if (cineStep === 0) return;                     // Phase 1 is non-interactive
+  const activeBtn = cineStep === CINE_LAST
+    ? document.getElementById('cine-getstarted')
+    : document.getElementById('cine-next');
+  if (activeBtn?.disabled) return;                // required answer not chosen
+  if (cineStep === 5) requestNotifPermission();   // Continue fires the real prompt
   if (cineStep >= CINE_LAST) { finishNewOnboarding(); return; }
   cineGoTo(cineStep + 1);
 }
 
-// iOS-style notification prompt buttons — Allow also fires the real request.
-function cineNotifChoice(e, allow) {
+// X (top right) — skip the rest of onboarding on any Phase 2 screen.
+function cineSkip(e) {
   if (e) e.stopPropagation();
-  if (allow) requestNotifPermission();
-  cineGoTo(cineStep + 1);
+  finishNewOnboarding();
+}
+
+// Screen 4 (match) advances on a tap anywhere; every other screen is inert.
+function cineScreenTap(e) {
+  const overlay = document.getElementById('cine-onboarding');
+  if (!overlay || overlay.hasAttribute('hidden')) return;
+  if (cineStep === 4) cineGoTo(5);
 }
 
 // ---- Screen 1 — scan demo ----
 function cineRunScan() {
-  const card = document.getElementById('cine2-card');
-  const head = document.getElementById('cine2-head');
-  if (head) { head.classList.remove('cine-fade-up'); void head.offsetWidth; head.classList.add('cine-fade-up'); }
+  const card = document.querySelector('.cine-screen[data-screen="1"] .cine-mock-card');
+  const text = document.querySelector('.cine-screen[data-screen="1"] .cine-textblock');
   if (card) { card.classList.remove('cine-pop-in'); void card.offsetWidth; card.classList.add('cine-pop-in'); }
+  if (text) { text.classList.remove('cine-fade-up'); void text.offsetWidth; text.classList.add('cine-fade-up'); }
 }
 
-// ---- Screen 2 — reply demo ----
+// ---- Screen 2 — reply demo (lift card → down arrow → reply → text) ----
 function cineRunReply() {
-  const head  = document.getElementById('cine3-head');
   const stack = document.getElementById('cine3-stack');
+  const arrow = document.getElementById('cine3-arrow');
   const reply = document.getElementById('cine3-reply');
-  if (head)  { head.classList.remove('cine-flip-in'); void head.offsetWidth; head.classList.add('cine-flip-in'); }
-  if (stack) stack.classList.remove('cine3-stack--lifted');
+  const text  = document.querySelector('.cine-screen[data-screen="2"] .cine-textblock');
   if (reply) reply.classList.remove('cine-reply-in');
-  _cineDelay(() => { if (stack) stack.classList.add('cine3-stack--lifted'); }, 520);
-  _cineDelay(() => { if (reply) reply.classList.add('cine-reply-in'); }, 820);
+  if (arrow) arrow.classList.remove('show');
+  _cineDelay(() => { if (arrow) arrow.classList.add('show'); }, 360);
+  _cineDelay(() => { if (reply) reply.classList.add('cine-reply-in'); }, 620);
+  if (text) { text.classList.remove('cine-fade-up'); void text.offsetWidth; text.classList.add('cine-fade-up'); }
 }
 
-// ---- Screen 3 — swipe right -> "It's a Match" -> auto-advance ----
+// ---- Screen 3 — swipe right → auto-advance to the match screen ----
 function cineRunSwipe() {
-  const card  = document.getElementById('cine-swipe-card');
-  const like  = document.getElementById('cine-swipe-like');
-  const flash = document.getElementById('cine-match-flash');
+  const card = document.getElementById('cine-swipe-card');
+  const like = document.getElementById('cine-swipe-like');
   if (!card) return;
-
   card.classList.remove('cine-swipe-card--fly');
   if (like) like.classList.remove('cine-swipe-like--show');
-  if (flash) { flash.hidden = true; flash.classList.remove('cine-match-flash--in'); }
   void card.offsetWidth;
-
-  _cineDelay(() => { if (like) like.classList.add('cine-swipe-like--show'); }, 650);
-  _cineDelay(() => { card.classList.add('cine-swipe-card--fly'); navigator.vibrate?.(8); }, 1000);
-  _cineDelay(() => {
-    if (!flash) return;
-    flash.hidden = false; void flash.offsetWidth;
-    flash.classList.add('cine-match-flash--in');
-    navigator.vibrate?.(16);
-  }, 1550);
-  _cineDelay(() => { if (cineStep === 3) cineGoTo(4); }, 3100);
+  _cineDelay(() => { if (like) like.classList.add('cine-swipe-like--show'); }, 700);
+  _cineDelay(() => { card.classList.add('cine-swipe-card--fly'); navigator.vibrate?.(8); }, 1150);
+  _cineDelay(() => { if (cineStep === 3) cineGoTo(4); }, 1750);
 }
 
-// ---- Screen 4 — notifications (iOS-style prompt, same as tracking) ----
+// ---- Screen 4 — "It's a Match" flash (tap anywhere to continue) ----
+function cineRunMatch() {
+  const card = document.getElementById('cine-match-card');
+  if (!card) return;
+  card.classList.remove('cine-match-flash--in'); void card.offsetWidth;
+  card.classList.add('cine-match-flash--in');
+  navigator.vibrate?.(16);
+}
+
+// ---- Screen 5 — notifications (bell + feature rows) ----
 function cineRunNotif() {
-  const sheet  = document.getElementById('cine-notif-sheet');
-  const prompt = document.getElementById('cine-notif-prompt');
-  const head   = document.getElementById('cine-notif-head');
-  if (sheet)  { sheet.classList.remove('cine5-sheet--up'); void sheet.offsetWidth; sheet.classList.add('cine5-sheet--up'); }
-  if (prompt) prompt.classList.remove('cine-pop-in');
-  if (head)   head.classList.remove('cine-fade-up');
-  _cineDelay(() => { if (prompt) { void prompt.offsetWidth; prompt.classList.add('cine-pop-in'); } }, 460);
-  _cineDelay(() => { if (head) { void head.offsetWidth; head.classList.add('cine-fade-up'); } }, 740);
+  const stage = document.querySelector('.cine-screen[data-screen="5"] .cine-notif-stage');
+  if (stage) { stage.classList.remove('cine-fade-up'); void stage.offsetWidth; stage.classList.add('cine-fade-up'); }
 }
 
 function requestNotifPermission() {
@@ -2235,68 +2207,61 @@ function requestNotifPermission() {
   } catch (_) {}
 }
 
-// ---- Screen 5 — tracking permission + value reinforcement ----
+// ---- Screen 6 — tracking permission (feature rows) ----
 function cineRunTracking() {
-  const sheet  = document.getElementById('cine5-sheet');
-  const prompt = document.getElementById('cine5-prompt');
-  const head   = document.getElementById('cine5-head');
-  const sup    = document.getElementById('cine5-supporting');
-  if (sheet)  { sheet.classList.remove('cine5-sheet--up'); void sheet.offsetWidth; sheet.classList.add('cine5-sheet--up'); }
-  if (prompt) prompt.classList.remove('cine-pop-in');
-  if (head)   head.classList.remove('cine-fade-up');
-  if (sup)    sup.classList.remove('cine-fade-up');
-  _cineDelay(() => { if (prompt) { void prompt.offsetWidth; prompt.classList.add('cine-pop-in'); } }, 460);
-  _cineDelay(() => { if (head) { void head.offsetWidth; head.classList.add('cine-fade-up'); } }, 740);
-  _cineDelay(() => { if (sup) { void sup.offsetWidth; sup.classList.add('cine-fade-up'); } }, 900);
+  const att = document.querySelector('.cine-screen[data-screen="6"] .cine-att');
+  if (att) { att.classList.remove('cine-pop-in'); void att.offsetWidth; att.classList.add('cine-pop-in'); }
 }
 
-// The mock ATT buttons are real, tappable controls (previously inert divs).
+// Both ATT links (Ask App Not to Track / Allow) are real controls that advance.
 function cineTrackingChoice(e) {
   if (e) e.stopPropagation();
-  cineNext();
+  if (cineStep === 6) cineGoTo(7);
 }
 
-// ---- Screens 6-8 — simple fade-in for the option grid ----
-function cineRunFade(gridClass) {
-  const grid = document.querySelector('.cine-screen.active .' + gridClass);
-  if (grid) { grid.classList.remove('cine-fade-up'); void grid.offsetWidth; grid.classList.add('cine-fade-up'); }
+// ---- Screen 7 — personalization (mode + color + age in one scroll) ----
+function cineRunPersonalize() {
+  const persona = document.querySelector('.cine-screen[data-screen="7"] .cine-persona');
+  if (persona) { persona.classList.remove('cine-fade-up'); void persona.offsetWidth; persona.classList.add('cine-fade-up'); }
+  applySavedTheme();   // ensure the accent (default pink) is live for the preview
 }
 
-// ---- Screen 6 — mode selection (account-level: Women/Men/Both) ----
+// True once the required personalization answers (mode + age) are chosen.
+function cinePersonaReady() {
+  return !!(localStorage.getItem('zelo_practice_mode') && localStorage.getItem('zelo_age_range'));
+}
+
+// Section 1 — practice mode (account-level: women / men / both)
 function cineSelectMode(mode, el) {
-  localStorage.setItem('zelo_mode', mode);   // account-level preference
+  localStorage.setItem('zelo_practice_mode', mode);
   document.querySelectorAll('.cine-mode-card').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
-  cineSetNextEnabled(true);                  // required answer satisfied
+  cineSetNextEnabled(cinePersonaReady());
   navigator.vibrate?.(4);
 }
 
-// ---- Screen 7 — theme picker (applies app-wide immediately) ----
-function cineSelectTheme(key, el) {
-  localStorage.setItem('zelo_theme', key);
+// Section 2 — accent color (applies app-wide immediately; live preview updates)
+function cineSelectColor(key, el) {
+  localStorage.setItem('zelo_accent_color', key);
   applyTheme(key);
-  document.querySelectorAll('.cine-theme-dot').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.cine-color-dot').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
-  cineSetNextEnabled(true);                  // required answer satisfied
   navigator.vibrate?.(4);
 }
 
-// ---- Screen 8 — age range ----
+// Section 3 — age range
 function cineSelectAge(range, el) {
-  localStorage.setItem('zelo_age', range);
+  localStorage.setItem('zelo_age_range', range);
   document.querySelectorAll('.cine-age-pill').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
-  cineSetNextEnabled(true);                  // required answer satisfied
+  cineSetNextEnabled(cinePersonaReady());
   navigator.vibrate?.(4);
 }
-
-// Phase 1 is fully non-interactive; taps anywhere are inert.
-function cineScreenTap() {}
 
 function finishNewOnboarding() {
   _cineClearTimers();
-  cineStopDemo();
   localStorage.setItem('zelo_onboarding_done', '1');
+  applyTheme(localStorage.getItem('zelo_accent_color') || 'pink');
   const overlay = document.getElementById('cine-onboarding');
   if (overlay) {
     overlay.classList.add('cine-out');
