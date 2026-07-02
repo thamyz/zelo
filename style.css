@@ -5013,8 +5013,25 @@ textarea { font-family: inherit; }
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: 30px;
+  padding-top: 70px;
   gap: 10px;
+}
+/* Screen 2 keeps its top cluster (card + arrow) compact so the reply-wrap
+   below has real room to center the result vertically. */
+.cine-screen[data-screen="2"] .cine-demo-stage { padding-top: 22px; }
+.cine-demo-top {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.cine-reply-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .cine-textblock {
   display: flex;
@@ -5122,13 +5139,12 @@ textarea { font-family: inherit; }
   text-align: left;
   opacity: 0;
 }
-@keyframes cineReplySlideUp {
-  0%   { opacity: 0; transform: translateY(36px) scale(0.88); }
-  65%  { opacity: 1; transform: translateY(-3px) scale(1.06); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes cineReplyZoomIn {
+  0%   { opacity: 0; transform: scale(1.24); }
+  100% { opacity: 1; transform: scale(1); }
 }
 .cine-reply-card.cine-anim-in {
-  animation: cineReplySlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: cineReplyZoomIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: 0.1s;
 }
 .cine-reply-label {
