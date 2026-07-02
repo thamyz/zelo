@@ -2119,10 +2119,11 @@ function cineRunScanEntrance() {
     chips.forEach(c => c.classList.add('cine-anim-in'));
     if (text) text.classList.add('cine-anim-in');
   }, 20);
-  _cineDelay(() => { if (cineStep === 1) cineGoTo(2); }, 2000);
+  _cineDelay(() => { if (cineStep === 1) cineGoTo(2); }, 3500);
 }
 
-// ---- Screen 2 — reply card slides up, arrow + sparkle pop in together ----
+// ---- Screen 2 — reply card slides up, arrow + sparkle pop in together,
+//      then the connecting arrow fades away once the reply has landed ----
 function cineRunReplyEntrance() {
   const scope = document.querySelector('.cine-screen[data-screen="2"]');
   if (!scope) return;
@@ -2131,7 +2132,7 @@ function cineRunReplyEntrance() {
   const arrow = scope.querySelector('.cine-down-arrow');
   const spark = scope.querySelector('.cine-reply-spark');
   const text  = scope.querySelector('.cine-textblock');
-  [card, reply, arrow, spark, text].forEach(el => el && el.classList.remove('cine-anim-in'));
+  [card, reply, arrow, spark, text].forEach(el => el && el.classList.remove('cine-anim-in', 'cine-anim-out'));
   if (card) void card.offsetWidth;
   _cineDelay(() => {
     if (card)  card.classList.add('cine-anim-in');   // carried-over message card, pops in first
@@ -2140,6 +2141,7 @@ function cineRunReplyEntrance() {
     if (spark) spark.classList.add('cine-anim-in');
     if (text)  text.classList.add('cine-anim-in');
   }, 20);
+  _cineDelay(() => { if (arrow) arrow.classList.add('cine-anim-out'); }, 750);
 }
 
 // Enable/disable the active CTA (used to enforce required answers on screen 7).

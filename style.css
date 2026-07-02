@@ -5012,7 +5012,8 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 30px;
   gap: 10px;
 }
 .cine-textblock {
@@ -5104,6 +5105,11 @@ textarea { font-family: inherit; }
   animation: cineArrowFadeIn 0.4s ease both;
   animation-delay: 0.15s;
 }
+@keyframes cineArrowFadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+.cine-down-arrow.cine-anim-out { animation: cineArrowFadeOut 0.35s ease forwards; }
 .cine-reply-card {
   position: relative;
   width: 100%;
@@ -5117,8 +5123,9 @@ textarea { font-family: inherit; }
   opacity: 0;
 }
 @keyframes cineReplySlideUp {
-  0%   { opacity: 0; transform: translateY(36px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0%   { opacity: 0; transform: translateY(36px) scale(0.88); }
+  65%  { opacity: 1; transform: translateY(-3px) scale(1.06); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .cine-reply-card.cine-anim-in {
   animation: cineReplySlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
