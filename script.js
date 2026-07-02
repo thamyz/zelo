@@ -2149,7 +2149,7 @@ function cineRunReplyEntrance() {
     if (text)  text.classList.add('cine-anim-in');
     decos.forEach((d, i) => { _cineDelay(() => d.classList.add('cine-anim-in'), 150 + i * 90); });
   });
-  _cineDelay(() => { if (arrow) arrow.classList.add('cine-anim-out'); }, 1300);
+  _cineDelay(() => { if (arrow) arrow.classList.add('cine-anim-out'); }, 950);
 }
 
 // Enable/disable the active CTA (used to enforce required answers on screen 7).
