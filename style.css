@@ -5012,13 +5012,20 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding-top: 120px;
   gap: 10px;
+}
+/* Screen 1: center the card in the available space (with a slight downward
+   bias) instead of pinning it near the top with dead space below. */
+.cine-screen[data-screen="1"] .cine-demo-stage {
+  justify-content: center;
+  padding-top: 40px;
 }
 /* Screen 2 keeps its top cluster (card + arrow) compact so the reply-wrap
    below has real room to center the result vertically. */
-.cine-screen[data-screen="2"] .cine-demo-stage { padding-top: 110px; }
+.cine-screen[data-screen="2"] .cine-demo-stage {
+  justify-content: flex-start;
+  padding-top: 90px;
+}
 .cine-demo-top {
   width: 100%;
   display: flex;
