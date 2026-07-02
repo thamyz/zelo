@@ -1935,10 +1935,12 @@ function copyCurrentReply() {
 //   PHASE 1 (auto, ~4-5s, no interaction):
 //     typewriter -> word morph (Confidence/Connection/Conversations) -> logo
 //   PHASE 2 (Next + X-to-skip, 7 screens):
-//     1 scan · 2 reply · 3 swipe · 4 match · 5 notifications ·
+//     1 scan (entrance pop-in, auto-advances after 2s, no Next) · 2 reply
+//     (entrance slide/pop-in) · 3 swipe · 4 match · 5 notifications ·
 //     6 tracking · 7 personalize (practice mode + accent color + age,
 //     one screen)  ->  Scan page with the pre-filled example.
-// Static layout — every screen fits the viewport (no scroll, no animation).
+// Every screen fits the viewport (no scroll). Screens 1 & 2 play a one-time
+// entrance animation; screens 3-7 are static layout (no animation).
 // Selections persist as zelo_practice_mode / zelo_accent_color / zelo_age_range.
 // Legacy 3-slide onboarding + 12-step spotlight tour live in
 // archive/legacy-onboarding.js and never run.
@@ -2082,8 +2084,9 @@ function cineGoTo(n) {
 
   const nextBtn = document.getElementById('cine-next');
   if (nextBtn) {
-    // Screen 3 (swipe → auto), 4 (tap to advance) and 7 (in-flow button) hide the shared CTA.
-    nextBtn.classList.toggle('cine-hidden', n === 3 || n === 4 || n === CINE_LAST);
+    // Screen 1 (auto-advance), 3 (swipe → auto), 4 (tap to advance) and
+    // 7 (in-flow button) hide the shared CTA.
+    nextBtn.classList.toggle('cine-hidden', n === 1 || n === 3 || n === 4 || n === CINE_LAST);
     if (n === 5) nextBtn.textContent = 'Continue';
     else if (n === 6) nextBtn.textContent = 'Allow & continue';
     else nextBtn.textContent = 'Next';
@@ -2093,11 +2096,50 @@ function cineGoTo(n) {
   if (n === CINE_LAST) cineSetNextEnabled(cinePersonaReady());
   else cineSetNextEnabled(true);
 
-  // Static layout (no per-screen animation). Screen 7 just needs the live
-  // accent applied so its color swatches / selection glow reflect the pick.
+  // Screen 7 needs the live accent applied so its color swatches / selection
+  // glow reflect the pick. Screens 1 & 2 play a one-time entrance animation.
   if (n === CINE_LAST) applySavedTheme();
+  else if (n === 1) cineRunScanEntrance();
+  else if (n === 2) cineRunReplyEntrance();
 
   cineRestoreSelection(n);   // re-highlight prior choices when revisiting screen 7
+}
+
+// ---- Screen 1 — card + chips pop in, then auto-advance after a 2s pause ----
+function cineRunScanEntrance() {
+  const scope = document.querySelector('.cine-screen[data-screen="1"]');
+  if (!scope) return;
+  const card  = scope.querySelector('.cine-mock-card');
+  const chips = scope.querySelectorAll('.cine-float-chip');
+  const text  = scope.querySelector('.cine-textblock');
+  [card, text, ...chips].forEach(el => el && el.classList.remove('cine-anim-in'));
+  if (card) void card.offsetWidth;
+  _cineDelay(() => {
+    if (card) card.classList.add('cine-anim-in');
+    chips.forEach(c => c.classList.add('cine-anim-in'));
+    if (text) text.classList.add('cine-anim-in');
+  }, 20);
+  _cineDelay(() => { if (cineStep === 1) cineGoTo(2); }, 2000);
+}
+
+// ---- Screen 2 — reply card slides up, arrow + sparkle pop in together ----
+function cineRunReplyEntrance() {
+  const scope = document.querySelector('.cine-screen[data-screen="2"]');
+  if (!scope) return;
+  const card  = scope.querySelector('.cine-mock-card');
+  const reply = scope.querySelector('.cine-reply-card');
+  const arrow = scope.querySelector('.cine-down-arrow');
+  const spark = scope.querySelector('.cine-reply-spark');
+  const text  = scope.querySelector('.cine-textblock');
+  [card, reply, arrow, spark, text].forEach(el => el && el.classList.remove('cine-anim-in'));
+  if (card) void card.offsetWidth;
+  _cineDelay(() => {
+    if (card)  card.classList.add('cine-anim-in');   // carried-over message card, pops in first
+    if (arrow) arrow.classList.add('cine-anim-in');
+    if (reply) reply.classList.add('cine-anim-in');
+    if (spark) spark.classList.add('cine-anim-in');
+    if (text)  text.classList.add('cine-anim-in');
+  }, 20);
 }
 
 // Enable/disable the active CTA (used to enforce required answers on screen 7).
