@@ -208,6 +208,11 @@ const AUTH = (() => {
   function _showSetupScreen() {
     _showOverlay('auth-setup-overlay');
     _initAgeRoller();
+    // Prefill with the name already chosen during onboarding, if any —
+    // avoids asking twice.
+    const nameInput = document.getElementById('setup-username-input');
+    const existing  = localStorage.getItem('zelo_display_name');
+    if (nameInput && existing) nameInput.value = existing;
   }
 
   function _initAgeRoller() {

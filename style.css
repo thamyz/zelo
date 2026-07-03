@@ -4967,225 +4967,132 @@ textarea { font-family: inherit; }
 .cine-p1-logo--in .cine-p1-spark { animation: cineP1SparkIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.28s both; }
 
 /* ================================================================
-   PHASE 2 — shared decorations (static)
+   SHOWCASE — Cal AI style landing (between Phase 1 and Phase 2)
    ================================================================ */
-.cine-deco { position: absolute; pointer-events: none; z-index: 1; }
-.cine-spark-deco { color: var(--accent); opacity: 0.9; }
-.cine-spark-deco.sm { opacity: 0.6; }
-.cine-swirl { color: var(--accent); }
-.cine-annot {
-  position: absolute;
-  z-index: 2;
-  font-family: 'Bradley Hand', 'Segoe Script', 'Comic Sans MS', cursive;
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--accent);
-  pointer-events: none;
+.cine-showcase { justify-content: flex-start; padding: 40px 26px 30px; gap: 0; }
+.cine-phone {
+  width: 190px;
+  height: 260px;
+  margin: 0 auto 22px;
+  border-radius: 30px;
+  background: #1c1917;
+  padding: 8px;
+  box-shadow: 0 24px 50px rgba(28,25,23,0.28);
+  position: relative;
 }
-
-/* ---- Shared bottom CTA ---- */
-.cine-next {
+.cine-phone-notch {
   position: absolute;
-  left: 24px; right: 24px;
-  bottom: 26px;
-  z-index: 30;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  width: 60px; height: 16px;
+  background: #1c1917;
+  border-radius: 0 0 12px 12px;
+  z-index: 2;
+}
+.cine-phone-screen {
+  width: 100%; height: 100%;
+  background: #fdf8f5;
+  border-radius: 22px;
+  overflow: hidden;
+  padding: 20px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cine-phone-top { display: flex; justify-content: center; margin-bottom: 2px; }
+.cine-phone-brand { font-weight: 800; font-size: 0.78rem; color: #1c1917; display: inline-flex; align-items: center; gap: 2px; }
+.cine-phone-spark { color: var(--accent); }
+.cine-phone-card {
+  background: #fff; border-radius: 10px; padding: 8px 9px;
+  font-size: 0.6rem; line-height: 1.3; color: #1c1917;
+  box-shadow: 0 4px 10px rgba(28,25,23,0.06);
+}
+.cine-phone-foot {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 5px; padding-top: 5px; border-top: 1px solid #f1e8e2;
+  font-size: 0.52rem; font-weight: 600; color: var(--accent);
+}
+.cine-phone-reply {
+  background: var(--accent-soft); border: 1px solid var(--accent-border);
+  border-radius: 10px; padding: 8px 9px; font-size: 0.6rem; line-height: 1.3; color: #1c1917;
+}
+.cine-phone-reply-label {
+  display: block; font-size: 0.5rem; font-weight: 800; letter-spacing: 0.3px;
+  color: var(--accent-deep); margin-bottom: 3px;
+}
+.cine-phone-btn {
+  margin-top: auto;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  background: var(--accent); color: #fff; font-weight: 700; font-size: 0.66rem;
+  padding: 8px; border-radius: 99px;
+}
+.cine-showcase-head {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  text-align: center;
+  color: #1c1917;
+  margin: 0 0 22px;
+}
+.cine-showcase-cta {
+  width: 100%;
   padding: 16px;
   border: none;
   border-radius: 99px;
-  background: var(--accent);
+  background: #1c1917;
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 10px 26px rgba(236, 72, 153, 0.35);
+  box-shadow: 0 10px 26px rgba(28,25,23,0.28);
 }
-.cine-next:active { transform: scale(0.99); }
-.cine-next--disabled { opacity: 0.4; pointer-events: none; }
+.cine-showcase-cta:active { transform: scale(0.99); }
+.cine-showcase-signin {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  font-size: 0.88rem;
+  color: #9a8f86;
+  cursor: pointer;
+}
+.cine-showcase-signin span { color: var(--accent); font-weight: 700; }
 
 /* ================================================================
-   Screens 1 & 2 — scan / reply demos
+   Screen 1 — Name input
    ================================================================ */
-.cine-screen--demo { justify-content: flex-start; padding: 62px 26px 100px; }
-.cine-demo-stage {
-  flex: 1;
+.cine-screen--name { gap: 4px; }
+.cine-name-input {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  max-width: 300px;
+  margin-top: 30px;
+  padding: 16px 4px;
+  border: none;
+  border-bottom: 2px solid #ece5da;
+  background: none;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1c1917;
+  outline: none;
+  transition: border-color 0.2s ease;
 }
-/* Screen 1: center the card in the available space (with a slight downward
-   bias) instead of pinning it near the top with dead space below. */
-.cine-screen[data-screen="1"] .cine-demo-stage {
-  justify-content: center;
-  padding-top: 40px;
-}
-/* Screen 2 keeps its top cluster (card + arrow) compact so the reply-wrap
-   below has real room to center the result vertically. */
-.cine-screen[data-screen="2"] .cine-demo-stage {
-  justify-content: flex-start;
-  padding-top: 90px;
-}
-.cine-demo-top {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-.cine-reply-wrap {
-  flex: 1;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.cine-textblock {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 6px;
-}
-
-/* Scan mock card */
-.cine-mock-card {
-  position: relative;
-  width: 100%;
-  max-width: 230px;
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 14px 16px 4px;
-  box-shadow: 0 14px 34px rgba(28,25,23,0.10);
-  text-align: left;
-}
-.cine-mock-msg { font-size: 0.85rem; line-height: 1.4; color: #1c1917; }
-.cine-mock-foot {
-  margin-top: 10px;
-  padding: 9px 0;
-  border-top: 1px solid #f1e8e2;
-}
-.cine-mock-upload {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
+.cine-name-input:focus { border-color: var(--accent); }
+.cine-name-input::placeholder { color: #cfc4b6; font-weight: 600; }
+.cine-name-error {
+  min-height: 20px;
+  margin: 10px 0 0;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--accent);
+  color: #e0455a;
+  text-align: center;
 }
-
-/* Floating decorative chips around the scan card (screen 1) */
-.cine-float-chip {
-  position: absolute;
-  z-index: 3;
-  width: 50px; height: 50px;
-  border-radius: 15px;
-  display: flex; align-items: center; justify-content: center;
-  background: #fbdcec;
-  color: var(--accent);
-  box-shadow: 0 12px 28px rgba(236,72,153,0.20);
-}
-.cine-float-chip.bubble { top: -36px; right: -26px; border-radius: 50%; }
-.cine-float-chip.img    { bottom: -32px; left: -28px; }
-
-/* ---- Screen 1 entrance: card pops in, chips pop in staggered, text fades up ---- */
-@keyframes cineCardPopIn {
-  0%   { opacity: 0; transform: translateY(22px) scale(0.93); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-.cine-mock-card { opacity: 0; }
-.cine-mock-card.cine-anim-in {
-  opacity: 1;
-  animation: cineCardPopIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-@keyframes cineChipPopIn {
-  0%   { opacity: 0; transform: scale(0.35) rotate(-14deg); }
-  60%  { opacity: 1; transform: scale(1.14) rotate(4deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0); }
-}
-.cine-float-chip { opacity: 0; }
-.cine-float-chip.cine-anim-in { animation: cineChipPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.cine-float-chip.bubble.cine-anim-in { animation-delay: 0.18s; }
-.cine-float-chip.img.cine-anim-in    { animation-delay: 0.34s; }
-@keyframes cineTextFadeUp {
-  0%   { opacity: 0; transform: translateY(14px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-.cine-textblock { opacity: 0; }
-.cine-textblock.cine-anim-in {
-  animation: cineTextFadeUp 0.5s ease both;
-  animation-delay: 0.3s;
-}
-
-/* Screen 2 — decorative sparkles pop in around the reply card as it lands */
-.cine-screen[data-screen="2"] .cine-spark-deco { opacity: 0; }
-.cine-screen[data-screen="2"] .cine-spark-deco.cine-anim-in {
-  animation: cineChipPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-/* Screen 2 — down arrow + reply card slide/pop in on entrance */
-.cine-down-arrow { color: var(--accent); display: block; opacity: 0; }
-@keyframes cineArrowFadeIn {
-  0%   { opacity: 0; transform: translateY(-8px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-.cine-down-arrow.cine-anim-in {
-  animation: cineArrowFadeIn 0.4s ease both;
-  animation-delay: 0.15s;
-}
-@keyframes cineArrowFadeOut {
-  0%   { opacity: 1; }
-  100% { opacity: 0; }
-}
-.cine-down-arrow.cine-anim-out { animation: cineArrowFadeOut 0.35s ease forwards; }
-.cine-reply-card {
-  position: relative;
-  width: 100%;
-  max-width: 350px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
-  border-radius: 22px;
-  padding: 22px 26px;
-  box-shadow: 0 18px 44px rgba(236, 72, 153, 0.16);
-  text-align: left;
-  opacity: 0;
-}
-@keyframes cineReplyZoomIn {
-  0%   { opacity: 0; transform: scale(1.5); }
-  100% { opacity: 1; transform: scale(1); }
-}
-.cine-reply-card.cine-anim-in {
-  animation: cineReplyZoomIn 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  animation-delay: 0.1s;
-}
-.cine-reply-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 0.92rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--accent-deep);
-  margin-bottom: 10px;
-}
-.cine-reply-spark { flex: none; opacity: 0; }
-@keyframes cineSparkPopIn {
-  0%   { opacity: 0; transform: scale(0) rotate(-40deg); }
-  60%  { opacity: 1; transform: scale(1.35) rotate(8deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0); }
-}
-.cine-reply-spark.cine-anim-in {
-  animation: cineSparkPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  animation-delay: 0.4s;
-}
-.cine-reply-text { margin: 0; font-size: 1.35rem; line-height: 1.4; color: #1c1917; padding-right: 26px; }
-.cine-reply-copy { position: absolute; top: 20px; right: 20px; color: var(--accent-deep); }
 
 /* ================================================================
-   Screen 3 — swipe demo
+   Screen 2 — swipe demo -> match (shared decorations + stage)
    ================================================================ */
 .cine-screen--swipe { justify-content: flex-start; padding: 60px 26px 118px; }
+.cine-swipe-state, .cine-match-state { flex: 1; width: 100%; display: flex; flex-direction: column; }
 .cine-swipe-stage {
   flex: 1;
   position: relative;
@@ -5224,6 +5131,10 @@ textarea { font-family: inherit; }
   box-shadow: 0 6px 16px rgba(28,25,23,0.18);
   transform: rotate(-10deg);
 }
+@keyframes cineSwipeFly {
+  to { transform: translate(-50%, -50%) translateX(300px) rotate(24deg); opacity: 0; }
+}
+.cine-swipe-card--fly { animation: cineSwipeFly 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 .cine-swipe-controls {
   position: absolute;
   left: 30px; right: 30px;
@@ -5247,10 +5158,7 @@ textarea { font-family: inherit; }
 .cine-swipe-hint b { display: block; color: var(--accent); font-size: 1rem; font-weight: 800; }
 .cine-swipe-hint span { color: #9a8f86; font-size: 0.85rem; }
 
-/* ================================================================
-   Screen 4 — match flash
-   ================================================================ */
-.cine-screen--match { justify-content: flex-start; padding: 60px 26px 40px; }
+/* Match state (revealed after the auto-swipe) */
 .cine-match-stage {
   flex: 1;
   position: relative;
@@ -5279,6 +5187,7 @@ textarea { font-family: inherit; }
   justify-content: center;
   gap: 6px;
   color: #fff;
+  opacity: 0;
 }
 .cine-match-card--back {
   transform: translate(-50%, -50%) scale(0.94) translateX(-24px) rotate(-6deg);
@@ -5292,12 +5201,35 @@ textarea { font-family: inherit; }
   color: var(--accent);
   z-index: 2;
 }
+@keyframes cineMatchIn {
+  0%   { opacity: 0; transform: translate(-50%, -50%) rotate(6deg) scale(0.7); }
+  60%  { transform: translate(-50%, -50%) rotate(6deg) scale(1.08); }
+  100% { opacity: 1; transform: translate(-50%, -50%) rotate(6deg) scale(1); }
+}
+.cine-match-card--in { animation: cineMatchIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .cine-match-cta { text-align: center; }
 .cine-match-cta b { display: block; color: var(--accent); font-size: 1.05rem; font-weight: 800; }
 .cine-match-cta span { color: #9a8f86; font-size: 0.9rem; }
 
 /* ================================================================
-   Shared feature card (screens 5 & 6)
+   Shared decorations (sparkles / swirl arrows / handwritten labels)
+   ================================================================ */
+.cine-deco { position: absolute; pointer-events: none; z-index: 1; }
+.cine-spark-deco { color: var(--accent); opacity: 0.9; }
+.cine-spark-deco.sm { opacity: 0.6; }
+.cine-swirl { color: var(--accent); }
+.cine-annot {
+  position: absolute;
+  z-index: 2;
+  font-family: 'Bradley Hand', 'Segoe Script', 'Comic Sans MS', cursive;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+/* ================================================================
+   Shared feature card (screens 3 & 4)
    ================================================================ */
 .cine-feat-card {
   width: 100%;
@@ -5324,7 +5256,7 @@ textarea { font-family: inherit; }
 .cine-feat-sub { display: block; font-size: 0.82rem; line-height: 1.3; color: #9a8f86; }
 
 /* ================================================================
-   Screen 5 — Notifications (bell + badge + glow, static)
+   Screen 3 — Notifications (bell + badge + glow, static)
    ================================================================ */
 .cine-screen--notif { justify-content: center; padding: 58px 26px 100px; }
 .cine-notif-stage {
@@ -5365,7 +5297,7 @@ textarea { font-family: inherit; }
 }
 
 /* ================================================================
-   Screen 6 — Tracking (Zelo app icon + feature rows, no ATT card)
+   Screen 4 — Tracking (Zelo app icon + feature rows)
    ================================================================ */
 .cine-screen--track { justify-content: center; padding: 58px 26px 100px; }
 .cine-track-stage {
@@ -5387,102 +5319,27 @@ textarea { font-family: inherit; }
 }
 
 /* ================================================================
-   Screen 7 — Personalization (no scroll, no preview)
+   Screen 5 — Age range
    ================================================================ */
-.cine-screen--persona { justify-content: flex-start; padding: 52px 22px 22px; }
-.cine-persona { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; }
-.cine-persona-head { margin-bottom: 6px; font-size: 1.5rem; }
-.cine-persona-sub { margin-bottom: 18px; }
-
-.cine-sec { width: 100%; margin-bottom: 14px; }
-.cine-sec-title {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 1rem;
-  font-weight: 800;
-  color: #1c1917;
-  margin-bottom: 11px;
+.cine-age-wrap { width: 100%; max-width: 320px; display: flex; flex-direction: column; align-items: center; }
+.cine-age-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 26px;
 }
-.cine-sec-num {
-  flex: none;
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-}
-
-/* Section 1 — practice-with cards */
-.cine-mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.cine-mode-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-  padding: 14px 6px 12px;
-  border: 1.5px solid #efe6df;
-  border-radius: 16px;
-  background: #fff;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
-}
-.cine-mode-card:active { transform: scale(0.97); }
-.cine-mode-card.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 24px var(--accent-soft);
-}
-.cine-mode-orb {
-  width: 50px; height: 50px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  display: flex; align-items: center; justify-content: center;
-  color: #1c1917;
-}
-.cine-mode-orb.both svg + svg { margin-left: -5px; }
-.cine-mode-main { font-size: 0.98rem; font-weight: 800; color: #1c1917; }
-.cine-mode-tag {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #b9b0a2;
-  text-align: center;
-}
-
-.cine-divider { width: 100%; height: 1px; background: #efe6df; margin: 6px 0 16px; }
-
-/* Section 2 — color picker */
-.cine-color-row { display: flex; gap: 12px; justify-content: space-between; width: 100%; }
-.cine-color-dot {
-  width: 46px; height: 46px;
-  border-radius: 50%;
-  border: 3px solid transparent;
-  cursor: pointer;
-  position: relative;
-  -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 5px 14px rgba(28,25,23,0.16);
-  transition: transform 0.15s ease, border-color 0.2s ease;
-}
-.cine-color-dot:active { transform: scale(0.92); }
-.cine-color-dot.selected { border-color: #1c1917; transform: scale(1.08); }
-
-/* Section 3 — age pills (4 in a row) */
-.cine-age-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; }
 .cine-age-pill {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 12px 4px;
-  border-radius: 13px;
+  gap: 8px;
+  padding: 18px 8px;
+  border-radius: 16px;
   border: 1.5px solid #efe6df;
   background: #fff;
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #1c1917;
   cursor: pointer;
@@ -5490,7 +5347,7 @@ textarea { font-family: inherit; }
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
 }
 .cine-age-pill svg { color: #8a8175; flex: none; }
-.cine-age-pill:active { transform: scale(0.97); }
+.cine-age-pill:active { transform: scale(0.98); }
 .cine-age-pill.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); }
 .cine-age-pill.selected svg { color: var(--accent); }
 .cine-age-check {
@@ -5507,11 +5364,15 @@ textarea { font-family: inherit; }
 }
 .cine-age-pill.selected .cine-age-check { display: flex; }
 
-/* Get Started (in-flow) */
-.cine-getstarted {
-  width: 100%;
-  margin-top: 20px;
-  padding: 15px;
+/* ================================================================
+   Shared bottom CTA
+   ================================================================ */
+.cine-next {
+  position: absolute;
+  left: 24px; right: 24px;
+  bottom: 26px;
+  z-index: 30;
+  padding: 16px;
   border: none;
   border-radius: 99px;
   background: var(--accent);
@@ -5519,12 +5380,186 @@ textarea { font-family: inherit; }
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 10px 26px rgba(236, 72, 153, 0.35);
+}
+.cine-next:active { transform: scale(0.99); }
+.cine-next--disabled { opacity: 0.4; pointer-events: none; }
+
+/* ================================================================
+   SIGN-UP PROMPT — full-screen overlay after onboarding Screen 5
+   ================================================================ */
+.signup-prompt {
+  position: absolute;
+  inset: 0;
+  z-index: 1010;
+  background: #fdf8f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px;
+  text-align: center;
+  transition: opacity 0.3s ease;
+}
+.signup-prompt[hidden] { display: none !important; }
+.signup-prompt-logo {
+  font-weight: 800;
+  font-size: 1.8rem;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 40px;
+}
+.signup-prompt-head {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #1c1917;
+  margin: 0 0 10px;
+}
+.signup-prompt-sub {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #9a8f86;
+  max-width: 300px;
+  margin: 0 0 32px;
+}
+.signup-prompt-cta {
+  width: 100%;
+  max-width: 320px;
+  padding: 16px;
+  border: none;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(236, 72, 153, 0.35);
+}
+.signup-prompt-cta:active { transform: scale(0.99); }
+.signup-prompt-later {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #9a8f86;
+  cursor: pointer;
+}
+
+/* ================================================================
+   HOME TAB — first-visit practice-mode popup
+   ================================================================ */
+.home-mode-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(28,25,23,0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  box-shadow: 0 10px 26px rgba(236, 72, 153, 0.35);
+  padding: 26px;
 }
-.cine-getstarted:active { transform: scale(0.99); }
-.cine-getstarted.cine-next--disabled { opacity: 0.4; pointer-events: none; }
-.cine-persona-foot { margin: 10px 0 0; text-align: center; font-size: 0.8rem; color: #b9b0a2; }
+.home-mode-popup[hidden] { display: none !important; }
+.home-mode-card {
+  width: 100%;
+  max-width: 360px;
+  background: #fdf8f5;
+  border-radius: 26px;
+  padding: 30px 24px;
+  box-shadow: 0 30px 70px rgba(28,25,23,0.35);
+}
+.home-mode-head {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #1c1917;
+  text-align: center;
+  margin: 0 0 22px;
+  line-height: 1.3;
+}
+.home-mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.home-mode-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px 14px;
+  border: 1.5px solid #efe6df;
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.home-mode-card-btn:active { transform: scale(0.97); }
+.home-mode-orb {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  display: flex; align-items: center; justify-content: center;
+  color: #1c1917;
+}
+.home-mode-orb.both svg + svg { margin-left: -5px; }
+.home-mode-main { font-size: 1rem; font-weight: 800; color: #1c1917; }
+.home-mode-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #b9b0a2;
+}
+
+/* ================================================================
+   WELCOME BACK — typewriter overlay for returning users
+   ================================================================ */
+.welcome-back {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  transition: opacity 0.4s ease;
+}
+.welcome-back[hidden] { display: none !important; }
+.welcome-back.welcome-back--out { opacity: 0; }
+.welcome-back-type {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #1c1917;
+  text-align: center;
+  margin: 0;
+  max-width: 320px;
+}
+
+/* ================================================================
+   HOME TAB — locked-deck overlay (mode chosen, not signed in)
+   ================================================================ */
+.home-locked-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  background: rgba(253, 248, 245, 0.82);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  cursor: pointer;
+}
+.home-locked-overlay[hidden] { display: none !important; }
+.home-locked-card {
+  max-width: 280px;
+  text-align: center;
+  background: #fff;
+  border-radius: 22px;
+  padding: 28px 24px;
+  box-shadow: 0 20px 50px rgba(28,25,23,0.18);
+  color: var(--accent);
+}
+.home-locked-title { font-size: 1.05rem; font-weight: 800; color: #1c1917; margin: 12px 0 6px; }
+.home-locked-sub { font-size: 0.85rem; line-height: 1.4; color: #9a8f86; margin: 0; }
