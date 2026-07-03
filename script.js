@@ -2208,17 +2208,23 @@ function cineNameInput() {
 }
 
 // ---- Screen 2 — swipe demo -> match (auto after 2s, tap match to advance) ----
+// Simple, reliable sequence: hold static 2s -> front card slides + rotates
+// off-screen right over 600ms (ease-in) -> instant swap to the match state
+// (no transition on the card itself) -> burst lines + CTA text fade in.
 function cineRunSwipeEntrance() {
   const swipeState = document.getElementById('cine-swipe-state');
   const matchState = document.getElementById('cine-match-state');
   const card       = document.getElementById('cine-swipe-card');
-  const matchCard  = document.getElementById('cine-match-card');
   if (!swipeState || !matchState || !card) return;
+
+  const burstEl = matchState.querySelector('.cine-match-burst');
+  const ctaEl   = matchState.querySelector('.cine-match-cta');
 
   swipeState.hidden = false;
   matchState.hidden = true;
   card.classList.remove('cine-swipe-card--fly');
-  if (matchCard) matchCard.classList.remove('cine-match-card--in');
+  if (burstEl) burstEl.classList.remove('cine-match-burst--in');
+  if (ctaEl)   ctaEl.classList.remove('cine-match-cta--in');
   void card.offsetWidth;
 
   _cineDelay(() => {
@@ -2228,12 +2234,13 @@ function cineRunSwipeEntrance() {
 
   _cineDelay(() => {
     swipeState.hidden = true;
-    matchState.hidden = false;
+    matchState.hidden = false;   // instant swap — no transition on the card
+    navigator.vibrate?.(16);
     _cineNextFrame(() => {
-      if (matchCard) matchCard.classList.add('cine-match-card--in');
-      navigator.vibrate?.(16);
+      if (burstEl) burstEl.classList.add('cine-match-burst--in');
+      if (ctaEl)   ctaEl.classList.add('cine-match-cta--in');
     });
-  }, 2550);
+  }, 2600);
 }
 
 // ---- Screen 3 — notifications ----
