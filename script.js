@@ -1660,6 +1660,11 @@ function handleUpload(input) {
       // itself confirms the attachment, no filename text needed.
       rowThumb.src    = reader.result;
       rowThumb.hidden = false;
+
+      // reader.result is "data:<mimeType>;base64,<data>" — reuse it
+      // instead of reading the file a second time.
+      const base64Data = reader.result.split(",")[1] || "";
+      runScreenshotOcr(base64Data, file.type);
     };
     reader.readAsDataURL(file);
 
@@ -1683,9 +1688,72 @@ function handleUpload(input) {
     dzSub.hidden   = false;
     if (clearBtn) clearBtn.hidden = true;
     if (minusBtn) minusBtn.hidden = true;
+
+    hideScreenshotOcrUi();
   }
 
   checkGenerateReady();
+}
+
+
+// ================================================================
+// SCREENSHOT READING — openai-proxy (GPT-5.4 mini vision) extracts
+// the message text from the uploaded screenshot and auto-fills the
+// message box. Text-only scans are untouched — they still go through
+// DeepSeek via deepseek-proxy. This is only ever called for uploads.
+// ================================================================
+
+let _ocrToken = 0; // invalidated on every new upload/clear so a stale call can't clobber a newer one
+
+function runScreenshotOcr(base64Data, mimeType) {
+  const token = ++_ocrToken;
+  const load  = document.getElementById("scan-ocr-loading");
+  const check = document.getElementById("scan-ocr-check");
+  const err   = document.getElementById("scan-ocr-error");
+
+  if (err)   err.hidden = true;
+  if (check) check.hidden = true;
+  if (load)  load.hidden = false;
+
+  zeloSupabase.functions.invoke('openai-proxy', {
+    body: { image: base64Data, mimeType }
+  })
+    .then(({ data, error }) => {
+      if (token !== _ocrToken) return; // a newer upload/clear superseded this call
+      if (load) load.hidden = true;
+
+      if (error || !data) { _showOcrError(); return; }
+      const cleaned = (data.text || "").trim();
+      if (!cleaned) { _showOcrError(); return; }
+
+      const input = document.getElementById("asst-input");
+      if (input) {
+        input.value = cleaned;
+        onAsstInput();
+      }
+      if (check) check.hidden = false;
+    })
+    .catch(() => {
+      if (token !== _ocrToken) return;
+      if (load) load.hidden = true;
+      _showOcrError();
+    });
+}
+
+function _showOcrError() {
+  clearUploadedPhoto();
+  const err = document.getElementById("scan-ocr-error");
+  if (err) err.hidden = false;
+}
+
+function hideScreenshotOcrUi() {
+  _ocrToken++;
+  const load  = document.getElementById("scan-ocr-loading");
+  const check = document.getElementById("scan-ocr-check");
+  const err   = document.getElementById("scan-ocr-error");
+  if (load)  load.hidden = true;
+  if (check) check.hidden = true;
+  if (err)   err.hidden = true;
 }
 
 
