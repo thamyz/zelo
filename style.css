@@ -407,6 +407,21 @@ textarea { font-family: inherit; }
 
 .scan-inline-textarea:focus { outline: none; }
 
+/* Small preview of the uploaded screenshot — shown below the message box
+   once OCR has filled it in; hidden again on clear/error. */
+.scan-thumb-preview { margin-top: 10px; }
+
+.scan-thumb-preview[hidden] { display: none; }
+
+.scan-thumb-preview-img {
+  display: block;
+  max-width: 140px;
+  max-height: 100px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
 
 /* Note: the "Tell Zelo More" entry now lives inside the Scan page redesign
    below as one of the "Who's this about?" cards (.scan-who-card--tellzelo).
@@ -1029,25 +1044,27 @@ textarea { font-family: inherit; }
 
 .scan-dropzone-thumb[hidden] { display: none; }
 
-/* Wrapper so the minus button can be positioned over the photo */
+/* Wrapper so the minus button can be positioned just outside the photo */
 .scan-dropzone-wrap {
   position: relative;
   display: block;
   width: 100%;
 }
 
-/* Minus button — top-right corner of the uploaded photo, only visible when has-file */
+/* Minus button — sits just outside the top-right corner of the uploaded
+   photo (not on top of it), so it never covers any part of the picture.
+   Only visible when has-file. */
 .scan-photo-minus-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 26px;
-  height: 26px;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: rgba(28, 25, 23, 0.65);
   color: #fff;
   border: none;
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1;
   display: flex;
   align-items: center;

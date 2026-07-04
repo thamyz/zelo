@@ -1723,6 +1723,14 @@ function runScreenshotOcr(base64Data, mimeType) {
         onAsstInput();
       }
       if (check) check.hidden = false;
+
+      // Small preview below the message box, once the text is in
+      const thumbWrap = document.getElementById("scan-thumb-preview");
+      const thumbImg  = document.getElementById("scan-thumb-preview-img");
+      if (thumbWrap && thumbImg) {
+        thumbImg.src   = `data:${mimeType};base64,${base64Data}`;
+        thumbWrap.hidden = false;
+      }
     })
     .catch(err => {
       if (token !== _ocrToken) return;
@@ -1739,10 +1747,14 @@ function _showOcrError() {
 
 function hideScreenshotOcrUi() {
   _ocrToken++;
-  const check = document.getElementById("scan-ocr-check");
-  const err   = document.getElementById("scan-ocr-error");
-  if (check) check.hidden = true;
-  if (err)   err.hidden = true;
+  const check     = document.getElementById("scan-ocr-check");
+  const err       = document.getElementById("scan-ocr-error");
+  const thumbWrap = document.getElementById("scan-thumb-preview");
+  const thumbImg  = document.getElementById("scan-thumb-preview-img");
+  if (check)     check.hidden = true;
+  if (err)       err.hidden = true;
+  if (thumbWrap) thumbWrap.hidden = true;
+  if (thumbImg)  thumbImg.src = "";
 }
 
 
