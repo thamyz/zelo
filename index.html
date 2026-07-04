@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260703c" />
+    <link rel="stylesheet" href="style.css?v=20260704a" />
   </head>
   <body>
     <div id="app">
@@ -790,46 +790,48 @@
         <!-- ============ PHASE 2 · Screen 2 — Swipe demo -> Match (combined, internal state) ============ -->
         <section class="cine-screen cine-screen--swipe" data-screen="2">
           <h2 class="cine-head">Find someone to<br><span class="hl">practice</span> with</h2>
-          <p class="cine-sub">Swipe to find people to chat and practice real conversations.</p>
+          <p class="cine-sub">Match and practice with AI girls that actually feel real.</p>
 
-          <!-- Swipe state -->
-          <div class="cine-swipe-state" id="cine-swipe-state">
+          <!-- Decorative sparkles/swirl — only shown during the like state -->
+          <div class="cine-swipe-deco" id="cine-swipe-deco">
             <span class="cine-deco cine-spark-deco" style="bottom:27%;left:12%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
             <span class="cine-deco cine-spark-deco sm" style="bottom:27%;right:14%"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
             <span class="cine-deco cine-swirl" style="top:39%;right:6%"><svg width="72" height="40" viewBox="0 0 72 40" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 24 C 22 16, 34 20, 48 15"/><path d="M42 7 L54 14 L45 25"/></svg></span>
+          </div>
 
-            <div class="cine-swipe-stage">
+          <!-- Locked-position card deck — absolutely positioned so the card
+               sits at the exact same spot on screen in both states. Only
+               the internal content (like cards vs. match cards) swaps. -->
+          <div class="cine-swipe-deck">
+            <div class="cine-swipe-stage" id="cine-swipe-stage">
               <div class="cine-swipe-card cine-swipe-card--back"></div>
               <div class="cine-swipe-card" id="cine-swipe-card">
                 <div class="cine-swipe-like">LIKE</div>
               </div>
             </div>
 
-            <div class="cine-swipe-controls">
-              <span class="cine-swipe-btn pass"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
-              <span class="cine-swipe-hint"><b>Swipe right</b><span>to like</span></span>
-              <span class="cine-swipe-btn like"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.4-8.6C.9 9.3 2.4 6 5.6 6c2 0 3.3 1.2 4.4 2.6C11 7.2 12.4 6 14.4 6c3.2 0 4.7 3.3 3 6.4C19 16.4 12 21 12 21z"/></svg></span>
+            <div class="cine-match-cards" id="cine-match-cards" style="display:none">
+              <div class="cine-match-card cine-match-card--back"></div>
+              <div class="cine-match-card" id="cine-match-card">
+                <span class="cine-match-spark">✦</span>
+                <span class="cine-match-title">It's a<br>Match!</span>
+              </div>
+              <span class="cine-match-burst" aria-hidden="true">
+                <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="30" y1="6" x2="24" y2="12"/><line x1="32" y1="16" x2="24" y2="18"/><line x1="24" y1="4" x2="21" y2="11"/></svg>
+              </span>
             </div>
           </div>
 
-          <!-- Match state (hidden until the auto-swipe completes) -->
-          <div class="cine-match-state" id="cine-match-state" style="display:none">
-            <div class="cine-match-stage">
-              <div class="cine-match-cards">
-                <div class="cine-match-card cine-match-card--back"></div>
-                <div class="cine-match-card" id="cine-match-card">
-                  <span class="cine-match-spark">✦</span>
-                  <span class="cine-match-title">It's a<br>Match!</span>
-                </div>
-                <span class="cine-match-burst" aria-hidden="true">
-                  <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="30" y1="6" x2="24" y2="12"/><line x1="32" y1="16" x2="24" y2="18"/><line x1="24" y1="4" x2="21" y2="11"/></svg>
-                </span>
-              </div>
-              <div class="cine-match-cta">
-                <b>Start practicing</b>
-                <span>and improve your replies</span>
-              </div>
-            </div>
+          <!-- Bottom row — swipe controls (like state) / CTA text (match state) -->
+          <div class="cine-swipe-controls" id="cine-swipe-controls">
+            <span class="cine-swipe-btn pass"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+            <span class="cine-swipe-hint"><b>Swipe right</b><span>to like</span></span>
+            <span class="cine-swipe-btn like"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.4-8.6C.9 9.3 2.4 6 5.6 6c2 0 3.3 1.2 4.4 2.6C11 7.2 12.4 6 14.4 6c3.2 0 4.7 3.3 3 6.4C19 16.4 12 21 12 21z"/></svg></span>
+          </div>
+
+          <div class="cine-match-cta" id="cine-match-cta" style="display:none">
+            <b>Start practicing</b>
+            <span>and improve your replies</span>
           </div>
         </section>
 
@@ -1378,6 +1380,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260703c"></script>
+    <script src="script.js?v=20260704a"></script>
   </body>
 </html>

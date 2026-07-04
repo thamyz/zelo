@@ -2100,6 +2100,9 @@ function cineGoTo(n) {
   cineStep = n;
 
   cineSetChrome('phase2');
+  // Screen 2 (swipe demo) hides only the X skip button — dots stay visible.
+  const skipBtn = document.getElementById('cine-skip');
+  if (skipBtn) skipBtn.classList.toggle('cine-hidden', n === 2);
   document.querySelectorAll('.cine-screen').forEach(s => {
     s.classList.toggle('active', Number(s.dataset.screen) === n);
   });
@@ -2154,8 +2157,8 @@ function cineScreenTap(e) {
   const overlay = document.getElementById('cine-onboarding');
   if (!overlay || overlay.hasAttribute('hidden')) return;
   if (cineStep !== 2) return;
-  const matchState = document.getElementById('cine-match-state');
-  if (matchState && matchState.style.display !== 'none') cineGoTo(3);
+  const matchCards = document.getElementById('cine-match-cards');
+  if (matchCards && matchCards.style.display !== 'none') cineGoTo(3);
 }
 
 // ---- Screen 1 — name input (profanity-filtered, no bad/empty/space-only) ----
@@ -2210,34 +2213,39 @@ function cineNameInput() {
 // ---- Screen 2 — swipe demo -> match (auto after 2s, tap match to advance) ----
 // Simple, reliable sequence: hold static 2s -> front card transitions
 // (transform+opacity, 500ms ease-in) off-screen right -> on the real
-// transitionend event, swap display:none/flex between the two states
-// instantly (no fade) -> burst lines + CTA text fade in.
-// Uses explicit style.display rather than the `hidden` attribute: the
-// shared `.cine-swipe-state, .cine-match-state { display: flex; }` rule
-// is an author style, and author styles always beat the browser's
-// built-in `[hidden] { display: none }` UA rule — so toggling `.hidden`
-// alone never actually hid either state.
+// transitionend event, swap the like/match content instantly (no fade) ->
+// burst lines + CTA text fade in. The card deck itself (.cine-swipe-deck)
+// is absolutely positioned with a fixed offset and never moves — only the
+// like-state and match-state content inside it toggles via style.display
+// (not the `hidden` attribute, which an author `display` rule can silently
+// override regardless of specificity).
 let _cineSwipeTransitionHandler = null;
 
 function cineRunSwipeEntrance() {
-  const likeState  = document.getElementById('cine-swipe-state');
-  const matchState = document.getElementById('cine-match-state');
-  const card       = document.getElementById('cine-swipe-card');
-  if (!likeState || !matchState || !card) return;
+  const deco        = document.getElementById('cine-swipe-deco');
+  const likeStage    = document.getElementById('cine-swipe-stage');
+  const likeControls = document.getElementById('cine-swipe-controls');
+  const matchCards    = document.getElementById('cine-match-cards');
+  const matchCta       = document.getElementById('cine-match-cta');
+  const card         = document.getElementById('cine-swipe-card');
+  if (!likeStage || !matchCards || !card) return;
 
-  const burstEl = matchState.querySelector('.cine-match-burst');
-  const ctaEl   = matchState.querySelector('.cine-match-cta');
+  const burstEl = matchCards.querySelector('.cine-match-burst');
 
   if (_cineSwipeTransitionHandler) {
     card.removeEventListener('transitionend', _cineSwipeTransitionHandler);
     _cineSwipeTransitionHandler = null;
   }
 
-  likeState.style.display  = 'flex';
-  matchState.style.display = 'none';
+  // Reset to the like state — deck stays put, only its contents toggle.
+  if (deco)         deco.style.display        = '';
+  likeStage.style.display    = 'block';
+  if (likeControls) likeControls.style.display = 'flex';
+  matchCards.style.display  = 'none';
+  if (matchCta) matchCta.style.display = 'none';
   card.classList.remove('cine-swipe-card--fly');
-  if (burstEl) burstEl.classList.remove('cine-match-burst--in');
-  if (ctaEl)   ctaEl.classList.remove('cine-match-cta--in');
+  if (burstEl)  burstEl.classList.remove('cine-match-burst--in');
+  if (matchCta) matchCta.classList.remove('cine-match-cta--in');
   void card.offsetWidth;   // force reflow so the removed class registers
 
   _cineDelay(() => {
@@ -2245,12 +2253,17 @@ function cineRunSwipeEntrance() {
       card.removeEventListener('transitionend', _cineSwipeTransitionHandler);
       _cineSwipeTransitionHandler = null;
 
-      likeState.style.display  = 'none';   // instant swap — no transition
-      matchState.style.display = 'flex';
+      // Instant swap — no transition. Deck container itself never moves;
+      // only the like/match content inside it (and the bottom row) toggles.
+      if (deco)         deco.style.display        = 'none';
+      likeStage.style.display    = 'none';
+      if (likeControls) likeControls.style.display = 'none';
+      matchCards.style.display  = 'block';
+      if (matchCta) matchCta.style.display = 'block';
       navigator.vibrate?.(16);
       _cineNextFrame(() => {
-        if (burstEl) burstEl.classList.add('cine-match-burst--in');
-        if (ctaEl)   ctaEl.classList.add('cine-match-cta--in');
+        if (burstEl)  burstEl.classList.add('cine-match-burst--in');
+        if (matchCta) matchCta.classList.add('cine-match-cta--in');
       });
     };
     card.addEventListener('transitionend', _cineSwipeTransitionHandler, { once: true });
