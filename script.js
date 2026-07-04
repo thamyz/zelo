@@ -1667,8 +1667,6 @@ function handleUpload(input) {
     dzIcon.hidden  = true;
     dzTitle.hidden = true;
     dzSub.hidden   = true;
-
-    runScreenshotOcr(file);
   } else {
     labelEl.textContent = "Upload Screenshot";
     row.classList.remove("has-file");
@@ -1685,83 +1683,9 @@ function handleUpload(input) {
     dzSub.hidden   = false;
     if (clearBtn) clearBtn.hidden = true;
     if (minusBtn) minusBtn.hidden = true;
-
-    hideScreenshotOcrUi();
   }
 
   checkGenerateReady();
-}
-
-
-// ================================================================
-// SCREENSHOT OCR — Tesseract.js reads the uploaded screenshot
-// client-side and auto-fills the message box with the extracted text.
-// Everything downstream (Tell Zelo More, generateReplies) runs exactly
-// as it does for a manually-typed message — OCR only fills the input.
-// ================================================================
-
-let _ocrToken = 0; // invalidated on every new upload/clear so a stale OCR run can't clobber a newer one
-
-function runScreenshotOcr(file) {
-  const token = ++_ocrToken;
-  const load  = document.getElementById("scan-ocr-loading");
-  const check = document.getElementById("scan-ocr-check");
-  const err   = document.getElementById("scan-ocr-error");
-
-  if (err)   err.hidden = true;
-  if (check) check.hidden = true;
-  if (load)  load.hidden = false;
-
-  if (typeof Tesseract === "undefined") {
-    if (load) load.hidden = true;
-    _showOcrError();
-    return;
-  }
-
-  Tesseract.recognize(file, "eng")
-    .then(({ data }) => {
-      if (token !== _ocrToken) return; // a newer upload/clear superseded this run
-      if (load) load.hidden = true;
-
-      const cleaned = _cleanOcrText(data.text);
-      if (!cleaned) { _showOcrError(); return; }
-
-      const input = document.getElementById("asst-input");
-      if (input) {
-        input.value = cleaned;
-        onAsstInput();
-      }
-      if (check) check.hidden = false;
-    })
-    .catch(() => {
-      if (token !== _ocrToken) return;
-      if (load) load.hidden = true;
-      _showOcrError();
-    });
-}
-
-function _cleanOcrText(raw) {
-  return (raw || "")
-    .split("\n")
-    .map(line => line.trim().replace(/\s+/g, " "))
-    .filter(Boolean)
-    .join("\n");
-}
-
-function _showOcrError() {
-  clearUploadedPhoto();
-  const err = document.getElementById("scan-ocr-error");
-  if (err) err.hidden = false;
-}
-
-function hideScreenshotOcrUi() {
-  _ocrToken++;
-  const load  = document.getElementById("scan-ocr-loading");
-  const check = document.getElementById("scan-ocr-check");
-  const err   = document.getElementById("scan-ocr-error");
-  if (load)  load.hidden = true;
-  if (check) check.hidden = true;
-  if (err)   err.hidden = true;
 }
 
 
