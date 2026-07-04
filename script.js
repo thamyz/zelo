@@ -1617,9 +1617,10 @@ function clearUploadedPhoto() {
   handleUpload({ files: [] });
 }
 
-// Called when the user selects a file. Updates both the dropzone (its own
-// page — shown as a thumbnail, no filename/label needed) and the upload
-// row preview (back on the main Scan page — also just a thumbnail, no text).
+// Called when the user selects a file. Just shows the thumbnail — both on
+// the dedicated upload page's dropzone and below the Upload Screenshot row
+// on the main Scan page. No text extraction happens here; that's deferred
+// to Analyze time (see _extractScreenshotText) and never shown to the user.
 function handleUpload(input) {
   const file       = input.files[0];
   const dropzone    = document.getElementById("scan-dropzone");
@@ -1631,24 +1632,23 @@ function handleUpload(input) {
   const clearBtn  = document.getElementById("scan-upload-clear-btn");
   const minusBtn  = document.getElementById("scan-photo-minus-btn");
 
+  const thumbWrap = document.getElementById("scan-thumb-preview");
+  const thumbImg  = document.getElementById("scan-thumb-preview-img");
+  const ocrErr    = document.getElementById("scan-ocr-error");
+
   if (file) {
     dropzone.classList.add("has-file");
     if (clearBtn) clearBtn.hidden = false;
     if (minusBtn) minusBtn.hidden = false;
+    if (ocrErr)   ocrErr.hidden = true;
 
     const reader = new FileReader();
     reader.onload = () => {
       dzThumb.src    = reader.result;
       dzThumb.hidden = false;
 
-      // reader.result is "data:<mimeType>;base64,<data>" — reuse it
-      // instead of reading the file a second time.
-      const base64Data = reader.result.split(",")[1] || "";
-      console.log("[Zelo OCR] screenshot selected — file.type:", file.type, "base64 length:", base64Data.length);
-      if (!base64Data) {
-        console.error("[Zelo OCR] base64 construction failed — reader.result had no comma-separated payload:", reader.result?.slice(0, 60));
-      }
-      runScreenshotOcr(base64Data, file.type);
+      if (thumbImg)  thumbImg.src = reader.result;
+      if (thumbWrap) thumbWrap.hidden = false;
     };
     reader.readAsDataURL(file);
 
@@ -1666,7 +1666,9 @@ function handleUpload(input) {
     if (clearBtn) clearBtn.hidden = true;
     if (minusBtn) minusBtn.hidden = true;
 
-    hideScreenshotOcrUi();
+    if (thumbWrap) thumbWrap.hidden = true;
+    if (thumbImg)  thumbImg.src = "";
+    if (ocrErr)    ocrErr.hidden = true;
   }
 
   checkGenerateReady();
@@ -1674,87 +1676,54 @@ function handleUpload(input) {
 
 
 // ================================================================
-// SCREENSHOT READING — openai-proxy (GPT-5.4 mini vision) extracts
-// the message text from the uploaded screenshot and auto-fills the
-// message box. Text-only scans are untouched — they still go through
-// DeepSeek via deepseek-proxy. This is only ever called for uploads.
+// SCREENSHOT READING — openai-proxy (GPT-5.4 mini vision) silently
+// extracts the message text from an attached screenshot at Analyze
+// time. The user never sees this text — it's used directly as the
+// DeepSeek prompt. Text-only scans are untouched, still via deepseek-proxy.
 // ================================================================
 
-let _ocrToken = 0; // invalidated on every new upload/clear so a stale call can't clobber a newer one
+function _fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
-function runScreenshotOcr(base64Data, mimeType) {
-  const token = ++_ocrToken;
-  const check = document.getElementById("scan-ocr-check");
-  const err   = document.getElementById("scan-ocr-error");
+// Returns the extracted text, or null on any failure (missing key, bad
+// deploy, network error, empty result) — callers stop and show the
+// existing error message when this returns null.
+async function _extractScreenshotText(file) {
+  try {
+    const base64Data = await _fileToBase64(file);
+    console.log("[Zelo OCR] extracting screenshot text at analyze time — base64 length:", base64Data.length, "mimeType:", file.type);
+    if (!base64Data) return null;
 
-  if (err)   err.hidden = true;
-  if (check) check.hidden = true;
-
-  console.log("[Zelo OCR] calling openai-proxy — base64 length:", base64Data.length, "mimeType:", mimeType);
-
-  zeloSupabase.functions.invoke('openai-proxy', {
-    body: { image: base64Data, mimeType }
-  })
-    .then(async ({ data, error }) => {
-      if (token !== _ocrToken) return; // a newer upload/clear superseded this call
-
-      if (error) {
-        // supabase-js only puts a generic message on error.message for a
-        // non-2xx response — the actual { error: "..." } body from
-        // openai-proxy has to be read off error.context.
-        let details = error.message;
-        try {
-          if (error.context && typeof error.context.clone === "function") {
-            details = await error.context.clone().text();
-          }
-        } catch (_) { /* best-effort — fall back to error.message */ }
-        console.error("[Zelo OCR] openai-proxy invoke error:", error, "— response body:", details);
-        _showOcrError();
-        return;
-      }
-
-      console.log("[Zelo OCR] openai-proxy response:", data);
-      const cleaned = (data?.text || "").trim();
-      if (!cleaned) { _showOcrError(); return; }
-
-      const input = document.getElementById("asst-input");
-      if (input) {
-        input.value = cleaned;
-        onAsstInput();
-      }
-      if (check) check.hidden = false;
-
-      // Small preview below the message box, once the text is in
-      const thumbWrap = document.getElementById("scan-thumb-preview");
-      const thumbImg  = document.getElementById("scan-thumb-preview-img");
-      if (thumbWrap && thumbImg) {
-        thumbImg.src   = `data:${mimeType};base64,${base64Data}`;
-        thumbWrap.hidden = false;
-      }
-    })
-    .catch(err => {
-      if (token !== _ocrToken) return;
-      console.error("[Zelo OCR] openai-proxy invoke threw:", err);
-      _showOcrError();
+    const { data, error } = await zeloSupabase.functions.invoke('openai-proxy', {
+      body: { image: base64Data, mimeType: file.type }
     });
-}
 
-function _showOcrError() {
-  clearUploadedPhoto();
-  const err = document.getElementById("scan-ocr-error");
-  if (err) err.hidden = false;
-}
+    if (error) {
+      // supabase-js only puts a generic message on error.message for a
+      // non-2xx response — the actual { error: "..." } body from
+      // openai-proxy has to be read off error.context.
+      let details = error.message;
+      try {
+        if (error.context && typeof error.context.clone === "function") {
+          details = await error.context.clone().text();
+        }
+      } catch (_) { /* best-effort — fall back to error.message */ }
+      console.error("[Zelo OCR] openai-proxy invoke error:", error, "— response body:", details);
+      return null;
+    }
 
-function hideScreenshotOcrUi() {
-  _ocrToken++;
-  const check     = document.getElementById("scan-ocr-check");
-  const err       = document.getElementById("scan-ocr-error");
-  const thumbWrap = document.getElementById("scan-thumb-preview");
-  const thumbImg  = document.getElementById("scan-thumb-preview-img");
-  if (check)     check.hidden = true;
-  if (err)       err.hidden = true;
-  if (thumbWrap) thumbWrap.hidden = true;
-  if (thumbImg)  thumbImg.src = "";
+    console.log("[Zelo OCR] openai-proxy response:", data);
+    return (data?.text || "").trim() || null;
+  } catch (err) {
+    console.error("[Zelo OCR] openai-proxy invoke threw:", err);
+    return null;
+  }
 }
 
 
@@ -1808,27 +1777,45 @@ async function _fetchDeepSeekReply(tone) {
 // ASSISTANT: GENERATE
 // ================================================================
 
-function generateReplies() {
+async function generateReplies() {
   document.getElementById("asst-generate-btn").classList.remove('generate-btn--bounce');
 
   const userInput = document.getElementById("asst-input").value.trim();
   const context   = scanContextString();
-  const hasImage  = document.getElementById("screenshot-input").files?.length > 0;
+  const screenshotFile = document.getElementById("screenshot-input").files?.[0] || null;
+  const hasImage  = !!screenshotFile;
 
   if (!userInput && !hasImage) return;
-
-  state.scanSavedToThread = false;
-  state.scanSkippedSave   = false;
 
   if (!isPaidUser() && scansRemainingToday() <= 0) {
     refreshScanLimitBanner();
     return;
   }
 
-  document.getElementById("asst-preview-bubble").textContent =
-    userInput || "📷 Screenshot uploaded";
+  // Typed message always wins. Only when there's no typed text do we fall
+  // back to the attached screenshot, read silently in the background via
+  // openai-proxy — the extracted text is never shown, just used as the
+  // DeepSeek prompt below.
+  let messageText = userInput;
+  if (!messageText && hasImage) {
+    const err = document.getElementById('scan-ocr-error');
+    if (err) err.hidden = true;
 
-  recordScan(context || userInput || "Screenshot scan");
+    const extracted = await _extractScreenshotText(screenshotFile);
+    if (extracted == null) {
+      if (err) err.hidden = false;
+      return; // stop — no scan consumed, nothing generated
+    }
+    messageText = extracted;
+  }
+
+  state.scanSavedToThread = false;
+  state.scanSkippedSave   = false;
+
+  document.getElementById("asst-preview-bubble").textContent =
+    messageText || "📷 Screenshot uploaded";
+
+  recordScan(context || messageText || "Screenshot scan");
 
   // The pre-filled onboarding example must not cost a scan credit — only
   // the user's own scans count against the daily limit. Captured before
@@ -1841,7 +1828,7 @@ function generateReplies() {
 
   // Snapshot message + context for this scan — used by per-tone API calls
   state.asstCurrentSet = {};  // cache: tone → reply text, filled on demand
-  state.asstMessage    = userInput;
+  state.asstMessage    = messageText;
   state.asstContext    = context;
   state.asstContextObj = { ...state.scanContext };  // structured who/situation/goal/extra, for prompt building
 

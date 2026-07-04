@@ -407,11 +407,16 @@ textarea { font-family: inherit; }
 
 .scan-inline-textarea:focus { outline: none; }
 
-/* Small preview of the uploaded screenshot — shown below the message box
-   once OCR has filled it in; hidden again on clear/error. */
+/* Small preview of the uploaded screenshot — shown below the Upload
+   Screenshot row as soon as a file is picked; hidden again on clear. */
 .scan-thumb-preview { margin-top: 10px; }
 
 .scan-thumb-preview[hidden] { display: none; }
+
+.scan-thumb-preview-wrap {
+  position: relative;
+  display: inline-block;
+}
 
 .scan-thumb-preview-img {
   display: block;
@@ -420,6 +425,28 @@ textarea { font-family: inherit; }
   border-radius: var(--r-md);
   border: 1px solid var(--border);
   object-fit: cover;
+}
+
+/* Small close button, top-left corner of the preview — tapping it clears
+   the attached screenshot completely. */
+.scan-thumb-remove-btn {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(28, 25, 23, 0.7);
+  color: #fff;
+  border: none;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 
@@ -1077,24 +1104,7 @@ textarea { font-family: inherit; }
 
 .scan-photo-minus-btn[hidden] { display: none; }
 
-/* Success — checkmark badge, opposite corner from the minus button */
-.scan-ocr-check {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--green);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-}
-
-.scan-ocr-check[hidden] { display: none; }
-
-/* Failure — inline message below the dropzone */
+/* Shown only if Analyze's silent background OCR extraction fails */
 .scan-ocr-error {
   margin-top: 10px;
   font-size: 0.82rem;
