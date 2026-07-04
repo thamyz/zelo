@@ -157,6 +157,7 @@ function showTab(name) {
   if (name === 'assistant') {
     maybeShowScanIntro();
     refreshScanLimitBanner();
+    refreshScanWhoCards();
   }
 }
 
@@ -1335,6 +1336,9 @@ function clearScanInput() {
   if (sub) sub.textContent = 'Add details for better analysis';
   const card = document.getElementById('tellzelo-card');
   if (card) card.classList.remove('filled');
+  // Reset the two "Who's this about?" quick-pick cards
+  document.getElementById('scan-who-dating')?.classList.remove('selected');
+  document.getElementById('scan-who-crush')?.classList.remove('selected');
   // Reset upload row
   const thumb = document.getElementById('upload-row-thumb');
   const label = document.getElementById('upload-label-text');
@@ -1461,6 +1465,30 @@ const TELLZELO_STEPS = [
     placeholder: "Anything extra that might help.",
   },
 ];
+
+// ---- "Who's this about?" quick-pick cards (Dating/Match, Crush) ----
+// Shortcuts that set the same state.scanContext.who the full Tell Zelo More
+// wizard uses — generateReplies() and the wizard both read from the same
+// place, so a quick pick here is indistinguishable from picking it in step 1
+// of the wizard. Opening "Or tell zelo more" still gets the full flow.
+function scanQuickWho(label, el) {
+  state.scanContext.who = label;
+  document.getElementById('scan-who-dating')?.classList.remove('selected');
+  document.getElementById('scan-who-crush')?.classList.remove('selected');
+  if (el) el.classList.add('selected');
+  updateTellZeloSummary();
+  navigator.vibrate?.(4);
+}
+
+// Re-highlight whichever quick-pick card matches the current context
+// (or neither, if "who" was set to something only the full wizard offers).
+function refreshScanWhoCards() {
+  const who    = state.scanContext.who;
+  const dating = document.getElementById('scan-who-dating');
+  const crush  = document.getElementById('scan-who-crush');
+  dating?.classList.toggle('selected', who === 'New Match');
+  crush?.classList.toggle('selected', who === 'Crush');
+}
 
 // Open the flow — always start at the first step, keep prior selections.
 function openTellZelo() {

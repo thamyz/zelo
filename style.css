@@ -430,67 +430,9 @@ textarea { font-family: inherit; }
 .scan-inline-textarea:focus { outline: none; }
 
 
-/* ----------------------------------------------------------------
-   TELL ZELO MORE — progressive disclosure entry (opens its own flow)
-   ---------------------------------------------------------------- */
-.tellzelo-card {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  width: 100%;
-  padding: 17px 18px;
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  text-align: left;
-  transition: background 0.12s, border-color 0.12s;
-}
-
-.tellzelo-card:hover { background: var(--s2); }
-.tellzelo-card:active { transform: scale(0.995); }
-
-.tellzelo-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.tellzelo-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.tellzelo-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.tellzelo-sub {
-  font-size: 0.86rem;
-  color: var(--text-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tellzelo-chevron {
-  color: var(--text-3);
-  flex-shrink: 0;
-}
-
-/* Filled state — context has been provided */
-.tellzelo-card.filled { border-color: var(--accent-border); }
-.tellzelo-card.filled .tellzelo-sub { color: var(--accent-deep); font-weight: 600; }
+/* Note: the "Tell Zelo More" entry now lives inside the Scan page redesign
+   below as one of the "Who's this about?" cards (.scan-who-card--tellzelo).
+   The #tellzelo-sub span it still writes to is hidden — no styling needed. */
 
 
 /* ----------------------------------------------------------------
@@ -4336,48 +4278,6 @@ textarea { font-family: inherit; }
   line-height: 1.4;
 }
 
-.aicoach-card {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 13px 14px;
-  margin-top: 14px;
-  box-shadow: 0 2px 12px rgba(236, 72, 153, 0.05);
-}
-.aicoach-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.aicoach-card-titles {
-  cursor: pointer;
-  user-select: none;
-  flex: 1;
-  min-width: 0;
-}
-.aicoach-card-chevron {
-  margin-left: 5px;
-  flex-shrink: 0;
-  transition: transform 0.22s ease;
-  color: var(--text-2);
-}
-.aicoach-card-chevron--open {
-  transform: rotate(180deg);
-}
-.aicoach-card-title {
-  display: flex;
-  align-items: center;
-  font-size: 0.97rem;
-  font-weight: 800;
-  color: var(--text);
-}
-.aicoach-card-sub {
-  display: block;
-  margin-top: 2px;
-  font-size: 0.78rem;
-  color: var(--text-2);
-}
 .aicoach-beta {
   margin-left: 7px;
   background: rgba(236, 72, 153, 0.12);
@@ -4389,80 +4289,193 @@ textarea { font-family: inherit; }
   border-radius: 999px;
   text-transform: none;
 }
-.aicoach-thread-dropdown {
+
+/* ----------------------------------------------------------------
+   SCAN PAGE REDESIGN — bigger brand mark, headline + illustration,
+   "Who's this about?" quick-pick cards, single-row AI Coach teaser,
+   privacy footnote. Same underlying functions/IDs as before — this
+   section only changes how the Scan tab looks.
+   ---------------------------------------------------------------- */
+.scan-page-brand {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+
+.scan-headline-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+}
+.scan-headline-text { flex: 1; min-width: 0; }
+.scan-headline {
+  position: relative;
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  padding-bottom: 12px;
+}
+.scan-headline-underline {
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 46px; height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.scan-headline-sub {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-2);
+  max-width: 230px;
+}
+.scan-bubbles-deco {
+  position: relative;
   flex-shrink: 0;
+  width: 118px;
+  height: 108px;
+  margin-top: 4px;
+}
+.scan-bubble {
+  position: absolute;
+  border-radius: 20px 20px 4px 20px;
+}
+.scan-bubble--main {
+  top: 0; right: 4px;
+  width: 78px; height: 46px;
+  background: var(--accent);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  background: #fff;
-  border: 1px solid var(--border-2);
-  border-radius: 10px;
-  padding: 6px 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-2);
-  max-width: 140px;
+  box-shadow: 0 8px 20px rgba(236,72,153,0.28);
 }
-.aicoach-thread-dropdown span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.aicoach-thread-dropdown svg { flex-shrink: 0; }
-
-.aicoach-card-body {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  background: rgba(236, 72, 153, 0.03);
-  border: 1px solid rgba(236, 72, 153, 0.09);
-  border-radius: 13px;
-  padding: 11px 12px;
-}
-.aicoach-avatar {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+.scan-bubble-dot {
+  width: 6px; height: 6px;
   border-radius: 50%;
-  background: rgba(236, 72, 153, 0.12);
+  background: #fff;
+}
+.scan-bubble--soft {
+  bottom: 2px; left: 0;
+  width: 66px; height: 52px;
+  background: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scan-bubble-spark {
+  position: absolute;
+  color: var(--accent);
+  z-index: 1;
+}
+.scan-bubble-spark.s1 { top: -4px; left: 4px; }
+.scan-bubble-spark.s2 { top: 30px; right: -2px; opacity: 0.85; }
+.scan-bubble-spark.s3 { bottom: 12px; right: 24px; opacity: 0.7; }
+
+.scan-who-section { margin-top: 20px; }
+.scan-who-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.scan-who-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.scan-who-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 6px 14px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.scan-who-card:active { transform: scale(0.97); }
+.scan-who-card.selected {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.scan-who-icon {
+  position: relative;
+  width: 34px; height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scan-who-icon-badge {
+  position: absolute;
+  top: -3px; right: -5px;
+}
+.scan-who-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+/* "Or tell zelo more" card shows a filled state once context is set —
+   updateTellZeloSummary() still runs unchanged; this just restyles the
+   feedback for the new compact card instead of a long subtitle line. */
+.scan-who-card--tellzelo.filled {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.scan-who-card--tellzelo.filled .scan-who-label { color: var(--accent-deep); }
+
+/* ---- AI Coach — single static row, no expand/collapse ---- */
+.aicoach-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 14px;
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  text-align: left;
+  transition: background 0.12s;
+}
+.aicoach-row:hover  { background: var(--s2); }
+.aicoach-row:active { transform: scale(0.995); }
+.aicoach-row-icon {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--accent-soft);
   color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.aicoach-intro { min-width: 0; }
-.aicoach-intro-hi {
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 0.88rem;
-  margin-bottom: 3px;
-}
-.aicoach-intro-text {
-  color: var(--text);
-  font-size: 0.84rem;
-  line-height: 1.45;
-  margin-bottom: 2px;
-}
-.aicoach-card-actions {
+.aicoach-row-copy { flex: 1; min-width: 0; }
+.aicoach-row-title { display: block; font-size: 0.97rem; font-weight: 800; color: var(--text); }
+.aicoach-row-sub   { display: block; font-size: 0.82rem; color: var(--text-2); margin-top: 2px; }
+.aicoach-row-chevron { flex-shrink: 0; color: var(--text-3); }
+
+.scan-privacy-note {
   display: flex;
-  gap: 7px;
-  margin-top: 9px;
-}
-.aicoach-pill {
-  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: #fff;
-  border: 1px solid var(--accent-border);
-  color: var(--accent);
-  font-weight: 600;
-  font-size: 0.78rem;
-  border-radius: 999px;
-  padding: 6px 12px;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--text-3);
 }
-.aicoach-pill:hover { background: var(--accent-soft); }
-.aicoach-card-body[hidden] { display: none; }
-.aicoach-card-sub[hidden] { display: none; }
 
 
 /* ================================================================
