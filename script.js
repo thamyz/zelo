@@ -1664,6 +1664,10 @@ function handleUpload(input) {
       // reader.result is "data:<mimeType>;base64,<data>" — reuse it
       // instead of reading the file a second time.
       const base64Data = reader.result.split(",")[1] || "";
+      console.log("[Zelo OCR] screenshot selected — file.type:", file.type, "base64 length:", base64Data.length);
+      if (!base64Data) {
+        console.error("[Zelo OCR] base64 construction failed — reader.result had no comma-separated payload:", reader.result?.slice(0, 60));
+      }
       runScreenshotOcr(base64Data, file.type);
     };
     reader.readAsDataURL(file);
@@ -1705,6 +1709,13 @@ function handleUpload(input) {
 
 let _ocrToken = 0; // invalidated on every new upload/clear so a stale call can't clobber a newer one
 
+// Floor for how long the "Reading your screenshot…" state stays visible.
+// Without this, a call that fails fast (bad deploy, missing secret, network
+// error) hides the loading state almost as soon as it appears — looking like
+// the loading state was skipped even though it was shown for the call's
+// entire (very short) real duration.
+const MIN_OCR_LOADING_MS = 500;
+
 function runScreenshotOcr(base64Data, mimeType) {
   const token = ++_ocrToken;
   const load  = document.getElementById("scan-ocr-loading");
@@ -1715,28 +1726,58 @@ function runScreenshotOcr(base64Data, mimeType) {
   if (check) check.hidden = true;
   if (load)  load.hidden = false;
 
+  console.log("[Zelo OCR] calling openai-proxy — base64 length:", base64Data.length, "mimeType:", mimeType);
+  const startedAt = Date.now();
+
+  // Applies the final state (success or error) no sooner than
+  // MIN_OCR_LOADING_MS after the loading state appeared.
+  const settle = (apply) => {
+    const wait = Math.max(0, MIN_OCR_LOADING_MS - (Date.now() - startedAt));
+    setTimeout(() => {
+      if (token !== _ocrToken) return; // a newer upload/clear superseded this call
+      if (load) load.hidden = true;
+      apply();
+    }, wait);
+  };
+
   zeloSupabase.functions.invoke('openai-proxy', {
     body: { image: base64Data, mimeType }
   })
-    .then(({ data, error }) => {
-      if (token !== _ocrToken) return; // a newer upload/clear superseded this call
-      if (load) load.hidden = true;
-
-      if (error || !data) { _showOcrError(); return; }
-      const cleaned = (data.text || "").trim();
-      if (!cleaned) { _showOcrError(); return; }
-
-      const input = document.getElementById("asst-input");
-      if (input) {
-        input.value = cleaned;
-        onAsstInput();
-      }
-      if (check) check.hidden = false;
-    })
-    .catch(() => {
+    .then(async ({ data, error }) => {
       if (token !== _ocrToken) return;
-      if (load) load.hidden = true;
-      _showOcrError();
+
+      if (error) {
+        // supabase-js only puts a generic message on error.message for a
+        // non-2xx response — the actual { error: "..." } body from
+        // openai-proxy has to be read off error.context.
+        let details = error.message;
+        try {
+          if (error.context && typeof error.context.clone === "function") {
+            details = await error.context.clone().text();
+          }
+        } catch (_) { /* best-effort — fall back to error.message */ }
+        console.error("[Zelo OCR] openai-proxy invoke error:", error, "— response body:", details);
+        settle(_showOcrError);
+        return;
+      }
+
+      console.log("[Zelo OCR] openai-proxy response:", data);
+      const cleaned = (data?.text || "").trim();
+      if (!cleaned) { settle(_showOcrError); return; }
+
+      settle(() => {
+        const input = document.getElementById("asst-input");
+        if (input) {
+          input.value = cleaned;
+          onAsstInput();
+        }
+        if (check) check.hidden = false;
+      });
+    })
+    .catch(err => {
+      if (token !== _ocrToken) return;
+      console.error("[Zelo OCR] openai-proxy invoke threw:", err);
+      settle(_showOcrError);
     });
 }
 
