@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260704g" />
+    <link rel="stylesheet" href="style.css?v=20260704h" />
   </head>
   <body>
     <div id="app">
@@ -556,10 +556,28 @@
             <span class="scan-dropzone-title" id="scan-dropzone-title">No Screenshot Uploaded</span>
             <span class="scan-dropzone-sub" id="scan-dropzone-sub">Upload your screenshot to get a response.</span>
             <img class="scan-dropzone-thumb" id="scan-dropzone-thumb" alt="Uploaded screenshot" hidden />
+
+            <!-- OCR reading state — sparkle pulse, same style as the Analyze loading screen -->
+            <span class="scan-ocr-loading" id="scan-ocr-loading" hidden>
+              <span class="scan-ocr-loading-spark" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+                </svg>
+              </span>
+              <span class="scan-ocr-loading-text">Reading your screenshot…</span>
+            </span>
+
+            <!-- OCR success — green checkmark badge over the thumbnail -->
+            <span class="scan-ocr-check" id="scan-ocr-check" hidden aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
           </button>
           <button class="scan-photo-minus-btn" id="scan-photo-minus-btn" type="button"
                   onclick="event.stopPropagation(); clearUploadedPhoto()" hidden>−</button>
           </div>
+
+          <!-- OCR failure — inline message; upload area resets itself when this shows -->
+          <p class="scan-ocr-error" id="scan-ocr-error" hidden>Couldn't read the screenshot. Try pasting the message instead.</p>
 
           <!-- Hidden real file input -->
           <input
@@ -1399,12 +1417,13 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="config.js"></script>
     <script src="personas.js"></script>
     <script src="data.js"></script>
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260704g"></script>
+    <script src="script.js?v=20260704h"></script>
   </body>
 </html>
