@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260704e" />
+    <link rel="stylesheet" href="style.css?v=20260704f" />
   </head>
   <body>
     <div id="app">
@@ -56,17 +56,29 @@
               <h2 class="scan-headline">What should<br>I say?<span class="scan-headline-underline" aria-hidden="true"></span></h2>
               <p class="scan-headline-sub">Get smart, natural replies for any conversation.</p>
             </div>
-            <div class="scan-bubbles-deco" aria-hidden="true">
-              <span class="scan-bubble-spark s1"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
-              <span class="scan-bubble-spark s2"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
-              <span class="scan-bubble-spark s3"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
-              <div class="scan-bubble scan-bubble--main">
-                <span class="scan-bubble-dot"></span><span class="scan-bubble-dot"></span><span class="scan-bubble-dot"></span>
-              </div>
-              <div class="scan-bubble scan-bubble--soft">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
-              </div>
-            </div>
+            <svg class="scan-bubbles-deco" width="118" height="108" viewBox="0 0 140 130" fill="none"
+                 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true">
+              <defs>
+                <path id="ill-spark" d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </defs>
+
+              <!-- accent sparkles -->
+              <use href="#ill-spark" xlink:href="#ill-spark" transform="translate(2 28) scale(0.7)" fill="#ec4899"/>
+              <use href="#ill-spark" xlink:href="#ill-spark" transform="translate(124 38) scale(0.5)" fill="#ec4899" opacity="0.7"/>
+              <use href="#ill-spark" xlink:href="#ill-spark" transform="translate(100 94) scale(0.42)" fill="#ec4899" opacity="0.55"/>
+
+              <!-- soft bubble (behind, bottom-left) -->
+              <rect x="4" y="50" width="72" height="52" rx="18" fill="#fbdcec"/>
+              <path d="M24 100 L40 100 L30 114 Z" fill="#fbdcec"/>
+              <use href="#ill-spark" xlink:href="#ill-spark" transform="translate(24 62) scale(0.9)" fill="#ffffff"/>
+
+              <!-- main bubble (front, top-right) with typing dots -->
+              <rect x="46" y="2" width="90" height="54" rx="18" fill="#ec4899"/>
+              <path d="M70 54 L86 54 L78 70 Z" fill="#ec4899"/>
+              <circle cx="74" cy="29" r="4.5" fill="#ffffff"/>
+              <circle cx="90" cy="29" r="4.5" fill="#ffffff"/>
+              <circle cx="106" cy="29" r="4.5" fill="#ffffff"/>
+            </svg>
           </div>
 
           <!-- Free-tier daily scan counter + mocked rewarded-ad upsell.
@@ -110,11 +122,11 @@
           <div class="scan-who-section">
             <h3 class="scan-who-title">Who's this about?</h3>
             <div class="scan-who-grid">
-              <button type="button" class="scan-who-card" id="scan-who-dating" onclick="scanQuickWho('New Match', this)">
+              <button type="button" class="scan-who-card" id="scan-who-dating" onclick="scanQuickWho('Dating', this)">
                 <span class="scan-who-icon">
                   <svg width="30" height="30" viewBox="0 0 24 24" fill="#ec4899"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </span>
-                <span class="scan-who-label">Dating / Match</span>
+                <span class="scan-who-label">Dating</span>
               </button>
               <button type="button" class="scan-who-card" id="scan-who-crush" onclick="scanQuickWho('Crush', this)">
                 <span class="scan-who-icon">
@@ -1375,6 +1387,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260704e"></script>
+    <script src="script.js?v=20260704f"></script>
   </body>
 </html>

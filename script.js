@@ -1466,17 +1466,19 @@ const TELLZELO_STEPS = [
   },
 ];
 
-// ---- "Who's this about?" quick-pick cards (Dating/Match, Crush) ----
+// ---- "Who's this about?" quick-pick cards (Dating, Crush) ----
 // Shortcuts that set the same state.scanContext.who the full Tell Zelo More
 // wizard uses — generateReplies() and the wizard both read from the same
 // place, so a quick pick here is indistinguishable from picking it in step 1
 // of the wizard. Opening "Or tell zelo more" still gets the full flow.
+// Deliberately does NOT call updateTellZeloSummary() — that would also mark
+// the "Or tell zelo more" card as filled/highlighted, showing two selected
+// cards at once. Only one card should ever look selected at a time.
 function scanQuickWho(label, el) {
   state.scanContext.who = label;
   document.getElementById('scan-who-dating')?.classList.remove('selected');
   document.getElementById('scan-who-crush')?.classList.remove('selected');
   if (el) el.classList.add('selected');
-  updateTellZeloSummary();
   navigator.vibrate?.(4);
 }
 
@@ -1486,7 +1488,7 @@ function refreshScanWhoCards() {
   const who    = state.scanContext.who;
   const dating = document.getElementById('scan-who-dating');
   const crush  = document.getElementById('scan-who-crush');
-  dating?.classList.toggle('selected', who === 'New Match');
+  dating?.classList.toggle('selected', who === 'Dating');
   crush?.classList.toggle('selected', who === 'Crush');
 }
 
@@ -3979,6 +3981,11 @@ function renderAiCoachChat() {
   // Opening Zelo greeting (not part of the stored turns)
   wrap.appendChild(_aiCoachZeloBubble(_aiCoachGreeting(), { greeting: true }));
 
+  // Empty state only — suggested categories + quick actions, both of which
+  // just call sendAiCoachMessage(preset), the same function the input bar
+  // and the existing action pills already use.
+  if (_aiCoachChat.length === 0) wrap.appendChild(_aiCoachSuggestionsBlock());
+
   _aiCoachChat.forEach(msg => {
     if (msg.role === 'user') {
       wrap.appendChild(_aiCoachUserBubble(msg));
@@ -4067,6 +4074,62 @@ function _aiCoachActionPills() {
       </svg>
       Show more options
     </button>`;
+  return wrap;
+}
+
+// Empty-state suggestions — shown before the user's first message. Every
+// button just routes through sendAiCoachMessage(preset), the same pipeline
+// the input bar and the existing action pills use — no new backend logic.
+function _aiCoachSuggestionsBlock() {
+  const wrap = document.createElement('div');
+  wrap.className = 'aicoach-suggest';
+  wrap.innerHTML = `
+    <p class="aicoach-suggest-title">What do you need help with?</p>
+    <div class="aicoach-suggest-grid">
+      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('Is she interested?')">
+        <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="#ec4899"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>
+        <span class="aicoach-suggest-label">Is she interested?</span>
+      </button>
+      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('What should I reply?')">
+        <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+        <span class="aicoach-suggest-label">What should I reply?</span>
+      </button>
+      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('Did I mess up?')">
+        <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 15.5s1.5-2 4-2 4 2 4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span>
+        <span class="aicoach-suggest-label">Did I mess up?</span>
+      </button>
+      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('How do I keep the conversation going?')">
+        <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
+        <span class="aicoach-suggest-label">Keep the conv. going</span>
+      </button>
+      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('How do I ask her out?')">
+        <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="3" y1="11" x2="21" y2="11"/></svg></span>
+        <span class="aicoach-suggest-label">How do I ask her out?</span>
+      </button>
+      <button type="button" class="aicoach-suggest-card" onclick="document.getElementById('aicoach-input')?.focus()">
+        <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="#ec4899"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+        <span class="aicoach-suggest-label">Other question</span>
+      </button>
+    </div>
+    <p class="aicoach-suggest-title">Quick actions</p>
+    <div class="aicoach-suggest-quick">
+      <button type="button" class="aicoach-quick-pill" onclick="sendAiCoachMessage('Generate a reply for me')">
+        <svg class="aicoach-quick-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        Generate Reply
+      </button>
+      <button type="button" class="aicoach-quick-pill" onclick="sendAiCoachMessage('Explain what this message means')">
+        <svg class="aicoach-quick-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        Explain Message
+      </button>
+      <button type="button" class="aicoach-quick-pill" onclick="sendAiCoachMessage('Rewrite my message to sound better')">
+        <svg class="aicoach-quick-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+        Rewrite Message
+      </button>
+      <button type="button" class="aicoach-quick-pill" onclick="sendAiCoachMessage('Give me more replies like this')">
+        <svg class="aicoach-quick-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.5.4.8 1 .8 1.6v.2h6.4v-.2c0-.6.3-1.2.8-1.6A7 7 0 0 0 12 2Z"/></svg>
+        More Like This
+      </button>
+    </div>`;
   return wrap;
 }
 
