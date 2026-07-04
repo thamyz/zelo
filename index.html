@@ -1156,6 +1156,22 @@
 
 
       <!-- ============================================================
+           SCAN — random-text confirmation popup. Instant, client-side
+           heuristic only (no API call) — only flags genuine keyboard
+           mashing, never real short messages/slang.
+           ============================================================ -->
+      <div class="gib-confirm-overlay" id="gib-confirm-overlay" hidden onclick="gibConfirmEdit()">
+        <div class="gib-confirm-card" onclick="event.stopPropagation()">
+          <p class="gib-confirm-text">This doesn't look like a real message — analyze it anyway?</p>
+          <div class="gib-confirm-actions">
+            <button class="gib-confirm-proceed-btn" onclick="gibConfirmProceed()">Analyze Anyway</button>
+            <button class="gib-confirm-edit-btn" onclick="gibConfirmEdit()">Let me fix it</button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
            THREAD LINK PICKER  (Fix 7 — link a thread to AI Coach)
            ============================================================ -->
       <div class="thread-link-overlay" id="thread-link-overlay" hidden onclick="closeThreadLinkPicker()">

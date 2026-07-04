@@ -4865,6 +4865,66 @@ textarea { font-family: inherit; }
 
 
 /* ================================================================
+   SCAN — random-text confirmation popup
+   ================================================================ */
+.gib-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.gib-confirm-overlay[hidden] { display: none; }
+
+.gib-confirm-card {
+  background: #fff;
+  border-radius: 22px;
+  padding: 26px 22px;
+  width: 100%;
+  max-width: 300px;
+  text-align: center;
+}
+
+.gib-confirm-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+.gib-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gib-confirm-proceed-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 12px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gib-confirm-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 8px;
+  cursor: pointer;
+}
+
+
+/* ================================================================
    THREAD LINK PICKER  (Fix 7)
    ================================================================ */
 .thread-link-overlay {

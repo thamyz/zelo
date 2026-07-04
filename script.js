@@ -1698,7 +1698,12 @@ function _fileToBase64(file) {
 
 // Returns the extracted text, or null on any failure (missing key, bad
 // deploy, network error, empty result) — callers stop and show the
-// existing error message when this returns null.
+// generic error message when this returns null. Returns NO_MESSAGE_SENTINEL
+// when the model explicitly found no real conversation in the image (as
+// opposed to a technical failure) — callers show a different, friendlier
+// message for that case.
+const NO_MESSAGE_SENTINEL = "__NO_MESSAGE_FOUND__";
+
 async function _extractScreenshotText(file) {
   try {
     const base64Data = await _fileToBase64(file);
@@ -1724,11 +1729,21 @@ async function _extractScreenshotText(file) {
     }
 
     console.log("[Zelo OCR] openai-proxy response:", data);
-    return (data?.text || "").trim() || null;
+    const cleaned = (data?.text || "").trim();
+    if (!cleaned) return null;
+    if (cleaned.toUpperCase() === "NO_MESSAGE_FOUND") return NO_MESSAGE_SENTINEL;
+    return cleaned;
   } catch (err) {
     console.error("[Zelo OCR] openai-proxy invoke threw:", err);
     return null;
   }
+}
+
+function _showScanOcrError(message) {
+  const err = document.getElementById('scan-ocr-error');
+  if (!err) return;
+  err.textContent = message;
+  err.hidden = false;
 }
 
 
@@ -1779,6 +1794,68 @@ async function _fetchDeepSeekReply(tone) {
 
 
 // ================================================================
+// RANDOM-TEXT GUARD — a fast, purely client-side heuristic (no API call)
+// that flags genuine keyboard mashing ("asdkfjaskdjf"), not real short
+// messages or texting slang ("wyd", "lol", "k"). Deliberately conservative:
+// only trips when the text is long, has almost no vowels, contains a long
+// run of consonants, AND matches no common word at all — real messages
+// essentially never hit all three at once.
+// ================================================================
+
+const _GIB_COMMON_WORDS = new Set([
+  "the","a","an","i","you","u","me","my","your","is","are","was","were","be","been",
+  "to","of","in","on","at","for","and","or","but","if","so","not","no","yes","yeah",
+  "yea","ya","k","ok","okay","lol","lmao","omg","wtf","wyd","hbu","ttyl","lmk","smh",
+  "idk","imo","tbh","rn","fr","ngl","hey","hi","hello","sup","what","why","how","who",
+  "when","where","can","will","would","could","should","do","does","did","have","has",
+  "had","love","like","want","need","think","know","see","go","get","good","bad","yep",
+  "nope","nah","haha","hah","it","this","that","with","from","about","just","really",
+  "right","maybe","sure","cool","nice","wow","damn","babe","bro","girl","guy","time",
+  "day","night","today","tomorrow","up","down","out","over","then","than","she","he"
+]);
+
+function _looksLikeGibberish(text) {
+  const clean = text.trim();
+  if (clean.length < 8) return false; // too short to reliably judge — never flag short texts/slang
+
+  const words = clean.toLowerCase().split(/\s+/).filter(Boolean);
+  const hasCommonWord = words.some(w => _GIB_COMMON_WORDS.has(w.replace(/[^a-z']/g, "")));
+  if (hasCommonWord) return false;
+
+  const letters = clean.toLowerCase().replace(/[^a-z]/g, "");
+  if (letters.length < 8) return false;
+
+  // A run of 5+ consonants in a row essentially never happens in real
+  // messages or slang, but is common in keyboard mashing — combined with
+  // "no recognizable word anywhere", this is conservative enough to avoid
+  // flagging real (if terse or misspelled) messages.
+  return /[bcdfghjklmnpqrstvwxyz]{5,}/i.test(clean);
+}
+
+let _gibResolve = null;
+
+function _confirmGibberish() {
+  return new Promise(resolve => {
+    _gibResolve = resolve;
+    const overlay = document.getElementById('gib-confirm-overlay');
+    if (overlay) overlay.hidden = false;
+  });
+}
+
+function gibConfirmEdit() {
+  const overlay = document.getElementById('gib-confirm-overlay');
+  if (overlay) overlay.hidden = true;
+  if (_gibResolve) { const r = _gibResolve; _gibResolve = null; r(false); }
+}
+
+function gibConfirmProceed() {
+  const overlay = document.getElementById('gib-confirm-overlay');
+  if (overlay) overlay.hidden = true;
+  if (_gibResolve) { const r = _gibResolve; _gibResolve = null; r(true); }
+}
+
+
+// ================================================================
 // ASSISTANT: GENERATE
 // ================================================================
 
@@ -1815,6 +1892,13 @@ async function generateReplies() {
     return;
   }
 
+  // Instant, local check — flags genuine keyboard mashing before anything
+  // else happens. No API call, so normal messages pay zero extra delay.
+  if (userInput && _looksLikeGibberish(userInput)) {
+    const proceed = await _confirmGibberish();
+    if (!proceed) return; // user chose to edit — nothing consumed, no navigation
+  }
+
   state.scanSavedToThread = false;
   state.scanSkippedSave   = false;
 
@@ -1839,9 +1923,14 @@ async function generateReplies() {
     if (err) err.hidden = true;
 
     const extracted = await _extractScreenshotText(screenshotFile);
-    if (extracted == null) {
+    if (extracted === NO_MESSAGE_SENTINEL) {
       popScreen(); // back to Scan — nothing was generated, no scan consumed
-      if (err) err.hidden = false;
+      _showScanOcrError("Hmm, I don't think I caught a real message in that screenshot. Try a clearer one, or paste the message instead.");
+      return;
+    }
+    if (extracted == null) {
+      popScreen();
+      _showScanOcrError("Couldn't read the screenshot. Try pasting the message instead.");
       return;
     }
     messageText = extracted;

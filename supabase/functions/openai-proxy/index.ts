@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
             content: [
               {
                 type: "text",
-                text: "You are analyzing a chat screenshot. Read the full conversation. Identify which messages were sent by the user and which were received. Return only the last message that the user received — the most recent message from the other person. Return just that message text, nothing else, no explanation, no labels.",
+                text: "You are analyzing a chat screenshot. Read the full conversation. Identify which messages were sent by the user and which were received. Return only the last message that the user received — the most recent message from the other person. Return just that message text, nothing else, no explanation, no labels. Do not guess or invent a message. If the image does not show a real chat conversation — for example a random photo, a blank image, or anything with no actual visible messages — respond with exactly: NO_MESSAGE_FOUND",
               },
               {
                 type: "image_url",
