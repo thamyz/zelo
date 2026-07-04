@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
             content: [
               {
                 type: "text",
-                text: "Extract only the text messages from this screenshot. Return just the message text, nothing else.",
+                text: "You are analyzing a chat screenshot. Read the full conversation. Identify which messages were sent by the user and which were received. Return only the last message that the user received — the most recent message from the other person. Return just that message text, nothing else, no explanation, no labels.",
               },
               {
                 type: "image_url",

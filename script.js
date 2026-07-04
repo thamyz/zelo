@@ -1618,9 +1618,9 @@ function clearUploadedPhoto() {
 }
 
 // Called when the user selects a file. Just shows the thumbnail — both on
-// the dedicated upload page's dropzone and below the Upload Screenshot row
-// on the main Scan page. No text extraction happens here; that's deferred
-// to Analyze time (see _extractScreenshotText) and never shown to the user.
+// the dedicated upload page's dropzone and in place of the Upload Screenshot
+// row on the main Scan page. No text extraction happens here; that's
+// deferred to Analyze time (see _extractScreenshotText) and never shown.
 function handleUpload(input) {
   const file       = input.files[0];
   const dropzone    = document.getElementById("scan-dropzone");
@@ -1632,6 +1632,7 @@ function handleUpload(input) {
   const clearBtn  = document.getElementById("scan-upload-clear-btn");
   const minusBtn  = document.getElementById("scan-photo-minus-btn");
 
+  const uploadRow = document.getElementById("upload-row");
   const thumbWrap = document.getElementById("scan-thumb-preview");
   const thumbImg  = document.getElementById("scan-thumb-preview-img");
   const ocrErr    = document.getElementById("scan-ocr-error");
@@ -1649,6 +1650,7 @@ function handleUpload(input) {
 
       if (thumbImg)  thumbImg.src = reader.result;
       if (thumbWrap) thumbWrap.hidden = false;
+      if (uploadRow) uploadRow.hidden = true;
     };
     reader.readAsDataURL(file);
 
@@ -1669,6 +1671,7 @@ function handleUpload(input) {
     if (thumbWrap) thumbWrap.hidden = true;
     if (thumbImg)  thumbImg.src = "";
     if (ocrErr)    ocrErr.hidden = true;
+    if (uploadRow) uploadRow.hidden = false;
   }
 
   checkGenerateReady();
@@ -1777,6 +1780,24 @@ async function _fetchDeepSeekReply(tone) {
 // ASSISTANT: GENERATE
 // ================================================================
 
+// Shows either the screenshot image or the typed text in "Her message" —
+// never both. screenshotUrl is only passed when the scan came from an
+// attached screenshot (no typed text).
+function renderHerMessagePreview(text, screenshotUrl) {
+  const bubble = document.getElementById("asst-preview-bubble");
+  if (!bubble) return;
+  bubble.textContent = "";
+  if (screenshotUrl) {
+    const img = document.createElement("img");
+    img.className = "preview-bubble-img";
+    img.src = screenshotUrl;
+    img.alt = "Uploaded screenshot";
+    bubble.appendChild(img);
+  } else {
+    bubble.textContent = text || "";
+  }
+}
+
 async function generateReplies() {
   document.getElementById("asst-generate-btn").classList.remove('generate-btn--bounce');
 
@@ -1795,8 +1816,10 @@ async function generateReplies() {
   // Typed message always wins. Only when there's no typed text do we fall
   // back to the attached screenshot, read silently in the background via
   // openai-proxy — the extracted text is never shown, just used as the
-  // DeepSeek prompt below.
+  // DeepSeek prompt below. The screenshot itself (not the text) is what
+  // gets displayed in "Her message" for this case.
   let messageText = userInput;
+  let screenshotPreviewUrl = null;
   if (!messageText && hasImage) {
     const err = document.getElementById('scan-ocr-error');
     if (err) err.hidden = true;
@@ -1807,13 +1830,13 @@ async function generateReplies() {
       return; // stop — no scan consumed, nothing generated
     }
     messageText = extracted;
+    screenshotPreviewUrl = document.getElementById('scan-thumb-preview-img')?.src || null;
   }
 
   state.scanSavedToThread = false;
   state.scanSkippedSave   = false;
 
-  document.getElementById("asst-preview-bubble").textContent =
-    messageText || "📷 Screenshot uploaded";
+  renderHerMessagePreview(messageText, screenshotPreviewUrl);
 
   recordScan(context || messageText || "Screenshot scan");
 
@@ -1868,7 +1891,7 @@ function _onReplyRevealed(wasFirstRunScan, isExactExampleText) {
 
   // If a thread was pre-selected on the typing screen, auto-save now
   if (state.preselectThreadId) {
-    const preMsg   = document.getElementById('asst-preview-bubble').textContent;
+    const preMsg   = state.asstMessage;
     const preReply = document.getElementById('reply-text').textContent;
     const allThr   = getThreads();
     const preThr   = allThr.find(t => t.id === state.preselectThreadId);
@@ -3640,7 +3663,7 @@ function showSaveBeforeLeave() {
               <button class="save-reminder-leave-btn">Cancel</button>
             </div>`;
           card.querySelector('.save-reminder-save-btn').onclick = () => {
-            const message = document.getElementById('asst-preview-bubble').textContent;
+            const message = state.asstMessage;
             const reply   = document.getElementById('reply-text').textContent;
             const allThr  = getThreads();
             const idx     = allThr.findIndex(t => t.id === thr.id);
@@ -3673,7 +3696,7 @@ function showSaveBeforeLeave() {
 
     card.querySelectorAll('.save-reminder-thread-row:not(.save-reminder-new-row)').forEach(btn => {
       btn.onclick = () => {
-        const message = document.getElementById('asst-preview-bubble').textContent;
+        const message = state.asstMessage;
         const reply   = document.getElementById('reply-text').textContent;
         const allThr  = getThreads();
         const t       = allThr.find(t => t.id === btn.dataset.id);
@@ -3717,7 +3740,7 @@ function showSaveBeforeLeave() {
         threads.unshift(thr);
         setThreadCount(count + 1);
       }
-      const message = document.getElementById('asst-preview-bubble').textContent;
+      const message = state.asstMessage;
       const reply   = document.getElementById('reply-text').textContent;
       thr.scans.push({ id: 'scan_' + Date.now(), message, reply, time: Date.now() });
       saveThreads(threads);
@@ -3773,7 +3796,7 @@ function openThreadPicker() {
 }
 
 function saveToExistingThread(threadId) {
-  const message = document.getElementById('asst-preview-bubble').textContent;
+  const message = state.asstMessage;
   const reply   = document.getElementById('reply-text').textContent;
   const threads = getThreads();
   const thread  = threads.find(t => t.id === threadId);
@@ -3817,7 +3840,7 @@ function confirmSaveToNewThread() {
     return;
   }
 
-  const message = document.getElementById('asst-preview-bubble').textContent;
+  const message = state.asstMessage;
   const reply   = document.getElementById('reply-text').textContent;
   const threads = getThreads();
   const norm    = name.toLowerCase();

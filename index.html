@@ -114,17 +114,16 @@
                 </span>
                 <span class="upload-label-text" id="upload-label-text">Upload Screenshot</span>
               </button>
-            </div>
-          </div>
 
-          <!-- Screenshot preview — shown below the Upload Screenshot row as soon as a
-               file is picked. No text is extracted here; that happens silently at
-               Analyze time and is never shown to the user. -->
-          <div class="scan-thumb-preview" id="scan-thumb-preview" hidden>
-            <div class="scan-thumb-preview-wrap">
-              <img class="scan-thumb-preview-img" id="scan-thumb-preview-img" alt="Uploaded screenshot" />
-              <button class="scan-thumb-remove-btn" id="scan-thumb-remove-btn" type="button"
-                      onclick="event.stopPropagation(); clearUploadedPhoto()" aria-label="Remove screenshot">−</button>
+              <!-- Replaces the row above once a screenshot is attached — same
+                   footer slot, no extra vertical space. No text is extracted
+                   here; that happens silently at Analyze time and is never
+                   shown to the user. -->
+              <div class="scan-thumb-preview" id="scan-thumb-preview" hidden>
+                <img class="scan-thumb-preview-img" id="scan-thumb-preview-img" alt="Uploaded screenshot" />
+                <button class="scan-thumb-remove-btn" id="scan-thumb-remove-btn" type="button"
+                        onclick="event.stopPropagation(); clearUploadedPhoto()" aria-label="Remove screenshot">−</button>
+              </div>
             </div>
           </div>
 

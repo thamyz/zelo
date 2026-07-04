@@ -407,39 +407,40 @@ textarea { font-family: inherit; }
 
 .scan-inline-textarea:focus { outline: none; }
 
-/* Small preview of the uploaded screenshot — shown below the Upload
-   Screenshot row as soon as a file is picked; hidden again on clear. */
-.scan-thumb-preview { margin-top: 10px; }
+/* Small preview of the uploaded screenshot — replaces the Upload Screenshot
+   row in the same footer slot once a file is picked, so it costs no extra
+   vertical space. Fixed small size, never stretches. */
+.scan-thumb-preview {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
 
 .scan-thumb-preview[hidden] { display: none; }
 
-.scan-thumb-preview-wrap {
-  position: relative;
-  display: inline-block;
-}
-
 .scan-thumb-preview-img {
   display: block;
-  max-width: 140px;
-  max-height: 100px;
-  border-radius: var(--r-md);
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   object-fit: cover;
 }
 
-/* Small close button, top-left corner of the preview — tapping it clears
-   the attached screenshot completely. */
+/* Small close button, top-right corner of the preview — tapping it clears
+   the attached screenshot completely and restores the upload row. */
 .scan-thumb-remove-btn {
   position: absolute;
-  top: -8px;
-  left: -8px;
-  width: 22px;
-  height: 22px;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: rgba(28, 25, 23, 0.7);
   color: #fff;
   border: none;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -514,6 +515,15 @@ textarea { font-family: inherit; }
   color: var(--text-2);
   max-width: 86%;
   overflow-wrap: break-word;
+}
+
+/* Shown instead of text when the scan came from a screenshot */
+.preview-bubble-img {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: var(--r-sm);
+  object-fit: contain;
 }
 
 /* "Your Reply" page only — more breathing room, larger touch targets */
