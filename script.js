@@ -1795,11 +1795,13 @@ async function _fetchDeepSeekReply(tone) {
 
 // ================================================================
 // RANDOM-TEXT GUARD — a fast, purely client-side heuristic (no API call)
-// that flags genuine keyboard mashing ("asdkfjaskdjf"), not real short
-// messages or texting slang ("wyd", "lol", "k"). Deliberately conservative:
-// only trips when the text is long, has almost no vowels, contains a long
-// run of consonants, AND matches no common word at all — real messages
-// essentially never hit all three at once.
+// that flags genuine keyboard mashing ("adijaoidj;a", "asdkfjaskdjf"), not
+// real short messages or texting slang ("wyd", "lol", "k"). Scores the
+// text's letter-pairs (bigrams) against a list of common English bigrams —
+// real words/slang score high even when short or misspelled; random typing
+// (including vowel-scattered mashing that a vowel-count check would miss)
+// scores low. Only trips when there's also no recognizable common word
+// anywhere in the message.
 // ================================================================
 
 const _GIB_COMMON_WORDS = new Set([
@@ -1814,6 +1816,24 @@ const _GIB_COMMON_WORDS = new Set([
   "day","night","today","tomorrow","up","down","out","over","then","than","she","he"
 ]);
 
+const _GIB_COMMON_BIGRAMS = new Set([
+  "th","he","in","er","an","re","on","at","en","nd","ti","es","or","te","of","ed",
+  "is","it","al","ar","st","to","nt","ng","se","ha","as","ou","io","le","ve","co",
+  "me","de","hi","ri","ro","ic","ne","ea","ra","ce","li","ch","ll","be","ma","si",
+  "om","ur","ay","el","wi","la","ac","id","il","ta","no","wa","ct","di","ho","ni",
+  "ss","ee","oo","ow","wh","sh","ph","gh","ck"
+]);
+
+function _gibberishBigramScore(letters) {
+  if (letters.length < 2) return 1;
+  let hits = 0, total = 0;
+  for (let i = 0; i < letters.length - 1; i++) {
+    total++;
+    if (_GIB_COMMON_BIGRAMS.has(letters.slice(i, i + 2))) hits++;
+  }
+  return total ? hits / total : 1;
+}
+
 function _looksLikeGibberish(text) {
   const clean = text.trim();
   if (clean.length < 8) return false; // too short to reliably judge — never flag short texts/slang
@@ -1825,11 +1845,7 @@ function _looksLikeGibberish(text) {
   const letters = clean.toLowerCase().replace(/[^a-z]/g, "");
   if (letters.length < 8) return false;
 
-  // A run of 5+ consonants in a row essentially never happens in real
-  // messages or slang, but is common in keyboard mashing — combined with
-  // "no recognizable word anywhere", this is conservative enough to avoid
-  // flagging real (if terse or misspelled) messages.
-  return /[bcdfghjklmnpqrstvwxyz]{5,}/i.test(clean);
+  return _gibberishBigramScore(letters) < 0.25;
 }
 
 let _gibResolve = null;
@@ -2003,12 +2019,13 @@ function _onReplyRevealed(wasFirstRunScan, isExactExampleText) {
     state.preselectThreadId = null;
   }
 
-  // Exactly one of two mutually exclusive prompts: "Your turn. Type
-  // anything." shows once, on the result screen for the first-run
-  // pre-populated message, and never again after that — even if the user
-  // backs out without tapping "Got it". So the completion flag is marked
-  // the moment this result is shown, not on dismissal. Every subsequent
-  // result instead gets the plain "Go back" nav hint.
+  // "Your turn. Type anything." shows once, on the result screen for the
+  // first-run pre-populated message, and never again after that — even if
+  // the user backs out without tapping "Got it". So the completion flag is
+  // marked the moment this result is shown, not on dismissal. Every
+  // subsequent result shows no prompt at all — the header's back button
+  // is the only way back, and it already triggers the save reminder via
+  // goBackFromResult() regardless of which button calls it.
   const promptEl = document.getElementById("scan-post-result-prompt");
   if (wasFirstRunScan && isExactExampleText) {
     promptEl.innerHTML = `
@@ -2017,18 +2034,15 @@ function _onReplyRevealed(wasFirstRunScan, isExactExampleText) {
         <button type="button" onclick="dismissExampleScan()">Got it</button>
       </div>`;
     localStorage.setItem('zelo_scan_first_run', 'true');
+    promptEl.hidden = false;
   } else {
     if (wasFirstRunScan) {
       state.exampleScanActive = false;
       localStorage.setItem('zelo_scan_first_run', 'true');
     }
-    promptEl.innerHTML = `
-      <button type="button" class="scan-back-hint" onclick="goBackFromResult()">
-        <span class="scan-back-hint-arrow" aria-hidden="true">↩</span>
-        <span>Go back</span>
-      </button>`;
+    promptEl.innerHTML = "";
+    promptEl.hidden = true;
   }
-  promptEl.hidden = false;
 }
 
 // Clears the pre-filled onboarding example so the next scan is the user's own.

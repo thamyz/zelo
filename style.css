@@ -2502,29 +2502,6 @@ textarea { font-family: inherit; }
   border-radius: 99px;
 }
 
-/* Shown on every scan after the first — plain nav hint back to Scan input */
-.scan-back-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-  background: var(--s2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-2);
-  width: 100%;
-  text-align: left;
-}
-
-.scan-back-hint-arrow {
-  font-size: 1.1rem;
-  line-height: 1;
-  color: var(--accent);
-}
-
 /* Generate button pulse — draws attention while the first-run example
    message sits untapped. Stopped the instant Generate is tapped. */
 @keyframes zelo-pulse {
