@@ -357,9 +357,6 @@ textarea { font-family: inherit; }
   transition: padding 0.12s;
 }
 
-/* Roomier once a thumbnail is showing, so the larger preview isn't cramped */
-.msg-footer.has-thumb { padding: 10px 14px; }
-
 /* Upload — a quiet, accent-tinted affordance inside the footer */
 .upload-row {
   display: inline-flex;
@@ -373,9 +370,6 @@ textarea { font-family: inherit; }
 }
 
 .upload-row:hover { background: var(--accent-soft); }
-
-/* Once attached, the thumbnail itself is the confirmation — no filename text */
-.upload-row.has-file .upload-label-text { display: none; }
 
 .char-count {
   font-size: 0.72rem;
@@ -393,27 +387,11 @@ textarea { font-family: inherit; }
 
 .upload-icon-sm[hidden] { display: none; }
 
-/* Thumbnail shown on the main Scan page once a screenshot is attached —
-   the image itself is the confirmation, no filename text needed. */
-.upload-row-thumb {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--r-sm);
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.upload-row-thumb[hidden] { display: none; }
-
 .upload-label-text {
   font-size: 0.92rem;
   font-weight: 600;
   color: inherit;
 }
-
-/* Uploaded state */
-.upload-row.has-file { color: var(--green); }
-.upload-row.has-file:hover { background: rgba(34, 197, 94, 0.10); }
 
 /* Message card — the conversation area. Important by position, not by size:
    sized for pasting a message or two, never paragraph-length writing. */
@@ -1081,36 +1059,6 @@ textarea { font-family: inherit; }
 }
 
 .scan-photo-minus-btn[hidden] { display: none; }
-
-/* Screenshot reading — overlay while openai-proxy extracts the text,
-   same sparkle-pulse style as the Analyze loading screen
-   (.scan-result-loading-spark / @keyframes sparklePulse) */
-.scan-ocr-loading {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: var(--s1);
-  border-radius: var(--r-lg);
-  z-index: 3;
-}
-
-.scan-ocr-loading[hidden] { display: none; }
-
-.scan-ocr-loading-spark {
-  display: flex;
-  color: var(--accent);
-  animation: sparklePulse 1.3s ease-in-out infinite;
-}
-
-.scan-ocr-loading-text {
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--text-2);
-}
 
 /* Success — checkmark badge, opposite corner from the minus button */
 .scan-ocr-check {

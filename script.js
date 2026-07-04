@@ -1339,15 +1339,6 @@ function clearScanInput() {
   // Reset the two "Who's this about?" quick-pick cards
   document.getElementById('scan-who-dating')?.classList.remove('selected');
   document.getElementById('scan-who-crush')?.classList.remove('selected');
-  // Reset upload row
-  const thumb = document.getElementById('upload-row-thumb');
-  const label = document.getElementById('upload-label-text');
-  const icon  = document.getElementById('upload-icon-sm');
-  const row   = document.getElementById('upload-row');
-  if (thumb) { thumb.hidden = true; thumb.src = ''; }
-  if (label) label.hidden = false;
-  if (icon)  icon.hidden  = false;
-  if (row)   row.classList.remove('has-file');
 }
 
 function updateScanMessagePreview() {
@@ -1631,11 +1622,6 @@ function clearUploadedPhoto() {
 // row preview (back on the main Scan page — also just a thumbnail, no text).
 function handleUpload(input) {
   const file       = input.files[0];
-  const row        = document.getElementById("upload-row");
-  const footer      = document.querySelector(".msg-footer");
-  const labelEl     = document.getElementById("upload-label-text");
-  const rowIcon     = document.getElementById("upload-icon-sm");
-  const rowThumb    = document.getElementById("upload-row-thumb");
   const dropzone    = document.getElementById("scan-dropzone");
   const dzIcon      = document.getElementById("scan-dropzone-icon");
   const dzTitle     = document.getElementById("scan-dropzone-title");
@@ -1646,8 +1632,6 @@ function handleUpload(input) {
   const minusBtn  = document.getElementById("scan-photo-minus-btn");
 
   if (file) {
-    row.classList.add("has-file");
-    footer.classList.add("has-thumb");
     dropzone.classList.add("has-file");
     if (clearBtn) clearBtn.hidden = false;
     if (minusBtn) minusBtn.hidden = false;
@@ -1656,10 +1640,6 @@ function handleUpload(input) {
     reader.onload = () => {
       dzThumb.src    = reader.result;
       dzThumb.hidden = false;
-      // Same image, shown larger on the main Scan page row — the image
-      // itself confirms the attachment, no filename text needed.
-      rowThumb.src    = reader.result;
-      rowThumb.hidden = false;
 
       // reader.result is "data:<mimeType>;base64,<data>" — reuse it
       // instead of reading the file a second time.
@@ -1672,19 +1652,12 @@ function handleUpload(input) {
     };
     reader.readAsDataURL(file);
 
-    rowIcon.hidden = true;
     dzIcon.hidden  = true;
     dzTitle.hidden = true;
     dzSub.hidden   = true;
   } else {
-    labelEl.textContent = "Upload Screenshot";
-    row.classList.remove("has-file");
-    footer.classList.remove("has-thumb");
     dropzone.classList.remove("has-file");
 
-    rowThumb.hidden = true;
-    rowThumb.src    = "";
-    rowIcon.hidden  = false;
     dzThumb.hidden = true;
     dzThumb.src    = "";
     dzIcon.hidden  = false;
@@ -1709,42 +1682,21 @@ function handleUpload(input) {
 
 let _ocrToken = 0; // invalidated on every new upload/clear so a stale call can't clobber a newer one
 
-// Floor for how long the "Reading your screenshot…" state stays visible.
-// Without this, a call that fails fast (bad deploy, missing secret, network
-// error) hides the loading state almost as soon as it appears — looking like
-// the loading state was skipped even though it was shown for the call's
-// entire (very short) real duration.
-const MIN_OCR_LOADING_MS = 500;
-
 function runScreenshotOcr(base64Data, mimeType) {
   const token = ++_ocrToken;
-  const load  = document.getElementById("scan-ocr-loading");
   const check = document.getElementById("scan-ocr-check");
   const err   = document.getElementById("scan-ocr-error");
 
   if (err)   err.hidden = true;
   if (check) check.hidden = true;
-  if (load)  load.hidden = false;
 
   console.log("[Zelo OCR] calling openai-proxy — base64 length:", base64Data.length, "mimeType:", mimeType);
-  const startedAt = Date.now();
-
-  // Applies the final state (success or error) no sooner than
-  // MIN_OCR_LOADING_MS after the loading state appeared.
-  const settle = (apply) => {
-    const wait = Math.max(0, MIN_OCR_LOADING_MS - (Date.now() - startedAt));
-    setTimeout(() => {
-      if (token !== _ocrToken) return; // a newer upload/clear superseded this call
-      if (load) load.hidden = true;
-      apply();
-    }, wait);
-  };
 
   zeloSupabase.functions.invoke('openai-proxy', {
     body: { image: base64Data, mimeType }
   })
     .then(async ({ data, error }) => {
-      if (token !== _ocrToken) return;
+      if (token !== _ocrToken) return; // a newer upload/clear superseded this call
 
       if (error) {
         // supabase-js only puts a generic message on error.message for a
@@ -1757,27 +1709,25 @@ function runScreenshotOcr(base64Data, mimeType) {
           }
         } catch (_) { /* best-effort — fall back to error.message */ }
         console.error("[Zelo OCR] openai-proxy invoke error:", error, "— response body:", details);
-        settle(_showOcrError);
+        _showOcrError();
         return;
       }
 
       console.log("[Zelo OCR] openai-proxy response:", data);
       const cleaned = (data?.text || "").trim();
-      if (!cleaned) { settle(_showOcrError); return; }
+      if (!cleaned) { _showOcrError(); return; }
 
-      settle(() => {
-        const input = document.getElementById("asst-input");
-        if (input) {
-          input.value = cleaned;
-          onAsstInput();
-        }
-        if (check) check.hidden = false;
-      });
+      const input = document.getElementById("asst-input");
+      if (input) {
+        input.value = cleaned;
+        onAsstInput();
+      }
+      if (check) check.hidden = false;
     })
     .catch(err => {
       if (token !== _ocrToken) return;
       console.error("[Zelo OCR] openai-proxy invoke threw:", err);
-      settle(_showOcrError);
+      _showOcrError();
     });
 }
 
@@ -1789,10 +1739,8 @@ function _showOcrError() {
 
 function hideScreenshotOcrUi() {
   _ocrToken++;
-  const load  = document.getElementById("scan-ocr-loading");
   const check = document.getElementById("scan-ocr-check");
   const err   = document.getElementById("scan-ocr-error");
-  if (load)  load.hidden = true;
   if (check) check.hidden = true;
   if (err)   err.hidden = true;
 }
