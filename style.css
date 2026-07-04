@@ -5128,6 +5128,7 @@ textarea { font-family: inherit; }
   overflow: hidden;
   background: linear-gradient(155deg, #f7a8d0 0%, #ec4899 55%, #db2777 100%);
   box-shadow: 0 22px 50px rgba(236,72,153,0.30);
+  transition: transform 0.5s ease-in, opacity 0.5s ease-in;
 }
 .cine-swipe-card--back {
   transform: translate(-50%, -50%) scale(0.96) translate(-16px, 10px) rotate(-5deg);
@@ -5147,10 +5148,14 @@ textarea { font-family: inherit; }
   box-shadow: 0 6px 16px rgba(28,25,23,0.18);
   transform: rotate(-10deg);
 }
-@keyframes cineSwipeFly {
-  to { transform: translate(calc(-50% + 420px), -50%) rotate(14deg); opacity: 0; }
+/* translateX(120%) of the card's own width, rotate 20deg clockwise — composed
+   onto the existing centering transform so it stays vertically centered
+   while it slides out. Driven by the .transition above; JS listens for
+   transitionend to trigger the instant state swap. */
+.cine-swipe-card--fly {
+  transform: translate(calc(-50% + 120%), -50%) rotate(20deg);
+  opacity: 0;
 }
-.cine-swipe-card--fly { animation: cineSwipeFly 0.6s ease-in forwards; }
 .cine-swipe-controls {
   position: absolute;
   left: 30px; right: 30px;

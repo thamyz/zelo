@@ -2112,7 +2112,7 @@ function cineGoTo(n) {
     // Screen 2 (swipe -> match) drives its own transition — no shared CTA.
     nextBtn.classList.toggle('cine-hidden', n === 2);
     if (n === 1)      nextBtn.textContent = 'Next';
-    else if (n === 3) nextBtn.textContent = 'Continue';
+    else if (n === 3) nextBtn.textContent = 'Allow & continue';
     else if (n === 4) nextBtn.textContent = 'Allow & continue';
     else if (n === 5) nextBtn.textContent = 'Get Started →';
   }
@@ -2137,8 +2137,8 @@ function cineNext() {
   if (cineStep === 0 || cineStep === 'showcase') return;  // non-interactive via this button
   const btn = document.getElementById('cine-next');
   if (btn?.disabled) return;
-  if (cineStep === 3) requestNotifPermission();      // Continue fires the real prompt
-  if (cineStep === 4) requestTrackingPermission();    // Allow & continue fires the tracking API
+  if (cineStep === 3) requestNotifPermission();       // "Allow & continue" fires the real prompt
+  if (cineStep === 4) requestTrackingPermission();    // "Allow & continue" fires the tracking API
   if (cineStep >= CINE_LAST) { cineFinishPhase2(); return; }
   cineGoTo(cineStep + 1);
 }
@@ -2155,7 +2155,7 @@ function cineScreenTap(e) {
   if (!overlay || overlay.hasAttribute('hidden')) return;
   if (cineStep !== 2) return;
   const matchState = document.getElementById('cine-match-state');
-  if (matchState && !matchState.hidden) cineGoTo(3);
+  if (matchState && matchState.style.display !== 'none') cineGoTo(3);
 }
 
 // ---- Screen 1 — name input (profanity-filtered, no bad/empty/space-only) ----
@@ -2208,39 +2208,55 @@ function cineNameInput() {
 }
 
 // ---- Screen 2 — swipe demo -> match (auto after 2s, tap match to advance) ----
-// Simple, reliable sequence: hold static 2s -> front card slides + rotates
-// off-screen right over 600ms (ease-in) -> instant swap to the match state
-// (no transition on the card itself) -> burst lines + CTA text fade in.
+// Simple, reliable sequence: hold static 2s -> front card transitions
+// (transform+opacity, 500ms ease-in) off-screen right -> on the real
+// transitionend event, swap display:none/flex between the two states
+// instantly (no fade) -> burst lines + CTA text fade in.
+// Uses explicit style.display rather than the `hidden` attribute: the
+// shared `.cine-swipe-state, .cine-match-state { display: flex; }` rule
+// is an author style, and author styles always beat the browser's
+// built-in `[hidden] { display: none }` UA rule — so toggling `.hidden`
+// alone never actually hid either state.
+let _cineSwipeTransitionHandler = null;
+
 function cineRunSwipeEntrance() {
-  const swipeState = document.getElementById('cine-swipe-state');
+  const likeState  = document.getElementById('cine-swipe-state');
   const matchState = document.getElementById('cine-match-state');
   const card       = document.getElementById('cine-swipe-card');
-  if (!swipeState || !matchState || !card) return;
+  if (!likeState || !matchState || !card) return;
 
   const burstEl = matchState.querySelector('.cine-match-burst');
   const ctaEl   = matchState.querySelector('.cine-match-cta');
 
-  swipeState.hidden = false;
-  matchState.hidden = true;
+  if (_cineSwipeTransitionHandler) {
+    card.removeEventListener('transitionend', _cineSwipeTransitionHandler);
+    _cineSwipeTransitionHandler = null;
+  }
+
+  likeState.style.display  = 'flex';
+  matchState.style.display = 'none';
   card.classList.remove('cine-swipe-card--fly');
   if (burstEl) burstEl.classList.remove('cine-match-burst--in');
   if (ctaEl)   ctaEl.classList.remove('cine-match-cta--in');
-  void card.offsetWidth;
+  void card.offsetWidth;   // force reflow so the removed class registers
 
   _cineDelay(() => {
+    _cineSwipeTransitionHandler = () => {
+      card.removeEventListener('transitionend', _cineSwipeTransitionHandler);
+      _cineSwipeTransitionHandler = null;
+
+      likeState.style.display  = 'none';   // instant swap — no transition
+      matchState.style.display = 'flex';
+      navigator.vibrate?.(16);
+      _cineNextFrame(() => {
+        if (burstEl) burstEl.classList.add('cine-match-burst--in');
+        if (ctaEl)   ctaEl.classList.add('cine-match-cta--in');
+      });
+    };
+    card.addEventListener('transitionend', _cineSwipeTransitionHandler, { once: true });
     card.classList.add('cine-swipe-card--fly');
     navigator.vibrate?.(8);
   }, 2000);
-
-  _cineDelay(() => {
-    swipeState.hidden = true;
-    matchState.hidden = false;   // instant swap — no transition on the card
-    navigator.vibrate?.(16);
-    _cineNextFrame(() => {
-      if (burstEl) burstEl.classList.add('cine-match-burst--in');
-      if (ctaEl)   ctaEl.classList.add('cine-match-cta--in');
-    });
-  }, 2600);
 }
 
 // ---- Screen 3 — notifications ----
