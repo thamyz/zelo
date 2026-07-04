@@ -1339,6 +1339,8 @@ function clearScanInput() {
   // Reset the two "Who's this about?" quick-pick cards
   document.getElementById('scan-who-dating')?.classList.remove('selected');
   document.getElementById('scan-who-crush')?.classList.remove('selected');
+  // Full reset once a scan is done — screenshot goes too, back to a blank Scan tab
+  clearUploadedPhoto();
 }
 
 function updateScanMessagePreview() {
@@ -1813,6 +1815,18 @@ async function generateReplies() {
     return;
   }
 
+  state.scanSavedToThread = false;
+  state.scanSkippedSave   = false;
+
+  // Navigate to the loading screen immediately — the silent OCR step (when
+  // needed) and the DeepSeek call both run while "Zelo is thinking…" is
+  // already on screen, so Analyze never looks like it's frozen/done nothing.
+  const loading = document.getElementById("scan-result-loading");
+  const content = document.getElementById("scan-result-content");
+  loading.hidden = false;
+  content.hidden = true;
+  pushScreen("scan-result");
+
   // Typed message always wins. Only when there's no typed text do we fall
   // back to the attached screenshot, read silently in the background via
   // openai-proxy — the extracted text is never shown, just used as the
@@ -1826,15 +1840,13 @@ async function generateReplies() {
 
     const extracted = await _extractScreenshotText(screenshotFile);
     if (extracted == null) {
+      popScreen(); // back to Scan — nothing was generated, no scan consumed
       if (err) err.hidden = false;
-      return; // stop — no scan consumed, nothing generated
+      return;
     }
     messageText = extracted;
     screenshotPreviewUrl = document.getElementById('scan-thumb-preview-img')?.src || null;
   }
-
-  state.scanSavedToThread = false;
-  state.scanSkippedSave   = false;
 
   renderHerMessagePreview(messageText, screenshotPreviewUrl);
 
@@ -1858,12 +1870,6 @@ async function generateReplies() {
   // Reset to Smooth style on each new generate
   state.asstStyle = "smooth";
   updateStylePills("smooth");
-
-  const loading = document.getElementById("scan-result-loading");
-  const content = document.getElementById("scan-result-content");
-  loading.hidden = false;
-  content.hidden = true;
-  pushScreen("scan-result");
 
   // Fetch the default (Smooth) reply immediately; reveal when it arrives
   _fetchDeepSeekReply("smooth")
