@@ -239,9 +239,9 @@ textarea { font-family: inherit; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
-  padding: 32px 0 4px;
+  padding: 12px 0 4px;
 }
 
 /* Brand hero — anchored at top of the page */
@@ -423,7 +423,7 @@ textarea { font-family: inherit; }
 
 /* Inline message textarea on the main Scan page */
 .scan-inline-textarea {
-  min-height: 130px;
+  min-height: 78px;
   padding: 16px 18px 14px;
 }
 
@@ -4312,7 +4312,7 @@ textarea { font-family: inherit; }
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  margin-top: 14px;
+  margin-top: 2px;
 }
 .scan-headline-text { flex: 1; min-width: 0; }
 .scan-headline {
