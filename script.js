@@ -3930,6 +3930,10 @@ function openAiCoach() {
   _aiCoachChat = thread && Array.isArray(thread.coachChat) ? thread.coachChat.slice() : [];
   renderAiCoachContext();
   renderAiCoachChat();
+  // Suggestions panel starts open on a fresh conversation, collapsed if
+  // there's already history — but the user can toggle it either way anytime.
+  _aiCoachSuggestOpen = _aiCoachChat.length === 0;
+  renderAiCoachSuggestPanel();
   const limit = document.getElementById('aicoach-limit');
   if (limit) limit.hidden = true;
   pushScreen('ai-coach');
@@ -3981,11 +3985,6 @@ function renderAiCoachChat() {
   // Opening Zelo greeting (not part of the stored turns)
   wrap.appendChild(_aiCoachZeloBubble(_aiCoachGreeting(), { greeting: true }));
 
-  // Empty state only — suggested categories + quick actions, both of which
-  // just call sendAiCoachMessage(preset), the same function the input bar
-  // and the existing action pills already use.
-  if (_aiCoachChat.length === 0) wrap.appendChild(_aiCoachSuggestionsBlock());
-
   _aiCoachChat.forEach(msg => {
     if (msg.role === 'user') {
       wrap.appendChild(_aiCoachUserBubble(msg));
@@ -4011,29 +4010,19 @@ function _aiCoachZeloBubble(text, opts = {}) {
     ? `<span class="aicoach-msg-avatar" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>`
     : '';
   const hi = opts.greeting ? `<p class="aicoach-bubble-hi">Hi! I'm Zelo.</p>` : '';
-  const time = opts.time ? `<span class="aicoach-msg-time">${formatTime(opts.time)}</span>` : '';
   row.innerHTML = `
     ${avatar}
     <div class="aicoach-bubble aicoach-bubble--zelo">
       ${hi}
       <p class="aicoach-bubble-text">${text}</p>
-    </div>
-    ${time}`;
+    </div>`;
   return row;
 }
 
 function _aiCoachUserBubble(msg) {
   const row = document.createElement('div');
   row.className = 'aicoach-msg aicoach-msg--user';
-  row.innerHTML = `
-    <div class="aicoach-bubble aicoach-bubble--user">${msg.content}</div>
-    <div class="aicoach-msg-meta">
-      <span class="aicoach-msg-time">${formatTime(msg.time)}</span>
-      <svg class="aicoach-tick" width="16" height="12" viewBox="0 0 24 16" fill="none" stroke="currentColor"
-           stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="2 8 7 13 14 4"/><polyline points="10 13 17 4"/>
-      </svg>
-    </div>`;
+  row.innerHTML = `<div class="aicoach-bubble aicoach-bubble--user">${msg.content}</div>`;
   return row;
 }
 
@@ -4077,32 +4066,49 @@ function _aiCoachActionPills() {
   return wrap;
 }
 
-// Empty-state suggestions — shown before the user's first message. Every
-// button just routes through sendAiCoachMessage(preset), the same pipeline
-// the input bar and the existing action pills use — no new backend logic.
-function _aiCoachSuggestionsBlock() {
-  const wrap = document.createElement('div');
-  wrap.className = 'aicoach-suggest';
-  wrap.innerHTML = `
+// ---- Collapsible suggestions panel (anchored above the input bar) ----
+// Open by default on a fresh conversation, auto-collapses once a message
+// is sent, reopenable anytime via the toggle. Every category/quick-action
+// button routes through aiCoachPromptTap(), which asks for her message
+// first if there's no real linked context — it does NOT hand the button's
+// own label straight to the AI as if it were a fully-formed question.
+let _aiCoachSuggestOpen = true;
+
+function toggleAiCoachSuggestPanel() {
+  _aiCoachSuggestOpen = !_aiCoachSuggestOpen;
+  _updateAiCoachSuggestToggle();
+}
+
+function _updateAiCoachSuggestToggle() {
+  const panel   = document.getElementById('aicoach-suggest-panel');
+  const chevron = document.getElementById('aicoach-suggest-toggle-chevron');
+  if (panel)   panel.classList.toggle('open', _aiCoachSuggestOpen);
+  if (chevron) chevron.classList.toggle('aicoach-suggest-toggle-chevron--open', _aiCoachSuggestOpen);
+}
+
+function renderAiCoachSuggestPanel() {
+  const body = document.getElementById('aicoach-suggest-body');
+  if (!body) return;
+  body.innerHTML = `
     <p class="aicoach-suggest-title">What do you need help with?</p>
     <div class="aicoach-suggest-grid">
-      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('Is she interested?')">
+      <button type="button" class="aicoach-suggest-card" onclick="aiCoachPromptTap('Is she interested?')">
         <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="#ec4899"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>
         <span class="aicoach-suggest-label">Is she interested?</span>
       </button>
-      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('What should I reply?')">
+      <button type="button" class="aicoach-suggest-card" onclick="aiCoachPromptTap('What should I reply?')">
         <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
         <span class="aicoach-suggest-label">What should I reply?</span>
       </button>
-      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('Did I mess up?')">
+      <button type="button" class="aicoach-suggest-card" onclick="aiCoachPromptTap('Did I mess up?')">
         <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 15.5s1.5-2 4-2 4 2 4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span>
         <span class="aicoach-suggest-label">Did I mess up?</span>
       </button>
-      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('How do I keep the conversation going?')">
+      <button type="button" class="aicoach-suggest-card" onclick="aiCoachPromptTap('How do I keep the conversation going?')">
         <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
         <span class="aicoach-suggest-label">Keep the conv. going</span>
       </button>
-      <button type="button" class="aicoach-suggest-card" onclick="sendAiCoachMessage('How do I ask her out?')">
+      <button type="button" class="aicoach-suggest-card" onclick="aiCoachPromptTap('How do I ask her out?')">
         <span class="aicoach-suggest-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="3" y1="11" x2="21" y2="11"/></svg></span>
         <span class="aicoach-suggest-label">How do I ask her out?</span>
       </button>
@@ -4113,24 +4119,52 @@ function _aiCoachSuggestionsBlock() {
     </div>
     <p class="aicoach-suggest-title">Quick actions</p>
     <div class="aicoach-suggest-quick">
-      <button type="button" class="aicoach-quick-pill" onclick="sendAiCoachMessage('Generate a reply for me')">
+      <button type="button" class="aicoach-quick-pill" onclick="aiCoachPromptTap('Generate a reply for me')">
         <svg class="aicoach-quick-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
         Generate Reply
       </button>
-      <button type="button" class="aicoach-quick-pill" onclick="sendAiCoachMessage('Explain what this message means')">
+      <button type="button" class="aicoach-quick-pill" onclick="aiCoachPromptTap('Explain what this message means')">
         <svg class="aicoach-quick-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         Explain Message
       </button>
-      <button type="button" class="aicoach-quick-pill" onclick="sendAiCoachMessage('Rewrite my message to sound better')">
+      <button type="button" class="aicoach-quick-pill" onclick="aiCoachPromptTap('Rewrite my message to sound better')">
         <svg class="aicoach-quick-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
         Rewrite Message
       </button>
-      <button type="button" class="aicoach-quick-pill" onclick="sendAiCoachMessage('Give me more replies like this')">
+      <button type="button" class="aicoach-quick-pill" onclick="aiCoachPromptTap('Give me more replies like this')">
         <svg class="aicoach-quick-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.5.4.8 1 .8 1.6v.2h6.4v-.2c0-.6.3-1.2.8-1.6A7 7 0 0 0 12 2Z"/></svg>
         More Like This
       </button>
     </div>`;
-  return wrap;
+  _updateAiCoachSuggestToggle();
+}
+
+// True once there's an actual message on record (a linked thread with real
+// scans) that the AI can reason about — not just a category label with
+// nothing behind it.
+function _aiCoachHasRealContext() {
+  const thread = getLinkedThread();
+  return !!(thread && Array.isArray(thread.scans) && thread.scans.length > 0);
+}
+
+function aiCoachPromptTap(question) {
+  if (_aiCoachHasRealContext()) {
+    // A linked thread already gives the AI something real to work with.
+    sendAiCoachMessage(question);
+    return;
+  }
+  // No message on record yet — ask for it instead of letting the AI guess.
+  _aiCoachChat.push({ role: 'user', content: question, time: Date.now() });
+  _aiCoachChat.push({
+    role: 'assistant',
+    content: "What did she write? Paste her message (or link a thread) and I'll take it from there.",
+    suggestions: [],
+    time: Date.now()
+  });
+  renderAiCoachChat();
+  _aiCoachSuggestOpen = false;
+  _updateAiCoachSuggestToggle();
+  setTimeout(() => document.getElementById('aicoach-input')?.focus(), 60);
 }
 
 function handleAiCoachKeyDown(e) {
@@ -4186,6 +4220,11 @@ async function sendAiCoachMessage(preset) {
   if (input && preset == null) input.value = '';
   _aiCoachChat.push({ role: 'user', content: text, time: Date.now() });
   if (!isPaidUser()) decrementScanCount();
+
+  // Sending a message collapses the suggestions panel — it can still be
+  // reopened manually anytime via the toggle.
+  _aiCoachSuggestOpen = false;
+  _updateAiCoachSuggestToggle();
 
   const placeholder = { role: 'assistant', content: '…', suggestions: [], time: Date.now() };
   _aiCoachChat.push(placeholder);
