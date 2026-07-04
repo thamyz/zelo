@@ -4916,7 +4916,7 @@ textarea { font-family: inherit; }
 }
 
 /* ---- PHASE 1 — typewriter -> word morph -> logo (unchanged) ---- */
-.cine-p1-stage { text-align: center; }
+.cine-p1-stage { text-align: center; margin-bottom: 50px; }
 .cine-p1-type[hidden],
 .cine-p1-word[hidden],
 .cine-p1-logo[hidden] { display: none; }
@@ -4952,7 +4952,13 @@ textarea { font-family: inherit; }
   justify-content: center;
   gap: 2px;
 }
-.cine-p1-spark { color: #ec4899; font-size: 2.4rem; display: inline-block; }
+.cine-p1-spark {
+  color: #ec4899;
+  font-size: 2.4rem;
+  display: inline-block;
+  position: relative;
+  top: -10px;   /* lifts it toward the top-right of "Zelo" instead of mid-height */
+}
 @keyframes cineP1LogoIn {
   0%   { opacity: 0; transform: scale(0.8); }
   60%  { transform: scale(1.06); }
@@ -4972,7 +4978,7 @@ textarea { font-family: inherit; }
 .cine-showcase {
   justify-content: space-between;
   align-items: stretch;
-  padding: 48px 28px 36px;
+  padding: 48px 28px 58px;
   gap: 0;
 }
 .cine-showcase-top {
