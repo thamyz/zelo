@@ -322,12 +322,12 @@
 
         <div class="screen-header">
           <button class="back-btn" onclick="popScreen()">‹</button>
-          <span class="screen-title">Profile</span>
+          <span class="screen-title">Account</span>
         </div>
 
         <div class="dash-layout">
 
-          <!-- Profile card -->
+          <!-- Header: avatar, display name (or "Player #XXXX" fallback), member label -->
           <div class="dash-profile-card">
             <div class="dash-avatar" id="dash-avatar">Y</div>
             <div class="dash-profile-info">
@@ -336,7 +336,7 @@
             </div>
           </div>
 
-          <!-- Dashboard stats -->
+          <!-- Stats row -->
           <div class="dash-stats">
             <div class="dash-stat">
               <span class="dash-stat-num" id="stat-scans">0</span>
@@ -352,41 +352,200 @@
             </div>
           </div>
 
-          <!-- Recent scans -->
+          <!-- History — reuses the exact same data/rows as the full History
+               screen (getThreads() for Scans, chatStore for Matches, see
+               screen-history). One data source, tabbed here as a compact
+               preview; "See all" opens the full screen on the same tab. -->
           <div class="dash-section">
-            <span class="block-label">Recent scans</span>
-            <div class="dash-list" id="dash-recent-scans"></div>
+            <div class="dash-section-head">
+              <span class="block-label">History</span>
+              <button class="dash-seeall-btn" onclick="openHistory(_dashHistoryTab)">See all</button>
+            </div>
+            <div class="dash-history-tabs">
+              <button class="dash-history-tab active" id="dash-history-tab-scans"
+                      onclick="setDashHistoryTab('scans')">Scans</button>
+              <button class="dash-history-tab" id="dash-history-tab-matches"
+                      onclick="setDashHistoryTab('matches')">Matches</button>
+            </div>
+            <div class="dash-list" id="dash-history-list"></div>
           </div>
 
-          <!-- Recent matches -->
+          <!-- Leaderboard — compact card, reuses the same rank computation
+               as the full leaderboard screen (getMyLeaderboardEntry()). -->
           <div class="dash-section">
-            <span class="block-label">Recent matches</span>
-            <div class="dash-matches-row" id="dash-recent-matches"></div>
-          </div>
-
-          <!-- Leaderboard entry (paid only) -->
-          <div class="dash-section">
-            <button class="dash-menu-row dash-lb-btn" onclick="openLeaderboard()">
-              <span>🏆 Leaderboard</span><span>›</span>
+            <button class="dash-lb-card" id="dash-lb-card" onclick="openLeaderboard()">
+              <span class="dash-lb-icon" aria-hidden="true">🏆</span>
+              <span class="dash-lb-text">
+                <span class="dash-lb-title">Leaderboard</span>
+                <span class="dash-lb-rank" id="dash-lb-rank">Rank #—</span>
+              </span>
+              <span class="dash-lb-chevron" aria-hidden="true">›</span>
             </button>
           </div>
 
-          <!-- Settings -->
+          <!-- Settings — section label that opens the Settings sub-page -->
           <div class="dash-section">
-            <span class="block-label">Settings</span>
+            <button class="dash-menu-row dash-settings-btn" onclick="openAccountSettings()">
+              Settings <span>›</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: ACCOUNT SETTINGS
+           Distinct from the top-level Account page (screen-dashboard) —
+           "Login & Security" below is intentionally never called
+           "Account", to avoid confusion between the two in code and UI.
+           Sub-panels are toggled in place (not via pushScreen) so "back"
+           can return to the Settings list instead of leaving the screen.
+           ============================================================ -->
+      <div class="screen" id="screen-settings">
+
+        <div class="screen-header">
+          <button class="back-btn" onclick="settingsBack()">‹</button>
+          <span class="screen-title" id="settings-screen-title">Settings</span>
+        </div>
+
+        <div class="settings-layout">
+
+          <!-- LIST -->
+          <div id="settings-panel-list">
             <div class="dash-menu">
-              <button class="dash-menu-row">Account <span>›</span></button>
-              <button class="dash-menu-row">Notifications <span>›</span></button>
-              <button class="dash-menu-row">Privacy <span>›</span></button>
-              <button class="dash-menu-row">Help &amp; support <span>›</span></button>
+              <button class="dash-menu-row" onclick="showSettingsPanel('login-security')">
+                Login &amp; Security <span>›</span>
+              </button>
+              <button class="dash-menu-row" onclick="showSettingsPanel('notifications')">
+                Notifications <span>›</span>
+              </button>
+              <button class="dash-menu-row" onclick="showSettingsPanel('privacy')">
+                Privacy <span>›</span>
+              </button>
+              <button class="dash-menu-row" onclick="showSettingsPanel('help')">
+                Help &amp; Support <span>›</span>
+              </button>
+            </div>
+
+            <!-- Separate from the list above; signs out immediately, no confirmation -->
+            <button class="settings-signout-btn" onclick="AUTH.signOut()">Sign Out</button>
+          </div>
+
+          <!-- LOGIN & SECURITY -->
+          <div id="settings-panel-login-security" hidden>
+            <div class="settings-field">
+              <label class="settings-field-label">Display name</label>
+              <div class="settings-field-row">
+                <input type="text" id="settings-display-name-input" class="settings-input" maxlength="30" />
+                <button class="settings-save-btn" onclick="saveAccountDisplayName()">Save</button>
+              </div>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-field-label">Email</label>
+              <div class="settings-field-row">
+                <input type="email" id="settings-email-input" class="settings-input" placeholder="you@example.com" />
+                <button class="settings-save-btn" onclick="changeAccountEmail()">Save</button>
+              </div>
+              <p class="settings-field-msg" id="settings-email-msg"></p>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-field-label">New password</label>
+              <div class="settings-field-row">
+                <input type="password" id="settings-password-input" class="settings-input" placeholder="New password" />
+                <button class="settings-save-btn" onclick="changeAccountPassword()">Save</button>
+              </div>
+              <p class="settings-field-msg" id="settings-password-msg"></p>
+            </div>
+
+            <button class="dash-menu-row" onclick="exportAccountData()">
+              Export my data (GDPR) <span>›</span>
+            </button>
+
+            <button class="settings-delete-account-btn" onclick="confirmDeleteAccount()">
+              Delete account permanently
+            </button>
+          </div>
+
+          <!-- NOTIFICATIONS -->
+          <div id="settings-panel-notifications" hidden>
+            <label class="settings-toggle-row">
+              <span class="settings-toggle-label">Push notifications</span>
+              <span class="settings-toggle">
+                <input type="checkbox" id="toggle-push-notifications"
+                       onchange="onSettingsToggle('zelo_push_notifications', this.checked)">
+                <span class="settings-toggle-slider"></span>
+              </span>
+            </label>
+            <label class="settings-toggle-row">
+              <span class="settings-toggle-label">Email notifications</span>
+              <span class="settings-toggle">
+                <input type="checkbox" id="toggle-email-notifications"
+                       onchange="onSettingsToggle('zelo_email_notifications', this.checked)">
+                <span class="settings-toggle-slider"></span>
+              </span>
+            </label>
+          </div>
+
+          <!-- PRIVACY -->
+          <div id="settings-panel-privacy" hidden>
+            <a class="dash-menu-row" href="#" onclick="return false;">
+              Privacy Policy <span>›</span>
+            </a>
+            <label class="settings-toggle-row">
+              <span class="settings-toggle-label">Do Not Sell My Data (CCPA)</span>
+              <span class="settings-toggle">
+                <input type="checkbox" id="toggle-do-not-sell"
+                       onchange="onSettingsToggle('zelo_do_not_sell', this.checked)">
+                <span class="settings-toggle-slider"></span>
+              </span>
+            </label>
+            <div class="settings-info-block">
+              <p class="settings-info-title">AI Disclosure</p>
+              <p class="settings-info-text">
+                Every character you chat with in Practice mode is an AI, not a real person.
+                Scan and AI Coach analyze real conversations you paste in or upload — Zelo
+                itself never pretends to be a real match.
+              </p>
+            </div>
+            <div class="settings-field">
+              <label class="settings-field-label">Scan history retention</label>
+              <select class="settings-select" id="settings-retention-select" onchange="onRetentionChange(this.value)">
+                <option value="7">7 days</option>
+                <option value="30">30 days</option>
+                <option value="90">90 days</option>
+                <option value="forever">Keep forever</option>
+              </select>
             </div>
           </div>
 
-          <!-- Sign out -->
-          <div class="dash-section">
-            <button class="dash-menu-row dash-signout-btn" onclick="AUTH.signOut()">
-              Sign out <span>›</span>
+          <!-- HELP & SUPPORT -->
+          <div id="settings-panel-help" hidden>
+            <a class="dash-menu-row" href="mailto:support@zelo.app">
+              Contact us <span>›</span>
+            </a>
+            <button class="dash-menu-row" onclick="toggleHelpFaq()">
+              FAQ <span>›</span>
             </button>
+            <div class="settings-faq-content" id="settings-faq-content" hidden>
+              <div class="settings-faq-item">
+                <p class="settings-faq-q">Is Zelo free to use?</p>
+                <p class="settings-faq-a">Yes — Zelo has a free daily scan limit and free thread storage. Upgrading removes the daily caps.</p>
+              </div>
+              <div class="settings-faq-item">
+                <p class="settings-faq-q">Are the people I practice with real?</p>
+                <p class="settings-faq-a">No — Practice mode characters are AI. Scan and AI Coach work on real conversations you provide.</p>
+              </div>
+              <div class="settings-faq-item">
+                <p class="settings-faq-q">How do I delete my account?</p>
+                <p class="settings-faq-a">Go to Settings → Login &amp; Security → Delete account permanently.</p>
+              </div>
+            </div>
+            <a class="dash-menu-row" href="mailto:support@zelo.app?subject=Report%20a%20problem">
+              Report a problem <span>›</span>
+            </a>
           </div>
 
         </div>
@@ -1048,10 +1207,10 @@
           <h2 class="history-title">History</h2>
 
           <div class="history-tabs">
-            <button class="history-tab active" id="history-tab-threads"
-                    onclick="setHistoryTab('threads')">Threads</button>
-            <button class="history-tab" id="history-tab-favorites"
-                    onclick="setHistoryTab('favorites')">Favorites</button>
+            <button class="history-tab active" id="history-tab-scans"
+                    onclick="setHistoryTab('scans')">Scans</button>
+            <button class="history-tab" id="history-tab-matches"
+                    onclick="setHistoryTab('matches')">Matches</button>
           </div>
 
           <p class="history-counter" id="history-counter" hidden></p>

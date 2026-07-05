@@ -319,6 +319,42 @@ const AUTH = (() => {
   // ── Sign out ───────────────────────────────────────────────────
 
   async function signOut() {
+    // Force onboarding to replay after sign-out, independent of the
+    // dev-mode wipe in script.js's DOMContentLoaded handler.
+    localStorage.removeItem('zelo_onboarding_done');
+    await zeloSupabase.auth.signOut();
+    location.reload();
+  }
+
+  // ── Account settings (Login & Security) ─────────────────────────
+
+  function currentEmail() {
+    return _session?.user?.email || '';
+  }
+
+  async function changeEmail(newEmail) {
+    const { error } = await zeloSupabase.auth.updateUser({ email: newEmail });
+    return { error: error ? error.message : null };
+  }
+
+  async function changePassword(newPassword) {
+    const { error } = await zeloSupabase.auth.updateUser({ password: newPassword });
+    return { error: error ? error.message : null };
+  }
+
+  // Deletes the profile row this client can reach via RLS, then wipes all
+  // local data and signs out. Full purge of the auth credential itself
+  // (email/password record) requires the Supabase admin API, which must
+  // run server-side (e.g. a service-role Edge Function) — not something a
+  // client with only the anon key can safely do. That backend job is what
+  // actually fulfills the "deleted within 30 days" promise in the
+  // confirmation modal.
+  async function deleteAccount() {
+    const userId = _session?.user?.id;
+    if (userId) {
+      try { await zeloSupabase.from('profiles').delete().eq('id', userId); } catch (_) { /* best effort */ }
+    }
+    localStorage.clear();
     await zeloSupabase.auth.signOut();
     location.reload();
   }
@@ -338,6 +374,10 @@ const AUTH = (() => {
     signInWithGoogle,
     handleSetupContinue,
     signOut,
-    dismiss
+    dismiss,
+    currentEmail,
+    changeEmail,
+    changePassword,
+    deleteAccount
   };
 })();

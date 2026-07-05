@@ -1960,7 +1960,7 @@ async function generateReplies() {
 
   renderHerMessagePreview(messageText, screenshotPreviewUrl);
 
-  recordScan(context || messageText || "Screenshot scan");
+  recordScan();
 
   // The pre-filled onboarding example must not cost a scan credit — only
   // the user's own scans count against the daily limit. Captured before
@@ -2815,38 +2815,75 @@ function syncChatToStore(text, sender) {
 // PROFILE / DASHBOARD
 // ================================================================
 
-// Scan counter persists across visits; history is per-session (mock-seeded)
+// Lifetime scan counter — the only thing recordScan() tracks now. Actual
+// scan history lives in getThreads() (see screen-history / Account page's
+// History section) — this used to duplicate it into a second flat array,
+// which is why that array is gone.
 let scanCount = parseInt(localStorage.getItem('zelo_scans') || '12', 10);
 
-let scanHistory = [
-  { text: "hey stranger, long time no see 😅", time: Date.now() - 2 * 60 * 60 * 1000 },
-  { text: "so what do you actually do for fun?", time: Date.now() - 24 * 60 * 60 * 1000 }
-];
-
-function recordScan(text) {
-  const short = text.length > 64 ? text.slice(0, 64) + '…' : text;
-  scanHistory.unshift({ text: short, time: Date.now() });
-  if (scanHistory.length > 50) scanHistory.pop();  // generous cap; the 7-day filter does the real trimming for free users
+function recordScan() {
   scanCount++;
   localStorage.setItem('zelo_scans', scanCount);
 }
 
-// Relative label for dashboard scan rows ("just now", "2h ago", "3d ago"...)
-function relativeTime(ts) {
-  const diffMs = Date.now() - ts;
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1)  return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+let _dashHistoryTab = 'scans';
+
+function setDashHistoryTab(tab) {
+  _dashHistoryTab = tab;
+  document.getElementById('dash-history-tab-scans')?.classList.toggle('active', tab === 'scans');
+  document.getElementById('dash-history-tab-matches')?.classList.toggle('active', tab === 'matches');
+  renderDashHistoryPreview();
 }
 
-// Free users only see the last 7 days of scan history.
-function visibleScanHistory() {
-  if (isPaidUser()) return scanHistory;
-  const cutoff = Date.now() - FREE_LIMITS.historyDays * 24 * 60 * 60 * 1000;
-  return scanHistory.filter(s => s.time >= cutoff);
+// Compact History preview on the Account page — reuses the exact same data
+// (getThreads() / chatStore) and row helpers (_threadLastActivity,
+// historyTime) as the full History screen (screen-history). One data
+// source, two presentations — no separate "recent scans"/"recent matches"
+// logic to keep in sync.
+function renderDashHistoryPreview() {
+  const listEl = document.getElementById('dash-history-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  if (_dashHistoryTab === 'scans') {
+    const threads = getThreads();
+    if (threads.length === 0) {
+      listEl.innerHTML = '<p class="dash-empty">No scans yet</p>';
+      return;
+    }
+    threads.slice(0, 3).forEach(thread => {
+      const activity = _threadLastActivity(thread);
+      const row = document.createElement('div');
+      row.className = 'dash-history-row';
+      row.onclick = () => openThreadDetail(thread.id);
+      row.innerHTML = `
+        <div class="dash-history-avatar">${(thread.name || '?').trim().charAt(0).toUpperCase()}</div>
+        <div class="dash-history-main">
+          <span class="dash-history-name">${thread.name}</span>
+          <span class="dash-history-preview">${activity.text}</span>
+        </div>
+        <span class="dash-history-time">${historyTime(activity.time)}</span>`;
+      listEl.appendChild(row);
+    });
+  } else {
+    if (chatStore.length === 0) {
+      listEl.innerHTML = '<p class="dash-empty">No matches yet</p>';
+      return;
+    }
+    chatStore.slice(0, 3).forEach(c => {
+      const grad = `linear-gradient(145deg, ${c.profile.gradientColors[0]}, ${c.profile.gradientColors[1]})`;
+      const row = document.createElement('div');
+      row.className = 'dash-history-row';
+      row.onclick = () => openChatFromStore(c);
+      row.innerHTML = `
+        <div class="dash-history-avatar" style="background:${grad}">${c.profile.initial}</div>
+        <div class="dash-history-main">
+          <span class="dash-history-name">${c.profile.name}</span>
+          <span class="dash-history-preview">${c.lastMessage || 'New match!'}</span>
+        </div>`;
+      listEl.appendChild(row);
+    });
+  }
 }
 
 function openDashboard() {
@@ -2854,51 +2891,20 @@ function openDashboard() {
   document.getElementById('dash-name').textContent   = displayName;
   document.getElementById('dash-avatar').textContent = displayName.charAt(0).toUpperCase();
 
-  // Stats
+  // Stats — lifetime persisted counts (matchCount() survives reload; chatStore doesn't)
   document.getElementById('stat-scans').textContent   = scanCount;
-  document.getElementById('stat-matches').textContent = chatStore.length;
+  document.getElementById('stat-matches').textContent = matchCount();
   document.getElementById('stat-chats').textContent   =
     chatStore.filter(c => c.messages.length > 0).length;
 
-  // Recent scans — free users only see the last 7 days
-  const scansEl = document.getElementById('dash-recent-scans');
-  scansEl.innerHTML = '';
-  const recentScans = visibleScanHistory();
-  if (recentScans.length === 0) {
-    scansEl.innerHTML = '<p class="dash-empty">No scans yet</p>';
-  } else {
-    recentScans.slice(0, 3).forEach(s => {
-      const row = document.createElement('div');
-      row.className = 'dash-scan-row';
-      const textEl = document.createElement('span');
-      textEl.className = 'dash-scan-text';
-      textEl.textContent = s.text;
-      const timeEl = document.createElement('span');
-      timeEl.className = 'dash-scan-time';
-      timeEl.textContent = relativeTime(s.time);
-      row.appendChild(textEl);
-      row.appendChild(timeEl);
-      scansEl.appendChild(row);
-    });
-  }
+  // History — see renderDashHistoryPreview() above
+  _dashHistoryTab = 'scans';
+  setDashHistoryTab('scans');
 
-  // Recent matches
-  const matchesEl = document.getElementById('dash-recent-matches');
-  matchesEl.innerHTML = '';
-  if (chatStore.length === 0) {
-    matchesEl.innerHTML = '<p class="dash-empty">No matches yet</p>';
-  } else {
-    chatStore.slice(0, 4).forEach(c => {
-      const item = document.createElement('div');
-      item.className = 'dash-match';
-      item.onclick = () => openChatFromStore(c);
-      const grad = `linear-gradient(145deg, ${c.profile.gradientColors[0]}, ${c.profile.gradientColors[1]})`;
-      item.innerHTML = `
-        <div class="dash-match-avatar" style="background:${grad}">${c.profile.initial}</div>
-        <span class="dash-match-name">${c.profile.name}</span>`;
-      matchesEl.appendChild(item);
-    });
-  }
+  // Leaderboard — reuses the same rank computation as the full leaderboard screen
+  const myEntry = getMyLeaderboardEntry();
+  const rankEl = document.getElementById('dash-lb-rank');
+  if (rankEl) rankEl.textContent = `Rank #${myEntry.rank}`;
 
   pushScreen('dashboard');
 }
@@ -3539,13 +3545,13 @@ function renderThreadList() {
 // tab bar stays visible; an X closes it back to whatever tab was active.
 // ================================================================
 
-let _historyTab = 'threads';
+let _historyTab = 'scans';
 
-function openHistory() {
+function openHistory(tab) {
   const screen = document.getElementById('screen-history');
   if (!screen) return;
-  _historyTab = 'threads';
-  setHistoryTab('threads');
+  _historyTab = tab || 'scans';
+  setHistoryTab(_historyTab);
   screen.classList.add('active');
 }
 
@@ -3556,10 +3562,10 @@ function closeHistory() {
 
 function setHistoryTab(tab) {
   _historyTab = tab;
-  const tEl = document.getElementById('history-tab-threads');
-  const fEl = document.getElementById('history-tab-favorites');
-  if (tEl) tEl.classList.toggle('active', tab === 'threads');
-  if (fEl) fEl.classList.toggle('active', tab === 'favorites');
+  const sEl = document.getElementById('history-tab-scans');
+  const mEl = document.getElementById('history-tab-matches');
+  if (sEl) sEl.classList.toggle('active', tab === 'scans');
+  if (mEl) mEl.classList.toggle('active', tab === 'matches');
   renderHistory();
 }
 
@@ -3595,29 +3601,50 @@ function renderHistory() {
   const listEl = document.getElementById('history-list');
   if (!listEl) return;
 
-  // Favorites is a paid-only tab; free users only ever see Threads.
-  const favTab = document.getElementById('history-tab-favorites');
-  if (favTab) favTab.hidden = !isPaidUser();
-  if (_historyTab === 'favorites' && !isPaidUser()) _historyTab = 'threads';
-
   const counterEl = document.getElementById('history-counter');
   const threads   = getThreads();
 
   listEl.innerHTML = '';
 
-  // ── Favorites tab (paid) — no favoriting mechanism yet, show empty state.
-  if (_historyTab === 'favorites') {
+  // ── Matches tab — reuses the exact same chatStore data/rows as the
+  // Account page's compact History preview (see renderDashHistoryPreview).
+  if (_historyTab === 'matches') {
     if (counterEl) counterEl.hidden = true;
-    listEl.innerHTML = `
-      <div class="history-empty">
-        <div class="history-empty-icon">✦</div>
-        <p class="history-empty-title">No favorites yet</p>
-        <p class="history-empty-sub">Star a thread to keep it here.</p>
-      </div>`;
+    if (chatStore.length === 0) {
+      listEl.innerHTML = `
+        <div class="history-empty">
+          <div class="history-empty-icon">💘</div>
+          <p class="history-empty-title">No matches yet</p>
+          <p class="history-empty-sub">Keep swiping to find a match.</p>
+        </div>`;
+      return;
+    }
+    chatStore.forEach(c => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'history-row-wrapper';
+      const row = document.createElement('div');
+      row.className = 'history-row';
+      const grad = `linear-gradient(145deg, ${c.profile.gradientColors[0]}, ${c.profile.gradientColors[1]})`;
+      row.innerHTML = `
+        <div class="history-avatar" style="background:${grad}; color:#fff;">${c.profile.initial}</div>
+        <div class="history-row-main">
+          <div class="history-row-top">
+            <span class="history-row-name">${c.profile.name}</span>
+          </div>
+          <span class="history-row-preview">${c.lastMessage || 'New match!'}</span>
+        </div>
+        <svg class="history-row-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>`;
+      row.onclick = () => openChatFromStore(c);
+      wrapper.appendChild(row);
+      listEl.appendChild(wrapper);
+    });
     return;
   }
 
-  // ── Threads tab ────────────────────────────────────────────────
+  // ── Scans tab ──────────────────────────────────────────────────
   // Counter: free users only — "You've used X of 2 free threads"
   if (counterEl) {
     if (!isPaidUser()) {
@@ -4584,10 +4611,18 @@ function openLeaderboard() {
 function setLbTimeFilter(f) { lbTimeFilter = f; renderLeaderboard(); }
 function setLbCategory(c)   { lbCategory   = c; renderLeaderboard(); }
 
+// Shared rank lookup — used by the full leaderboard screen and by the
+// Account page's compact leaderboard card, so both always agree.
+function getMyLeaderboardEntry() {
+  const data   = getLbData(lbTimeFilter, lbCategory);
+  const myName = getDisplayName();
+  return data.find(e => e.name === myName) || { rank: data.length + 1, name: myName, score: 0 };
+}
+
 function renderLeaderboard() {
   const data       = getLbData(lbTimeFilter, lbCategory);
   const myName     = getDisplayName();
-  const myEntry    = data.find(e => e.name === myName) || { rank: data.length + 1, name: myName, score: 0 };
+  const myEntry    = getMyLeaderboardEntry();
 
   // Time filter tabs
   ['weekly','monthly','alltime'].forEach(f => {
@@ -4646,4 +4681,156 @@ function getLbData(timeFilter, category) {
 function openLeaderboardFromDash() {
   popScreen();   // close dashboard first
   setTimeout(() => openLeaderboard(), 50);
+}
+
+
+// ================================================================
+// ACCOUNT SETTINGS
+// screen-settings has no real navigation stack of its own — sub-panels
+// are toggled in place inside one screen (same pattern as gib-confirm's
+// ask/thanks steps), so "back" can return to the Settings list instead of
+// leaving the screen entirely, which pushScreen()/popScreen() can't do
+// (popScreen always returns to the last active tab, not the prior screen).
+// ================================================================
+
+let _settingsPanel = 'list';
+
+const SETTINGS_PANEL_IDS = {
+  'list':            'settings-panel-list',
+  'login-security':  'settings-panel-login-security',
+  'notifications':   'settings-panel-notifications',
+  'privacy':         'settings-panel-privacy',
+  'help':            'settings-panel-help'
+};
+
+const SETTINGS_PANEL_TITLES = {
+  'list':            'Settings',
+  'login-security':  'Login & Security',
+  'notifications':   'Notifications',
+  'privacy':         'Privacy',
+  'help':            'Help & Support'
+};
+
+function openAccountSettings() {
+  showSettingsPanel('list');
+  pushScreen('settings');
+}
+
+function showSettingsPanel(name) {
+  _settingsPanel = name;
+  Object.entries(SETTINGS_PANEL_IDS).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = (key !== name);
+  });
+  const titleEl = document.getElementById('settings-screen-title');
+  if (titleEl) titleEl.textContent = SETTINGS_PANEL_TITLES[name] || 'Settings';
+
+  if (name === 'login-security') _populateLoginSecurityPanel();
+  if (name === 'notifications')  _populateNotificationsPanel();
+  if (name === 'privacy')        _populatePrivacyPanel();
+}
+
+// Header back button: one level up (sub-panel -> list), or out of the
+// screen entirely (list -> Account) if already at the list.
+function settingsBack() {
+  if (_settingsPanel !== 'list') {
+    showSettingsPanel('list');
+  } else {
+    popScreen();
+  }
+}
+
+function _populateLoginSecurityPanel() {
+  const nameInput = document.getElementById('settings-display-name-input');
+  if (nameInput) nameInput.value = getDisplayName();
+  const emailInput = document.getElementById('settings-email-input');
+  if (emailInput) emailInput.value = AUTH.currentEmail();
+  const emailMsg = document.getElementById('settings-email-msg');
+  if (emailMsg) emailMsg.textContent = '';
+  const pwMsg = document.getElementById('settings-password-msg');
+  if (pwMsg) pwMsg.textContent = '';
+}
+
+function _populateNotificationsPanel() {
+  const push  = document.getElementById('toggle-push-notifications');
+  const email = document.getElementById('toggle-email-notifications');
+  if (push)  push.checked  = localStorage.getItem('zelo_push_notifications')  === 'true';
+  if (email) email.checked = localStorage.getItem('zelo_email_notifications') === 'true';
+}
+
+function _populatePrivacyPanel() {
+  const dns = document.getElementById('toggle-do-not-sell');
+  if (dns) dns.checked = localStorage.getItem('zelo_do_not_sell') === 'true';
+  const sel = document.getElementById('settings-retention-select');
+  if (sel) sel.value = localStorage.getItem('zelo_history_retention_days') || '7';
+}
+
+function onSettingsToggle(key, value) {
+  localStorage.setItem(key, String(value));
+}
+
+function onRetentionChange(value) {
+  localStorage.setItem('zelo_history_retention_days', value);
+}
+
+function toggleHelpFaq() {
+  const el = document.getElementById('settings-faq-content');
+  if (el) el.hidden = !el.hidden;
+}
+
+function saveAccountDisplayName() {
+  const input = document.getElementById('settings-display-name-input');
+  if (!input) return;
+  saveDisplayName(input.value);
+  input.value = getDisplayName();
+}
+
+async function changeAccountEmail() {
+  const input = document.getElementById('settings-email-input');
+  const msg   = document.getElementById('settings-email-msg');
+  const email = (input?.value || '').trim();
+  if (!email) { if (msg) msg.textContent = 'Enter an email address.'; return; }
+  if (msg) msg.textContent = 'Saving…';
+  const { error } = await AUTH.changeEmail(email);
+  if (msg) msg.textContent = error || 'Check your inbox to confirm the new email.';
+}
+
+async function changeAccountPassword() {
+  const input = document.getElementById('settings-password-input');
+  const msg   = document.getElementById('settings-password-msg');
+  const pw = input?.value || '';
+  if (pw.length < 6) { if (msg) msg.textContent = 'Password must be at least 6 characters.'; return; }
+  if (msg) msg.textContent = 'Saving…';
+  const { error } = await AUTH.changePassword(pw);
+  if (msg) msg.textContent = error || 'Password updated.';
+  if (!error && input) input.value = '';
+}
+
+// GDPR data export — everything the app actually stores for this user,
+// pulled from the same sources as the rest of the app (no separate copy).
+function exportAccountData() {
+  const payload = {
+    displayName: getDisplayName(),
+    age:         localStorage.getItem('zelo_user_age'),
+    scanCount:   scanCount,
+    threads:     getThreads(),
+    matches:     chatStore,
+    exportedAt:  new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'zelo-my-data.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function confirmDeleteAccount() {
+  showDeleteConfirm(
+    'Deleting your account is permanent. All your data will be deleted within 30 days and cannot be recovered.',
+    () => { AUTH.deleteAccount(); }
+  );
 }
