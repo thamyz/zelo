@@ -1831,11 +1831,17 @@ function _looksLikeGibberish(text) {
   return !hasRealWord;
 }
 
-let _gibResolve = null;
+let _gibResolve     = null;
+let _gibCurrentText = "";
 
-function _confirmGibberish() {
+function _confirmGibberish(text) {
+  _gibCurrentText = text;
   return new Promise(resolve => {
     _gibResolve = resolve;
+    const askStep    = document.getElementById('gib-confirm-step-ask');
+    const thanksStep = document.getElementById('gib-confirm-step-thanks');
+    if (askStep)    askStep.hidden    = false;
+    if (thanksStep) thanksStep.hidden = true;
     const overlay = document.getElementById('gib-confirm-overlay');
     if (overlay) overlay.hidden = false;
   });
@@ -1851,6 +1857,22 @@ function gibConfirmProceed() {
   const overlay = document.getElementById('gib-confirm-overlay');
   if (overlay) overlay.hidden = true;
   if (_gibResolve) { const r = _gibResolve; _gibResolve = null; r(true); }
+}
+
+// User says the flagged text was actually real — log it locally so it can
+// be reviewed later to improve the dictionary, then apologize and let them
+// continue straight through (no need to also tap "Analyze Anyway").
+function gibReportFalsePositive() {
+  try {
+    const reports = JSON.parse(localStorage.getItem('zelo_gib_reports') || '[]');
+    reports.push({ text: _gibCurrentText, time: Date.now() });
+    localStorage.setItem('zelo_gib_reports', JSON.stringify(reports));
+  } catch (_) { /* best effort — never block the user over a storage error */ }
+
+  const askStep    = document.getElementById('gib-confirm-step-ask');
+  const thanksStep = document.getElementById('gib-confirm-step-thanks');
+  if (askStep)    askStep.hidden    = true;
+  if (thanksStep) thanksStep.hidden = false;
 }
 
 
@@ -1894,7 +1916,7 @@ async function generateReplies() {
   // Instant, local check — flags genuine keyboard mashing before anything
   // else happens. No API call, so normal messages pay zero extra delay.
   if (userInput && _looksLikeGibberish(userInput)) {
-    const proceed = await _confirmGibberish();
+    const proceed = await _confirmGibberish(userInput);
     if (!proceed) return; // user chose to edit — nothing consumed, no navigation
   }
 

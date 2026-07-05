@@ -4900,6 +4900,19 @@ textarea { font-family: inherit; }
   cursor: pointer;
 }
 
+.gib-confirm-report-link {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 0.76rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+
 
 /* ================================================================
    THREAD LINK PICKER  (Fix 7)
