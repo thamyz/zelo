@@ -82,6 +82,8 @@ window.addEventListener('DOMContentLoaded', () => {
   AUTH.init(); // session check — must run before any auth triggers fire
   // TODO — merge anonymous scan history on signup
 
+  _loadGibberishDictionary(); // preload word dictionary for fast gibberish detection
+
   ensureTrialStarted();
   initScanCountForToday();
   initMatchSlots();           // Feature 7: restore expired deletion slots
@@ -1794,58 +1796,39 @@ async function _fetchDeepSeekReply(tone) {
 
 
 // ================================================================
-// RANDOM-TEXT GUARD — a fast, purely client-side heuristic (no API call)
-// that flags genuine keyboard mashing ("adijaoidj;a", "asdkfjaskdjf"), not
-// real short messages or texting slang ("wyd", "lol", "k"). Scores the
-// text's letter-pairs (bigrams) against a list of common English bigrams —
-// real words/slang score high even when short or misspelled; random typing
-// (including vowel-scattered mashing that a vowel-count check would miss)
-// scores low. Only trips when there's also no recognizable common word
-// anywhere in the message.
+// RANDOM-TEXT GUARD — dictionary-based gibberish detection.
+// Flags messages that contain zero recognizable English words or slang.
+// Loads a word dictionary (5000+ common words + texting slang) at startup
+// for O(1) lookups. Fast, no API calls, catches everything from "sadawe"
+// to "adijaoidj;a" while letting real short messages/slang through.
 // ================================================================
 
-const _GIB_COMMON_WORDS = new Set([
-  "the","a","an","i","you","u","me","my","your","is","are","was","were","be","been",
-  "to","of","in","on","at","for","and","or","but","if","so","not","no","yes","yeah",
-  "yea","ya","k","ok","okay","lol","lmao","omg","wtf","wyd","hbu","ttyl","lmk","smh",
-  "idk","imo","tbh","rn","fr","ngl","hey","hi","hello","sup","what","why","how","who",
-  "when","where","can","will","would","could","should","do","does","did","have","has",
-  "had","love","like","want","need","think","know","see","go","get","good","bad","yep",
-  "nope","nah","haha","hah","it","this","that","with","from","about","just","really",
-  "right","maybe","sure","cool","nice","wow","damn","babe","bro","girl","guy","time",
-  "day","night","today","tomorrow","up","down","out","over","then","than","she","he"
-]);
+let _gibDictionary = new Set();
 
-const _GIB_COMMON_BIGRAMS = new Set([
-  "th","he","in","er","an","re","on","at","en","nd","ti","es","or","te","of","ed",
-  "is","it","al","ar","st","to","nt","ng","se","ha","as","ou","io","le","ve","co",
-  "me","de","hi","ri","ro","ic","ne","ea","ra","ce","li","ch","ll","be","ma","si",
-  "om","ur","ay","el","wi","la","ac","id","il","ta","no","wa","ct","di","ho","ni",
-  "ss","ee","oo","ow","wh","sh","ph","gh","ck"
-]);
-
-function _gibberishBigramScore(letters) {
-  if (letters.length < 2) return 1;
-  let hits = 0, total = 0;
-  for (let i = 0; i < letters.length - 1; i++) {
-    total++;
-    if (_GIB_COMMON_BIGRAMS.has(letters.slice(i, i + 2))) hits++;
+async function _loadGibberishDictionary() {
+  try {
+    const response = await fetch('words-dict.txt?v=20260704l');
+    const text = await response.text();
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    _gibDictionary = new Set(words.map(w => w.toLowerCase()));
+    console.log("[Gibberish Guard] Dictionary loaded:", _gibDictionary.size, "words");
+  } catch (err) {
+    console.warn("[Gibberish Guard] Failed to load dictionary:", err);
+    _gibDictionary = new Set(["the","a","is","and","or","you","me","i","like","love","want"]);
   }
-  return total ? hits / total : 1;
 }
 
 function _looksLikeGibberish(text) {
   const clean = text.trim();
-  if (clean.length < 8) return false; // too short to reliably judge — never flag short texts/slang
+  if (clean.length === 0) return false;
 
   const words = clean.toLowerCase().split(/\s+/).filter(Boolean);
-  const hasCommonWord = words.some(w => _GIB_COMMON_WORDS.has(w.replace(/[^a-z']/g, "")));
-  if (hasCommonWord) return false;
+  const hasRealWord = words.some(word => {
+    const cleaned = word.replace(/[^a-z']/g, "");
+    return cleaned.length > 0 && _gibDictionary.has(cleaned);
+  });
 
-  const letters = clean.toLowerCase().replace(/[^a-z]/g, "");
-  if (letters.length < 8) return false;
-
-  return _gibberishBigramScore(letters) < 0.25;
+  return !hasRealWord;
 }
 
 let _gibResolve = null;
