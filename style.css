@@ -2474,6 +2474,24 @@ textarea { font-family: inherit; }
   line-height: 1;
 }
 
+/* Settings — expands inline instead of navigating to a new page */
+.dash-settings-chevron {
+  display: inline-block;
+  transition: transform 0.15s;
+}
+
+.dash-settings-btn--open .dash-settings-chevron {
+  transform: rotate(90deg);
+}
+
+.dash-settings-dropdown {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-settings-dropdown[hidden] { display: none; }
+
 
 /* ================================================================
    ACCOUNT SETTINGS (screen-settings)

@@ -383,11 +383,30 @@
             </button>
           </div>
 
-          <!-- Settings — section label that opens the Settings sub-page -->
+          <!-- Settings — section label that expands inline, not a new page.
+               Each row still opens its own sub-page (screen-settings). -->
           <div class="dash-section">
-            <button class="dash-menu-row dash-settings-btn" onclick="openAccountSettings()">
-              Settings <span>›</span>
+            <button class="dash-menu-row dash-settings-btn" id="dash-settings-btn" onclick="toggleSettingsDropdown()">
+              Settings <span class="dash-settings-chevron" id="dash-settings-chevron">›</span>
             </button>
+            <div class="dash-settings-dropdown" id="dash-settings-dropdown" hidden>
+              <div class="dash-menu">
+                <button class="dash-menu-row" onclick="openSettingsSubpage('login-security')">
+                  Login &amp; Security <span>›</span>
+                </button>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('notifications')">
+                  Notifications <span>›</span>
+                </button>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('privacy')">
+                  Privacy <span>›</span>
+                </button>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('help')">
+                  Help &amp; Support <span>›</span>
+                </button>
+              </div>
+              <!-- Separate from the list above; signs out immediately, no confirmation -->
+              <button class="settings-signout-btn" onclick="AUTH.signOut()">Sign Out</button>
+            </div>
           </div>
 
         </div>
@@ -399,8 +418,9 @@
            Distinct from the top-level Account page (screen-dashboard) —
            "Login & Security" below is intentionally never called
            "Account", to avoid confusion between the two in code and UI.
-           Sub-panels are toggled in place (not via pushScreen) so "back"
-           can return to the Settings list instead of leaving the screen.
+           Entry point is the inline Settings dropdown on the Account page,
+           not a list page here — each row pushes straight to its panel,
+           and the back button returns straight to Account.
            ============================================================ -->
       <div class="screen" id="screen-settings">
 
@@ -410,27 +430,6 @@
         </div>
 
         <div class="settings-layout">
-
-          <!-- LIST -->
-          <div id="settings-panel-list">
-            <div class="dash-menu">
-              <button class="dash-menu-row" onclick="showSettingsPanel('login-security')">
-                Login &amp; Security <span>›</span>
-              </button>
-              <button class="dash-menu-row" onclick="showSettingsPanel('notifications')">
-                Notifications <span>›</span>
-              </button>
-              <button class="dash-menu-row" onclick="showSettingsPanel('privacy')">
-                Privacy <span>›</span>
-              </button>
-              <button class="dash-menu-row" onclick="showSettingsPanel('help')">
-                Help &amp; Support <span>›</span>
-              </button>
-            </div>
-
-            <!-- Separate from the list above; signs out immediately, no confirmation -->
-            <button class="settings-signout-btn" onclick="AUTH.signOut()">Sign Out</button>
-          </div>
 
           <!-- LOGIN & SECURITY -->
           <div id="settings-panel-login-security" hidden>

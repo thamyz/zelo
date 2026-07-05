@@ -2906,6 +2906,12 @@ function openDashboard() {
   const rankEl = document.getElementById('dash-lb-rank');
   if (rankEl) rankEl.textContent = `Rank #${myEntry.rank}`;
 
+  // Settings dropdown always starts collapsed
+  const settingsDropdown = document.getElementById('dash-settings-dropdown');
+  const settingsBtn      = document.getElementById('dash-settings-btn');
+  if (settingsDropdown) settingsDropdown.hidden = true;
+  if (settingsBtn) settingsBtn.classList.remove('dash-settings-btn--open');
+
   pushScreen('dashboard');
 }
 
@@ -4686,17 +4692,15 @@ function openLeaderboardFromDash() {
 
 // ================================================================
 // ACCOUNT SETTINGS
-// screen-settings has no real navigation stack of its own — sub-panels
-// are toggled in place inside one screen (same pattern as gib-confirm's
-// ask/thanks steps), so "back" can return to the Settings list instead of
-// leaving the screen entirely, which pushScreen()/popScreen() can't do
-// (popScreen always returns to the last active tab, not the prior screen).
+// The Settings entry point is an inline dropdown on the Account page
+// (toggleSettingsDropdown), not a page of its own. Each row in that
+// dropdown pushes straight into screen-settings on its own panel;
+// the header back button there always returns straight to Account.
 // ================================================================
 
-let _settingsPanel = 'list';
+let _settingsPanel = null;
 
 const SETTINGS_PANEL_IDS = {
-  'list':            'settings-panel-list',
   'login-security':  'settings-panel-login-security',
   'notifications':   'settings-panel-notifications',
   'privacy':         'settings-panel-privacy',
@@ -4704,15 +4708,23 @@ const SETTINGS_PANEL_IDS = {
 };
 
 const SETTINGS_PANEL_TITLES = {
-  'list':            'Settings',
   'login-security':  'Login & Security',
   'notifications':   'Notifications',
   'privacy':         'Privacy',
   'help':            'Help & Support'
 };
 
-function openAccountSettings() {
-  showSettingsPanel('list');
+// Settings section on the Account page — expands/collapses in place.
+function toggleSettingsDropdown() {
+  const dropdown = document.getElementById('dash-settings-dropdown');
+  const btn      = document.getElementById('dash-settings-btn');
+  if (!dropdown) return;
+  dropdown.hidden = !dropdown.hidden;
+  if (btn) btn.classList.toggle('dash-settings-btn--open', !dropdown.hidden);
+}
+
+function openSettingsSubpage(name) {
+  showSettingsPanel(name);
   pushScreen('settings');
 }
 
@@ -4730,14 +4742,9 @@ function showSettingsPanel(name) {
   if (name === 'privacy')        _populatePrivacyPanel();
 }
 
-// Header back button: one level up (sub-panel -> list), or out of the
-// screen entirely (list -> Account) if already at the list.
+// No intermediate list page anymore — back always returns to Account.
 function settingsBack() {
-  if (_settingsPanel !== 'list') {
-    showSettingsPanel('list');
-  } else {
-    popScreen();
-  }
+  popScreen();
 }
 
 function _populateLoginSecurityPanel() {
