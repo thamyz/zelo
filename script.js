@@ -13,6 +13,7 @@ const state = {
   // Navigation
   activeTab:    "assistant",  // "assistant" | "practice"
   activeScreen: null,         // "profile" | "chat" | "match" | null
+  screenStack:  [],           // screens pushed while another screen (not a tab) was active — popScreen() unwinds this before falling back to the tab
 
   // Practice session
   difficulty:   null,
@@ -142,6 +143,7 @@ function showTab(name) {
 
   state.activeTab    = name;
   state.activeScreen = null;
+  state.screenStack  = [];
 
   // Practice (Home) tab: first visit shows the mode popup; after that,
   // signed-in users get the deck and anonymous users see it locked.
@@ -173,12 +175,24 @@ function pushScreen(name) {
   // Hide tab bar
   document.getElementById("tab-bar").classList.add("hidden");
 
+  // Remember what screen (if any) was showing before this one, so popScreen()
+  // can return to it instead of always falling back to the base tab.
+  if (state.activeScreen) state.screenStack.push(state.activeScreen);
   state.activeScreen = name;
 }
 
 function popScreen() {
-  // Return to whichever tab was last active
-  showTab(state.activeTab);
+  const prevScreen = state.screenStack.pop();
+  if (prevScreen) {
+    document.querySelectorAll(".tab, .screen").forEach(el => el.classList.remove("active"));
+    document.getElementById("screen-" + prevScreen).classList.add("active");
+    document.getElementById("tab-bar").classList.add("hidden");
+    state.activeScreen = prevScreen;
+  } else {
+    // Nothing to unwind to — return to whichever tab was last active
+    state.activeScreen = null;
+    showTab(state.activeTab);
+  }
 }
 
 
