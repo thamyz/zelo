@@ -346,9 +346,87 @@ const FREE_LIMITS = {
   bonusScansPerAd: 3,
   maxAdsPerDay:    1,
   historyDays:     7,
-  freeTones:       ["smooth", "funny"],
   maxMatches:      3,
-  trialDays:       7
+  trialDays:       7,
+  maxRegensPerCard: 2   // regenerations allowed per style card before the paywall
+};
+
+// ================================================================
+// REPLY STYLES — eligibility depends only on Situation + Goal (the "Who"
+// answer shapes tone/voice in the prompt, never which styles are shown).
+// Each list is in priority order — first entry is the initial
+// auto-generated card. getEligibleStyles() (script.js) is the only thing
+// that should read this table; it also enforces the hard safety rule
+// (no Funny/Bolder for Argument/Toxic Relationship) in code, not just here.
+// ================================================================
+
+const STYLE_LABELS = {
+  smooth: "Smooth",
+  direct: "Direct",
+  shorter: "Shorter",
+  funny: "Funny",
+  warmer: "Warmer",
+  bolder: "Bolder",
+  longer: "Longer"
+};
+
+const STYLE_ELIGIBILITY = {
+  "First Conversation": {
+    "Get a Reply":       ["smooth", "direct", "shorter"],
+    "Keep Things Going": ["smooth", "funny", "warmer"],
+    "Ask Them Out":      ["smooth", "bolder", "direct"],
+    "Fix Things":        ["direct", "shorter"],
+    "Be Funny":          ["funny", "smooth"],
+    "Be Direct":         ["direct", "shorter"]
+  },
+  "Getting to Know Each Other": {
+    "Get a Reply":       ["smooth", "warmer", "shorter"],
+    "Keep Things Going": ["warmer", "funny", "smooth"],
+    "Ask Them Out":      ["bolder", "smooth", "direct"],
+    "Fix Things":        ["direct", "shorter"],
+    "Be Funny":          ["funny", "warmer"],
+    "Be Direct":         ["direct", "smooth"]
+  },
+  "Planning Something": {
+    "Get a Reply":       ["direct", "shorter", "smooth"],
+    "Keep Things Going": ["warmer", "direct", "longer"],
+    "Ask Them Out":      ["bolder", "direct", "smooth"],
+    "Fix Things":        ["direct", "shorter"],
+    "Be Funny":          ["funny", "direct"],
+    "Be Direct":         ["direct", "shorter"]
+  },
+  "Flirting": {
+    "Get a Reply":       ["smooth", "warmer", "shorter"],
+    "Keep Things Going": ["smooth", "funny", "bolder"],
+    "Ask Them Out":      ["bolder", "smooth", "direct"],
+    "Fix Things":        ["direct", "shorter"],
+    "Be Funny":          ["funny", "smooth"],
+    "Be Direct":         ["direct", "bolder"]
+  },
+  "Awkward Silence": {
+    "Get a Reply":       ["funny", "smooth", "shorter"],
+    "Keep Things Going": ["funny", "smooth", "warmer"],
+    "Ask Them Out":      ["bolder", "direct", "smooth"],
+    "Fix Things":        ["warmer", "direct"],
+    "Be Funny":          ["funny", "smooth"],
+    "Be Direct":         ["direct", "shorter"]
+  },
+  "Argument": {
+    "Get a Reply":       ["direct", "shorter"],
+    "Keep Things Going": ["warmer", "direct"],
+    "Ask Them Out":      ["warmer", "direct"],
+    "Fix Things":        ["warmer", "direct", "shorter", "longer"],
+    "Be Funny":          [],   // not offered — see hard safety rule in getEligibleStyles()
+    "Be Direct":         ["direct", "shorter"]
+  },
+  "Toxic Relationship": {
+    "Get a Reply":       ["direct", "shorter"],
+    "Keep Things Going": ["warmer", "direct"],
+    "Ask Them Out":      ["warmer", "direct"],
+    "Fix Things":        ["warmer", "direct", "longer"],
+    "Be Funny":          [],   // not offered — see hard safety rule in getEligibleStyles()
+    "Be Direct":         ["direct", "shorter"]
+  }
 };
 
 

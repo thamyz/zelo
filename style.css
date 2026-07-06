@@ -639,45 +639,52 @@ textarea { font-family: inherit; }
 .copy-btn:hover  { background: var(--s3); color: var(--text); }
 .copy-btn.copied { color: var(--green); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.06); }
 
-
-/* ----------------------------------------------------------------
-   STYLE PILLS  (secondary, below reply)
-   ---------------------------------------------------------------- */
-.style-block { display: flex; flex-direction: column; gap: 14px; }
-
-.style-pills {
+.reply-block-actions {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.style-pill {
-  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 20px;
-  border-radius: 99px;
-  font-size: 0.92rem;
-  font-weight: 600;
-  background: var(--s1);
-  border: 1.5px solid var(--border);
+}
+
+/* Regenerate — icon-only, same footprint/feel as Copy beside it */
+.regen-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   color: var(--text-2);
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-
-/* Outline icons matching the rest of the app's icon language — never
-   color emoji, which render completely differently across platforms. */
-.style-pill-icon { flex-shrink: 0; color: inherit; }
-
-.style-pill:hover {
   background: var(--s2);
-  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  transition: background 0.12s, color 0.12s, transform 0.15s;
+}
+.regen-btn:hover   { background: var(--s3); color: var(--text); }
+.regen-btn:active  { transform: rotate(90deg); }
+
+/* Swipe area — clips the card as it slides between styles */
+.reply-card-swipe-area {
+  overflow: hidden;
+  touch-action: pan-y;
 }
 
-.style-pill.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent-deep);
+.reply-style-label {
+  position: absolute;
+  top: 14px;
+  left: 30px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+/* Regenerate / swipe-to-a-new-style loading state — same sparkle pulse
+   used by the full-page "Zelo is thinking…" loading screen. */
+.reply-card--loading .reply-text { opacity: 0.35; }
+.reply-card--loading .reply-card-spark {
+  opacity: 1;
+  animation: sparklePulse 1.1s ease-in-out infinite;
 }
 
 
@@ -2816,26 +2823,6 @@ textarea { font-family: inherit; }
   font-size: 0.78rem;
   color: var(--text-2);
   line-height: 1.4;
-}
-
-/* Reply tone pills: emoji icon + lock glyph for paid-only tones */
-.style-pill-emoji {
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.style-pill-lock {
-  font-size: 0.72rem;
-  margin-left: 2px;
-  opacity: 0.7;
-}
-
-.style-pill.locked {
-  opacity: 0.55;
-}
-
-.style-pill.locked-tap {
-  animation: lockedShake 0.26s ease;
 }
 
 /* Scan daily-limit banner + mocked rewarded-ad button */

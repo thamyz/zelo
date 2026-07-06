@@ -28,12 +28,15 @@ const state = {
   swipeIndex:    0,   // index of the current top card
 
   // Assistant
-  asstStyle:      "smooth",
-  asstCurrentSet: null,  // cache: tone → reply text, populated on demand
-  asstMessage:    "",    // message text for the current scan
-  asstContext:    "",    // scanContextString() snapshot for the current scan
-  scanContext:    {},   // structured "Tell Zelo More" selections { where, who, goal, vibe }
-  tzStep:         0,    // current step in the Tell Zelo More flow
+  asstStyle:        "smooth",
+  asstCurrentSet:   null,  // cache: style → reply text, populated on demand
+  asstMessage:      "",    // message text for the current scan
+  asstContext:      "",    // scanContextString() snapshot for the current scan
+  scanContext:      {},    // structured "Tell Zelo More" selections { who, situation, goal }
+  tzStep:           0,     // current step in the Tell Zelo More flow
+  eligibleStyles:   [],    // ordered styles for the current scan's Situation+Goal (see getEligibleStyles())
+  currentStyleIndex: 0,    // index into eligibleStyles for the card currently shown
+  regenCounts:      {},    // style -> regenerations used, independent per card, reset on each new scan
 
   // mode chosen per swipe-card profile (Open/Neutral/Cold), keyed by name
   cardModes: {},
@@ -78,6 +81,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // TODO — merge anonymous scan history on signup
 
   _loadGibberishDictionary(); // preload word dictionary for fast gibberish detection
+  _initReplyCardSwipe();      // swipe gesture for the reply style cards
 
   ensureTrialStarted();
   initScanCountForToday();
@@ -1461,12 +1465,6 @@ const TELLZELO_STEPS = [
       { icon: "🎯", label: "Be Direct" },
     ],
   },
-  {
-    key:   "extra",
-    q:     "Add the last bit of seasoning.",
-    freeText: true,
-    placeholder: "Anything extra that might help.",
-  },
 ];
 
 // ---- "Who's this about?" quick-pick cards (Dating, Crush) ----
@@ -1608,7 +1606,7 @@ function updateTellZeloSummary() {
 
 // Build a single context string for generation from the structured selections.
 function scanContextString() {
-  const order = ["who", "situation", "goal", "extra"];
+  const order = ["who", "situation", "goal"];
   return order.map(k => state.scanContext[k]).filter(Boolean).join(" · ");
 }
 
@@ -1758,10 +1756,49 @@ function _showScanOcrError(message) {
 
 
 // ================================================================
-// ASSISTANT: DEEPSEEK API
+// STYLE ELIGIBILITY
+// Situation + Goal (never Who) select which styles are eligible, in
+// priority order. STYLE_ELIGIBILITY (data.js) is the table; this is the
+// only function that should read it, so the hard safety rule below is
+// always enforced regardless of what the table says.
 // ================================================================
 
-const TONE_LABELS = { smooth: 'Smooth', funny: 'Funny', flirty: 'Flirty', confident: 'Confident' };
+const SAFE_FALLBACK_STYLES        = ["direct", "shorter"];
+const NO_CONTEXT_DEFAULT_STYLES   = ["smooth", "direct", "shorter"];
+const HEAVY_SITUATIONS            = new Set(["Argument", "Toxic Relationship"]);
+const BANNED_STYLES_IN_HEAVY_SITS = new Set(["funny", "bolder"]);
+
+function getEligibleStyles(situation, goal) {
+  let styles;
+  const tableEntry = situation && goal && STYLE_ELIGIBILITY[situation]
+    ? STYLE_ELIGIBILITY[situation][goal]
+    : null;
+
+  if (tableEntry && tableEntry.length) {
+    styles = tableEntry.slice();
+  } else if (HEAVY_SITUATIONS.has(situation)) {
+    // "not offered" cell (e.g. Argument + Be Funny) — safe fallback, never Funny/Bolder
+    styles = SAFE_FALLBACK_STYLES.slice();
+  } else {
+    // No Situation/Goal selected at all, or an otherwise-unmapped combo
+    styles = NO_CONTEXT_DEFAULT_STYLES.slice();
+  }
+
+  // Hard safety rule, enforced in code — not just by relying on the table
+  // being correct. Funny and Bolder must never reach the user during an
+  // Argument or Toxic Relationship, regardless of Goal.
+  if (HEAVY_SITUATIONS.has(situation)) {
+    styles = styles.filter(s => !BANNED_STYLES_IN_HEAVY_SITS.has(s));
+    if (styles.length === 0) styles = SAFE_FALLBACK_STYLES.slice();
+  }
+
+  return styles;
+}
+
+
+// ================================================================
+// ASSISTANT: DEEPSEEK API
+// ================================================================
 
 // Turns the structured Tell Zelo More selections into plain-language
 // constraints the model is explicitly told to follow, rather than a bare
@@ -1772,14 +1809,13 @@ function buildScanContextBlock() {
   if (ctx.who)       lines.push(`This message is from a ${ctx.who}.`);
   if (ctx.situation) lines.push(`The situation is: ${ctx.situation}.`);
   if (ctx.goal)       lines.push(`The user wants to: ${ctx.goal}.`);
-  if (ctx.extra)      lines.push(`Additional context from the user: ${ctx.extra}`);
   return lines.join(' ');
 }
 
-async function _fetchDeepSeekReply(tone) {
+async function _fetchDeepSeekReply(style) {
   const contextBlock = buildScanContextBlock();
 
-  let userPrompt = `Message I received: "${state.asstMessage}"\nTone: ${TONE_LABELS[tone]}`;
+  let userPrompt = `Message I received: "${state.asstMessage}"\nTone: ${STYLE_LABELS[style]}`;
   if (contextBlock) userPrompt += `\nContext: ${contextBlock}`;
 
   const systemPrompt = contextBlock
@@ -1977,25 +2013,31 @@ async function generateReplies() {
   recordScan();
   decrementScanCount();
 
-  // Snapshot message + context for this scan — used by per-tone API calls
-  state.asstCurrentSet = {};  // cache: tone → reply text, filled on demand
+  // Snapshot message + context for this scan — used by per-style API calls
+  state.asstCurrentSet = {};  // cache: style → reply text, filled on demand
   state.asstMessage    = messageText;
   state.asstContext    = context;
-  state.asstContextObj = { ...state.scanContext };  // structured who/situation/goal/extra, for prompt building
+  state.asstContextObj = { ...state.scanContext };  // structured who/situation/goal, for prompt building
 
-  // Reset to Smooth style on each new generate
-  state.asstStyle = "smooth";
-  updateStylePills("smooth");
+  // Situation + Goal (never Who) decide which styles are eligible, in
+  // priority order. Only the first (highest-priority) style is generated
+  // now — the rest are fetched on demand as the user swipes (see
+  // swipeReplyCard()/_prefetchNextStyle()), never all upfront.
+  state.eligibleStyles   = getEligibleStyles(state.scanContext.situation, state.scanContext.goal);
+  state.currentStyleIndex = 0;
+  state.regenCounts       = {};
+  state.asstStyle         = state.eligibleStyles[0];
 
-  // Fetch the default (Smooth) reply immediately; reveal when it arrives
-  _fetchDeepSeekReply("smooth")
+  const firstStyle = state.asstStyle;
+  _fetchDeepSeekReply(firstStyle)
     .catch(() => "Couldn't reach Zelo right now. Try again.")
     .then(reply => {
-      state.asstCurrentSet["smooth"] = reply;
+      state.asstCurrentSet[firstStyle] = reply;
       renderReplyCard();
       loading.hidden = true;
       content.hidden = false;
       _onReplyRevealed();
+      _prefetchNextStyle();
     });
 }
 
@@ -2033,67 +2075,86 @@ function _onReplyRevealed() {
 
 
 // ================================================================
-// ASSISTANT: SELECT STYLE
-// Called when user taps a style pill. Updates the single card.
+// ASSISTANT: SWIPEABLE STYLE CARDS
+// Replaces the old style-pill selector. One card at a time, swiped left/
+// right through state.eligibleStyles (in the table's priority order).
+// Only the current style + one card ahead are ever generated — see
+// _prefetchNextStyle(); never all eligible styles upfront.
 // ================================================================
 
-function selectStyle(style) {
-  if (!state.asstCurrentSet) return;  // nothing generated yet
+function _setCardLoading(isLoading) {
+  const card = document.getElementById("reply-card");
+  if (card) card.classList.toggle("reply-card--loading", isLoading);
+}
 
-  if (isToneLocked(style)) {
-    const pill = document.querySelector(`.style-pill[data-style="${style}"]`);
-    if (pill) {
-      pill.classList.add('locked-tap');
-      setTimeout(() => pill.classList.remove('locked-tap'), 260);
-    }
-    return;
-  }
+function _updateStyleLabel() {
+  const label = document.getElementById("reply-style-label");
+  if (label) label.textContent = STYLE_LABELS[state.asstStyle] || "";
+}
 
-  state.asstStyle = style;
-  updateStylePills(style);
+// index is clamped, not wrapped — swiping past either end is a no-op.
+function goToStyleIndex(index) {
+  if (!state.eligibleStyles.length) return;
+  if (index < 0 || index >= state.eligibleStyles.length) return;
+  if (index === state.currentStyleIndex) return;
 
-  if (state.asstCurrentSet[style]) {
-    // Already cached — render immediately, no usage charge
+  state.currentStyleIndex = index;
+  state.asstStyle         = state.eligibleStyles[index];
+  _updateStyleLabel(); // reflects the target style immediately, even while its reply is still loading
+
+  if (state.asstCurrentSet[state.asstStyle]) {
     renderReplyCard();
+    _prefetchNextStyle();
   } else {
-    // Gate: new tone fetch counts against the shared daily limit
-    if (!isPaidUser() && scansRemainingToday() <= 0) {
-      refreshScanLimitBanner();
-      return;
-    }
-    // Show placeholder while fetching
-    document.getElementById("reply-text").textContent = "…";
-    decrementScanCount();
-    _fetchDeepSeekReply(style)
-      .catch(() => "Couldn't reach Zelo right now. Try again.")
-      .then(reply => {
-        state.asstCurrentSet[style] = reply;
-        if (state.asstStyle === style) renderReplyCard();
-      });
+    _generateStyleCard(state.asstStyle);
   }
 }
 
-function updateStylePills(activeStyle) {
-  document.querySelectorAll(".style-pill").forEach(pill => {
-    pill.classList.toggle("active", pill.dataset.style === activeStyle);
-    pill.classList.toggle("locked", isToneLocked(pill.dataset.style));
-  });
+// direction: -1 = previous card (swipe right), +1 = next card (swipe left)
+function swipeReplyCard(direction) {
+  goToStyleIndex(state.currentStyleIndex + direction);
 }
 
-// Free users only get Smooth + Funny — Flirty/Confident stay visible but locked.
-function isToneLocked(style) {
-  return !isPaidUser() && !FREE_LIMITS.freeTones.includes(style);
+function _generateStyleCard(style) {
+  _setCardLoading(true);
+  _fetchDeepSeekReply(style)
+    .catch(() => "Couldn't reach Zelo right now. Try again.")
+    .then(reply => {
+      state.asstCurrentSet[style] = reply;
+      if (state.asstStyle === style) {
+        renderReplyCard();
+        _prefetchNextStyle();
+      }
+    });
 }
 
-// Renders/updates the single reply card with the current style's text.
-// The card header is now a static "Zelo Suggests" label — it no longer
-// swaps per style, since the style pills below already show the choice.
+// Silent background fetch, exactly one card ahead of whatever's showing —
+// never triggered by regenerate, never fetches more than one card at a
+// time. If the user swipes there before it resolves, goToStyleIndex()
+// just shows its own loading state and waits on the same promise's result.
+function _prefetchNextStyle() {
+  const nextIndex = state.currentStyleIndex + 1;
+  if (nextIndex >= state.eligibleStyles.length) return;
+  const nextStyle = state.eligibleStyles[nextIndex];
+  if (state.asstCurrentSet[nextStyle]) return; // already cached, nothing to do
+
+  _fetchDeepSeekReply(nextStyle)
+    .then(reply => {
+      if (!state.asstCurrentSet[nextStyle]) state.asstCurrentSet[nextStyle] = reply;
+    })
+    .catch(() => {}); // best-effort — a failed prefetch just means a real fetch happens on swipe
+}
+
+// Renders/updates the single reply card with the current style's text +
+// its small style label.
 function renderReplyCard() {
   const set   = state.asstCurrentSet;
   const style = state.asstStyle;
   const text  = set[style];
 
+  _setCardLoading(false);
   document.getElementById("reply-text").textContent = text;
+  _updateStyleLabel();
 
   // Reset copy button
   const copyBtn = document.getElementById("copy-btn");
@@ -2105,6 +2166,107 @@ function renderReplyCard() {
   card.style.animation = "none";
   card.offsetHeight;          // force reflow
   card.style.animation = "";
+}
+
+
+// ================================================================
+// ASSISTANT: REGENERATE
+// Same style, new text. Capped at FREE_LIMITS.maxRegensPerCard per style —
+// the count is independent per style (swiping to a different card and
+// back keeps its own remembered count), reset to {} on every new scan.
+// ================================================================
+
+function regenerateCurrentReply() {
+  if (!state.asstCurrentSet) return;
+  const style = state.asstStyle;
+  const used  = state.regenCounts[style] || 0;
+
+  if (!isPaidUser() && used >= FREE_LIMITS.maxRegensPerCard) {
+    showRegenPaywall();
+    return;
+  }
+
+  state.regenCounts[style] = used + 1;
+  _setCardLoading(true);
+  _fetchDeepSeekReply(style)
+    .catch(() => "Couldn't reach Zelo right now. Try again.")
+    .then(reply => {
+      state.asstCurrentSet[style] = reply;
+      if (state.asstStyle === style) renderReplyCard();
+    });
+}
+
+// No dedicated paywall screen exists yet anywhere in the app (see the
+// other "DEV — connect to paywall" spots) — this hooks into the same
+// not-yet-built modal so it starts working the moment that lands, and
+// uses the existing toast in the meantime so the user sees *something*
+// happen on the 3rd attempt rather than silence.
+function showRegenPaywall() {
+  flashLimitToast("You've used your free regenerations for this reply. Upgrade for unlimited.");
+  document.getElementById('thread-upgrade-modal')?.removeAttribute('hidden');
+}
+
+
+// ================================================================
+// ASSISTANT: SWIPE GESTURE (reply card)
+// Drag horizontally to move between eligible style cards — threshold-
+// based commit, snaps back if released short of it. Attached once at
+// startup; the card/area are static elements present from page load.
+// ================================================================
+
+function _initReplyCardSwipe() {
+  const area = document.getElementById('reply-card-swipe-area');
+  const card = document.getElementById('reply-card');
+  if (!area || !card) return;
+
+  const THRESHOLD = 70;
+  let startX = 0, deltaX = 0, dragging = false;
+
+  function pointerX(e) {
+    return e.touches ? e.touches[0].clientX : e.clientX;
+  }
+
+  function onDown(e) {
+    if (!state.eligibleStyles || state.eligibleStyles.length <= 1) return;
+    dragging = true;
+    startX = pointerX(e);
+    card.style.transition = "none";
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    deltaX = pointerX(e) - startX;
+    card.style.transform = `translateX(${deltaX}px)`;
+  }
+
+  function onUp() {
+    if (!dragging) return;
+    dragging = false;
+
+    const goingNext = deltaX <= -THRESHOLD && state.currentStyleIndex < state.eligibleStyles.length - 1;
+    const goingPrev = deltaX >= THRESHOLD  && state.currentStyleIndex > 0;
+
+    if (goingNext || goingPrev) {
+      card.style.transition = "transform 0.18s ease";
+      card.style.transform  = `translateX(${goingNext ? -120 : 120}%)`;
+      setTimeout(() => {
+        card.style.transition = "none";
+        card.style.transform  = "";
+        swipeReplyCard(goingNext ? 1 : -1);
+      }, 180);
+    } else {
+      card.style.transition = "transform 0.2s ease";
+      card.style.transform  = "translateX(0)";
+    }
+    deltaX = 0;
+  }
+
+  area.addEventListener("mousedown", onDown);
+  area.addEventListener("touchstart", onDown, { passive: true });
+  window.addEventListener("mousemove", onMove);
+  area.addEventListener("touchmove", onMove, { passive: true });
+  window.addEventListener("mouseup", onUp);
+  area.addEventListener("touchend", onUp);
 }
 
 
