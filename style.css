@@ -4929,9 +4929,9 @@ textarea { font-family: inherit; }
 .aicoach-suggest-toggle-chevron {
   color: var(--text-3);
   transition: transform 0.35s ease;
+  transform: rotate(180deg); /* collapsed: points up */
 }
-/* Default (collapsed) points down; rotated to point up once expanded. */
-.aicoach-suggest-toggle-chevron--open { transform: rotate(180deg); }
+.aicoach-suggest-toggle-chevron--open { transform: rotate(0deg); } /* expanded: points down */
 
 /* Collapsed by default; expanding animates height instead of an instant
    display:none/block swap, for a slow dropdown/dropup slide. */
