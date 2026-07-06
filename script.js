@@ -1811,11 +1811,12 @@ async function _fetchDeepSeekReply(tone) {
 // to "adijaoidj;a" while letting real short messages/slang through.
 // ================================================================
 
-let _gibDictionary = new Set();
+let _gibDictionary       = new Set();
+let _gibDictionaryLoaded = false;
 
 async function _loadGibberishDictionary() {
   try {
-    const response = await fetch('words-dict.txt?v=20260704l');
+    const response = await fetch('words-dict.txt?v=20260706d');
     const text = await response.text();
     const words = text.split(/\s+/).filter(w => w.length > 0);
     _gibDictionary = new Set(words.map(w => w.toLowerCase()));
@@ -1823,10 +1824,17 @@ async function _loadGibberishDictionary() {
   } catch (err) {
     console.warn("[Gibberish Guard] Failed to load dictionary:", err);
     _gibDictionary = new Set(["the","a","is","and","or","you","me","i","like","love","want"]);
+  } finally {
+    _gibDictionaryLoaded = true;
   }
 }
 
 function _looksLikeGibberish(text) {
+  // Fail open: if the dictionary hasn't loaded yet (e.g. Analyze pressed
+  // right after page load, before the fetch resolves), don't flag anything
+  // rather than flagging everything against an empty word list.
+  if (!_gibDictionaryLoaded) return false;
+
   const clean = text.trim();
   if (clean.length === 0) return false;
 
