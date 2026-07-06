@@ -4370,6 +4370,13 @@ textarea { font-family: inherit; }
 .screen--history {
   bottom: var(--tab-h);
   background: var(--bg);
+  /* Opened as an overlay on top of another already-active .screen (e.g.
+     Account) rather than through pushScreen(). Without this, that other
+     screen's position:sticky header creates its own compositing layer and
+     renders ABOVE this one regardless of DOM order — so taps meant for
+     History's own header/close button were hitting the screen underneath
+     instead. Verified with a real browser (elementFromPoint) before fixing. */
+  z-index: 50;
 }
 
 .history-close-btn {
