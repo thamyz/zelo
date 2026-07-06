@@ -323,10 +323,6 @@ const ASSISTANT_REPLIES = [
 // NEW FEATURE-DECISION CONSTANTS
 // ================================================================
 
-// Onboarding: pre-filled example so first-time users see Generate
-// already active without typing anything themselves.
-const EXAMPLE_SCAN_MESSAGE = "haha yeah I guess, idk what do you wanna do";
-
 // Placeholder names for the two chat reply-timing modes (internal keys
 // stay "training"/"realistic" — only the user-facing short label is
 // unresolved). Hardcoded here so renaming later is a one-line change.

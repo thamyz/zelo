@@ -35,10 +35,6 @@ const state = {
   scanContext:    {},   // structured "Tell Zelo More" selections { where, who, goal, vibe }
   tzStep:         0,    // current step in the Tell Zelo More flow
 
-  // True while the pre-filled onboarding example is still sitting in the
-  // scan input untouched by the user.
-  exampleScanActive: false,
-
   // mode chosen per swipe-card profile (Open/Neutral/Cold), keyed by name
   cardModes: {},
 
@@ -71,8 +67,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // below never fires in dev (onboarding always looks "not done" first).
   // Comment this block out temporarily to test the welcome-back typewriter.
   localStorage.removeItem('zelo_onboarding_done');
-  localStorage.removeItem('zelo_example_prefilled');
-  localStorage.removeItem('zelo_scan_first_run');
   localStorage.removeItem('zelo_tour_seen');
   // Onboarding + Home-tab answers start blank each run — nothing pre-chosen.
   localStorage.removeItem('zelo_practice_mode');
@@ -90,7 +84,6 @@ window.addEventListener('DOMContentLoaded', () => {
   initMatchSlots();           // Feature 7: restore expired deletion slots
   maybeShowWelcomeBack();     // returning users only — see NOTE above
   initOnboarding();
-  maybePrefillExampleScan();
   refreshScanLimitBanner();
   // Drop a stale AI Coach link if its thread no longer exists
   if (getLinkedThreadId() && !getLinkedThread()) setLinkedThreadId(null);
@@ -162,6 +155,7 @@ function showTab(name) {
     maybeShowScanIntro();
     refreshScanLimitBanner();
     refreshScanWhoCards();
+    checkGenerateReady();
   }
 }
 
@@ -1332,14 +1326,8 @@ function onStartChatting() {
 
 function onAsstInput() {
   const el = document.getElementById("asst-input");
-  // Once the user edits the pre-filled example, first-run is over
-  if (state.exampleScanActive && el.value !== EXAMPLE_SCAN_MESSAGE) {
-    state.exampleScanActive = false;
-  }
   const cc = document.getElementById("char-count");
   if (cc) cc.textContent = `${el.value.length}/4000`;
-  // Remove bounce animation as soon as the user types or deletes anything
-  document.getElementById('asst-generate-btn')?.classList.remove('generate-btn--bounce');
   updateScanMessagePreview();
   checkGenerateReady();
 }
@@ -1350,7 +1338,6 @@ function clearScanInput() {
   state.asstMessage = '';
   state.asstContext = '';
   state.scanContext = {};
-  state.exampleScanActive = false;
   const input = document.getElementById('asst-input');
   if (input) input.value = '';
   updateScanMessagePreview();
@@ -1920,8 +1907,6 @@ function renderHerMessagePreview(text, screenshotUrl) {
 }
 
 async function generateReplies() {
-  document.getElementById("asst-generate-btn").classList.remove('generate-btn--bounce');
-
   const userInput = document.getElementById("asst-input").value.trim();
   const context   = scanContextString();
   const screenshotFile = document.getElementById("screenshot-input").files?.[0] || null;
@@ -1982,15 +1967,7 @@ async function generateReplies() {
   renderHerMessagePreview(messageText, screenshotPreviewUrl);
 
   recordScan();
-
-  // The pre-filled onboarding example must not cost a scan credit — only
-  // the user's own scans count against the daily limit. Captured before
-  // any state changes below so it reflects this specific generate.
-  const wasFirstRunScan    = isFirstRunScan();
-  const isExactExampleText = userInput === EXAMPLE_SCAN_MESSAGE;
-  if (!(wasFirstRunScan && isExactExampleText)) {
-    decrementScanCount();
-  }
+  decrementScanCount();
 
   // Snapshot message + context for this scan — used by per-tone API calls
   state.asstCurrentSet = {};  // cache: tone → reply text, filled on demand
@@ -2010,12 +1987,12 @@ async function generateReplies() {
       renderReplyCard();
       loading.hidden = true;
       content.hidden = false;
-      _onReplyRevealed(wasFirstRunScan, isExactExampleText);
+      _onReplyRevealed();
     });
 }
 
 // Runs once per scan after the first reply is revealed.
-function _onReplyRevealed(wasFirstRunScan, isExactExampleText) {
+function _onReplyRevealed() {
   // Reset the thread-save prompt so it appears fresh on every new scan
   const tsp = document.getElementById('thread-save-prompt');
   if (tsp) {
@@ -2044,51 +2021,6 @@ function _onReplyRevealed(wasFirstRunScan, isExactExampleText) {
     }
     state.preselectThreadId = null;
   }
-
-  // "Your turn. Type anything." shows once, on the result screen for the
-  // first-run pre-populated message, and never again after that — even if
-  // the user backs out without tapping "Got it". So the completion flag is
-  // marked the moment this result is shown, not on dismissal. Every
-  // subsequent result shows no prompt at all — the header's back button
-  // is the only way back, and it already triggers the save reminder via
-  // goBackFromResult() regardless of which button calls it.
-  const promptEl = document.getElementById("scan-post-result-prompt");
-  if (wasFirstRunScan && isExactExampleText) {
-    promptEl.innerHTML = `
-      <div class="example-banner">
-        <span>Your turn. Type anything.</span>
-        <button type="button" onclick="dismissExampleScan()">Got it</button>
-      </div>`;
-    localStorage.setItem('zelo_scan_first_run', 'true');
-    promptEl.hidden = false;
-  } else {
-    if (wasFirstRunScan) {
-      state.exampleScanActive = false;
-      localStorage.setItem('zelo_scan_first_run', 'true');
-    }
-    promptEl.innerHTML = "";
-    promptEl.hidden = true;
-  }
-}
-
-// Clears the pre-filled onboarding example so the next scan is the user's own.
-// zelo_scan_first_run is already marked complete by the time this runs (see
-// generateReplies' result-reveal step) — this just resets the input/UI.
-function dismissExampleScan() {
-  const promptEl = document.getElementById("scan-post-result-prompt");
-  promptEl.hidden = true;
-  promptEl.innerHTML = "";
-  clearScanInput();
-  checkGenerateReady();
-  popScreen();
-}
-
-// True only while the pre-filled example is still sitting in the scan input,
-// untouched and not yet dismissed — backed by zelo_scan_first_run so a stale
-// in-memory flag can never re-grant a free scan after completion.
-function isFirstRunScan() {
-  if (localStorage.getItem('zelo_scan_first_run') === 'true') return false;
-  return state.exampleScanActive === true;
 }
 
 
@@ -2965,38 +2897,6 @@ function isWithinTrial() {
 // Cold mode (swipe card) and the 3rd "Cold mode" women-trial both gate on this.
 function isColdAvailable() {
   return isPaidUser() || isWithinTrial();
-}
-
-
-// ================================================================
-// ONBOARDING: PRE-FILLED EXAMPLE SCAN
-// First-ever app open only — pre-populates the scan input so Generate
-// is already active without the user typing anything.
-// ================================================================
-
-function maybePrefillExampleScan() {
-  // One-time migration: an earlier version set zelo_example_prefilled before
-  // the prefill actually ran, permanently blocking it even for users who
-  // never completed the first-run scan. Recover the intended experience for
-  // anyone still mid-onboarding, without affecting users who already did.
-  if (localStorage.getItem('zelo_example_prefilled') && localStorage.getItem('zelo_scan_first_run') !== 'true') {
-    localStorage.removeItem('zelo_example_prefilled');
-  }
-
-  if (localStorage.getItem('zelo_example_prefilled')) return;
-
-  const input = document.getElementById('asst-input');
-  input.value = EXAMPLE_SCAN_MESSAGE;
-  state.exampleScanActive = true;
-  updateScanMessagePreview();
-  checkGenerateReady();
-
-  // Draws the eye to Generate while the example is sitting there untapped.
-  // Stopped the moment Generate is tapped (see generateReplies()) and never
-  // applied again on later visits or for user-typed messages.
-  document.getElementById('asst-generate-btn').classList.add('generate-btn--bounce');
-
-  localStorage.setItem('zelo_example_prefilled', '1');
 }
 
 
@@ -4216,9 +4116,9 @@ function openAiCoach() {
   _aiCoachChat = thread && Array.isArray(thread.coachChat) ? thread.coachChat.slice() : [];
   renderAiCoachContext();
   renderAiCoachChat();
-  // Suggestions panel starts open on a fresh conversation, collapsed if
-  // there's already history — but the user can toggle it either way anytime.
-  _aiCoachSuggestOpen = _aiCoachChat.length === 0;
+  // Suggestions panel always starts collapsed — the user taps to reveal it,
+  // regardless of whether this is a fresh conversation or has history.
+  _aiCoachSuggestOpen = false;
   renderAiCoachSuggestPanel();
   const limit = document.getElementById('aicoach-limit');
   if (limit) limit.hidden = true;
@@ -4353,12 +4253,12 @@ function _aiCoachActionPills() {
 }
 
 // ---- Collapsible suggestions panel (anchored above the input bar) ----
-// Open by default on a fresh conversation, auto-collapses once a message
-// is sent, reopenable anytime via the toggle. Every category/quick-action
-// button routes through aiCoachPromptTap(), which asks for her message
-// first if there's no real linked context — it does NOT hand the button's
-// own label straight to the AI as if it were a fully-formed question.
-let _aiCoachSuggestOpen = true;
+// Always starts collapsed — the user taps the toggle to reveal it. Every
+// category/quick-action button routes through aiCoachPromptTap(), which
+// asks for her message first if there's no real linked context — it does
+// NOT hand the button's own label straight to the AI as if it were a
+// fully-formed question.
+let _aiCoachSuggestOpen = false;
 
 function toggleAiCoachSuggestPanel() {
   _aiCoachSuggestOpen = !_aiCoachSuggestOpen;

@@ -95,7 +95,7 @@
             <textarea
               id="asst-input"
               class="msg-textarea scan-inline-textarea"
-              placeholder="Paste the last message here…"
+              placeholder="Paste a message she sent…"
               maxlength="4000"
               oninput="onAsstInput()"
             ></textarea>
@@ -784,12 +784,6 @@
 
           <!-- Result content — revealed once the reply is ready -->
           <div class="scan-result-content" id="scan-result-content" hidden>
-
-            <!-- Exactly one of two prompts, built in script.js by generateReplies():
-                 the "Your turn" banner (first-run only) OR the "Go back" hint
-                 (every scan after). Only the chosen one is ever inserted —
-                 the other markup never exists in the DOM at the same time. -->
-            <div class="scan-post-result-prompt" id="scan-post-result-prompt" hidden></div>
 
             <!-- Her message preview -->
             <div class="preview-block">
