@@ -4379,19 +4379,6 @@ textarea { font-family: inherit; }
   z-index: 50;
 }
 
-.history-close-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(236, 72, 153, 0.10);
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.12s;
-}
-.history-close-btn:hover { background: rgba(236, 72, 153, 0.18); }
-
 .history-layout {
   padding: 0 22px;
   display: flex;
