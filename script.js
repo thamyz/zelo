@@ -176,8 +176,13 @@ function pushScreen(name) {
   document.getElementById("tab-bar").classList.add("hidden");
 
   // Remember what screen (if any) was showing before this one, so popScreen()
-  // can return to it instead of always falling back to the base tab.
-  if (state.activeScreen) state.screenStack.push(state.activeScreen);
+  // can return to it instead of always falling back to the base tab. Skip
+  // the push if we're already on this screen — otherwise re-entering the
+  // same screen (e.g. openDashboard() called while Account is already
+  // showing) piles up redundant stack entries that corrupt later "back"s.
+  if (state.activeScreen && state.activeScreen !== name) {
+    state.screenStack.push(state.activeScreen);
+  }
   state.activeScreen = name;
 }
 
@@ -3596,12 +3601,12 @@ function closeHistory() {
 
 // History is a lightweight overlay (not part of the pushScreen/popScreen
 // stack — it deliberately leaves the tab bar visible underneath). Rows
-// inside it drill into a real screen (thread-detail, chat) via pushScreen,
-// so without this, that screen's "back" would land on whatever was under
-// History (a tab, or Account) instead of reopening History itself. Any
-// function that can be entered from a History row calls
-// _captureHistoryReturn() before navigating away, and its close/back
-// handler calls _restoreHistoryReturn() first.
+// inside it drill into a real screen (thread-detail, chat) via pushScreen;
+// without this, that screen's "back" would land on whatever was under
+// History instead of Account. Any function that can be entered from a
+// History row calls _captureHistoryReturn() before navigating away, and
+// its close/back handler calls _restoreHistoryReturn() first — this goes
+// straight back to Account, it does not reopen History.
 let _historyReturnTab = null;
 
 function _captureHistoryReturn() {
@@ -3611,10 +3616,10 @@ function _captureHistoryReturn() {
 
 function _restoreHistoryReturn() {
   if (!_historyReturnTab) return false;
-  const tab = _historyReturnTab;
   _historyReturnTab = null;
-  popScreen();
-  openHistory(tab);
+  // Always lands on Account, unconditionally — a Scan/Match row is only
+  // ever reached through History, and History is an Account feature.
+  openDashboard();
   return true;
 }
 
