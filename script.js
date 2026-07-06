@@ -349,6 +349,8 @@ function chatSettingsDelete() {
 
 function exitChat() {
   cancelPendingReply();
+  if (_restoreHistoryReturn()) return;
+  if (state.screenStack.length > 0) { popScreen(); return; }
   // If we came from chats tab, return there; otherwise practice
   const returnTab = state.activeTab === 'chats' ? 'chats' : 'practice';
   showTab(returnTab);
@@ -2762,6 +2764,8 @@ function renderChatsList() {
 }
 
 function openChatFromStore(chat) {
+  _captureHistoryReturn();
+
   // Mark unread cleared
   chat.unread = 0;
 
@@ -3580,6 +3584,30 @@ function closeHistory() {
   if (screen) screen.classList.remove('active');
 }
 
+// History is a lightweight overlay (not part of the pushScreen/popScreen
+// stack — it deliberately leaves the tab bar visible underneath). Rows
+// inside it drill into a real screen (thread-detail, chat) via pushScreen,
+// so without this, that screen's "back" would land on whatever was under
+// History (a tab, or Account) instead of reopening History itself. Any
+// function that can be entered from a History row calls
+// _captureHistoryReturn() before navigating away, and its close/back
+// handler calls _restoreHistoryReturn() first.
+let _historyReturnTab = null;
+
+function _captureHistoryReturn() {
+  const screen = document.getElementById('screen-history');
+  _historyReturnTab = (screen && screen.classList.contains('active')) ? _historyTab : null;
+}
+
+function _restoreHistoryReturn() {
+  if (!_historyReturnTab) return false;
+  const tab = _historyReturnTab;
+  _historyReturnTab = null;
+  popScreen();
+  openHistory(tab);
+  return true;
+}
+
 function setHistoryTab(tab) {
   _historyTab = tab;
   const sEl = document.getElementById('history-tab-scans');
@@ -4041,6 +4069,8 @@ function openThreadDetail(threadId) {
   const thread  = threads.find(t => t.id === threadId);
   if (!thread) return;
 
+  _captureHistoryReturn();
+
   state.activeThreadId = threadId;
   state.threadChat     = thread.chat || [];
   state.scanEditMode   = false;
@@ -4130,6 +4160,7 @@ function _deleteScanAtIndex(idx) {
 function closeThreadDetail() {
   state.activeThreadId = null;
   state.threadChat     = [];
+  if (_restoreHistoryReturn()) return;
   popScreen();
 }
 

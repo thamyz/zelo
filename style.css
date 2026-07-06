@@ -4359,7 +4359,7 @@ textarea { font-family: inherit; }
    ================================================================ */
 .screen--history {
   bottom: var(--tab-h);
-  background: #fdf2f7;
+  background: var(--bg);
 }
 
 .history-close-btn {
