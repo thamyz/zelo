@@ -3571,9 +3571,15 @@ function renderThreadList() {
 
 let _historyTab = 'scans';
 
+// Tracked explicitly (not inferred from DOM/active-class state) so closing
+// History always lands back on the right place regardless of how it was
+// opened — the Scan tab's header icon, or Account's "See all".
+let _historyOpenedFromDashboard = false;
+
 function openHistory(tab) {
   const screen = document.getElementById('screen-history');
   if (!screen) return;
+  _historyOpenedFromDashboard = (state.activeScreen === 'dashboard');
   _historyTab = tab || 'scans';
   setHistoryTab(_historyTab);
   screen.classList.add('active');
@@ -3582,6 +3588,10 @@ function openHistory(tab) {
 function closeHistory() {
   const screen = document.getElementById('screen-history');
   if (screen) screen.classList.remove('active');
+  if (_historyOpenedFromDashboard) {
+    _historyOpenedFromDashboard = false;
+    openDashboard();
+  }
 }
 
 // History is a lightweight overlay (not part of the pushScreen/popScreen
@@ -4746,14 +4756,16 @@ function openLeaderboardFromDash() {
 let _settingsPanel = null;
 
 const SETTINGS_PANEL_IDS = {
-  'login-security':  'settings-panel-login-security',
+  'login':           'settings-panel-login',
+  'security':        'settings-panel-security',
   'notifications':   'settings-panel-notifications',
   'privacy':         'settings-panel-privacy',
   'help':            'settings-panel-help'
 };
 
 const SETTINGS_PANEL_TITLES = {
-  'login-security':  'Login & Security',
+  'login':           'Login',
+  'security':        'Security',
   'notifications':   'Notifications',
   'privacy':         'Privacy',
   'help':            'Help & Support'
@@ -4782,7 +4794,7 @@ function showSettingsPanel(name) {
   const titleEl = document.getElementById('settings-screen-title');
   if (titleEl) titleEl.textContent = SETTINGS_PANEL_TITLES[name] || 'Settings';
 
-  if (name === 'login-security') _populateLoginSecurityPanel();
+  if (name === 'login')          _populateLoginPanel();
   if (name === 'notifications')  _populateNotificationsPanel();
   if (name === 'privacy')        _populatePrivacyPanel();
 }
@@ -4792,7 +4804,7 @@ function settingsBack() {
   popScreen();
 }
 
-function _populateLoginSecurityPanel() {
+function _populateLoginPanel() {
   const nameInput = document.getElementById('settings-display-name-input');
   if (nameInput) nameInput.value = getDisplayName();
   const emailInput = document.getElementById('settings-email-input');

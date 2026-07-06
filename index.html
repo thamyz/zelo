@@ -327,14 +327,16 @@
 
         <div class="dash-layout">
 
-          <!-- Header: avatar, display name (or "Player #XXXX" fallback), member label -->
-          <div class="dash-profile-card">
+          <!-- Header: avatar, display name (or "Player #XXXX" fallback), member
+               label — tapping opens the Login page (name/email/password) -->
+          <button class="dash-profile-card" onclick="openSettingsSubpage('login')">
             <div class="dash-avatar" id="dash-avatar">Y</div>
             <div class="dash-profile-info">
               <span class="dash-name" id="dash-name">You</span>
               <span class="dash-sub">Zelo member</span>
             </div>
-          </div>
+            <span class="dash-profile-chevron" aria-hidden="true">›</span>
+          </button>
 
           <!-- Stats row -->
           <div class="dash-stats">
@@ -391,8 +393,8 @@
             </button>
             <div class="dash-settings-dropdown" id="dash-settings-dropdown" hidden>
               <div class="dash-menu">
-                <button class="dash-menu-row" onclick="openSettingsSubpage('login-security')">
-                  Login &amp; Security <span>›</span>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('security')">
+                  Security <span>›</span>
                 </button>
                 <button class="dash-menu-row" onclick="openSettingsSubpage('notifications')">
                   Notifications <span>›</span>
@@ -431,8 +433,9 @@
 
         <div class="settings-layout">
 
-          <!-- LOGIN & SECURITY -->
-          <div id="settings-panel-login-security" hidden>
+          <!-- LOGIN — entered from the profile card at the top of Account,
+               not from the Settings dropdown -->
+          <div id="settings-panel-login" hidden>
             <div class="settings-field">
               <label class="settings-field-label">Display name</label>
               <div class="settings-field-row">
@@ -458,7 +461,11 @@
               </div>
               <p class="settings-field-msg" id="settings-password-msg"></p>
             </div>
+          </div>
 
+          <!-- SECURITY — stays in the Settings dropdown, in the same place
+               "Login & Security" used to be -->
+          <div id="settings-panel-security" hidden>
             <button class="dash-menu-row" onclick="exportAccountData()">
               Export my data (GDPR) <span>›</span>
             </button>

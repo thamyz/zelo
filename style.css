@@ -2246,10 +2246,20 @@ textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 14px;
+  width: 100%;
   background: var(--s1);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: 18px;
+  text-align: left;
+}
+
+.dash-profile-chevron {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: 1.3rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .dash-avatar {
