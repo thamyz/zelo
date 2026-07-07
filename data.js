@@ -347,8 +347,7 @@ const FREE_LIMITS = {
   maxAdsPerDay:    1,
   historyDays:     7,
   maxMatches:      3,
-  trialDays:       7,
-  maxRegensPerCard: 2   // regenerations allowed per style card before the paywall
+  trialDays:       7
 };
 
 // ================================================================

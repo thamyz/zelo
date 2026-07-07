@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260707i" />
+    <link rel="stylesheet" href="style.css?v=20260707j" />
   </head>
   <body>
     <div id="app">
@@ -770,8 +770,9 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <span class="screen-title">Your Reply</span>
-          <button class="back-btn" onclick="openHistory()" aria-label="History">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Same .history-btn treatment as the Scan page header -->
+          <button class="history-btn" onclick="openHistory()" aria-label="History">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
             </svg>
           </button>
@@ -805,12 +806,6 @@
               <div class="yr-suggests-row">
                 <span class="yr-suggests-label">✦ Zelo Suggests</span>
                 <div class="yr-suggests-actions">
-                  <button class="regen-btn" id="regen-btn" onclick="regenerateCurrentReply()" aria-label="Regenerate">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                    </svg>
-                  </button>
                   <button class="copy-btn" id="copy-btn" onclick="copyCurrentReply()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                     <span id="copy-btn-label">Copy</span>
@@ -1583,6 +1578,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260707i"></script>
+    <script src="script.js?v=20260707j"></script>
   </body>
 </html>

@@ -527,7 +527,7 @@ textarea { font-family: inherit; }
 #screen-scan-result .screen-title {
   flex: 1;
   text-align: center;
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 700;
   color: #121212;
   letter-spacing: -0.2px;
@@ -552,7 +552,8 @@ textarea { font-family: inherit; }
   border: 1px solid #E8DDD2;
   border-radius: 16px;
   padding: 12px 18px;
-  font-size: 18px;
+  font-size: 14px;
+  font-weight: 400;
   line-height: 1.4;
   color: var(--text);
   display: flex;
@@ -587,27 +588,7 @@ textarea { font-family: inherit; }
   gap: 8px;
 }
 
-/* Regenerate — icon-only, same footprint/feel as Copy beside it. Not called
-   out separately in the visual spec (which only shows Copy in this row) but
-   kept so regenerate-reply stays reachable — see PR notes for this deviation. */
-.regen-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: var(--text-2);
-  background: #F8F2EB;
-  border: 1px solid #E8DDD2;
-  border-radius: 12px;
-  transition: background 0.12s, color 0.12s, transform 0.15s;
-}
-.regen-btn svg { width: 12px; height: 12px; }
-.regen-btn:hover   { background: #EFE5DA; color: var(--text); }
-.regen-btn:active  { transform: rotate(90deg); }
-
-/* Copy button — secondary pill, 42px tall */
-/* Measured: 139x55 mockup px = 60x24 at 390w */
+/* Copy button — secondary pill. Measured: 139x55 mockup px = 60x24 at 390w */
 .copy-btn {
   display: inline-flex;
   align-items: center;
@@ -645,23 +626,38 @@ textarea { font-family: inherit; }
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .yr-carousel::-webkit-scrollbar { display: none; }
+/* While the pointer is dragging the track, snap must not fight the hand —
+   it's restored on release, when the drag handler animates to the nearest
+   card itself. */
+.yr-carousel.dragging { scroll-snap-type: none; cursor: grabbing; scroll-behavior: auto; }
 
-/* Measured: 447x613 mockup px = 194x286 at 390w; radius 22 = 10. */
+/* Measured: 447x613 mockup px = 194x286 at 390w. Radius 24 — the earlier
+   pixel-scan said 10 but that undermeasured (the soft border's faint arc
+   evaded the color tolerance); visually the mockup corners are a clear
+   "curved square". Non-centered cards scale down slightly (.is-center is
+   maintained by the scroll listener) so the middle card reads taller than
+   its neighbors, exactly like the reference. */
 .yr-card {
   flex-shrink: 0;
   scroll-snap-align: center;
   width: 100%; /* fills the carousel's content-box = the measured 194px at 390w */
   height: 286px;
-  border-radius: 10px;
+  border-radius: 24px;
   border: 1px solid; /* hairline; each card's border-color is set inline at 70% opacity via color-mix — see _cardHTML() */
   padding: 24px 14px 18px; /* measured: top->label 24, button side pad 14, button->bottom 18 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  transform: scale(0.92);
+  transition: transform 0.22s ease;
 }
+.yr-card.is-center { transform: scale(1); }
 
 .yr-card-top {
   display: flex;
@@ -1278,7 +1274,7 @@ textarea { font-family: inherit; }
   flex-direction: column;
   flex: 1;
   overflow-y: auto;
-  padding: 8px 26px 0;
+  padding: 8px 26px 28px; /* bottom 28 = measured save-card -> canvas-bottom inset */
 }
 
 /* Loading state — sparkle pulse while the reply "thinks" */
@@ -1319,6 +1315,7 @@ textarea { font-family: inherit; }
 .scan-result-content {
   display: flex;
   flex-direction: column;
+  flex: 1; /* fills the screen so the save card's margin-top:auto can pin it to the bottom */
   gap: 26px;
   animation: fadeUp 0.32s ease;
 }
@@ -3421,6 +3418,7 @@ textarea { font-family: inherit; }
 .thread-save-prompt {
   width: 100%;
   height: 66px;
+  margin-top: auto; /* pins to the bottom of the screen, like the mockup */
   padding: 12px 14px;
   background: #FFFDFB;
   border-radius: 20px;

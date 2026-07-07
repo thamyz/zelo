@@ -36,7 +36,6 @@ const state = {
   tzStep:           0,     // current step in the Tell Zelo More flow
   eligibleStyles:   [],    // ordered styles for the current scan's Situation+Goal (see getEligibleStyles())
   currentStyleIndex: 0,    // index into eligibleStyles for the card currently shown
-  regenCounts:      {},    // style -> regenerations used, independent per card, reset on each new scan
 
   // mode chosen per swipe-card profile (Open/Neutral/Cold), keyed by name
   cardModes: {},
@@ -2067,7 +2066,6 @@ async function generateReplies() {
   // never all of them upfront. Cards without a fetch yet show a loading dot.
   state.eligibleStyles   = getEligibleStyles(state.scanContext.situation, state.scanContext.goal);
   state.currentStyleIndex = 0;
-  state.regenCounts       = {};
   state.asstStyle         = state.eligibleStyles[0];
 
   renderReplyCarousel();
@@ -2238,17 +2236,18 @@ function renderReplyCarousel() {
   styles.forEach(style => _renderCardText(style));
   _renderDots();
   _updateSwipeHintVisibility();
-  _attachCarouselScrollListener(track);
+  _wireCarousel(track);
 }
 
 // Snaps the track to whichever card matches state.currentStyleIndex, with
 // no animation — used right after the screen becomes visible (real layout
-// now exists to measure) and after a manual regenerate/goToStyleIndex jump.
+// now exists to measure) and after a manual goToStyleIndex jump.
 function _centerCarouselOnCurrent() {
   const track = document.getElementById("reply-carousel");
   const card  = track?.querySelector(`.yr-card[data-index="${state.currentStyleIndex}"]`);
   if (!track || !card) return;
   track.scrollLeft = card.offsetLeft + card.offsetWidth / 2 - track.clientWidth / 2;
+  _updateCenterCardClass(track);
 }
 
 // Paints (or re-paints) every DOM node for this style — the real card and,
@@ -2272,27 +2271,62 @@ function _renderCardText(style) {
   });
 }
 
+// The active dot starts at the MIDDLE position (like the reference) and
+// moves relative to it — the carousel loops, so position is relative, not
+// absolute: dot position = (style index + half the count) mod count.
 function _renderDots() {
   const dotsEl = document.getElementById("reply-dots");
   if (!dotsEl || !state.eligibleStyles) return;
+  const n = state.eligibleStyles.length;
+  const activePos = (state.currentStyleIndex + Math.floor(n / 2)) % n;
   dotsEl.innerHTML = state.eligibleStyles.map((_, i) =>
-    `<span class="reply-dot${i === state.currentStyleIndex ? " active" : ""}"></span>`
+    `<span class="reply-dot${i === activePos ? " active" : ""}"></span>`
   ).join("");
 }
 
-// Called once, the first time the carousel actually settles on a new card.
-// Persisted so the swipe hint never comes back once the gesture is learned.
-function _markSwipeLearned() {
-  if (localStorage.getItem("zelo_swipe_learned") === "true") return;
-  localStorage.setItem("zelo_swipe_learned", "true");
-  document.getElementById("reply-swipe-hint")?.classList.add("hidden");
-}
-
+// Always shown when there's more than one card — a permanent affordance,
+// not first-time-only guidance.
 function _updateSwipeHintVisibility() {
   const hint = document.getElementById("reply-swipe-hint");
   if (!hint) return;
-  const learned = localStorage.getItem("zelo_swipe_learned") === "true";
-  hint.classList.toggle("hidden", learned || state.eligibleStyles.length <= 1);
+  hint.classList.toggle("hidden", state.eligibleStyles.length <= 1);
+}
+
+function _closestCard(track) {
+  const cards = track.querySelectorAll(".yr-card");
+  const center = track.scrollLeft + track.clientWidth / 2;
+  let closest = null, closestDist = Infinity;
+  cards.forEach(card => {
+    const dist = Math.abs((card.offsetLeft + card.offsetWidth / 2) - center);
+    if (dist < closestDist) { closestDist = dist; closest = card; }
+  });
+  return closest;
+}
+
+// Keeps .is-center on whichever card is nearest the middle — this is what
+// makes the centered card render taller than its neighbors (see .yr-card).
+// Runs on every scroll frame, not just on settle, so the scale hand-off
+// happens live mid-swipe.
+function _updateCenterCardClass(track) {
+  const closest = _closestCard(track);
+  track.querySelectorAll(".yr-card").forEach(c => c.classList.toggle("is-center", c === closest));
+}
+
+// Wires the track's scroll-settle detection and pointer-drag, exactly once
+// (renderReplyCarousel re-runs per scan, but the track element persists).
+let _carouselScrollTimer = null;
+function _wireCarousel(track) {
+  if (track._wired) { _updateCenterCardClass(track); return; }
+  track._wired = true;
+
+  track.addEventListener("scroll", () => {
+    _updateCenterCardClass(track);
+    clearTimeout(_carouselScrollTimer);
+    _carouselScrollTimer = setTimeout(() => _onCarouselSettled(track), 120);
+  }, { passive: true });
+
+  _initCarouselDrag(track);
+  _updateCenterCardClass(track);
 }
 
 // Detects which card is centered once native scrolling settles (debounced
@@ -2301,23 +2335,9 @@ function _updateSwipeHintVisibility() {
 // prefetches accordingly. If the settled card is a loop phantom, silently
 // (no animation) jumps the track to the matching real card at the same
 // scroll position, so the loop is invisible to the user.
-let _carouselScrollTimer = null;
-function _attachCarouselScrollListener(track) {
-  track.addEventListener("scroll", () => {
-    clearTimeout(_carouselScrollTimer);
-    _carouselScrollTimer = setTimeout(() => _onCarouselSettled(track), 120);
-  }, { passive: true });
-}
-
 function _onCarouselSettled(track) {
-  const cards = track.querySelectorAll(".yr-card");
-  if (!cards.length) return;
-  const center = track.scrollLeft + track.clientWidth / 2;
-  let closest = null, closestDist = Infinity;
-  cards.forEach(card => {
-    const dist = Math.abs((card.offsetLeft + card.offsetWidth / 2) - center);
-    if (dist < closestDist) { closestDist = dist; closest = card; }
-  });
+  if (track._dragging) return; // wait for the hand to lift; onUp re-triggers settle
+  const closest = _closestCard(track);
   if (!closest) return;
 
   const style      = closest.dataset.style;
@@ -2325,7 +2345,6 @@ function _onCarouselSettled(track) {
   const realIndex   = state.eligibleStyles.indexOf(style);
   if (!isPhantom && realIndex === state.currentStyleIndex) return; // nothing actually changed
 
-  _markSwipeLearned();
   state.currentStyleIndex = realIndex;
   state.asstStyle = style;
   _renderDots();
@@ -2334,8 +2353,60 @@ function _onCarouselSettled(track) {
 
   if (isPhantom) {
     const realCard = track.querySelector(`.yr-card[data-style="${style}"][data-index]`);
-    if (realCard) track.scrollLeft = realCard.offsetLeft + realCard.offsetWidth / 2 - track.clientWidth / 2;
+    if (realCard) {
+      track.scrollLeft = realCard.offsetLeft + realCard.offsetWidth / 2 - track.clientWidth / 2;
+      _updateCenterCardClass(track);
+    }
   }
+}
+
+// Pointer drag-to-swipe — same mouse+touch mechanics as the homepage card
+// stack (attachDragListeners/onDragStart): shared handlers, and the mouse
+// move/up listeners live on document so the drag survives the cursor
+// leaving the track. Touch swipes already work via native scroll; this is
+// what makes dragging work with a mouse on desktop. Text selection is
+// blocked by user-select:none on the track (see .yr-carousel).
+function _initCarouselDrag(track) {
+  let startX = 0, startScroll = 0, moved = false;
+
+  function onDown(e) {
+    if (e.button !== 0) return; // left button only
+    track._dragging = true;
+    moved = false;
+    startX = e.clientX;
+    startScroll = track.scrollLeft;
+    track.classList.add("dragging"); // suspends scroll-snap so it doesn't fight the hand
+    e.preventDefault();              // stops native text/image drag from hijacking the gesture
+  }
+
+  function onMove(e) {
+    if (!track._dragging) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 4) moved = true;
+    track.scrollLeft = startScroll - dx;
+  }
+
+  function onUp() {
+    if (!track._dragging) return;
+    track._dragging = false;
+    track.classList.remove("dragging");
+    const closest = _closestCard(track);
+    if (closest) {
+      track.scrollTo({
+        left: closest.offsetLeft + closest.offsetWidth / 2 - track.clientWidth / 2,
+        behavior: "smooth"
+      });
+    }
+  }
+
+  track.addEventListener("mousedown", onDown);
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup", onUp);
+
+  // A drag that moved shouldn't also fire the card's "Use this reply" click
+  track.addEventListener("click", e => {
+    if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+  }, true);
 }
 
 // Fetches a style's reply only if it isn't cached yet — used both for the
@@ -2351,8 +2422,8 @@ function _ensureStyleFetched(style) {
 }
 
 // Silent background fetch, exactly one card ahead of whatever's centered —
-// wraps around at the end since the carousel loops. Never triggered by
-// regenerate, never fetches more than one card at a time.
+// wraps around at the end since the carousel loops. Never fetches more
+// than one card at a time.
 function _prefetchNextStyle() {
   const n = state.eligibleStyles.length;
   if (n <= 1) return;
@@ -2369,53 +2440,6 @@ function goToStyleIndex(index) {
   const track = document.getElementById("reply-carousel");
   const card  = track?.querySelector(`.yr-card[data-index="${wrapped}"]`);
   if (card) card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-}
-
-
-// ================================================================
-// ASSISTANT: REGENERATE
-// Same style, new text. Capped at FREE_LIMITS.maxRegensPerCard per style —
-// the count is independent per style (scrolling to a different card and
-// back keeps its own remembered count), reset to {} on every new scan.
-// ================================================================
-
-let _regenerating = false;
-
-function regenerateCurrentReply() {
-  if (!state.asstCurrentSet || _regenerating) return; // guards a double-tap burning 2 regens for one click
-  const style = state.asstStyle;
-  const used  = state.regenCounts[style] || 0;
-
-  if (!isPaidUser() && used >= FREE_LIMITS.maxRegensPerCard) {
-    showRegenPaywall();
-    return;
-  }
-
-  _regenerating = true;
-  state.regenCounts[style] = used + 1;
-  document.querySelectorAll(`.yr-card[data-style="${style}"]`).forEach(card => {
-    const textEl    = card.querySelector(".yr-card-text");
-    const loadingEl = card.querySelector(".yr-card-loading");
-    if (textEl)    textEl.hidden = true;
-    if (loadingEl) loadingEl.hidden = false;
-  });
-  _fetchDeepSeekReply(style)
-    .catch(() => "Couldn't reach Zelo right now. Try again.")
-    .then(reply => {
-      state.asstCurrentSet[style] = reply;
-      _renderCardText(style);
-    })
-    .finally(() => { _regenerating = false; });
-}
-
-// No dedicated paywall screen exists yet anywhere in the app (see the
-// other "DEV — connect to paywall" spots) — this hooks into the same
-// not-yet-built modal so it starts working the moment that lands, and
-// uses the existing toast in the meantime so the user sees *something*
-// happen on the 3rd attempt rather than silence.
-function showRegenPaywall() {
-  flashLimitToast("You've used your free regenerations for this reply. Upgrade for unlimited.");
-  document.getElementById('thread-upgrade-modal')?.removeAttribute('hidden');
 }
 
 
