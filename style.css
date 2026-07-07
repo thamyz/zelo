@@ -661,11 +661,54 @@ textarea { font-family: inherit; }
 .regen-btn:hover   { background: var(--s3); color: var(--text); }
 .regen-btn:active  { transform: rotate(90deg); }
 
-/* Swipe area — clips the card as it slides between styles */
+/* Swipe area — clips the card as it slides between styles. Padded and
+   pulled back in by a matching negative margin so the peek elements have
+   room to render without changing the area's own footprint. */
 .reply-card-swipe-area {
+  position: relative;
   overflow: hidden;
   touch-action: pan-y;
+  padding: 0 12px;
+  margin: 0 -12px;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
+
+/* Edge-peek — a sliver of "another card" behind the current one, shown
+   only on whichever side actually has a card to swipe to. */
+.reply-card-peek {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 18px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-xl);
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.reply-card-peek--left  { left: 2px; }
+.reply-card-peek--right { right: 2px; }
+.reply-card-peek.visible { opacity: 0.6; }
+
+/* Faint chevrons hinting at the swipe gesture — fade out for good the
+   first time the user actually swipes (see _markSwipeLearned() in JS). */
+.reply-card-chevron {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--accent);
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+.reply-card-chevron--left  { left: 10px; }
+.reply-card-chevron--right { right: 10px; }
+.reply-card-chevron.hidden { opacity: 0; }
 
 .reply-style-label {
   position: absolute;

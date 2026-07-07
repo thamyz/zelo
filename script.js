@@ -1865,6 +1865,44 @@ async function _loadGibberishDictionary() {
   }
 }
 
+// Strips common inflections (plurals, -ing, -ed) down to a root the
+// dictionary might actually contain — "looking"/"looked"/"looks" all
+// reduce toward "look", "friends" toward "friend". A hand-curated word
+// list will never cover every inflected form, so this generalizes instead
+// of requiring every variant to be added one at a time.
+function _stemCandidates(word) {
+  const candidates = [];
+  if (word.length > 4 && word.endsWith("ies")) candidates.push(word.slice(0, -3) + "y");
+  if (word.length > 3 && word.endsWith("es"))  candidates.push(word.slice(0, -2));
+  if (word.length > 3 && word.endsWith("s"))   candidates.push(word.slice(0, -1));
+  if (word.length > 4 && word.endsWith("ing")) {
+    const stem = word.slice(0, -3);
+    candidates.push(stem, stem + "e");
+  }
+  if (word.length > 4 && word.endsWith("ied")) candidates.push(word.slice(0, -3) + "y");
+  if (word.length > 3 && word.endsWith("ed")) {
+    const stem = word.slice(0, -2);
+    candidates.push(stem, stem + "e");
+  }
+  return candidates;
+}
+
+// A word counts as recognized if it's in the dictionary as-is, OR if
+// collapsing repeated letters makes it match one ("kkk" -> "k", "yess" ->
+// "yes", "nooo" -> "no") — texting emphasis is extremely common and
+// shouldn't read as gibberish — OR if a common inflection strips down to
+// one (see _stemCandidates). The exact-match check always runs first, so
+// real words that legitimately double a letter ("good", "book") or end in
+// these letter patterns already pass before any fallback is considered.
+function _isRecognizedWord(word) {
+  if (_gibDictionary.has(word)) return true;
+
+  const collapsed = word.replace(/(.)\1+/g, "$1");
+  if (collapsed !== word && _gibDictionary.has(collapsed)) return true;
+
+  return _stemCandidates(word).some(c => c !== word && _gibDictionary.has(c));
+}
+
 function _looksLikeGibberish(text) {
   // Fail open: if the dictionary hasn't loaded yet (e.g. Analyze pressed
   // right after page load, before the fetch resolves), don't flag anything
@@ -1877,7 +1915,7 @@ function _looksLikeGibberish(text) {
   const words = clean.toLowerCase().split(/\s+/).filter(Boolean);
   const hasRealWord = words.some(word => {
     const cleaned = word.replace(/[^a-z']/g, "");
-    return cleaned.length > 0 && _gibDictionary.has(cleaned);
+    return cleaned.length > 0 && _isRecognizedWord(cleaned);
   });
 
   return !hasRealWord;
@@ -2155,6 +2193,7 @@ function renderReplyCard() {
   _setCardLoading(false);
   document.getElementById("reply-text").textContent = text;
   _updateStyleLabel();
+  _updateSwipeAffordances();
 
   // Reset copy button
   const copyBtn = document.getElementById("copy-btn");
@@ -2168,6 +2207,34 @@ function renderReplyCard() {
   card.style.animation = "";
 }
 
+// Edge-peek + chevrons: shown only on sides that actually have a card to
+// swipe to, and only until the user has swiped once, ever (persisted —
+// first-time guidance, not a permanent UI element).
+function _updateSwipeAffordances() {
+  const hasPrev = state.currentStyleIndex > 0;
+  const hasNext = state.currentStyleIndex < state.eligibleStyles.length - 1;
+  const learned = localStorage.getItem("zelo_swipe_learned") === "true";
+
+  const peekLeft  = document.getElementById("reply-card-peek-left");
+  const peekRight = document.getElementById("reply-card-peek-right");
+  if (peekLeft)  peekLeft.classList.toggle("visible", hasPrev);
+  if (peekRight) peekRight.classList.toggle("visible", hasNext);
+
+  const chevronLeft  = document.getElementById("reply-card-chevron-left");
+  const chevronRight = document.getElementById("reply-card-chevron-right");
+  if (chevronLeft)  chevronLeft.classList.toggle("hidden", learned || !hasPrev);
+  if (chevronRight) chevronRight.classList.toggle("hidden", learned || !hasNext);
+}
+
+// Called once, the first time a drag actually commits to a new card.
+// Persisted so the chevrons never come back once the gesture is learned.
+function _markSwipeLearned() {
+  if (localStorage.getItem("zelo_swipe_learned") === "true") return;
+  localStorage.setItem("zelo_swipe_learned", "true");
+  document.getElementById("reply-card-chevron-left")?.classList.add("hidden");
+  document.getElementById("reply-card-chevron-right")?.classList.add("hidden");
+}
+
 
 // ================================================================
 // ASSISTANT: REGENERATE
@@ -2176,8 +2243,10 @@ function renderReplyCard() {
 // back keeps its own remembered count), reset to {} on every new scan.
 // ================================================================
 
+let _regenerating = false;
+
 function regenerateCurrentReply() {
-  if (!state.asstCurrentSet) return;
+  if (!state.asstCurrentSet || _regenerating) return; // guards a double-tap burning 2 regens for one click
   const style = state.asstStyle;
   const used  = state.regenCounts[style] || 0;
 
@@ -2186,6 +2255,7 @@ function regenerateCurrentReply() {
     return;
   }
 
+  _regenerating = true;
   state.regenCounts[style] = used + 1;
   _setCardLoading(true);
   _fetchDeepSeekReply(style)
@@ -2193,7 +2263,8 @@ function regenerateCurrentReply() {
     .then(reply => {
       state.asstCurrentSet[style] = reply;
       if (state.asstStyle === style) renderReplyCard();
-    });
+    })
+    .finally(() => { _regenerating = false; });
 }
 
 // No dedicated paywall screen exists yet anywhere in the app (see the
@@ -2247,6 +2318,7 @@ function _initReplyCardSwipe() {
     const goingPrev = deltaX >= THRESHOLD  && state.currentStyleIndex > 0;
 
     if (goingNext || goingPrev) {
+      _markSwipeLearned();
       card.style.transition = "transform 0.18s ease";
       card.style.transform  = `translateX(${goingNext ? -120 : 120}%)`;
       setTimeout(() => {
