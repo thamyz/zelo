@@ -2093,6 +2093,7 @@ async function generateReplies() {
       _renderCardText(firstStyle);
       loading.hidden = true;
       content.hidden = false;
+      _centerCarouselOnCurrent(); // only now is the carousel actually laid out and measurable
       _onReplyRevealed();
       _prefetchNextStyle();
     });
@@ -2198,11 +2199,18 @@ function _cardThemeFor(style) {
   };
 }
 
-function _cardHTML(style, index) {
+// realIndex is this style's position in state.eligibleStyles. phantom cards
+// are extra clones — see renderReplyCarousel() — that make the carousel
+// loop: a phantom of the last style sits before the first real card, and a
+// phantom of the first style sits after the last, so the first/best-match
+// card always has a real-looking neighbor to peek at on both sides instead
+// of a blank edge.
+function _cardHTML(style, realIndex, phantom) {
   const theme  = _cardThemeFor(style);
-  const isBest = index === 0; // table's true highest-priority style for this scan
+  const isBest = state.eligibleStyles[0] === style;
+  const indexAttr = phantom ? `data-phantom="true"` : `data-index="${realIndex}"`;
   return `
-    <div class="yr-card" data-style="${style}" data-index="${index}"
+    <div class="yr-card" data-style="${style}" ${indexAttr} ${phantom ? 'aria-hidden="true"' : ""}
          style="background:linear-gradient(180deg, ${theme.gradTop}, ${theme.gradBottom}); border-color:${theme.border};">
       <div class="yr-card-top">
         <div class="yr-card-badges">
@@ -2213,40 +2221,68 @@ function _cardHTML(style, index) {
       </div>
       <div class="yr-card-illustration" style="background:${theme.iconBg}">${_styleIconSvg(style)}</div>
       <span class="yr-card-quote" style="color:${theme.quote}">${_CARD_QUOTE_SVG}</span>
-      <p class="yr-card-text" id="yr-card-text-${style}" hidden></p>
-      <div class="yr-card-loading" id="yr-card-loading-${style}" aria-hidden="true"><span></span><span></span><span></span></div>
-      <button class="yr-card-btn" onclick="copyReplyFromCard('${style}')">Use this reply</button>
+      <p class="yr-card-text" hidden></p>
+      <div class="yr-card-loading" aria-hidden="true"><span></span><span></span><span></span></div>
+      <button class="yr-card-btn" onclick="copyReplyFromCard('${style}', this)">Use this reply</button>
     </div>`;
 }
 
 // Builds every eligible style's card shell up front (so scroll-snap has
-// real neighbors), then paints whichever ones already have cached text.
+// real neighbors), plus — when there's more than one style — a phantom
+// clone of the last style before the first card and of the first style
+// after the last, so the carousel loops and both peeks always have real
+// content. Then paints whichever cards already have cached text. Doesn't
+// position the scroll here — #scan-result-content is still hidden at this
+// point (see generateReplies()), so offsetLeft/clientWidth would all read
+// 0; call _centerCarouselOnCurrent() once the screen is actually visible.
 function renderReplyCarousel() {
   const track = document.getElementById("reply-carousel");
   if (!track) return;
-  track.scrollLeft = 0;
-  track.innerHTML = state.eligibleStyles.map((style, i) => _cardHTML(style, i)).join("");
-  state.eligibleStyles.forEach(style => _renderCardText(style));
+  const styles = state.eligibleStyles;
+  const n = styles.length;
+  const loop = n > 1;
+
+  const parts = [];
+  if (loop) parts.push(_cardHTML(styles[n - 1], n - 1, true));
+  styles.forEach((style, i) => parts.push(_cardHTML(style, i, false)));
+  if (loop) parts.push(_cardHTML(styles[0], 0, true));
+  track.innerHTML = parts.join("");
+
+  styles.forEach(style => _renderCardText(style));
   _renderDots();
   _updateSwipeHintVisibility();
   _attachCarouselScrollListener(track);
 }
 
-// Paints (or re-paints) a single card's text/loading state from cache.
-// Called after every fetch resolves, and once per card at initial render.
+// Snaps the track to whichever card matches state.currentStyleIndex, with
+// no animation — used right after the screen becomes visible (real layout
+// now exists to measure) and after a manual regenerate/goToStyleIndex jump.
+function _centerCarouselOnCurrent() {
+  const track = document.getElementById("reply-carousel");
+  const card  = track?.querySelector(`.yr-card[data-index="${state.currentStyleIndex}"]`);
+  if (!track || !card) return;
+  track.scrollLeft = card.offsetLeft + card.offsetWidth / 2 - track.clientWidth / 2;
+}
+
+// Paints (or re-paints) every DOM node for this style — the real card and,
+// if it's currently cloned at either loop boundary, its phantom too —
+// from cache. Called after every fetch resolves, and once per style at
+// initial render.
 function _renderCardText(style) {
-  const textEl    = document.getElementById(`yr-card-text-${style}`);
-  const loadingEl = document.getElementById(`yr-card-loading-${style}`);
-  if (!textEl) return;
   const text = state.asstCurrentSet[style];
-  if (text) {
-    textEl.textContent = text; // .textContent, not innerHTML — no escaping needed, no injection risk
-    textEl.hidden = false;
-    if (loadingEl) loadingEl.hidden = true;
-  } else {
-    textEl.hidden = true;
-    if (loadingEl) loadingEl.hidden = false;
-  }
+  document.querySelectorAll(`.yr-card[data-style="${style}"]`).forEach(card => {
+    const textEl    = card.querySelector(".yr-card-text");
+    const loadingEl = card.querySelector(".yr-card-loading");
+    if (!textEl) return;
+    if (text) {
+      textEl.textContent = text; // .textContent, not innerHTML — no escaping needed, no injection risk
+      textEl.hidden = false;
+      if (loadingEl) loadingEl.hidden = true;
+    } else {
+      textEl.hidden = true;
+      if (loadingEl) loadingEl.hidden = false;
+    }
+  });
 }
 
 function _renderDots() {
@@ -2275,7 +2311,9 @@ function _updateSwipeHintVisibility() {
 // Detects which card is centered once native scrolling settles (debounced
 // on the 'scroll' event rather than 'scrollend', which isn't universally
 // supported), updates state.currentStyleIndex/asstStyle, and fetches/
-// prefetches accordingly.
+// prefetches accordingly. If the settled card is a loop phantom, silently
+// (no animation) jumps the track to the matching real card at the same
+// scroll position, so the loop is invisible to the user.
 let _carouselScrollTimer = null;
 function _attachCarouselScrollListener(track) {
   track.addEventListener("scroll", () => {
@@ -2288,19 +2326,29 @@ function _onCarouselSettled(track) {
   const cards = track.querySelectorAll(".yr-card");
   if (!cards.length) return;
   const center = track.scrollLeft + track.clientWidth / 2;
-  let closest = 0, closestDist = Infinity;
-  cards.forEach((card, i) => {
+  let closest = null, closestDist = Infinity;
+  cards.forEach(card => {
     const dist = Math.abs((card.offsetLeft + card.offsetWidth / 2) - center);
-    if (dist < closestDist) { closestDist = dist; closest = i; }
+    if (dist < closestDist) { closestDist = dist; closest = card; }
   });
-  if (closest === state.currentStyleIndex) return;
+  if (!closest) return;
+
+  const style      = closest.dataset.style;
+  const isPhantom   = closest.dataset.phantom === "true";
+  const realIndex   = state.eligibleStyles.indexOf(style);
+  if (!isPhantom && realIndex === state.currentStyleIndex) return; // nothing actually changed
 
   _markSwipeLearned();
-  state.currentStyleIndex = closest;
-  state.asstStyle = state.eligibleStyles[closest];
+  state.currentStyleIndex = realIndex;
+  state.asstStyle = style;
   _renderDots();
-  _ensureStyleFetched(state.asstStyle);
+  _ensureStyleFetched(style);
   _prefetchNextStyle();
+
+  if (isPhantom) {
+    const realCard = track.querySelector(`.yr-card[data-style="${style}"][data-index]`);
+    if (realCard) track.scrollLeft = realCard.offsetLeft + realCard.offsetWidth / 2 - track.clientWidth / 2;
+  }
 }
 
 // Fetches a style's reply only if it isn't cached yet — used both for the
@@ -2316,20 +2364,23 @@ function _ensureStyleFetched(style) {
 }
 
 // Silent background fetch, exactly one card ahead of whatever's centered —
-// never triggered by regenerate, never fetches more than one card at a time.
+// wraps around at the end since the carousel loops. Never triggered by
+// regenerate, never fetches more than one card at a time.
 function _prefetchNextStyle() {
-  const nextIndex = state.currentStyleIndex + 1;
-  if (nextIndex >= state.eligibleStyles.length) return;
+  const n = state.eligibleStyles.length;
+  if (n <= 1) return;
+  const nextIndex = (state.currentStyleIndex + 1) % n;
   _ensureStyleFetched(state.eligibleStyles[nextIndex]);
 }
 
 // Programmatic navigation — native touch/trackpad swipe doesn't need this,
 // but it's what regenerate/future prev-next controls scroll the track with.
 function goToStyleIndex(index) {
-  if (!state.eligibleStyles.length) return;
-  if (index < 0 || index >= state.eligibleStyles.length) return;
+  const n = state.eligibleStyles.length;
+  if (!n) return;
+  const wrapped = ((index % n) + n) % n;
   const track = document.getElementById("reply-carousel");
-  const card  = track?.querySelector(`.yr-card[data-index="${index}"]`);
+  const card  = track?.querySelector(`.yr-card[data-index="${wrapped}"]`);
   if (card) card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
 }
 
@@ -2355,10 +2406,12 @@ function regenerateCurrentReply() {
 
   _regenerating = true;
   state.regenCounts[style] = used + 1;
-  const textEl    = document.getElementById(`yr-card-text-${style}`);
-  const loadingEl = document.getElementById(`yr-card-loading-${style}`);
-  if (textEl)    textEl.hidden = true;
-  if (loadingEl) loadingEl.hidden = false;
+  document.querySelectorAll(`.yr-card[data-style="${style}"]`).forEach(card => {
+    const textEl    = card.querySelector(".yr-card-text");
+    const loadingEl = card.querySelector(".yr-card-loading");
+    if (textEl)    textEl.hidden = true;
+    if (loadingEl) loadingEl.hidden = false;
+  });
   _fetchDeepSeekReply(style)
     .catch(() => "Couldn't reach Zelo right now. Try again.")
     .then(reply => {
@@ -2405,11 +2458,11 @@ function copyCurrentReply() {
 // "Use this reply" on an individual carousel card — copies that card's own
 // text (not necessarily the centered one) and flashes feedback on that
 // same button, since the shared header Copy button may belong to a
-// different card than whichever one was actually tapped.
-function copyReplyFromCard(style) {
+// different card than whichever one was actually tapped — including a
+// phantom loop clone, since btn is the exact clicked element, not a re-query.
+function copyReplyFromCard(style, btn) {
   const text = state.asstCurrentSet[style];
   if (!text) return;
-  const btn = document.querySelector(`.yr-card[data-style="${style}"] .yr-card-btn`);
   const original = btn ? btn.textContent : null;
   const flash = () => {
     if (!btn) return;

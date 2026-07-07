@@ -652,14 +652,18 @@ textarea { font-family: inherit; }
 .copy-btn:hover  { background: #EFE5DA; color: var(--text); }
 .copy-btn.copied { color: var(--green); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.06); }
 
-/* Carousel — native horizontal scroll-snap. Side padding = (342 - 240) / 2 =
-   51px so the first/last card can still center; that same 51px gutter is
-   what lets the neighbor cards peek in in the 240px-wide layout below. */
+/* Carousel — native horizontal scroll-snap. Card is 70.2% of the track's own
+   width (= 240/342, the 240px-of-a-390-canvas ratio from the design spec)
+   and side padding is 14.9% (= 51/342) so the first/last real card can
+   still center — both expressed as percentages, not fixed px, so the same
+   ratio (and thus the same proportionally-visible peek) holds at narrower
+   canvases (down to ~375px) instead of the card staying a fixed 240px and
+   crowding out the peeks as the screen narrows. */
 .yr-carousel {
   display: flex;
   gap: 16px;
   width: 100%;
-  padding: 0 51px;
+  padding: 0 14.9%;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
@@ -672,8 +676,8 @@ textarea { font-family: inherit; }
 .yr-card {
   flex-shrink: 0;
   scroll-snap-align: center;
-  width: 240px;
-  height: 400px;
+  width: 100%; /* fills the carousel's content-box, which the 14.9% padding above has already narrowed to the 240/342 ratio */
+  height: 370px;
   border-radius: 28px;
   border: 1.5px solid;
   padding: 24px;
