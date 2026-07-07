@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260707g" />
+    <link rel="stylesheet" href="style.css?v=20260707h" />
   </head>
   <body>
     <div id="app">
@@ -796,17 +796,6 @@
             <div class="preview-block">
               <span class="yr-label">Her message</span>
               <div class="yr-message-box" id="asst-preview-bubble"></div>
-
-              <!-- Soft nudge — only when the message was short/thin AND no
-                   Situation/Goal was given, so Zelo had little to work with.
-                   Nested here (not a top-level section) so it adds only its
-                   own small height when shown, not a whole extra 28px
-                   section-gap cycle — keeps the no-scroll guarantee intact
-                   even in this rarer state. -->
-              <div class="context-hint" id="context-hint" hidden>
-                <span class="context-hint-text">Short message — add context for a sharper reply</span>
-                <button class="context-hint-btn" onclick="openTellZelo()">Add context</button>
-              </div>
             </div>
 
             <!-- Suggests row + carousel + dots/hint, grouped so they share a
@@ -1594,6 +1583,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260707g"></script>
+    <script src="script.js?v=20260707h"></script>
   </body>
 </html>

@@ -1990,18 +1990,6 @@ function renderHerMessagePreview(text, screenshotUrl) {
   }
 }
 
-// Nudges toward Tell Zelo More only when the message is short/thin AND no
-// Situation/Goal was given — Zelo has little to work with in that case,
-// and adding context would meaningfully sharpen the reply. Purely a
-// suggestion: never blocks or gates generation either way.
-function _updateContextHint(messageText) {
-  const hint = document.getElementById("context-hint");
-  if (!hint) return;
-  const hasContext = !!(state.scanContext.situation || state.scanContext.goal);
-  const isShort = (messageText || "").trim().length < 20;
-  hint.hidden = !(isShort && !hasContext);
-}
-
 async function generateReplies() {
   const userInput = document.getElementById("asst-input").value.trim();
   const context   = scanContextString();
@@ -2061,7 +2049,6 @@ async function generateReplies() {
   }
 
   renderHerMessagePreview(messageText, screenshotPreviewUrl);
-  _updateContextHint(messageText);
 
   recordScan();
   decrementScanCount();
@@ -2211,7 +2198,7 @@ function _cardHTML(style, realIndex, phantom) {
   const indexAttr = phantom ? `data-phantom="true"` : `data-index="${realIndex}"`;
   return `
     <div class="yr-card" data-style="${style}" ${indexAttr} ${phantom ? 'aria-hidden="true"' : ""}
-         style="background:linear-gradient(180deg, ${theme.gradTop}, ${theme.gradBottom}); border-color:${theme.border};">
+         style="background:linear-gradient(180deg, ${theme.gradTop}, ${theme.gradBottom}); border-color:color-mix(in srgb, ${theme.border} 70%, transparent);">
       <div class="yr-card-top">
         <div class="yr-card-badges">
           <span class="yr-card-badge" style="color:${theme.badge}">${STYLE_LABELS[style] || ""}</span>

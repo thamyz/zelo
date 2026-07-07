@@ -542,15 +542,17 @@ textarea { font-family: inherit; }
   color: #B8A99B;
   text-transform: uppercase;
   letter-spacing: 1.8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
+/* Shorter than the original 92px spec — vertical budget traded to the
+   444px hero card so the screen still never scrolls (see .yr-card). */
 .yr-message-box {
   width: 100%;
-  height: 92px;
+  height: 76px;
   border: 1px solid #E8DDD2;
   border-radius: 16px;
-  padding: 18px;
+  padding: 14px 18px;
   font-size: 18px;
   line-height: 1.4;
   color: var(--text);
@@ -565,35 +567,6 @@ textarea { font-family: inherit; }
   max-height: 100%;
   border-radius: 10px;
   object-fit: contain;
-}
-
-/* Soft nudge shown only for a short message with no Situation/Goal given */
-.context-hint {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 6px 10px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--r-md);
-}
-.context-hint[hidden] { display: none; }
-.context-hint-text {
-  font-size: 0.7rem;
-  line-height: 1.2;
-  font-weight: 600;
-  color: var(--accent-deep);
-}
-.context-hint-btn {
-  flex-shrink: 0;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 5px 10px;
-  border-radius: 99px;
 }
 
 /* ZELO SUGGESTS row */
@@ -622,14 +595,15 @@ textarea { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   color: var(--text-2);
   background: #F8F2EB;
   border: 1px solid #E8DDD2;
-  border-radius: 21px;
+  border-radius: 18px;
   transition: background 0.12s, color 0.12s, transform 0.15s;
 }
+.regen-btn svg { width: 14px; height: 14px; }
 .regen-btn:hover   { background: #EFE5DA; color: var(--text); }
 .regen-btn:active  { transform: rotate(90deg); }
 
@@ -637,18 +611,18 @@ textarea { font-family: inherit; }
 .copy-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 42px;
-  padding: 0 18px;
-  font-size: 16px;
+  gap: 5px;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
   font-weight: 500;
   color: #6B5B4D;
   background: #F8F2EB;
   border: 1px solid #E8DDD2;
-  border-radius: 21px;
+  border-radius: 18px;
   transition: background 0.12s, color 0.12s;
 }
-.copy-btn svg { width: 18px; height: 18px; }
+.copy-btn svg { width: 15px; height: 15px; }
 .copy-btn:hover  { background: #EFE5DA; color: var(--text); }
 .copy-btn.copied { color: var(--green); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.06); }
 
@@ -661,9 +635,9 @@ textarea { font-family: inherit; }
    crowding out the peeks as the screen narrows. */
 .yr-carousel {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
-  padding: 0 14.9%;
+  padding: 0 10.2%;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
@@ -676,11 +650,11 @@ textarea { font-family: inherit; }
 .yr-card {
   flex-shrink: 0;
   scroll-snap-align: center;
-  width: 100%; /* fills the carousel's content-box, which the 14.9% padding above has already narrowed to the 240/342 ratio */
-  height: 370px;
+  width: 100%; /* fills the carousel's content-box: the 10.2% side padding above yields a 272px card on a 390px canvas, leaving a ~23px visible peek per side (gutter 35px minus the 12px gap) */
+  height: 444px;
   border-radius: 28px;
-  border: 1.5px solid;
-  padding: 24px;
+  border: 1px solid; /* hairline; each card's border-color is set inline at 70% opacity via color-mix — see _cardHTML() */
+  padding: 24px 24px 22px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -730,7 +704,7 @@ textarea { font-family: inherit; }
   width: 80px;
   height: 80px;
   border-radius: 24px;
-  margin: 16px auto;
+  margin: 24px auto;
   color: #fff;
   display: flex;
   align-items: center;
@@ -739,23 +713,30 @@ textarea { font-family: inherit; }
 }
 .yr-card-illustration svg { width: 36px; height: 36px; }
 
+/* Decorative quote — absolutely positioned so it reads as faint background
+   art behind where the reply text starts, rather than a solid in-flow glyph.
+   Being out of flow also means its 2x size costs no vertical budget, so a
+   5-line reply still fits the fixed-height card. */
 .yr-card-quote {
-  display: block;
-  width: 56px;
-  height: 56px;
-  opacity: 0.15;
-  margin-bottom: 4px;
+  position: absolute;
+  top: 158px;
+  left: 24px;
+  width: 112px;
+  opacity: 0.07;
+  pointer-events: none;
 }
 
 .yr-card-text[hidden] { display: none; }
 .yr-card-text {
+  position: relative; /* paints above the absolutely-positioned quote art */
+  margin-top: 24px;
   font-size: 18px;
   font-weight: 500;
   line-height: 30px;
   color: var(--text);
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 6;
+  -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
 }
 
@@ -763,6 +744,7 @@ textarea { font-family: inherit; }
 .yr-card-loading {
   display: flex;
   gap: 5px;
+  margin-top: 24px;
   padding: 8px 0;
 }
 .yr-card-loading span {
@@ -785,9 +767,10 @@ textarea { font-family: inherit; }
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 56px;
-  margin-top: auto;
-  border-radius: 28px;
+  height: 58px;
+  flex-shrink: 0;
+  margin-top: auto; /* pins to the bottom; card padding-bottom (22px) keeps it off the border */
+  border-radius: 29px;
   background: linear-gradient(135deg, #FF4FA0, #EC2C86);
   box-shadow: 0 12px 28px rgba(236, 44, 134, 0.20);
   color: #fff;
@@ -1323,29 +1306,21 @@ textarea { font-family: inherit; }
 
 .scan-result-content[hidden] { display: none; }
 
+/* Section gap kept small here; the generous whitespace between the dots
+   and the save card (per design: 40-48px) comes from .thread-save-prompt's
+   own margin-top stacking on top of this, and the taller 444px hero card
+   eats most of the vertical budget — see the no-scroll math in each rule. */
 .scan-result-content {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 12px;
   animation: fadeUp 0.32s ease;
-}
-
-/* The context-hint nudge adds real height on top of an already-tight
-   no-scroll budget (see .scan-result-layout) — when it's showing, compact
-   the surrounding section spacing so the screen still never needs to
-   scroll. Guarding on :has() rather than a JS-toggled class keeps this
-   tied directly to the element's own hidden state. */
-.scan-result-content:has(#context-hint:not([hidden])) {
-  gap: 10px;
-}
-.scan-result-content:has(#context-hint:not([hidden])) .thread-save-prompt {
-  margin-top: 6px;
 }
 
 .yr-suggests-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 @keyframes fadeUp {
@@ -3432,14 +3407,13 @@ textarea { font-family: inherit; }
 
 .mini-modal-confirm--danger { background: #ef4444; }
 
-/* Thread save prompt (inside scan result) — 342x94 action card, 48-64px
-   below the carousel (implemented as 20px extra margin-top stacked on the
-   scan-result-content's 28px base section gap, landing at the low end of
-   that range to help the whole screen fit without scrolling). */
+/* Thread save prompt (inside scan result) — 342x94 action card, sitting
+   40-48px below the dots/hint (32px margin here + the content's 12px
+   section gap = 44px), per design: generous whitespace after the carousel. */
 .thread-save-prompt {
   width: 100%;
   height: 94px;
-  margin-top: 20px;
+  margin-top: 32px;
   padding: 14px 16px;
   background: #FFFDFB;
   border-radius: 20px;
