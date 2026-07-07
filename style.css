@@ -511,10 +511,10 @@ textarea { font-family: inherit; }
    ================================================================ */
 #screen-scan-result { background: #FFFDFC; }
 
-/* Nav bar — 72px total height (44px circular buttons + 14px top/bottom
-   padding), 24px from each edge. */
+/* Nav bar — 69px total height per mockup measurement (44px circular
+   buttons + 12px top/bottom padding + 1px border). */
 #screen-scan-result .screen-header {
-  padding: 14px 24px;
+  padding: 12px 24px;
   border-bottom-color: #EFE5DA;
 }
 #screen-scan-result .back-btn {
@@ -542,17 +542,16 @@ textarea { font-family: inherit; }
   color: #B8A99B;
   text-transform: uppercase;
   letter-spacing: 1.8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px; /* measured: label -> box gap 27 mockup px = 12 */
 }
 
-/* Shorter than the original 92px spec — vertical budget traded to the
-   444px hero card so the screen still never scrolls (see .yr-card). */
+/* Measured from mockup: 121 mockup px tall = 52px at 390w. */
 .yr-message-box {
   width: 100%;
-  height: 76px;
+  height: 52px;
   border: 1px solid #E8DDD2;
   border-radius: 16px;
-  padding: 14px 18px;
+  padding: 12px 18px;
   font-size: 18px;
   line-height: 1.4;
   color: var(--text);
@@ -595,49 +594,51 @@ textarea { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 24px;
+  height: 24px;
   color: var(--text-2);
   background: #F8F2EB;
   border: 1px solid #E8DDD2;
-  border-radius: 18px;
+  border-radius: 12px;
   transition: background 0.12s, color 0.12s, transform 0.15s;
 }
-.regen-btn svg { width: 14px; height: 14px; }
+.regen-btn svg { width: 12px; height: 12px; }
 .regen-btn:hover   { background: #EFE5DA; color: var(--text); }
 .regen-btn:active  { transform: rotate(90deg); }
 
 /* Copy button — secondary pill, 42px tall */
+/* Measured: 139x55 mockup px = 60x24 at 390w */
 .copy-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 36px;
-  padding: 0 14px;
-  font-size: 14px;
+  gap: 3px;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
   font-weight: 500;
   color: #6B5B4D;
   background: #F8F2EB;
   border: 1px solid #E8DDD2;
-  border-radius: 18px;
+  border-radius: 12px;
   transition: background 0.12s, color 0.12s;
 }
-.copy-btn svg { width: 15px; height: 15px; }
+.copy-btn svg { width: 12px; height: 12px; }
 .copy-btn:hover  { background: #EFE5DA; color: var(--text); }
 .copy-btn.copied { color: var(--green); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.06); }
 
-/* Carousel — native horizontal scroll-snap. Card is 70.2% of the track's own
-   width (= 240/342, the 240px-of-a-390-canvas ratio from the design spec)
-   and side padding is 14.9% (= 51/342) so the first/last real card can
-   still center — both expressed as percentages, not fixed px, so the same
-   ratio (and thus the same proportionally-visible peek) holds at narrower
-   canvases (down to ~375px) instead of the card staying a fixed 240px and
-   crowding out the peeks as the screen narrows. */
+/* Carousel — native horizontal scroll-snap, rebuilt to the mockup's
+   MEASURED proportions: card = 49.7% of canvas width (447/899 mockup px =
+   194px at 390w), peeks 85px each side, 12px card<->peek gap. The track
+   escapes the layout's 26px side padding (negative margin) because in the
+   mockup the peeks bleed to the very screen edge. Side padding here is a
+   percentage of the parent's content width (390-52=338 at 390w): 98px
+   gutter / 338 = 29% — one value that holds the measured ratio at any
+   canvas width. Margin-top = measured suggests-row -> card gap (34). */
 .yr-carousel {
   display: flex;
   gap: 12px;
-  width: 100%;
-  padding: 0 10.2%;
+  margin: 34px -26px 0;
+  padding: 0 29%;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
@@ -647,14 +648,15 @@ textarea { font-family: inherit; }
 }
 .yr-carousel::-webkit-scrollbar { display: none; }
 
+/* Measured: 447x613 mockup px = 194x286 at 390w; radius 22 = 10. */
 .yr-card {
   flex-shrink: 0;
   scroll-snap-align: center;
-  width: 100%; /* fills the carousel's content-box: the 10.2% side padding above yields a 272px card on a 390px canvas, leaving a ~23px visible peek per side (gutter 35px minus the 12px gap) */
-  height: 444px;
-  border-radius: 28px;
+  width: 100%; /* fills the carousel's content-box = the measured 194px at 390w */
+  height: 286px;
+  border-radius: 10px;
   border: 1px solid; /* hairline; each card's border-color is set inline at 70% opacity via color-mix — see _cardHTML() */
-  padding: 24px 24px 22px;
+  padding: 24px 14px 18px; /* measured: top->label 24, button side pad 14, button->bottom 18 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -674,7 +676,7 @@ textarea { font-family: inherit; }
   flex-wrap: wrap;
 }
 .yr-card-badge {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -682,61 +684,60 @@ textarea { font-family: inherit; }
 .yr-best-match {
   display: inline-flex;
   align-items: center;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 14px;
+  height: 16px;
+  padding: 0 7px;
+  border-radius: 8px;
   background: #FFE1F0;
   color: #E54391;
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 700;
   white-space: nowrap;
 }
 .yr-card-spark {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   color: #F54B98;
   opacity: 0.8;
 }
 .yr-card-spark svg { width: 100%; height: 100%; }
 
+/* Measured: illustration 132 mockup px = 57 at 390w; label->icon gap 26,
+   icon->quote gap 3. */
 .yr-card-illustration {
-  width: 80px;
-  height: 80px;
-  border-radius: 24px;
-  margin: 24px auto;
+  width: 57px;
+  height: 57px;
+  border-radius: 17px;
+  margin: 26px auto 3px;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.yr-card-illustration svg { width: 36px; height: 36px; }
+.yr-card-illustration svg { width: 26px; height: 26px; }
 
-/* Decorative quote — absolutely positioned so it reads as faint background
-   art behind where the reply text starts, rather than a solid in-flow glyph.
-   Being out of flow also means its 2x size costs no vertical budget, so a
-   5-line reply still fits the fixed-height card. */
+/* Decorative quote — measured in flow between icon and text: 19px tall,
+   soft but visible (measured blend vs card fill ≈ 35% alpha), 15px below
+   it to the text. */
 .yr-card-quote {
-  position: absolute;
-  top: 158px;
-  left: 24px;
-  width: 112px;
-  opacity: 0.07;
+  display: block;
+  width: 25px;
+  height: 19px;
+  margin-bottom: 15px;
+  opacity: 0.35;
   pointer-events: none;
 }
 
 .yr-card-text[hidden] { display: none; }
 .yr-card-text {
-  position: relative; /* paints above the absolutely-positioned quote art */
-  margin-top: 24px;
-  font-size: 18px;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 30px;
+  line-height: 17px; /* measured: 3-line block 118 mockup px = 51 at 390w */
   color: var(--text);
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
 }
 
@@ -744,8 +745,7 @@ textarea { font-family: inherit; }
 .yr-card-loading {
   display: flex;
   gap: 5px;
-  margin-top: 24px;
-  padding: 8px 0;
+  padding: 6px 0;
 }
 .yr-card-loading span {
   width: 6px;
@@ -762,28 +762,33 @@ textarea { font-family: inherit; }
   50%      { opacity: 0.9;  transform: scale(1); }
 }
 
+/* Measured: 383x66 mockup px = 166x29 at 390w (full card content width). */
 .yr-card-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 58px;
+  height: 29px;
   flex-shrink: 0;
-  margin-top: auto; /* pins to the bottom; card padding-bottom (22px) keeps it off the border */
-  border-radius: 29px;
+  margin-top: auto; /* pins to the bottom; card padding-bottom (18px) keeps it off the border */
+  border-radius: 15px;
   background: linear-gradient(135deg, #FF4FA0, #EC2C86);
-  box-shadow: 0 12px 28px rgba(236, 44, 134, 0.20);
+  box-shadow: 0 6px 16px rgba(236, 44, 134, 0.20);
   color: #fff;
-  font-size: 17px;
+  font-size: 13px;
   font-weight: 600;
 }
 
-/* Dots + swipe hint, between carousel and the save card */
+/* Dots + swipe hint, between carousel and the save card. Measured gaps:
+   card bottom -> dots 14; dots -> hint 12 here (measured 18 with a 4px-tall
+   hint glyph row; our hint line is 11px tall, so 12 keeps the measured
+   dots -> save total of ~48 once the content's 26px section gap follows). */
 .yr-carousel-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
+  margin-top: 14px;
 }
 .reply-dots {
   display: flex;
@@ -1266,12 +1271,14 @@ textarea { font-family: inherit; }
 /* ----------------------------------------------------------------
    SCREEN: SCAN — RESULT
    ---------------------------------------------------------------- */
+/* Side inset 26px = measured msg-box inset (59 mockup px); top 8px =
+   measured nav -> HER MESSAGE gap. */
 .scan-result-layout {
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow-y: auto;
-  padding: 0 24px;
+  padding: 8px 26px 0;
 }
 
 /* Loading state — sparkle pulse while the reply "thinks" */
@@ -1306,21 +1313,19 @@ textarea { font-family: inherit; }
 
 .scan-result-content[hidden] { display: none; }
 
-/* Section gap kept small here; the generous whitespace between the dots
-   and the save card (per design: 40-48px) comes from .thread-save-prompt's
-   own margin-top stacking on top of this, and the taller 444px hero card
-   eats most of the vertical budget — see the no-scroll math in each rule. */
+/* 26px section gap = measured swipe-hint -> save-card whitespace. The
+   other measured gaps inside the suggests group are set as explicit
+   margins on the carousel/footer, not a shared gap value. */
 .scan-result-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 26px;
   animation: fadeUp 0.32s ease;
 }
 
 .yr-suggests-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
 @keyframes fadeUp {
@@ -3410,17 +3415,20 @@ textarea { font-family: inherit; }
 /* Thread save prompt (inside scan result) — 342x94 action card, sitting
    40-48px below the dots/hint (32px margin here + the content's 12px
    section gap = 44px), per design: generous whitespace after the carousel. */
+/* Measured from mockup: 151 mockup px tall = 66 at 390w; icon circle 30.
+   The height goes auto when the thread-picker expands inside it, so the
+   fixed measured height never clips the picker UI. */
 .thread-save-prompt {
   width: 100%;
-  height: 94px;
-  margin-top: 32px;
-  padding: 14px 16px;
+  height: 66px;
+  padding: 12px 14px;
   background: #FFFDFB;
   border-radius: 20px;
   border: 1px solid #E8DDD2;
   box-sizing: border-box;
-  overflow: hidden; /* safety net: the 94px height is literal/spec'd and must hold regardless of text length */
+  overflow: hidden;
 }
+.thread-save-prompt:has(.thread-picker:not([hidden])) { height: auto; }
 .thread-save-main {
   display: flex;
   align-items: center;
@@ -3428,8 +3436,8 @@ textarea { font-family: inherit; }
 }
 .thread-save-icon {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: #F54B98;
   color: #fff;
@@ -3437,22 +3445,26 @@ textarea { font-family: inherit; }
   align-items: center;
   justify-content: center;
 }
+.thread-save-icon svg { width: 14px; height: 14px; }
 .thread-save-copy { flex: 1; min-width: 0; }
 .thread-save-q {
   font-size: 13px;
   font-weight: 700;
   color: #1c1917;
-  line-height: 1.25;
+  line-height: 1.2;
   margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .thread-save-sub {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-2);
-  line-height: 1.3;
+  line-height: 1.25;
   margin: 0;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 .thread-save-q.thread-save-success {
@@ -3469,12 +3481,12 @@ textarea { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 104px;
-  height: 44px;
-  border-radius: 22px;
+  width: 76px;
+  height: 34px;
+  border-radius: 17px;
   background: linear-gradient(135deg, #FF4EA1, #EA2C85);
   color: #fff;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -3518,7 +3530,7 @@ textarea { font-family: inherit; }
   background: none;
   border: none;
   color: #A89584;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   padding: 0;
