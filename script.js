@@ -2256,6 +2256,11 @@ function _prefetchNextStyle() {
   _fetchDeepSeekReply(nextStyle)
     .then(reply => {
       if (!state.asstCurrentSet[nextStyle]) state.asstCurrentSet[nextStyle] = reply;
+      // The peek card was already rendered showing a "···" placeholder —
+      // refresh it now that real text is in the cache. Safe to call even
+      // if the user has since swiped elsewhere; it just redraws whatever
+      // peek(s) are relevant to the current position.
+      if (state.currentStyleIndex === nextIndex - 1) _updateSwipeAffordances();
     })
     .catch(() => {}); // best-effort — a failed prefetch just means a real fetch happens on swipe
 }
