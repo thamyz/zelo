@@ -1764,7 +1764,10 @@ function _showScanOcrError(message) {
 // ================================================================
 
 const SAFE_FALLBACK_STYLES        = ["direct", "shorter"];
-const NO_CONTEXT_DEFAULT_STYLES   = ["smooth", "direct", "shorter"];
+// No Situation/Goal provided at all — gives a spread across the main axes
+// (neutral, direct, shorter, longer) so there's something to swipe through
+// even without filling in Tell Zelo More.
+const NO_CONTEXT_DEFAULT_STYLES   = ["smooth", "direct", "shorter", "longer"];
 const HEAVY_SITUATIONS            = new Set(["Argument", "Toxic Relationship"]);
 const BANNED_STYLES_IN_HEAVY_SITS = new Set(["funny", "bolder"]);
 
@@ -1988,6 +1991,18 @@ function renderHerMessagePreview(text, screenshotUrl) {
   }
 }
 
+// Nudges toward Tell Zelo More only when the message is short/thin AND no
+// Situation/Goal was given — Zelo has little to work with in that case,
+// and adding context would meaningfully sharpen the reply. Purely a
+// suggestion: never blocks or gates generation either way.
+function _updateContextHint(messageText) {
+  const hint = document.getElementById("context-hint");
+  if (!hint) return;
+  const hasContext = !!(state.scanContext.situation || state.scanContext.goal);
+  const isShort = (messageText || "").trim().length < 20;
+  hint.hidden = !(isShort && !hasContext);
+}
+
 async function generateReplies() {
   const userInput = document.getElementById("asst-input").value.trim();
   const context   = scanContextString();
@@ -2047,6 +2062,7 @@ async function generateReplies() {
   }
 
   renderHerMessagePreview(messageText, screenshotPreviewUrl);
+  _updateContextHint(messageText);
 
   recordScan();
   decrementScanCount();

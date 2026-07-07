@@ -528,6 +528,34 @@ textarea { font-family: inherit; }
   object-fit: contain;
 }
 
+/* Soft nudge shown only for a short message with no Situation/Goal given */
+.context-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+}
+.context-hint[hidden] { display: none; }
+.context-hint-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+}
+.context-hint-btn {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 7px 13px;
+  border-radius: 99px;
+}
+
 /* "Your Reply" page only — more breathing room, larger touch targets */
 #screen-scan-result .screen-header { padding: 18px 22px; }
 
@@ -576,6 +604,7 @@ textarea { font-family: inherit; }
    the cream/white "Her Message" box above so the eye lands here first. */
 .reply-card {
   position: relative;
+  z-index: 1;
   background: var(--accent-soft);
   border: 1px solid var(--accent-border);
   border-radius: var(--r-xl);
@@ -676,38 +705,47 @@ textarea { font-family: inherit; }
 }
 
 /* Edge-peek — a sliver of "another card" behind the current one, shown
-   only on whichever side actually has a card to swipe to. */
+   only on whichever side actually has a card to swipe to. Rounded only on
+   the outer corners so it reads as the edge of a larger card mostly
+   hidden behind the front one, not a floating pill. Sits below the main
+   card in stacking order (z-index) so it never overlaps its content. */
 .reply-card-peek {
   position: absolute;
-  top: 6px;
-  bottom: 6px;
-  width: 18px;
+  top: 10px;
+  bottom: 10px;
+  width: 26px;
   background: var(--accent-soft);
   border: 1px solid var(--accent-border);
-  border-radius: var(--r-xl);
   z-index: 0;
   opacity: 0;
   transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
 }
-.reply-card-peek--left  { left: 2px; }
-.reply-card-peek--right { right: 2px; }
-.reply-card-peek.visible { opacity: 0.6; }
+.reply-card-peek--left {
+  left: 6px;
+  border-radius: var(--r-xl) 6px 6px var(--r-xl);
+  justify-content: flex-start;
+  padding-left: 6px;
+}
+.reply-card-peek--right {
+  right: 6px;
+  border-radius: 6px var(--r-xl) var(--r-xl) 6px;
+  justify-content: flex-end;
+  padding-right: 6px;
+}
+.reply-card-peek.visible { opacity: 0.7; }
 
-/* Faint chevrons hinting at the swipe gesture — fade out for good the
-   first time the user actually swipes (see _markSwipeLearned() in JS). */
+/* Chevron lives inside its peek sliver — one cohesive affordance per side
+   instead of two competing shapes. Fades out for good the first time the
+   user actually swipes (see _markSwipeLearned() in JS). */
 .reply-card-chevron {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
   display: flex;
   color: var(--accent);
-  opacity: 0.35;
+  opacity: 0.7;
   pointer-events: none;
-  transition: opacity 0.4s ease;
-  z-index: 2;
+  transition: opacity 0.3s ease;
 }
-.reply-card-chevron--left  { left: 10px; }
-.reply-card-chevron--right { right: 10px; }
 .reply-card-chevron.hidden { opacity: 0; }
 
 .reply-style-label {
