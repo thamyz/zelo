@@ -366,8 +366,22 @@ const STYLE_LABELS = {
   shorter: "Shorter",
   funny: "Funny",
   warmer: "Warmer",
-  bolder: "Bolder",
+  bolder: "Bold",
   longer: "Longer"
+};
+
+// Per-style color theme for the reply carousel — soft background tint +
+// a fuller-saturation accent for the label/icon. Kept as a single small
+// palette here so every card treatment (center + peeks) reads from the
+// same source.
+const STYLE_COLORS = {
+  smooth:  { bg: "#fdeef5", accent: "#ec4899" },
+  funny:   { bg: "#f1eefd", accent: "#8b7cf6" },
+  bolder:  { bg: "#fef3ea", accent: "#f97316" },
+  direct:  { bg: "#eaf2fe", accent: "#3b82f6" },
+  warmer:  { bg: "#fef7ea", accent: "#f5a524" },
+  shorter: { bg: "#eafaf3", accent: "#10b981" },
+  longer:  { bg: "#eef1fc", accent: "#6366f1" }
 };
 
 const STYLE_ELIGIBILITY = {

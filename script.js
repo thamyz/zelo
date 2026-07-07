@@ -2146,6 +2146,67 @@ function _updateStyleLabel() {
   if (label) label.textContent = STYLE_LABELS[state.asstStyle] || "";
 }
 
+// Small flat line-icon per style, matching the app's existing outline-icon
+// language rather than introducing a clashing illustration style.
+function _styleIconSvg(style) {
+  const icons = {
+    smooth:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="16" cy="12" r="1"/><path d="M21 12c0 4.97-4.03 9-9 9-1.5 0-2.9-.37-4.14-1.02L3 21l1.02-3.86A8.96 8.96 0 0 1 3 12c0-4.97 4.03-9 9-9s9 4.03 9 9z"/></svg>',
+    funny:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+    bolder:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>',
+    direct:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+    warmer:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+    shorter: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>',
+    longer:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/></svg>'
+  };
+  return icons[style] || icons.smooth;
+}
+
+// Applies this style's color theme to the main (center) card.
+function _applyCardTheme() {
+  const card = document.getElementById("reply-card");
+  const icon = document.getElementById("reply-card-icon");
+  const badge = document.getElementById("reply-best-match-badge");
+  if (!card) return;
+  const colors = STYLE_COLORS[state.asstStyle] || STYLE_COLORS.smooth;
+  card.style.background   = colors.bg;
+  card.style.borderColor  = colors.accent + "40";
+  if (icon) {
+    icon.style.background = colors.accent;
+    icon.innerHTML = _styleIconSvg(state.asstStyle);
+  }
+  const label = document.getElementById("reply-style-label");
+  if (label) label.style.color = colors.accent;
+  const useBtn = document.getElementById("reply-use-btn");
+  if (useBtn) useBtn.style.background = colors.accent;
+  // "Best match" only tags the table's true highest-priority style for
+  // this scan, regardless of which slot it's currently viewed from.
+  if (badge) badge.hidden = state.eligibleStyles[0] !== state.asstStyle;
+}
+
+// Small preview fragment for a peeking neighbor card — real content (not
+// a decorative placeholder), styled in that style's own color theme.
+// Falls back to a soft placeholder if its prefetch hasn't resolved yet.
+function _peekCardHTML(style) {
+  if (!style) return "";
+  const colors = STYLE_COLORS[style] || STYLE_COLORS.smooth;
+  const text = state.asstCurrentSet[style] || "···";
+  return `
+    <div class="reply-peek-card" style="background:${colors.bg}; border-color:${colors.accent}40;">
+      <span class="reply-peek-label" style="color:${colors.accent}">${STYLE_LABELS[style] || ""}</span>
+      <div class="reply-peek-icon" style="background:${colors.accent}">${_styleIconSvg(style)}</div>
+      <p class="reply-peek-text">${text}</p>
+      <span class="reply-peek-btn" style="background:${colors.accent}22; color:${colors.accent}">Use this reply</span>
+    </div>`;
+}
+
+function _renderDots() {
+  const dotsEl = document.getElementById("reply-dots");
+  if (!dotsEl || !state.eligibleStyles) return;
+  dotsEl.innerHTML = state.eligibleStyles.map((_, i) =>
+    `<span class="reply-dot${i === state.currentStyleIndex ? " active" : ""}"></span>`
+  ).join("");
+}
+
 // index is clamped, not wrapped — swiping past either end is a no-op.
 function goToStyleIndex(index) {
   if (!state.eligibleStyles.length) return;
@@ -2209,6 +2270,8 @@ function renderReplyCard() {
   _setCardLoading(false);
   document.getElementById("reply-text").textContent = text;
   _updateStyleLabel();
+  _applyCardTheme();
+  _renderDots();
   _updateSwipeAffordances();
 
   // Reset copy button
@@ -2223,32 +2286,39 @@ function renderReplyCard() {
   card.style.animation = "";
 }
 
-// Edge-peek + chevrons: shown only on sides that actually have a card to
-// swipe to, and only until the user has swiped once, ever (persisted —
-// first-time guidance, not a permanent UI element).
+// Peek cards — shown (with real, styled content) only on sides that
+// actually have a neighbor. The swipe-hint text fades out for good the
+// first time the user actually swipes (persisted — first-time guidance,
+// not a permanent UI element).
 function _updateSwipeAffordances() {
   const hasPrev = state.currentStyleIndex > 0;
   const hasNext = state.currentStyleIndex < state.eligibleStyles.length - 1;
   const learned = localStorage.getItem("zelo_swipe_learned") === "true";
 
+  const prevStyle = hasPrev ? state.eligibleStyles[state.currentStyleIndex - 1] : null;
+  const nextStyle = hasNext ? state.eligibleStyles[state.currentStyleIndex + 1] : null;
+
   const peekLeft  = document.getElementById("reply-card-peek-left");
   const peekRight = document.getElementById("reply-card-peek-right");
-  if (peekLeft)  peekLeft.classList.toggle("visible", hasPrev);
-  if (peekRight) peekRight.classList.toggle("visible", hasNext);
+  if (peekLeft) {
+    peekLeft.classList.toggle("visible", hasPrev);
+    peekLeft.innerHTML = _peekCardHTML(prevStyle);
+  }
+  if (peekRight) {
+    peekRight.classList.toggle("visible", hasNext);
+    peekRight.innerHTML = _peekCardHTML(nextStyle);
+  }
 
-  const chevronLeft  = document.getElementById("reply-card-chevron-left");
-  const chevronRight = document.getElementById("reply-card-chevron-right");
-  if (chevronLeft)  chevronLeft.classList.toggle("hidden", learned || !hasPrev);
-  if (chevronRight) chevronRight.classList.toggle("hidden", learned || !hasNext);
+  const hint = document.getElementById("reply-swipe-hint");
+  if (hint) hint.classList.toggle("hidden", learned || (!hasPrev && !hasNext));
 }
 
 // Called once, the first time a drag actually commits to a new card.
-// Persisted so the chevrons never come back once the gesture is learned.
+// Persisted so the swipe hint never comes back once the gesture is learned.
 function _markSwipeLearned() {
   if (localStorage.getItem("zelo_swipe_learned") === "true") return;
   localStorage.setItem("zelo_swipe_learned", "true");
-  document.getElementById("reply-card-chevron-left")?.classList.add("hidden");
-  document.getElementById("reply-card-chevron-right")?.classList.add("hidden");
+  document.getElementById("reply-swipe-hint")?.classList.add("hidden");
 }
 
 

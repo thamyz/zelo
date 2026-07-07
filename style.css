@@ -566,6 +566,8 @@ textarea { font-family: inherit; }
 }
 
 #screen-scan-result .screen-title {
+  flex: 1;
+  text-align: center;
   font-size: 1.2rem;
   letter-spacing: -0.3px;
 }
@@ -697,8 +699,8 @@ textarea { font-family: inherit; }
   position: relative;
   overflow: hidden;
   touch-action: pan-y;
-  padding: 0 12px;
-  margin: 0 -12px;
+  padding: 0 84px;
+  margin: 0 -84px;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   user-select: none;
@@ -709,55 +711,152 @@ textarea { font-family: inherit; }
    the outer corners so it reads as the edge of a larger card mostly
    hidden behind the front one, not a floating pill. Sits below the main
    card in stacking order (z-index) so it never overlaps its content. */
+/* Peek cards — real content (not a decorative placeholder) in that
+   style's own color theme, cropped by the swipe area's overflow:hidden.
+   Sits below the main card in stacking order so it never overlaps it. */
 .reply-card-peek {
   position: absolute;
   top: 10px;
   bottom: 10px;
-  width: 26px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
+  width: 78px;
   z-index: 0;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.2s ease;
+  overflow: hidden;
+}
+.reply-card-peek--left  { left: 6px; border-radius: var(--r-xl) 6px 6px var(--r-xl); }
+.reply-card-peek--right { right: 6px; border-radius: 6px var(--r-xl) var(--r-xl) 6px; }
+.reply-card-peek.visible { opacity: 1; }
+
+.reply-peek-card {
+  height: 100%;
+  padding: 12px 10px;
+  border: 1px solid;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.reply-card-peek--left  .reply-peek-card { border-radius: var(--r-xl) 6px 6px var(--r-xl); }
+.reply-card-peek--right .reply-peek-card { border-radius: 6px var(--r-xl) var(--r-xl) 6px; }
+
+.reply-peek-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.reply-peek-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  color: #fff;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
-.reply-card-peek--left {
-  left: 6px;
-  border-radius: var(--r-xl) 6px 6px var(--r-xl);
-  justify-content: flex-start;
-  padding-left: 6px;
+.reply-peek-icon svg { width: 13px; height: 13px; }
+.reply-peek-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
-.reply-card-peek--right {
-  right: 6px;
-  border-radius: 6px var(--r-xl) var(--r-xl) 6px;
-  justify-content: flex-end;
-  padding-right: 6px;
+.reply-peek-btn {
+  margin-top: auto;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 5px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
 }
-.reply-card-peek.visible { opacity: 0.7; }
 
-/* Chevron lives inside its peek sliver — one cohesive affordance per side
-   instead of two competing shapes. Fades out for good the first time the
-   user actually swipes (see _markSwipeLearned() in JS). */
-.reply-card-chevron {
+/* Swipe hint text — fades out for good the first time the user actually
+   swipes (see _markSwipeLearned() in JS). */
+.reply-swipe-hint {
   display: flex;
-  color: var(--accent);
-  opacity: 0.7;
-  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-3);
   transition: opacity 0.3s ease;
 }
-.reply-card-chevron.hidden { opacity: 0; }
+.reply-swipe-hint.hidden { opacity: 0; }
+
+/* Dot pagination — one per eligible style */
+.reply-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+.reply-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--border);
+  transition: width 0.2s ease, background 0.2s ease;
+}
+.reply-dot.active {
+  width: 18px;
+  background: var(--accent);
+}
+
+.reply-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
 
 .reply-style-label {
-  position: absolute;
-  top: 14px;
-  left: 30px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--accent);
-  opacity: 0.7;
+}
+
+.reply-best-match-badge {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: rgba(236, 72, 153, 0.15);
+  color: var(--accent-deep);
+}
+.reply-best-match-badge[hidden] { display: none; }
+
+.reply-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.reply-use-btn {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 13px;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
 /* Regenerate / swipe-to-a-new-style loading state — same sparkle pulse
@@ -3359,11 +3458,34 @@ textarea { font-family: inherit; }
   margin: 0 0 16px;
   border: 1px solid #ece7de;
 }
+.thread-save-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.thread-save-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thread-save-copy { flex: 1; min-width: 0; }
 .thread-save-q {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #1c1917;
-  margin: 0 0 10px;
+  margin: 0 0 3px;
+}
+.thread-save-sub {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.4;
+  margin: 0;
 }
 .thread-save-q.thread-save-success {
   color: #16a34a;
@@ -3373,6 +3495,7 @@ textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 .thread-save-row {
   display: flex;

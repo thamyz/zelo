@@ -768,6 +768,11 @@
         <div class="screen-header">
           <button class="back-btn" onclick="goBackFromResult()">‹</button>
           <span class="screen-title">Your Reply</span>
+          <button class="back-btn" onclick="openHistory()" aria-label="History">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+            </svg>
+          </button>
         </div>
 
         <div class="scan-result-layout">
@@ -823,23 +828,20 @@
                 </div>
               </div>
               <div class="reply-card-swipe-area" id="reply-card-swipe-area">
-                <div class="reply-card-peek reply-card-peek--left"  id="reply-card-peek-left"  aria-hidden="true">
-                  <span class="reply-card-chevron" id="reply-card-chevron-left">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                  </span>
-                </div>
-                <div class="reply-card-peek reply-card-peek--right" id="reply-card-peek-right" aria-hidden="true">
-                  <span class="reply-card-chevron" id="reply-card-chevron-right">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </span>
-                </div>
+                <div class="reply-card-peek reply-card-peek--left"  id="reply-card-peek-left"  aria-hidden="true"></div>
+                <div class="reply-card-peek reply-card-peek--right" id="reply-card-peek-right" aria-hidden="true"></div>
                 <div class="reply-card" id="reply-card">
-                  <span class="reply-style-label" id="reply-style-label"></span>
+                  <div class="reply-card-top">
+                    <span class="reply-style-label" id="reply-style-label"></span>
+                    <span class="reply-best-match-badge" id="reply-best-match-badge" hidden>Best match</span>
+                  </div>
+                  <div class="reply-card-icon" id="reply-card-icon"></div>
                   <svg class="reply-quote" width="34" height="24" viewBox="0 0 32 24" fill="currentColor" aria-hidden="true">
                     <path d="M0 12c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h5v9H0z"/>
                     <path d="M16 12c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h5v9h-10z"/>
                   </svg>
                   <p class="reply-text" id="reply-text"></p>
+                  <button class="reply-use-btn" id="reply-use-btn" onclick="copyCurrentReply()">Use this reply</button>
                   <span class="reply-card-spark" aria-hidden="true">
                     <svg width="100%" height="100%" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
@@ -848,15 +850,27 @@
                   </span>
                 </div>
               </div>
+              <div class="reply-dots" id="reply-dots"></div>
+              <p class="reply-swipe-hint" id="reply-swipe-hint">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Swipe for more suggestions
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </p>
             </div>
 
             <!-- Save-to-thread prompt: Save opens a thread picker; Skip hides the prompt -->
             <div class="thread-save-prompt" id="thread-save-prompt">
               <div class="thread-save-main" id="thread-save-main">
-                <p class="thread-save-q">Save to a thread?</p>
+                <span class="thread-save-icon" aria-hidden="true">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                </span>
+                <span class="thread-save-copy">
+                  <p class="thread-save-q">Save to a thread?</p>
+                  <p class="thread-save-sub">Keep this conversation organized and easy to find later.</p>
+                </span>
                 <div class="thread-save-actions">
-                  <button class="thread-save-btn" onclick="openThreadPicker()">Save</button>
                   <button class="thread-save-skip" onclick="skipThreadSave()">Skip</button>
+                  <button class="thread-save-btn" onclick="openThreadPicker()">Save</button>
                 </div>
               </div>
               <!-- Picker is rendered dynamically by openThreadPicker() -->
