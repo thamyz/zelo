@@ -81,7 +81,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // TODO — merge anonymous scan history on signup
 
   _loadGibberishDictionary(); // preload word dictionary for fast gibberish detection
-  _initReplyCardSwipe();      // swipe gesture for the reply style cards
 
   ensureTrialStarted();
   initScanCountForToday();
@@ -1982,7 +1981,7 @@ function renderHerMessagePreview(text, screenshotUrl) {
   bubble.textContent = "";
   if (screenshotUrl) {
     const img = document.createElement("img");
-    img.className = "preview-bubble-img";
+    img.className = "yr-message-img";
     img.src = screenshotUrl;
     img.alt = "Uploaded screenshot";
     bubble.appendChild(img);
@@ -2074,20 +2073,24 @@ async function generateReplies() {
   state.asstContextObj = { ...state.scanContext };  // structured who/situation/goal, for prompt building
 
   // Situation + Goal (never Who) decide which styles are eligible, in
-  // priority order. Only the first (highest-priority) style is generated
-  // now — the rest are fetched on demand as the user swipes (see
-  // swipeReplyCard()/_prefetchNextStyle()), never all upfront.
+  // priority order. Every eligible style gets a real card shell in the
+  // carousel immediately (renderReplyCarousel(), below) so native scroll-
+  // snap has real neighbors to show — but only the current style + one
+  // card ahead are ever fetched (_ensureStyleFetched()/_prefetchNextStyle()),
+  // never all of them upfront. Cards without a fetch yet show a loading dot.
   state.eligibleStyles   = getEligibleStyles(state.scanContext.situation, state.scanContext.goal);
   state.currentStyleIndex = 0;
   state.regenCounts       = {};
   state.asstStyle         = state.eligibleStyles[0];
+
+  renderReplyCarousel();
 
   const firstStyle = state.asstStyle;
   _fetchDeepSeekReply(firstStyle)
     .catch(() => "Couldn't reach Zelo right now. Try again.")
     .then(reply => {
       state.asstCurrentSet[firstStyle] = reply;
-      renderReplyCard();
+      _renderCardText(firstStyle);
       loading.hidden = true;
       content.hidden = false;
       _onReplyRevealed();
@@ -2110,7 +2113,7 @@ function _onReplyRevealed() {
   // If a thread was pre-selected on the typing screen, auto-save now
   if (state.preselectThreadId) {
     const preMsg   = state.asstMessage;
-    const preReply = document.getElementById('reply-text').textContent;
+    const preReply = _currentReplyText();
     const allThr   = getThreads();
     const preThr   = allThr.find(t => t.id === state.preselectThreadId);
     if (preThr) {
@@ -2129,74 +2132,121 @@ function _onReplyRevealed() {
 
 
 // ================================================================
-// ASSISTANT: SWIPEABLE STYLE CARDS
-// Replaces the old style-pill selector. One card at a time, swiped left/
-// right through state.eligibleStyles (in the table's priority order).
-// Only the current style + one card ahead are ever generated — see
-// _prefetchNextStyle(); never all eligible styles upfront.
+// ASSISTANT: REPLY CAROUSEL
+// Native horizontal scroll-snap carousel (Apple Wallet / App Store Today
+// pattern) — every eligible style gets a real .yr-card sibling, centered
+// one at a time via CSS scroll-snap-align, with true neighbor cards
+// peeking in on both sides rather than a synthetic peek element. Only the
+// centered style + one card ahead are ever fetched; see
+// _ensureStyleFetched()/_prefetchNextStyle().
 // ================================================================
 
-function _setCardLoading(isLoading) {
-  const card = document.getElementById("reply-card");
-  if (card) card.classList.toggle("reply-card--loading", isLoading);
+function _currentReplyText() {
+  return (state.asstCurrentSet && state.asstCurrentSet[state.asstStyle]) || "";
 }
 
-function _updateStyleLabel() {
-  const label = document.getElementById("reply-style-label");
-  if (label) label.textContent = STYLE_LABELS[state.asstStyle] || "";
+function _escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // Small flat line-icon per style, matching the app's existing outline-icon
 // language rather than introducing a clashing illustration style.
 function _styleIconSvg(style) {
   const icons = {
-    smooth:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="16" cy="12" r="1"/><path d="M21 12c0 4.97-4.03 9-9 9-1.5 0-2.9-.37-4.14-1.02L3 21l1.02-3.86A8.96 8.96 0 0 1 3 12c0-4.97 4.03-9 9-9s9 4.03 9 9z"/></svg>',
-    funny:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
-    bolder:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>',
-    direct:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
-    warmer:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
-    shorter: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>',
-    longer:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/></svg>'
+    smooth:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="16" cy="12" r="1"/><path d="M21 12c0 4.97-4.03 9-9 9-1.5 0-2.9-.37-4.14-1.02L3 21l1.02-3.86A8.96 8.96 0 0 1 3 12c0-4.97 4.03-9 9-9s9 4.03 9 9z"/></svg>',
+    funny:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+    bolder:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>',
+    direct:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+    warmer:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+    shorter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>',
+    longer:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/></svg>'
   };
   return icons[style] || icons.smooth;
 }
 
-// Applies this style's color theme to the main (center) card.
-function _applyCardTheme() {
-  const card = document.getElementById("reply-card");
-  const icon = document.getElementById("reply-card-icon");
-  const badge = document.getElementById("reply-best-match-badge");
-  if (!card) return;
-  const colors = STYLE_COLORS[state.asstStyle] || STYLE_COLORS.smooth;
-  card.style.background   = colors.bg;
-  card.style.borderColor  = colors.accent + "40";
-  if (icon) {
-    icon.style.background = colors.accent;
-    icon.innerHTML = _styleIconSvg(state.asstStyle);
-  }
-  const label = document.getElementById("reply-style-label");
-  if (label) label.style.color = colors.accent;
-  const useBtn = document.getElementById("reply-use-btn");
-  if (useBtn) useBtn.style.background = colors.accent;
-  // "Best match" only tags the table's true highest-priority style for
-  // this scan, regardless of which slot it's currently viewed from.
-  if (badge) badge.hidden = state.eligibleStyles[0] !== state.asstStyle;
+const _CARD_SPARK_SVG  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>';
+const _CARD_QUOTE_SVG  = '<svg viewBox="0 0 32 24" fill="currentColor"><path d="M0 12c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h5v9H0z"/><path d="M16 12c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h5v9h-10z"/></svg>';
+
+// Literal per-spec theme for "smooth" — the pink card the design spec gives
+// exact hex values for. Other styles don't have spec'd colors, so they
+// reuse their existing STYLE_COLORS accent (unchanged from the old pill/
+// peek system) tinted into the same border+gradient+badge treatment.
+const CARD_THEME_SMOOTH = {
+  border: "#F56BAE",
+  gradTop: "#FFF7FB",
+  gradBottom: "#FFF3F8",
+  badge: "#F14E9B",
+  quote: "#F14A95",
+  iconBg: "#F14E9B"
+};
+
+function _cardThemeFor(style) {
+  if (style === "smooth") return CARD_THEME_SMOOTH;
+  const accent = (STYLE_COLORS[style] || STYLE_COLORS.smooth).accent;
+  return {
+    border: accent,
+    gradTop: `color-mix(in srgb, ${accent} 4%, white)`,
+    gradBottom: `color-mix(in srgb, ${accent} 8%, white)`,
+    badge: accent,
+    quote: accent,
+    iconBg: accent
+  };
 }
 
-// Small preview fragment for a peeking neighbor card — real content (not
-// a decorative placeholder), styled in that style's own color theme.
-// Falls back to a soft placeholder if its prefetch hasn't resolved yet.
-function _peekCardHTML(style) {
-  if (!style) return "";
-  const colors = STYLE_COLORS[style] || STYLE_COLORS.smooth;
-  const text = state.asstCurrentSet[style] || "···";
+function _cardHTML(style, index) {
+  const theme  = _cardThemeFor(style);
+  const isBest = index === 0; // table's true highest-priority style for this scan
   return `
-    <div class="reply-peek-card" style="background:${colors.bg}; border-color:${colors.accent}40;">
-      <span class="reply-peek-label" style="color:${colors.accent}">${STYLE_LABELS[style] || ""}</span>
-      <div class="reply-peek-icon" style="background:${colors.accent}">${_styleIconSvg(style)}</div>
-      <p class="reply-peek-text">${text}</p>
-      <span class="reply-peek-btn" style="background:${colors.accent}22; color:${colors.accent}">Use this reply</span>
+    <div class="yr-card" data-style="${style}" data-index="${index}"
+         style="background:linear-gradient(180deg, ${theme.gradTop}, ${theme.gradBottom}); border-color:${theme.border};">
+      <div class="yr-card-top">
+        <div class="yr-card-badges">
+          <span class="yr-card-badge" style="color:${theme.badge}">${STYLE_LABELS[style] || ""}</span>
+          ${isBest ? `<span class="yr-best-match">Best Match</span>` : ""}
+        </div>
+        <span class="yr-card-spark" aria-hidden="true">${_CARD_SPARK_SVG}</span>
+      </div>
+      <div class="yr-card-illustration" style="background:${theme.iconBg}">${_styleIconSvg(style)}</div>
+      <span class="yr-card-quote" style="color:${theme.quote}">${_CARD_QUOTE_SVG}</span>
+      <p class="yr-card-text" id="yr-card-text-${style}" hidden></p>
+      <div class="yr-card-loading" id="yr-card-loading-${style}" aria-hidden="true"><span></span><span></span><span></span></div>
+      <button class="yr-card-btn" onclick="copyReplyFromCard('${style}')">Use this reply</button>
     </div>`;
+}
+
+// Builds every eligible style's card shell up front (so scroll-snap has
+// real neighbors), then paints whichever ones already have cached text.
+function renderReplyCarousel() {
+  const track = document.getElementById("reply-carousel");
+  if (!track) return;
+  track.scrollLeft = 0;
+  track.innerHTML = state.eligibleStyles.map((style, i) => _cardHTML(style, i)).join("");
+  state.eligibleStyles.forEach(style => _renderCardText(style));
+  _renderDots();
+  _updateSwipeHintVisibility();
+  _attachCarouselScrollListener(track);
+}
+
+// Paints (or re-paints) a single card's text/loading state from cache.
+// Called after every fetch resolves, and once per card at initial render.
+function _renderCardText(style) {
+  const textEl    = document.getElementById(`yr-card-text-${style}`);
+  const loadingEl = document.getElementById(`yr-card-loading-${style}`);
+  if (!textEl) return;
+  const text = state.asstCurrentSet[style];
+  if (text) {
+    textEl.textContent = text; // .textContent, not innerHTML — no escaping needed, no injection risk
+    textEl.hidden = false;
+    if (loadingEl) loadingEl.hidden = true;
+  } else {
+    textEl.hidden = true;
+    if (loadingEl) loadingEl.hidden = false;
+  }
 }
 
 function _renderDots() {
@@ -2207,118 +2257,7 @@ function _renderDots() {
   ).join("");
 }
 
-// index is clamped, not wrapped — swiping past either end is a no-op.
-function goToStyleIndex(index) {
-  if (!state.eligibleStyles.length) return;
-  if (index < 0 || index >= state.eligibleStyles.length) return;
-  if (index === state.currentStyleIndex) return;
-
-  state.currentStyleIndex = index;
-  state.asstStyle         = state.eligibleStyles[index];
-  _updateStyleLabel(); // reflects the target style immediately, even while its reply is still loading
-
-  if (state.asstCurrentSet[state.asstStyle]) {
-    renderReplyCard();
-    _prefetchNextStyle();
-  } else {
-    _generateStyleCard(state.asstStyle);
-  }
-}
-
-// direction: -1 = previous card (swipe right), +1 = next card (swipe left)
-function swipeReplyCard(direction) {
-  goToStyleIndex(state.currentStyleIndex + direction);
-}
-
-function _generateStyleCard(style) {
-  _setCardLoading(true);
-  _fetchDeepSeekReply(style)
-    .catch(() => "Couldn't reach Zelo right now. Try again.")
-    .then(reply => {
-      state.asstCurrentSet[style] = reply;
-      if (state.asstStyle === style) {
-        renderReplyCard();
-        _prefetchNextStyle();
-      }
-    });
-}
-
-// Silent background fetch, exactly one card ahead of whatever's showing —
-// never triggered by regenerate, never fetches more than one card at a
-// time. If the user swipes there before it resolves, goToStyleIndex()
-// just shows its own loading state and waits on the same promise's result.
-function _prefetchNextStyle() {
-  const nextIndex = state.currentStyleIndex + 1;
-  if (nextIndex >= state.eligibleStyles.length) return;
-  const nextStyle = state.eligibleStyles[nextIndex];
-  if (state.asstCurrentSet[nextStyle]) return; // already cached, nothing to do
-
-  _fetchDeepSeekReply(nextStyle)
-    .then(reply => {
-      if (!state.asstCurrentSet[nextStyle]) state.asstCurrentSet[nextStyle] = reply;
-      // The peek card was already rendered showing a "···" placeholder —
-      // refresh it now that real text is in the cache. Safe to call even
-      // if the user has since swiped elsewhere; it just redraws whatever
-      // peek(s) are relevant to the current position.
-      if (state.currentStyleIndex === nextIndex - 1) _updateSwipeAffordances();
-    })
-    .catch(() => {}); // best-effort — a failed prefetch just means a real fetch happens on swipe
-}
-
-// Renders/updates the single reply card with the current style's text +
-// its small style label.
-function renderReplyCard() {
-  const set   = state.asstCurrentSet;
-  const style = state.asstStyle;
-  const text  = set[style];
-
-  _setCardLoading(false);
-  document.getElementById("reply-text").textContent = text;
-  _updateStyleLabel();
-  _applyCardTheme();
-  _renderDots();
-  _updateSwipeAffordances();
-
-  // Reset copy button
-  const copyBtn = document.getElementById("copy-btn");
-  document.getElementById("copy-btn-label").textContent = "Copy";
-  copyBtn.classList.remove("copied");
-
-  // Re-trigger the card pop animation
-  const card = document.getElementById("reply-card");
-  card.style.animation = "none";
-  card.offsetHeight;          // force reflow
-  card.style.animation = "";
-}
-
-// Peek cards — shown (with real, styled content) only on sides that
-// actually have a neighbor. The swipe-hint text fades out for good the
-// first time the user actually swipes (persisted — first-time guidance,
-// not a permanent UI element).
-function _updateSwipeAffordances() {
-  const hasPrev = state.currentStyleIndex > 0;
-  const hasNext = state.currentStyleIndex < state.eligibleStyles.length - 1;
-  const learned = localStorage.getItem("zelo_swipe_learned") === "true";
-
-  const prevStyle = hasPrev ? state.eligibleStyles[state.currentStyleIndex - 1] : null;
-  const nextStyle = hasNext ? state.eligibleStyles[state.currentStyleIndex + 1] : null;
-
-  const peekLeft  = document.getElementById("reply-card-peek-left");
-  const peekRight = document.getElementById("reply-card-peek-right");
-  if (peekLeft) {
-    peekLeft.classList.toggle("visible", hasPrev);
-    peekLeft.innerHTML = _peekCardHTML(prevStyle);
-  }
-  if (peekRight) {
-    peekRight.classList.toggle("visible", hasNext);
-    peekRight.innerHTML = _peekCardHTML(nextStyle);
-  }
-
-  const hint = document.getElementById("reply-swipe-hint");
-  if (hint) hint.classList.toggle("hidden", learned || (!hasPrev && !hasNext));
-}
-
-// Called once, the first time a drag actually commits to a new card.
+// Called once, the first time the carousel actually settles on a new card.
 // Persisted so the swipe hint never comes back once the gesture is learned.
 function _markSwipeLearned() {
   if (localStorage.getItem("zelo_swipe_learned") === "true") return;
@@ -2326,11 +2265,79 @@ function _markSwipeLearned() {
   document.getElementById("reply-swipe-hint")?.classList.add("hidden");
 }
 
+function _updateSwipeHintVisibility() {
+  const hint = document.getElementById("reply-swipe-hint");
+  if (!hint) return;
+  const learned = localStorage.getItem("zelo_swipe_learned") === "true";
+  hint.classList.toggle("hidden", learned || state.eligibleStyles.length <= 1);
+}
+
+// Detects which card is centered once native scrolling settles (debounced
+// on the 'scroll' event rather than 'scrollend', which isn't universally
+// supported), updates state.currentStyleIndex/asstStyle, and fetches/
+// prefetches accordingly.
+let _carouselScrollTimer = null;
+function _attachCarouselScrollListener(track) {
+  track.addEventListener("scroll", () => {
+    clearTimeout(_carouselScrollTimer);
+    _carouselScrollTimer = setTimeout(() => _onCarouselSettled(track), 120);
+  }, { passive: true });
+}
+
+function _onCarouselSettled(track) {
+  const cards = track.querySelectorAll(".yr-card");
+  if (!cards.length) return;
+  const center = track.scrollLeft + track.clientWidth / 2;
+  let closest = 0, closestDist = Infinity;
+  cards.forEach((card, i) => {
+    const dist = Math.abs((card.offsetLeft + card.offsetWidth / 2) - center);
+    if (dist < closestDist) { closestDist = dist; closest = i; }
+  });
+  if (closest === state.currentStyleIndex) return;
+
+  _markSwipeLearned();
+  state.currentStyleIndex = closest;
+  state.asstStyle = state.eligibleStyles[closest];
+  _renderDots();
+  _ensureStyleFetched(state.asstStyle);
+  _prefetchNextStyle();
+}
+
+// Fetches a style's reply only if it isn't cached yet — used both for the
+// card the user just landed on, and (via _prefetchNextStyle) the one ahead.
+function _ensureStyleFetched(style) {
+  if (state.asstCurrentSet[style]) return;
+  _fetchDeepSeekReply(style)
+    .catch(() => "Couldn't reach Zelo right now. Try again.")
+    .then(reply => {
+      state.asstCurrentSet[style] = reply;
+      _renderCardText(style);
+    });
+}
+
+// Silent background fetch, exactly one card ahead of whatever's centered —
+// never triggered by regenerate, never fetches more than one card at a time.
+function _prefetchNextStyle() {
+  const nextIndex = state.currentStyleIndex + 1;
+  if (nextIndex >= state.eligibleStyles.length) return;
+  _ensureStyleFetched(state.eligibleStyles[nextIndex]);
+}
+
+// Programmatic navigation — native touch/trackpad swipe doesn't need this,
+// but it's what regenerate/future prev-next controls scroll the track with.
+function goToStyleIndex(index) {
+  if (!state.eligibleStyles.length) return;
+  if (index < 0 || index >= state.eligibleStyles.length) return;
+  const track = document.getElementById("reply-carousel");
+  const card  = track?.querySelector(`.yr-card[data-index="${index}"]`);
+  if (card) card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+}
+
 
 // ================================================================
 // ASSISTANT: REGENERATE
 // Same style, new text. Capped at FREE_LIMITS.maxRegensPerCard per style —
-// the count is independent per style (swiping to a different card and
+// the count is independent per style (scrolling to a different card and
 // back keeps its own remembered count), reset to {} on every new scan.
 // ================================================================
 
@@ -2348,12 +2355,15 @@ function regenerateCurrentReply() {
 
   _regenerating = true;
   state.regenCounts[style] = used + 1;
-  _setCardLoading(true);
+  const textEl    = document.getElementById(`yr-card-text-${style}`);
+  const loadingEl = document.getElementById(`yr-card-loading-${style}`);
+  if (textEl)    textEl.hidden = true;
+  if (loadingEl) loadingEl.hidden = false;
   _fetchDeepSeekReply(style)
     .catch(() => "Couldn't reach Zelo right now. Try again.")
     .then(reply => {
       state.asstCurrentSet[style] = reply;
-      if (state.asstStyle === style) renderReplyCard();
+      _renderCardText(style);
     })
     .finally(() => { _regenerating = false; });
 }
@@ -2370,75 +2380,11 @@ function showRegenPaywall() {
 
 
 // ================================================================
-// ASSISTANT: SWIPE GESTURE (reply card)
-// Drag horizontally to move between eligible style cards — threshold-
-// based commit, snaps back if released short of it. Attached once at
-// startup; the card/area are static elements present from page load.
-// ================================================================
-
-function _initReplyCardSwipe() {
-  const area = document.getElementById('reply-card-swipe-area');
-  const card = document.getElementById('reply-card');
-  if (!area || !card) return;
-
-  const THRESHOLD = 70;
-  let startX = 0, deltaX = 0, dragging = false;
-
-  function pointerX(e) {
-    return e.touches ? e.touches[0].clientX : e.clientX;
-  }
-
-  function onDown(e) {
-    if (!state.eligibleStyles || state.eligibleStyles.length <= 1) return;
-    dragging = true;
-    startX = pointerX(e);
-    card.style.transition = "none";
-  }
-
-  function onMove(e) {
-    if (!dragging) return;
-    deltaX = pointerX(e) - startX;
-    card.style.transform = `translateX(${deltaX}px)`;
-  }
-
-  function onUp() {
-    if (!dragging) return;
-    dragging = false;
-
-    const goingNext = deltaX <= -THRESHOLD && state.currentStyleIndex < state.eligibleStyles.length - 1;
-    const goingPrev = deltaX >= THRESHOLD  && state.currentStyleIndex > 0;
-
-    if (goingNext || goingPrev) {
-      _markSwipeLearned();
-      card.style.transition = "transform 0.18s ease";
-      card.style.transform  = `translateX(${goingNext ? -120 : 120}%)`;
-      setTimeout(() => {
-        card.style.transition = "none";
-        card.style.transform  = "";
-        swipeReplyCard(goingNext ? 1 : -1);
-      }, 180);
-    } else {
-      card.style.transition = "transform 0.2s ease";
-      card.style.transform  = "translateX(0)";
-    }
-    deltaX = 0;
-  }
-
-  area.addEventListener("mousedown", onDown);
-  area.addEventListener("touchstart", onDown, { passive: true });
-  window.addEventListener("mousemove", onMove);
-  area.addEventListener("touchmove", onMove, { passive: true });
-  window.addEventListener("mouseup", onUp);
-  area.addEventListener("touchend", onUp);
-}
-
-
-// ================================================================
 // ASSISTANT: COPY REPLY
 // ================================================================
 
 function copyCurrentReply() {
-  const text  = document.getElementById("reply-text").textContent;
+  const text  = _currentReplyText();
   const btn   = document.getElementById("copy-btn");
   const label = document.getElementById("copy-btn-label");
 
@@ -2454,6 +2400,23 @@ function copyCurrentReply() {
     label.textContent = "Copied";
     setTimeout(() => { label.textContent = "Copy"; }, 2000);
   });
+}
+
+// "Use this reply" on an individual carousel card — copies that card's own
+// text (not necessarily the centered one) and flashes feedback on that
+// same button, since the shared header Copy button may belong to a
+// different card than whichever one was actually tapped.
+function copyReplyFromCard(style) {
+  const text = state.asstCurrentSet[style];
+  if (!text) return;
+  const btn = document.querySelector(`.yr-card[data-style="${style}"] .yr-card-btn`);
+  const original = btn ? btn.textContent : null;
+  const flash = () => {
+    if (!btn) return;
+    btn.textContent = "Copied ✓";
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  };
+  navigator.clipboard.writeText(text).then(flash).catch(flash);
 }
 
 
@@ -4101,7 +4064,7 @@ function showSaveBeforeLeave() {
             </div>`;
           card.querySelector('.save-reminder-save-btn').onclick = () => {
             const message = state.asstMessage;
-            const reply   = document.getElementById('reply-text').textContent;
+            const reply   = _currentReplyText();
             const allThr  = getThreads();
             const idx     = allThr.findIndex(t => t.id === thr.id);
             if (idx !== -1) {
@@ -4134,7 +4097,7 @@ function showSaveBeforeLeave() {
     card.querySelectorAll('.save-reminder-thread-row:not(.save-reminder-new-row)').forEach(btn => {
       btn.onclick = () => {
         const message = state.asstMessage;
-        const reply   = document.getElementById('reply-text').textContent;
+        const reply   = _currentReplyText();
         const allThr  = getThreads();
         const t       = allThr.find(t => t.id === btn.dataset.id);
         if (!t) return;
@@ -4178,7 +4141,7 @@ function showSaveBeforeLeave() {
         setThreadCount(count + 1);
       }
       const message = state.asstMessage;
-      const reply   = document.getElementById('reply-text').textContent;
+      const reply   = _currentReplyText();
       thr.scans.push({ id: 'scan_' + Date.now(), message, reply, time: Date.now() });
       saveThreads(threads);
       renderThreadList();
@@ -4234,7 +4197,7 @@ function openThreadPicker() {
 
 function saveToExistingThread(threadId) {
   const message = state.asstMessage;
-  const reply   = document.getElementById('reply-text').textContent;
+  const reply   = _currentReplyText();
   const threads = getThreads();
   const thread  = threads.find(t => t.id === threadId);
   if (!thread) return;
@@ -4278,7 +4241,7 @@ function confirmSaveToNewThread() {
   }
 
   const message = state.asstMessage;
-  const reply   = document.getElementById('reply-text').textContent;
+  const reply   = _currentReplyText();
   const threads = getThreads();
   const norm    = name.toLowerCase();
   let thread = threads.find(t => t.name.toLowerCase() === norm);

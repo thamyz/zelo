@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260707e" />
+    <link rel="stylesheet" href="style.css?v=20260707f" />
   </head>
   <body>
     <div id="app">
@@ -766,10 +766,12 @@
       <div class="screen" id="screen-scan-result">
 
         <div class="screen-header">
-          <button class="back-btn" onclick="goBackFromResult()">‹</button>
+          <button class="back-btn" onclick="goBackFromResult()" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
           <span class="screen-title">Your Reply</span>
           <button class="back-btn" onclick="openHistory()" aria-label="History">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
             </svg>
           </button>
@@ -792,77 +794,60 @@
 
             <!-- Her message preview -->
             <div class="preview-block">
-              <span class="block-label">Her message</span>
-              <div class="preview-bubble" id="asst-preview-bubble"></div>
+              <span class="yr-label">Her message</span>
+              <div class="yr-message-box" id="asst-preview-bubble"></div>
+
+              <!-- Soft nudge — only when the message was short/thin AND no
+                   Situation/Goal was given, so Zelo had little to work with.
+                   Nested here (not a top-level section) so it adds only its
+                   own small height when shown, not a whole extra 28px
+                   section-gap cycle — keeps the no-scroll guarantee intact
+                   even in this rarer state. -->
+              <div class="context-hint" id="context-hint" hidden>
+                <span class="context-hint-text">Short message — add context for a sharper reply</span>
+                <button class="context-hint-btn" onclick="openTellZelo()">Add context</button>
+              </div>
             </div>
 
-            <!-- Soft nudge — only when the message was short/thin AND no
-                 Situation/Goal was given, so Zelo had little to work with. -->
-            <div class="context-hint" id="context-hint" hidden>
-              <span class="context-hint-text">Short message — add context for a sharper reply</span>
-              <button class="context-hint-btn" onclick="openTellZelo()">Add context</button>
-            </div>
-
-            <!-- Single reply card — swipeable left/right through the
-                 eligible styles for this scan's Situation+Goal. -->
-            <div class="reply-block">
-              <div class="reply-block-header">
-                <span class="reply-block-label">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-                    <path d="M19 2l.6 1.7a1 1 0 0 0 .6.6L22 5l-1.8.7a1 1 0 0 0-.6.6L19 8l-.6-1.7a1 1 0 0 0-.6-.6L16 5l1.8-.7a1 1 0 0 0 .6-.6z"/>
-                  </svg>
-                  Zelo Suggests
-                </span>
-                <div class="reply-block-actions">
+            <!-- Suggests row + carousel + dots/hint, grouped so they share a
+                 tight 12px internal rhythm distinct from the looser 28px
+                 gap between top-level sections. -->
+            <div class="yr-suggests-group">
+              <div class="yr-suggests-row">
+                <span class="yr-suggests-label">✦ Zelo Suggests</span>
+                <div class="yr-suggests-actions">
                   <button class="regen-btn" id="regen-btn" onclick="regenerateCurrentReply()" aria-label="Regenerate">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
                       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                     </svg>
                   </button>
                   <button class="copy-btn" id="copy-btn" onclick="copyCurrentReply()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                     <span id="copy-btn-label">Copy</span>
                   </button>
                 </div>
               </div>
-              <div class="reply-card-swipe-area" id="reply-card-swipe-area">
-                <div class="reply-card-peek reply-card-peek--left"  id="reply-card-peek-left"  aria-hidden="true"></div>
-                <div class="reply-card-peek reply-card-peek--right" id="reply-card-peek-right" aria-hidden="true"></div>
-                <div class="reply-card" id="reply-card">
-                  <div class="reply-card-top">
-                    <span class="reply-style-label" id="reply-style-label"></span>
-                    <span class="reply-best-match-badge" id="reply-best-match-badge" hidden>Best match</span>
-                  </div>
-                  <div class="reply-card-icon" id="reply-card-icon"></div>
-                  <svg class="reply-quote" width="34" height="24" viewBox="0 0 32 24" fill="currentColor" aria-hidden="true">
-                    <path d="M0 12c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h5v9H0z"/>
-                    <path d="M16 12c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h5v9h-10z"/>
-                  </svg>
-                  <p class="reply-text" id="reply-text"></p>
-                  <button class="reply-use-btn" id="reply-use-btn" onclick="copyCurrentReply()">Use this reply</button>
-                  <span class="reply-card-spark" aria-hidden="true">
-                    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-                      <path d="M19 2l.6 1.7a1 1 0 0 0 .6.6L22 5l-1.8.7a1 1 0 0 0-.6.6L19 8l-.6-1.7a1 1 0 0 0-.6-.6L16 5l1.8-.7a1 1 0 0 0 .6-.6z"/>
-                    </svg>
-                  </span>
-                </div>
+
+              <!-- Horizontal snap carousel — one real card per eligible style,
+                   rendered by JS (see renderReplyCarousel() in script.js). -->
+              <div class="yr-carousel" id="reply-carousel"></div>
+
+              <div class="yr-carousel-footer">
+                <div class="reply-dots" id="reply-dots"></div>
+                <p class="reply-swipe-hint" id="reply-swipe-hint">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                  Swipe for more suggestions
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </p>
               </div>
-              <div class="reply-dots" id="reply-dots"></div>
-              <p class="reply-swipe-hint" id="reply-swipe-hint">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                Swipe for more suggestions
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </p>
             </div>
 
             <!-- Save-to-thread prompt: Save opens a thread picker; Skip hides the prompt -->
             <div class="thread-save-prompt" id="thread-save-prompt">
               <div class="thread-save-main" id="thread-save-main">
                 <span class="thread-save-icon" aria-hidden="true">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                 </span>
                 <span class="thread-save-copy">
                   <p class="thread-save-q">Save to a thread?</p>
@@ -870,7 +855,7 @@
                 </span>
                 <div class="thread-save-actions">
                   <button class="thread-save-skip" onclick="skipThreadSave()">Skip</button>
-                  <button class="thread-save-btn" onclick="openThreadPicker()">Save</button>
+                  <button class="yr-save-btn" onclick="openThreadPicker()">Save</button>
                 </div>
               </div>
               <!-- Picker is rendered dynamically by openThreadPicker() -->
@@ -1609,6 +1594,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260707e"></script>
+    <script src="script.js?v=20260707f"></script>
   </body>
 </html>
