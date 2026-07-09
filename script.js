@@ -2155,6 +2155,12 @@ function _styleIconSvg(style) {
   return icons[style] || icons.smooth;
 }
 
+// Per-style icon image assets live in assets/icons/{style}.{ICON_EXT}. Each
+// card tries to load its image and falls back to the drawn SVG below if the
+// file is missing — so a partial icon set never breaks the card. Change
+// ICON_EXT here in one place if the delivered files use a different format.
+const ICON_EXT = 'png';
+
 const _CARD_SPARK_SVG  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>';
 const _CARD_QUOTE_SVG  = '<svg viewBox="0 0 32 24" fill="currentColor"><path d="M0 12c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h5v9H0z"/><path d="M16 12c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h5v9h-10z"/></svg>';
 
@@ -2204,7 +2210,12 @@ function _cardHTML(style, realIndex, phantom) {
         </div>
         <span class="yr-card-spark" aria-hidden="true">${_CARD_SPARK_SVG}</span>
       </div>
-      <div class="yr-card-illustration" style="background:${theme.iconBg}">${_styleIconSvg(style)}</div>
+      <div class="yr-card-illustration" style="background:${theme.iconBg}">
+        <img class="yr-card-illustration-img" src="assets/icons/${style}.${ICON_EXT}" alt="" draggable="false"
+             onload="this.closest('.yr-card-illustration').classList.add('has-img')"
+             onerror="this.remove()">
+        <span class="yr-card-illustration-svg">${_styleIconSvg(style)}</span>
+      </div>
       <span class="yr-card-quote" style="color:${theme.quote}">${_CARD_QUOTE_SVG}</span>
       <p class="yr-card-text" hidden></p>
       <div class="yr-card-loading" aria-hidden="true"><span></span><span></span><span></span></div>

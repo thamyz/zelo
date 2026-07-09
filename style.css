@@ -713,6 +713,22 @@ textarea { font-family: inherit; }
 }
 .yr-card-illustration svg { width: 26px; height: 26px; }
 
+/* Real per-style image (assets/icons/{style}.png) swapped in for the drawn
+   SVG. Same 57x57 container, no size/position change — only the source.
+   Fills the container (object-fit keeps aspect). Hidden until it actually
+   loads; on success .has-img reveals it, hides the SVG fallback, and clears
+   the colored square so a self-contained icon shows cleanly. If the file is
+   missing the <img> removes itself (onerror) and the SVG-on-color stays. */
+.yr-card-illustration-img {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.yr-card-illustration.has-img { background: transparent !important; }
+.yr-card-illustration.has-img .yr-card-illustration-img  { display: block; }
+.yr-card-illustration.has-img .yr-card-illustration-svg  { display: none; }
+
 /* Decorative quote — measured in flow between icon and text: 19px tall,
    soft but visible (measured blend vs card fill ≈ 35% alpha), 15px below
    it to the text. */
