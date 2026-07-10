@@ -546,28 +546,76 @@ textarea { font-family: inherit; }
 }
 
 /* Measured from mockup: 121 mockup px tall = 52px at 390w. */
-.yr-message-box {
+/* Combined "Her message" box — one box, two modes: an editable text field
+   (default) or an uploaded screenshot (same-size box). Enlarged from the old
+   52px echo so it fills the space naturally as a real input. */
+.yr-message-combined {
+  position: relative;
   width: 100%;
-  height: 52px;
+  height: 178px; /* enlarged so it soaks up most of the space freed by the
+                    smaller card, leaving a natural ~55px finishing gap above
+                    the save block rather than dead space. */
   border: 1px solid #E8DDD2;
   border-radius: 16px;
-  padding: 12px 18px;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.4;
-  color: var(--text);
-  display: flex;
-  align-items: center;
+  background: #fff;
   overflow: hidden;
   box-sizing: border-box;
 }
-.yr-message-img {
-  display: block;
-  max-width: 100%;
-  max-height: 100%;
-  border-radius: 10px;
-  object-fit: contain;
+.yr-message-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  padding: 14px 46px 14px 18px; /* right room for the attach button */
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--text);
+  font-family: inherit;
+  box-sizing: border-box;
 }
+.yr-message-input::placeholder { color: var(--text-3); }
+
+/* Attach/camera button — inside the box, bottom-right */
+.yr-message-attach {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+  transition: background 0.12s;
+}
+.yr-message-attach:hover { background: var(--accent-border); }
+
+/* Screenshot mode — fills the same box, correct aspect (no stretch) */
+.yr-message-shot { position: absolute; inset: 0; background: #faf6f0; }
+.yr-message-shot[hidden] { display: none; }
+.yr-message-shot-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.yr-message-shot-remove {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(28, 25, 23, 0.62);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.yr-message-combined.has-shot .yr-message-input,
+.yr-message-combined.has-shot .yr-message-attach { display: none; }
 
 /* ZELO SUGGESTS row */
 .yr-suggests-row {
@@ -646,12 +694,11 @@ textarea { font-family: inherit; }
   flex-shrink: 0;
   scroll-snap-align: center;
   width: 100%; /* fills the carousel's content-box = the measured 194px at 390w */
-  height: 423px; /* grown from the mockup-scaled 286px: the mockup was
-                    proportionally shorter than a real phone, leaving ~182px of
-                    dead space above the save block. This fills the real
-                    viewport so the card is the dominant element, leaving only a
-                    ~45px finishing gap. See the icon/quote/text centering below
-                    for how the extra height is distributed. */
+  height: 286px; /* restored to the reference's measured 194:286 ratio
+                    (width 194 stays fixed by the carousel). Reduced from the
+                    prior 423px stretch so the card reads in proportion again;
+                    the enlarged combined message box above now takes the extra
+                    vertical space. Internal content stays centered (below). */
   border-radius: 24px;
   border: 1px solid; /* hairline; each card's border-color is set inline at 70% opacity via color-mix — see _cardHTML() */
   padding: 24px 14px 18px; /* measured: top->label 24, button side pad 14, button->bottom 18 */

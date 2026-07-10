@@ -1971,22 +1971,121 @@ function gibReportFalsePositive() {
 // ASSISTANT: GENERATE
 // ================================================================
 
-// Shows either the screenshot image or the typed text in "Her message" —
-// never both. screenshotUrl is only passed when the scan came from an
-// attached screenshot (no typed text).
+// Populates the combined "Her message" box on the result screen: either the
+// editable text field (text mode) or the uploaded screenshot (same-size box,
+// screenshot mode). The underlying message that feeds generation always lives
+// in state.asstMessage; the text field just reflects it in text mode.
 function renderHerMessagePreview(text, screenshotUrl) {
-  const bubble = document.getElementById("asst-preview-bubble");
-  if (!bubble) return;
-  bubble.textContent = "";
+  const ta = document.getElementById("asst-preview-bubble"); // now the <textarea>
+  if (!ta) return;
   if (screenshotUrl) {
-    const img = document.createElement("img");
-    img.className = "yr-message-img";
-    img.src = screenshotUrl;
-    img.alt = "Uploaded screenshot";
-    bubble.appendChild(img);
+    const img = document.getElementById("yr-message-shot-img");
+    if (img) img.src = screenshotUrl;
+    _setResultShotMode(true);
+    ta.value = "";
   } else {
-    bubble.textContent = text || "";
+    _setResultShotMode(false);
+    ta.value = text || "";
   }
+}
+
+// Toggles the combined box between text mode and screenshot mode.
+function _setResultShotMode(on) {
+  const box = document.getElementById("yr-message-combined");
+  const shot = document.getElementById("yr-message-shot");
+  if (box)  box.classList.toggle("has-shot", on);
+  if (shot) shot.hidden = !on;
+}
+
+// --- Result-screen combined-input handlers -----------------------------
+// Typed text: commit (regenerate) on blur only, so we don't fire a request
+// on every keystroke — matches "feeds reply generation as if typed."
+function onResultMessageInput() { /* live typing; commit happens on blur */ }
+
+function onResultMessageCommit() {
+  const ta = document.getElementById("asst-preview-bubble");
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text || text === (state.asstMessage || "")) return; // unchanged — no-op
+  _regenerateFromResultInput(text, null);
+}
+
+function triggerResultUpload() {
+  document.getElementById("result-screenshot-input")?.click();
+}
+
+// Screenshot chosen in the combined box: show it in the same-size box
+// immediately (no spinner — silent per app convention), then reuse the
+// EXISTING OCR pipeline (_extractScreenshotText → openai-proxy) and feed the
+// extracted text into generation exactly as typed text would.
+async function onResultScreenshot(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = document.getElementById("yr-message-shot-img");
+    if (img) img.src = reader.result;
+    _setResultShotMode(true);
+  };
+  reader.readAsDataURL(file);
+
+  const extracted = await _extractScreenshotText(file);
+  if (extracted && extracted !== NO_MESSAGE_SENTINEL) {
+    const url = document.getElementById("yr-message-shot-img")?.src || null;
+    _regenerateFromResultInput(extracted, url);
+  } else {
+    // Couldn't read it — quietly revert to the text field (no scary status).
+    input.value = "";
+    _setResultShotMode(false);
+    const ta = document.getElementById("asst-preview-bubble");
+    if (ta) ta.value = state.asstMessage || "";
+  }
+}
+
+function removeResultScreenshot() {
+  const input = document.getElementById("result-screenshot-input");
+  if (input) input.value = "";
+  const img = document.getElementById("yr-message-shot-img");
+  if (img) img.src = "";
+  _setResultShotMode(false);
+  const ta = document.getElementById("asst-preview-bubble");
+  if (ta) ta.value = state.asstMessage || "";
+}
+
+// Re-runs reply generation in place (no navigation, no full loading screen —
+// the combined box stays visible) with a new message. Reuses the same carousel
+// + fetch path as generateReplies(); only the trigger differs. Does not
+// re-decrement the daily scan count — this refines the current scan.
+function _regenerateFromResultInput(messageText, screenshotUrl) {
+  if (!messageText) return;
+  state.asstMessage    = messageText;
+  state.asstContext    = scanContextString();
+  state.asstContextObj = { ...state.scanContext };
+  state.asstCurrentSet = {};
+
+  // Keep the combined box reflecting the source: screenshot stays shown, or
+  // the text field shows the (typed) message.
+  if (!screenshotUrl) {
+    _setResultShotMode(false);
+    const ta = document.getElementById("asst-preview-bubble");
+    if (ta && document.activeElement !== ta) ta.value = messageText;
+  }
+
+  state.eligibleStyles    = getEligibleStyles(state.scanContext.situation, state.scanContext.goal);
+  state.currentStyleIndex = 0;
+  state.asstStyle         = state.eligibleStyles[0];
+  renderReplyCarousel();
+
+  const firstStyle = state.asstStyle;
+  _fetchDeepSeekReply(firstStyle)
+    .catch(() => "Couldn't reach Zelo right now. Try again.")
+    .then(reply => {
+      state.asstCurrentSet[firstStyle] = reply;
+      _renderCardText(firstStyle);
+      _centerCarouselOnCurrent();
+      _prefetchNextStyle();
+    });
 }
 
 async function generateReplies() {
