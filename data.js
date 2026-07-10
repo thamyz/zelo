@@ -373,14 +373,18 @@ const STYLE_LABELS = {
 // a fuller-saturation accent for the label/icon. Kept as a single small
 // palette here so every card treatment (center + peeks) reads from the
 // same source.
+// accent/bg sampled directly from the reference icon-palette image
+// (assets/icons/_source/icon-palette.png) so the card border/gradient/badge
+// theming matches the real per-style icons. WARMER was corrected from amber
+// (#f5a524) to the rose/pink its heart icon actually is (#f36fa6).
 const STYLE_COLORS = {
-  smooth:  { bg: "#fdeef5", accent: "#ec4899" },
-  funny:   { bg: "#f1eefd", accent: "#8b7cf6" },
-  bolder:  { bg: "#fef3ea", accent: "#f97316" },
-  direct:  { bg: "#eaf2fe", accent: "#3b82f6" },
-  warmer:  { bg: "#fef7ea", accent: "#f5a524" },
-  shorter: { bg: "#eafaf3", accent: "#10b981" },
-  longer:  { bg: "#eef1fc", accent: "#6366f1" }
+  smooth:  { bg: "#fdf3f6", accent: "#f470a7" },
+  funny:   { bg: "#f9f6fd", accent: "#885cea" },
+  bolder:  { bg: "#fef7f3", accent: "#fe8e36" },
+  direct:  { bg: "#f4f7fd", accent: "#4488f6" },
+  warmer:  { bg: "#fcf2f6", accent: "#f36fa6" },
+  shorter: { bg: "#f4f9f5", accent: "#48cba2" },
+  longer:  { bg: "#f4f2fc", accent: "#936cec" }
 };
 
 const STYLE_ELIGIBILITY = {
