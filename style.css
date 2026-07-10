@@ -646,7 +646,12 @@ textarea { font-family: inherit; }
   flex-shrink: 0;
   scroll-snap-align: center;
   width: 100%; /* fills the carousel's content-box = the measured 194px at 390w */
-  height: 286px;
+  height: 423px; /* grown from the mockup-scaled 286px: the mockup was
+                    proportionally shorter than a real phone, leaving ~182px of
+                    dead space above the save block. This fills the real
+                    viewport so the card is the dominant element, leaving only a
+                    ~45px finishing gap. See the icon/quote/text centering below
+                    for how the extra height is distributed. */
   border-radius: 24px;
   border: 1px solid; /* hairline; each card's border-color is set inline at 70% opacity via color-mix — see _cardHTML() */
   padding: 24px 14px 18px; /* measured: top->label 24, button side pad 14, button->bottom 18 */
@@ -698,13 +703,18 @@ textarea { font-family: inherit; }
 }
 .yr-card-spark svg { width: 100%; height: 100%; }
 
-/* Measured: illustration 132 mockup px = 57 at 390w; label->icon gap 26,
-   icon->quote gap 3. */
+/* Measured: illustration 132 mockup px = 57 at 390w; icon->quote gap 3.
+   margin-top is `auto` (not the old fixed 26px): paired with the button's
+   own margin-top:auto below, the two auto margins split the card's free
+   space evenly, so the icon+quote+text read as one group centered between
+   the style label (top) and the button (bottom). When the card grows, the
+   extra height distributes equally above and below this group rather than
+   pooling into a single gap. Icon size itself is unchanged (57px). */
 .yr-card-illustration {
   width: 57px;
   height: 57px;
   border-radius: 17px;
-  margin: 26px auto 3px;
+  margin: auto auto 3px;
   color: #fff;
   display: flex;
   align-items: center;
