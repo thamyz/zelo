@@ -1976,30 +1976,39 @@ function gibReportFalsePositive() {
 // screenshot mode). The underlying message that feeds generation always lives
 // in state.asstMessage; the text field just reflects it in text mode.
 function renderHerMessagePreview(text, screenshotUrl) {
-  const ta = document.getElementById("asst-preview-bubble"); // now the <textarea>
+  const ta = document.getElementById("asst-preview-bubble"); // the <textarea>
   if (!ta) return;
-  if (screenshotUrl) {
-    const img = document.getElementById("yr-message-shot-img");
-    if (img) img.src = screenshotUrl;
-    _setResultShotMode(true);
-    ta.value = "";
-  } else {
-    _setResultShotMode(false);
-    ta.value = text || "";
-  }
+  ta.value = text || "";                    // box always shows the message text
+  if (screenshotUrl) _showResultThumb(screenshotUrl);  // + thumbnail row below
+  else               _hideResultThumb();
 }
 
-// Toggles the combined box between text mode and screenshot mode.
-function _setResultShotMode(on) {
-  const box = document.getElementById("yr-message-combined");
-  const shot = document.getElementById("yr-message-shot");
-  if (box)  box.classList.toggle("has-shot", on);
-  if (shot) shot.hidden = !on;
+// Shows / hides the small screenshot thumbnail in its own row BELOW the box.
+// When shown, .has-shot shrinks the text box so box + thumb occupy roughly the
+// same vertical space as the tall box alone (no layout jump / no new scroll).
+function _showResultThumb(url) {
+  const img = document.getElementById("yr-message-shot-img");
+  if (img) img.src = url;
+  const row = document.getElementById("yr-message-thumb-row");
+  if (row) row.hidden = false;
+  document.getElementById("yr-preview-block")?.classList.add("has-shot");
+}
+function _hideResultThumb() {
+  const img = document.getElementById("yr-message-shot-img");
+  if (img) img.src = "";
+  const row = document.getElementById("yr-message-thumb-row");
+  if (row) row.hidden = true;
+  document.getElementById("yr-preview-block")?.classList.remove("has-shot");
 }
 
 // --- Result-screen combined-input handlers -----------------------------
-// Typed text: commit (regenerate) on blur only, so we don't fire a request
-// on every keystroke — matches "feeds reply generation as if typed."
+// Text the user had typed before attaching a screenshot. Restored verbatim if
+// the OCR fails or the screenshot is removed — the fix for the wrong-text bug
+// (previously it fell back to the STALE state.asstMessage from a prior scan).
+let _typedBeforeShot = "";
+
+// Typed text: commit (regenerate) on blur only, so we don't fire a request on
+// every keystroke — matches "feeds reply generation as if typed."
 function onResultMessageInput() { /* live typing; commit happens on blur */ }
 
 function onResultMessageCommit() {
@@ -2007,70 +2016,76 @@ function onResultMessageCommit() {
   if (!ta) return;
   const text = ta.value.trim();
   if (!text || text === (state.asstMessage || "")) return; // unchanged — no-op
-  _regenerateFromResultInput(text, null);
+  _regenerateFromResultInput(text);
 }
 
 function triggerResultUpload() {
   document.getElementById("result-screenshot-input")?.click();
 }
 
-// Screenshot chosen in the combined box: show it in the same-size box
-// immediately (no spinner — silent per app convention), then reuse the
-// EXISTING OCR pipeline (_extractScreenshotText → openai-proxy) and feed the
-// extracted text into generation exactly as typed text would.
+// Screenshot chosen: show the thumbnail (below the box) immediately and
+// silently (no spinner, per app convention), then reuse the EXISTING OCR
+// pipeline (_extractScreenshotText → openai-proxy) and feed the extracted text
+// into generation exactly as typed text would. On success the screenshot's
+// text becomes the message (intended precedence — screenshot wins).
 async function onResultScreenshot(input) {
   const file = input.files?.[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = document.getElementById("yr-message-shot-img");
-    if (img) img.src = reader.result;
-    _setResultShotMode(true);
-  };
-  reader.readAsDataURL(file);
+  const ta = document.getElementById("asst-preview-bubble");
+  _typedBeforeShot = ta ? ta.value : "";   // remember typed text to restore on failure
+
+  // Read + show the thumbnail first, AWAITED — otherwise the FileReader's async
+  // onload can fire after the OCR-failure branch and re-show a hidden thumb.
+  const dataUrl = await new Promise((res) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result);
+    r.onerror = () => res(null);
+    r.readAsDataURL(file);
+  });
+  if (dataUrl) _showResultThumb(dataUrl);
 
   const extracted = await _extractScreenshotText(file);
+  // Requested: log the RAW OCR result before it's written into the input, so a
+  // wrong/garbled substitution is debuggable if it recurs.
+  console.log("[Zelo OCR] result-box raw extracted text (before writing to input):", JSON.stringify(extracted));
+
   if (extracted && extracted !== NO_MESSAGE_SENTINEL) {
-    const url = document.getElementById("yr-message-shot-img")?.src || null;
-    _regenerateFromResultInput(extracted, url);
+    if (ta) ta.value = extracted;
+    _regenerateFromResultInput(extracted);
   } else {
-    // Couldn't read it — quietly revert to the text field (no scary status).
+    // OCR failed / no message — restore the user's OWN typed text (never the
+    // stale previous-scan message) and drop the unreadable screenshot.
+    if (ta) ta.value = _typedBeforeShot;
     input.value = "";
-    _setResultShotMode(false);
-    const ta = document.getElementById("asst-preview-bubble");
-    if (ta) ta.value = state.asstMessage || "";
+    _hideResultThumb();
   }
 }
 
 function removeResultScreenshot() {
   const input = document.getElementById("result-screenshot-input");
   if (input) input.value = "";
-  const img = document.getElementById("yr-message-shot-img");
-  if (img) img.src = "";
-  _setResultShotMode(false);
+  _hideResultThumb();
+  // Restore the text the user had before the screenshot (their own text, not a
+  // stale message), and re-run generation for it so the replies match the box.
   const ta = document.getElementById("asst-preview-bubble");
-  if (ta) ta.value = state.asstMessage || "";
+  const restore = _typedBeforeShot || "";
+  if (ta) ta.value = restore;
+  if (restore.trim() && restore.trim() !== (state.asstMessage || "")) {
+    _regenerateFromResultInput(restore.trim());
+  }
 }
 
 // Re-runs reply generation in place (no navigation, no full loading screen —
-// the combined box stays visible) with a new message. Reuses the same carousel
+// the box/thumbnail stay visible) with a new message. Reuses the same carousel
 // + fetch path as generateReplies(); only the trigger differs. Does not
 // re-decrement the daily scan count — this refines the current scan.
-function _regenerateFromResultInput(messageText, screenshotUrl) {
+function _regenerateFromResultInput(messageText) {
   if (!messageText) return;
   state.asstMessage    = messageText;
   state.asstContext    = scanContextString();
   state.asstContextObj = { ...state.scanContext };
   state.asstCurrentSet = {};
-
-  // Keep the combined box reflecting the source: screenshot stays shown, or
-  // the text field shows the (typed) message.
-  if (!screenshotUrl) {
-    _setResultShotMode(false);
-    const ta = document.getElementById("asst-preview-bubble");
-    if (ta && document.activeElement !== ta) ta.value = messageText;
-  }
 
   state.eligibleStyles    = getEligibleStyles(state.scanContext.situation, state.scanContext.goal);
   state.currentStyleIndex = 0;

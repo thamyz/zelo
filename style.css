@@ -545,21 +545,20 @@ textarea { font-family: inherit; }
   margin-bottom: 12px; /* measured: label -> box gap 27 mockup px = 12 */
 }
 
-/* Measured from mockup: 121 mockup px tall = 52px at 390w. */
-/* Combined "Her message" box — one box, two modes: an editable text field
-   (default) or an uploaded screenshot (same-size box). Enlarged from the old
-   52px echo so it fills the space naturally as a real input. */
+/* "Her message" — an editable text box. Screenshots upload via the soft
+   sparkle in the corner and appear as a small thumbnail in their own row
+   below (see .yr-message-thumb-row). Enlarged from the old 52px echo so it
+   fills the space naturally as a real input. */
 .yr-message-combined {
   position: relative;
   width: 100%;
-  height: 178px; /* enlarged so it soaks up most of the space freed by the
-                    smaller card, leaving a natural ~55px finishing gap above
-                    the save block rather than dead space. */
+  height: 178px;
   border: 1px solid #E8DDD2;
   border-radius: 16px;
   background: #fff;
   overflow: hidden;
   box-sizing: border-box;
+  transition: height 0.18s ease;
 }
 .yr-message-input {
   width: 100%;
@@ -568,7 +567,7 @@ textarea { font-family: inherit; }
   outline: none;
   resize: none;
   background: transparent;
-  padding: 14px 46px 14px 18px; /* right room for the attach button */
+  padding: 14px 44px 14px 18px; /* right/bottom room clears the corner sparkle */
   font-size: 14px;
   font-weight: 400;
   line-height: 1.45;
@@ -578,44 +577,64 @@ textarea { font-family: inherit; }
 }
 .yr-message-input::placeholder { color: var(--text-3); }
 
-/* Attach/camera button — inside the box, bottom-right */
-.yr-message-attach {
+/* Decorative sparkle in the bottom-right corner — soft, on-brand (matches the
+   app's sparkle motif), and doubles as the unobtrusive upload trigger. Not a
+   photo/attach icon, no mascot. Gently glows so it's discoverable. */
+.yr-message-spark {
   position: absolute;
   right: 10px;
   bottom: 10px;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--accent);
-  background: var(--accent-soft);
-  transition: background 0.12s;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, var(--accent-soft) 0%, transparent 72%);
+  animation: sparkleGlow 2.6s ease-in-out infinite;
+  transition: transform 0.15s, opacity 0.15s;
 }
-.yr-message-attach:hover { background: var(--accent-border); }
+.yr-message-spark svg { width: 16px; height: 16px; }
+.yr-message-spark:hover  { transform: scale(1.1); }
+.yr-message-spark:active { transform: scale(0.9); }
+@keyframes sparkleGlow {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 0.85; }
+}
 
-/* Screenshot mode — fills the same box, correct aspect (no stretch) */
-.yr-message-shot { position: absolute; inset: 0; background: #faf6f0; }
-.yr-message-shot[hidden] { display: none; }
-.yr-message-shot-img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.yr-message-shot-remove {
+/* Screenshot thumbnail — its own row BELOW the box (no longer overlapping). */
+.yr-message-thumb-row { display: flex; margin-top: 10px; }
+.yr-message-thumb-row[hidden] { display: none; }
+.yr-message-thumb {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #E8DDD2;
+  background: #faf6f0;
+  flex-shrink: 0;
+}
+.yr-message-thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.yr-message-thumb-remove {
   position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 24px;
-  height: 24px;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: rgba(28, 25, 23, 0.62);
   color: #fff;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.yr-message-combined.has-shot .yr-message-input,
-.yr-message-combined.has-shot .yr-message-attach { display: none; }
+/* With a thumbnail attached, shrink the text box so box + thumb occupy about
+   the same vertical space as the tall box alone — no layout jump, no scroll. */
+.preview-block.has-shot .yr-message-combined { height: 84px; }
 
 /* ZELO SUGGESTS row */
 .yr-suggests-row {
