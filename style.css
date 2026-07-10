@@ -725,7 +725,11 @@ textarea { font-family: inherit; }
   height: 100%;
   object-fit: contain;
 }
-.yr-card-illustration.has-img { background: transparent !important; }
+/* When a real (transparent-background) badge image is present, the container
+   must NOT paint any shape of its own — the badge PNG's own rounded-square
+   edge is the only box. So clear both the colored fill and the container's
+   17px radius, leaving the image as the single clean shape. */
+.yr-card-illustration.has-img { background: transparent !important; border-radius: 0; }
 .yr-card-illustration.has-img .yr-card-illustration-img  { display: block; }
 .yr-card-illustration.has-img .yr-card-illustration-svg  { display: none; }
 
