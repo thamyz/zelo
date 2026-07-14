@@ -1608,11 +1608,12 @@ function scanContextString() {
   return order.map(k => state.scanContext[k]).filter(Boolean).join(" · ");
 }
 
-function checkGenerateReady() {
-  const hasText  = document.getElementById("asst-input").value.trim().length > 0;
-  const hasImage = document.getElementById("screenshot-input").files?.length > 0;
-  document.getElementById("asst-generate-btn").disabled = !(hasText || hasImage);
-}
+// Get Suggestions stays fully pink/glowing at all times now — it's never
+// visually disabled. Tapping it with no input still safely no-ops (see the
+// early-return in generateReplies()), which now also shakes the input card
+// instead of silently doing nothing. Kept as a no-op (rather than removing
+// its several call sites) so nothing else breaks.
+function checkGenerateReady() {}
 
 // Trigger the hidden file input
 function triggerUpload() {
@@ -2164,13 +2165,26 @@ function _regenerateFromResultInput(messageText) {
     });
 }
 
+// Briefly shakes the input card — signals "add something first" when Get
+// Suggestions is tapped with no text and no screenshot. Re-triggerable: the
+// class is removed after the animation so a second empty tap shakes again.
+function shakeInputCard() {
+  const card = document.querySelector('.input-card');
+  if (!card) return;
+  card.classList.remove('shake');
+  void card.offsetWidth; // restart the animation if it's already mid-shake
+  card.classList.add('shake');
+  navigator.vibrate?.(15);
+  setTimeout(() => card.classList.remove('shake'), 400);
+}
+
 async function generateReplies() {
   const userInput = document.getElementById("asst-input").value.trim();
   const context   = scanContextString();
   const screenshotFile = document.getElementById("screenshot-input").files?.[0] || null;
   const hasImage  = !!screenshotFile;
 
-  if (!userInput && !hasImage) return;
+  if (!userInput && !hasImage) { shakeInputCard(); return; }
 
   if (!isPaidUser() && scansRemainingToday() <= 0) {
     refreshScanLimitBanner();

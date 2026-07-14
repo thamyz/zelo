@@ -414,10 +414,21 @@ textarea { font-family: inherit; }
   transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
 }
 .asst-suggest-btn:active { transform: scale(0.97); }
-.asst-suggest-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
-  box-shadow: none;
+/* Always stays full pink/glowing — never dims, regardless of input state.
+   Tapping it with no input shakes .input-card instead (see generateReplies()
+   / shakeInputCard() in script.js); it never visually disables. */
+
+/* Quick shake on the input card when Get Suggestions is tapped with nothing
+   to submit — signals "add something first" without navigating anywhere. */
+.input-card.shake {
+  animation: inputCardShake 0.35s ease;
+}
+@keyframes inputCardShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-7px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(3px); }
 }
 .asst-suggest-btn-icon { flex-shrink: 0; }
 
@@ -5014,19 +5025,10 @@ textarea { font-family: inherit; }
 .scan-hero-illustration-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
   background: transparent;
 }
-.hero-spark {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(236, 72, 153, 0.3);
-}
-.hero-spark--1 { width: 6px; height: 6px; top: -16px;   left: -16px; }
-.hero-spark--2 { width: 4px; height: 4px; top: -14px;   right: -14px; }
-.hero-spark--3 { width: 5px; height: 5px; bottom: -15px; right: -15px; }
-.hero-spark--4 { width: 4px; height: 4px; bottom: -14px; left: -14px; }
 
 .scan-who-section { margin-top: 12px; }
 .scan-who-title {
