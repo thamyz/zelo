@@ -359,7 +359,7 @@ textarea { font-family: inherit; }
 .msg-footer {
   display: flex;
   align-items: center;
-  padding: 12px 14px 12px 10px;
+  padding: 12px 0 12px 8px;
   transition: padding 0.12s;
 }
 
@@ -370,7 +370,7 @@ textarea { font-family: inherit; }
   width: 1px;
   height: 20px;
   flex-shrink: 0;
-  margin: 0 12px;
+  margin: 0 4px;
   background: #E8DDD2;
 }
 
@@ -378,11 +378,12 @@ textarea { font-family: inherit; }
 .upload-row {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 8px;
+  gap: 4px;
+  padding: 5px 2px;
   border-radius: var(--r-sm);
   cursor: pointer;
   color: var(--accent);
+  white-space: nowrap;
   transition: background 0.12s;
 }
 
@@ -436,7 +437,7 @@ textarea { font-family: inherit; }
 .upload-icon-sm[hidden] { display: none; }
 
 .upload-label-text {
-  font-size: 0.92rem;
+  font-size: 13px;
   font-weight: 600;
   color: inherit;
 }
@@ -4948,42 +4949,31 @@ textarea { font-family: inherit; }
   gap: 2px;
 }
 
+/* No longer a flex row of two side-by-side columns — the illustration is now
+   absolutely positioned (see below) so the headline text can flow its full
+   width and intentionally overlap it, with text on top via z-index. */
 .scan-headline-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  position: relative;
   margin-top: 24px;
 }
 /* +6px left breathing room beyond the tab's own 22px side padding — the
    headline/subline read too close to the edge otherwise. */
-.scan-headline-text { flex: 1; min-width: 0; padding-left: 6px; }
+.scan-headline-text {
+  position: relative;
+  z-index: 2; /* sits above the illustration (z-index: 1) so text reads cleanly on top */
+  padding-left: 6px;
+}
 .scan-headline {
   position: relative;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.5px;
   color: var(--text);
 }
-/* Forces "Get the right words," to render as one unbroken line — a real nbsp
-   character between "right" and "words," was confirmed present in the DOM
-   (char code 160) but Chrome still broke the line there anyway; white-space:
-   nowrap on the whole phrase is the reliable fix. */
-.scan-headline-line1 { white-space: nowrap; }
-/* The accent word ("right") — pink, with a short rounded underline sized to
-   the word itself (% width), not the whole headline block. */
+/* The accent word ("right") — just pink, no underline. */
 .scan-headline-accent {
-  position: relative;
-  display: inline-block;
   color: var(--accent);
-}
-.scan-headline-underline {
-  position: absolute;
-  left: 1px; bottom: -5px;
-  width: 80%; height: 3px;
-  border-radius: 2px;
-  background: var(--accent);
 }
 .scan-headline-sub {
   margin-top: 20px;
@@ -4992,16 +4982,30 @@ textarea { font-family: inherit; }
   color: var(--text-2);
   max-width: 230px;
 }
+/* Decorative separator between the hero text block and the input card below
+   (replaces the old underline-under-"right" treatment). */
+.scan-headline-divider {
+  display: block;
+  width: 48px;
+  height: 3px;
+  border-radius: 2px;
+  background: #EC4899;
+  margin-top: 20px;
+}
 
 /* Hero illustration — the real chat-bubble PNG (assets/icons/chat-bubble-hero.png),
    fixed 110x110 box, never stretched (object-fit: contain), with a few small
-   decorative pink sparkle dots scattered around it (CSS only, no extra assets). */
+   decorative pink sparkle dots scattered around it (CSS only, no extra assets).
+   Absolutely positioned (behind the text, z-index: 1) so the headline can grow
+   at 28px and intentionally overlap it. */
 .scan-hero-illustration {
-  position: relative;
+  position: absolute;
+  z-index: 1;
+  top: 2px;
+  right: 0;
   flex-shrink: 0;
   width: 110px;
   height: 110px;
-  margin-top: 2px;
   background: transparent;
 }
 .scan-hero-illustration-img {
