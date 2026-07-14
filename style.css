@@ -359,7 +359,7 @@ textarea { font-family: inherit; }
 .msg-footer {
   display: flex;
   align-items: center;
-  padding: 12px 0 12px 8px;
+  padding: 10px 14px;
   transition: padding 0.12s;
 }
 
@@ -370,7 +370,7 @@ textarea { font-family: inherit; }
   width: 1px;
   height: 20px;
   flex-shrink: 0;
-  margin: 0 4px;
+  margin: 0 12px;
   background: #E8DDD2;
 }
 
@@ -378,6 +378,7 @@ textarea { font-family: inherit; }
 .upload-row {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 4px;
   padding: 5px 2px;
   border-radius: var(--r-sm);
@@ -397,8 +398,10 @@ textarea { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  margin-left: auto; /* pushes to the footer's right edge now that .msg-footer no longer uses space-between */
+  flex: 1; /* takes remaining space in the footer row; text centers inside it */
+  min-width: 0; /* flex items default to min-width: auto, which blocks shrinking
+    below their own content width even with flex: 1 — this override is required
+    for the button to actually fill only the remaining space as specified. */
   gap: 6px;
   padding: 10px 18px;
   background: linear-gradient(135deg, #FF4FA0, #EC4899);
@@ -5004,8 +5007,8 @@ textarea { font-family: inherit; }
   top: 2px;
   right: 0;
   flex-shrink: 0;
-  width: 110px;
-  height: 110px;
+  width: 130px;
+  height: 130px;
   background: transparent;
 }
 .scan-hero-illustration-img {
