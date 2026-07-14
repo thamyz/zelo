@@ -1345,7 +1345,7 @@ function clearScanInput() {
   updateScanMessagePreview();
   // Reset Tell Zelo More sub-label
   const sub = document.getElementById('tellzelo-sub');
-  if (sub) sub.textContent = 'Add details for better analysis';
+  if (sub) sub.textContent = 'Friends, situations or anything else';
   const card = document.getElementById('tellzelo-card');
   if (card) card.classList.remove('filled');
   // Reset the two "Who's this about?" quick-pick cards
@@ -1597,7 +1597,7 @@ function updateTellZeloSummary() {
     sub.textContent = ctx;
     card.classList.add('filled');
   } else {
-    sub.textContent = 'Add details for better analysis';
+    sub.textContent = 'Friends, situations or anything else';
     card.classList.remove('filled');
   }
 }
@@ -1665,6 +1665,11 @@ function handleUpload(input) {
     dzIcon.hidden  = true;
     dzTitle.hidden = true;
     dzSub.hidden   = true;
+
+    // Auto-transfer: the instant a photo is linked on the dedicated Upload
+    // page, jump straight back to Scan (the inline preview is already set via
+    // the reader above) — no need to also tap "Done".
+    if (state.activeScreen === 'scan-upload') popScreen();
   } else {
     dropzone.classList.remove("has-file");
 
@@ -1971,33 +1976,77 @@ function gibReportFalsePositive() {
 // ASSISTANT: GENERATE
 // ================================================================
 
-// Populates the combined "Her message" box on the result screen: either the
-// editable text field (text mode) or the uploaded screenshot (same-size box,
-// screenshot mode). The underlying message that feeds generation always lives
-// in state.asstMessage; the text field just reflects it in text mode.
+// Populates the "Her message" area on the result screen. Text mode → the
+// editable text field shows the message. Screenshot mode → the screenshot ITSELF
+// is shown (filling the box area); we deliberately do NOT surface the OCR text in
+// the box — the extracted text lives only in state.asstMessage to feed reply
+// generation ("ChatGPT already reads it"), it's not something the user re-reads.
 function renderHerMessagePreview(text, screenshotUrl) {
   const ta = document.getElementById("asst-preview-bubble"); // the <textarea>
   if (!ta) return;
-  ta.value = text || "";                    // box always shows the message text
-  if (screenshotUrl) _showResultThumb(screenshotUrl);  // + thumbnail row below
-  else               _hideResultThumb();
+  if (screenshotUrl) {
+    ta.value = "";                     // screenshot mode: the image is the message
+    _showResultThumb(screenshotUrl);
+  } else {
+    ta.value = text || "";             // text mode: reflect the message in the box
+    _hideResultThumb();
+    _renderZeloRead(text);             // fill the gap with a coaching read
+  }
 }
 
-// Shows / hides the small screenshot thumbnail in its own row BELOW the box.
-// When shown, .has-shot shrinks the text box so box + thumb occupy roughly the
-// same vertical space as the tall box alone (no layout jump / no new scroll).
+// Zelo's read — a short, human coaching take on HER message, shown in the gap
+// below the box for text replies. Rule-based (instant, zero extra API cost): reads
+// simple signals in the message + the user's Goal. Easy to swap for an AI-written
+// read later. Hidden automatically in screenshot mode (the image fills the gap).
+function _buildZeloRead(message, ctx) {
+  const msg = (message || "").trim();
+  if (!msg) return "Drop her message in and I'll tell you what she's really saying.";
+  const low   = msg.toLowerCase();
+  const words = low.split(/\s+/).filter(Boolean);
+  const goal  = (ctx && ctx.goal ? String(ctx.goal) : "").toLowerCase();
+
+  const emojiOnly     = !/[a-z0-9]/i.test(msg) && /\p{Extended_Pictographic}/u.test(msg);
+  const oneWord       = words.length <= 1;
+  const lowEffortWord = /^(k|kk|ok|okay|okok|sure|idk|idc|lol+|lmao+|ha(ha)+|hm+|meh|nvm|fine|yeah?|ya|yep|yup|nope?|no|maybe|cool)$/i.test(low.replace(/[.! ]/g, ""));
+  const handsLead     = /(idk|i don'?t know|up to you|you decide|whatever( works)?|what do you (wanna|want to)|your call|you pick)/.test(low);
+  const asksQuestion  = low.includes("?");
+  const warm          = /(!|😊|😍|🥰|😄|😁|❤|💕|can'?t wait|excited|love|omg|haha)/.test(low) && !lowEffortWord;
+
+  // move — a short nudge tied to the user's Goal (optional)
+  let move = "";
+  if      (/date|meet|hang|see you|link up/.test(goal))                          move = " Aim for a real plan — a day and place.";
+  else if (/number|digits|snap|insta|contact/.test(goal))                        move = " Set up a smooth number swap.";
+  else if (/reply|response|revive|ghost|quiet|restart|re-?engage|reconnect/.test(goal)) move = " Keep it easy to reply to.";
+  else if (/flirt|tension|spark|attract|interest/.test(goal))                    move = " Add a little playful tension.";
+
+  let read;
+  if      (handsLead)                read = "She's handing you the wheel — take the lead and be specific.";
+  else if (emojiOnly)               read = "Just an emoji — engaged, but giving you nothing to grab. You steer.";
+  else if (lowEffortWord || oneWord) read = "Low-effort reply — she wants to see if you'll bring the energy.";
+  else if (asksQuestion)            read = "She's curious and leaning in — answer with a hook, then turn it back.";
+  else if (warm)                    read = "She's warm and into it — match her energy and move a step forward.";
+  else                              read = "She's keeping it open — add spark and give her a thread to grab.";
+
+  return read + move;
+}
+
+function _renderZeloRead(message) {
+  const el = document.getElementById("yr-zelo-read-text");
+  if (el) el.textContent = _buildZeloRead(message, state.scanContext);
+}
+
+// Shows / hides the screenshot preview in its own row BELOW the box. The row's
+// height is reserved in CSS at a constant size, so the box stays compact and the
+// cards below never move; only the image inside is toggled (via .has-shot) — empty
+// breathing room for a text reply, a big portrait preview for a screenshot reply.
 function _showResultThumb(url) {
   const img = document.getElementById("yr-message-shot-img");
   if (img) img.src = url;
-  const row = document.getElementById("yr-message-thumb-row");
-  if (row) row.hidden = false;
   document.getElementById("yr-preview-block")?.classList.add("has-shot");
 }
 function _hideResultThumb() {
   const img = document.getElementById("yr-message-shot-img");
   if (img) img.src = "";
-  const row = document.getElementById("yr-message-thumb-row");
-  if (row) row.hidden = true;
   document.getElementById("yr-preview-block")?.classList.remove("has-shot");
 }
 
@@ -2021,6 +2070,13 @@ function onResultMessageCommit() {
 
 function triggerResultUpload() {
   document.getElementById("result-screenshot-input")?.click();
+}
+
+// Tapping the message box opens the file picker — the box itself is the
+// trigger (there is no upload icon). Typing still works: the textarea focuses
+// under the (modal) picker, so cancelling it leaves the field ready to type.
+function onMessageBoxTap() {
+  triggerResultUpload();
 }
 
 // Screenshot chosen: show the thumbnail (below the box) immediately and
@@ -2051,7 +2107,9 @@ async function onResultScreenshot(input) {
   console.log("[Zelo OCR] result-box raw extracted text (before writing to input):", JSON.stringify(extracted));
 
   if (extracted && extracted !== NO_MESSAGE_SENTINEL) {
-    if (ta) ta.value = extracted;
+    // Do NOT write the OCR text into the box — the screenshot stays shown as the
+    // message. The extracted text only feeds generation (state.asstMessage).
+    if (ta) ta.value = "";
     _regenerateFromResultInput(extracted);
   } else {
     // OCR failed / no message — restore the user's OWN typed text (never the
@@ -2083,6 +2141,7 @@ function removeResultScreenshot() {
 function _regenerateFromResultInput(messageText) {
   if (!messageText) return;
   state.asstMessage    = messageText;
+  _renderZeloRead(messageText);        // keep the read in sync with edited text
   state.asstContext    = scanContextString();
   state.asstContextObj = { ...state.scanContext };
   state.asstCurrentSet = {};

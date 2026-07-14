@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css?v=20260708a" />
+    <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
   <body>
     <div id="app">
@@ -50,35 +52,19 @@
           <!-- Input block -->
           <div class="scan-main">
 
-          <!-- Headline + decorative illustration -->
+          <!-- Headline + real chat-bubble illustration (assets/icons/chat-bubble-hero.png) -->
           <div class="scan-headline-row">
             <div class="scan-headline-text">
-              <h2 class="scan-headline">What should<br>I say?<span class="scan-headline-underline" aria-hidden="true"></span></h2>
-              <p class="scan-headline-sub">Get smart, natural replies for any conversation.</p>
+              <h2 class="scan-headline">Get the <span class="scan-headline-accent">right<i class="scan-headline-underline" aria-hidden="true"></i></span><br>words, effortlessly.</h2>
+              <p class="scan-headline-sub">Smart, natural replies for any conversation.</p>
             </div>
-            <svg class="scan-bubbles-deco" width="118" height="108" viewBox="0 0 140 130" fill="none"
-                 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true">
-              <defs>
-                <path id="ill-spark" d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-              </defs>
-
-              <!-- accent sparkles -->
-              <use href="#ill-spark" xlink:href="#ill-spark" transform="translate(2 28) scale(0.7)" fill="#ec4899"/>
-              <use href="#ill-spark" xlink:href="#ill-spark" transform="translate(124 38) scale(0.5)" fill="#ec4899" opacity="0.7"/>
-              <use href="#ill-spark" xlink:href="#ill-spark" transform="translate(100 94) scale(0.42)" fill="#ec4899" opacity="0.55"/>
-
-              <!-- soft bubble (behind, bottom-left) -->
-              <rect x="4" y="50" width="72" height="52" rx="18" fill="#fbdcec"/>
-              <path d="M24 100 L40 100 L30 114 Z" fill="#fbdcec"/>
-              <use href="#ill-spark" xlink:href="#ill-spark" transform="translate(24 62) scale(0.9)" fill="#ffffff"/>
-
-              <!-- main bubble (front, top-right) with typing dots -->
-              <rect x="46" y="2" width="90" height="54" rx="18" fill="#ec4899"/>
-              <path d="M70 54 L86 54 L78 70 Z" fill="#ec4899"/>
-              <circle cx="74" cy="29" r="4.5" fill="#ffffff"/>
-              <circle cx="90" cy="29" r="4.5" fill="#ffffff"/>
-              <circle cx="106" cy="29" r="4.5" fill="#ffffff"/>
-            </svg>
+            <div class="scan-hero-illustration">
+              <img class="scan-hero-illustration-img" src="assets/icons/chat-bubble-hero.png" alt="" />
+              <span class="hero-spark hero-spark--1" aria-hidden="true"></span>
+              <span class="hero-spark hero-spark--2" aria-hidden="true"></span>
+              <span class="hero-spark hero-spark--3" aria-hidden="true"></span>
+              <span class="hero-spark hero-spark--4" aria-hidden="true"></span>
+            </div>
           </div>
 
           <!-- Free-tier daily scan counter + mocked rewarded-ad upsell.
@@ -124,6 +110,16 @@
                 <button class="scan-thumb-remove-btn" id="scan-thumb-remove-btn" type="button"
                         onclick="event.stopPropagation(); clearUploadedPhoto()" aria-label="Remove screenshot">−</button>
               </div>
+
+              <!-- Primary CTA — lives in the input card's footer now, beside
+                   Upload Screenshot. Same id/onclick as before: checkGenerateReady()
+                   still toggles [disabled] on this exact element unchanged. -->
+              <button class="asst-suggest-btn" id="asst-generate-btn" onclick="generateReplies()">
+                Get Suggestions
+                <svg class="asst-suggest-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -132,13 +128,17 @@
 
           <!-- WHO'S THIS ABOUT — two quick-pick shortcuts + full context wizard -->
           <div class="scan-who-section">
-            <h3 class="scan-who-title">Who's this about?</h3>
+            <div class="scan-who-header">
+              <h3 class="scan-who-title">Who's this about?</h3>
+              <span class="scan-who-learnmore">Learn more ›</span>
+            </div>
             <div class="scan-who-grid">
               <button type="button" class="scan-who-card" id="scan-who-dating" onclick="scanQuickWho('Dating', this)">
                 <span class="scan-who-icon">
                   <svg width="30" height="30" viewBox="0 0 24 24" fill="#ec4899"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </span>
                 <span class="scan-who-label">Dating</span>
+                <span class="scan-who-sub">Build attraction and connection</span>
               </button>
               <button type="button" class="scan-who-card" id="scan-who-crush" onclick="scanQuickWho('Crush', this)">
                 <span class="scan-who-icon">
@@ -146,44 +146,40 @@
                   <svg class="scan-who-icon-badge" width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
                 </span>
                 <span class="scan-who-label">Crush</span>
+                <span class="scan-who-sub">Start flirty conversations</span>
               </button>
               <button type="button" class="scan-who-card scan-who-card--tellzelo" id="tellzelo-card" onclick="openTellZelo()">
                 <span class="scan-who-icon">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="#ec4899"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
                 </span>
-                <span class="scan-who-label">Or tell zelo more</span>
-                <span class="tellzelo-sub" id="tellzelo-sub" hidden>Add details for better analysis</span>
+                <span class="scan-who-label">Other</span>
+                <span class="scan-who-sub tellzelo-sub" id="tellzelo-sub">Friends, situations or anything else</span>
               </button>
             </div>
           </div>
 
-<!-- ANALYZE — the terminal action of the page -->
-          <button
-            class="generate-btn"
-            id="asst-generate-btn"
-            onclick="generateReplies()"
-          >
-            <svg class="generate-btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
-            </svg>
-            Get Suggestions
-          </button>
-
-          <!-- AI COACH — simplified static row, taps straight through to the full page -->
-          <button class="aicoach-row" id="aicoach-card" type="button" onclick="openAiCoach()">
-            <span class="aicoach-row-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <!-- AI COACH — dark promo banner. Tapping the banner opens the full page;
+               the Upgrade pill is its own nested button (stopPropagation) wired to
+               the existing upgradeNow() stub — no real paywall exists yet in this
+               codebase (isPaidUser() is a permanent-true stub), so this is the
+               correct existing hook rather than inventing a new paywall flow. -->
+          <div class="asst-coach-banner" id="aicoach-card" onclick="openAiCoach()">
+            <span class="asst-coach-avatar" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
                 <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
               </svg>
             </span>
-            <span class="aicoach-row-copy">
-              <span class="aicoach-row-title">AI Coach</span>
-              <span class="aicoach-row-sub">Level up your conversations</span>
+            <span class="asst-coach-copy">
+              <span class="asst-coach-title">AI Coach</span>
+              <span class="asst-coach-sub">Level up your conversations with personalized tips.</span>
             </span>
-            <svg class="aicoach-row-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </button>
+            <button type="button" class="asst-coach-upgrade-btn" onclick="event.stopPropagation(); upgradeNow();">
+              Upgrade
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+          </div>
 
           <p class="scan-privacy-note">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>
@@ -793,33 +789,34 @@
           <!-- Result content — revealed once the reply is ready -->
           <div class="scan-result-content" id="scan-result-content" hidden>
 
-            <!-- Her message — editable text box. Upload a screenshot via the
-                 soft sparkle in the corner (no persistent photo icon); the OCR
+            <!-- Her message — compact editable text box. No icons: tapping the
+                 box itself opens the file picker (onclick below); the OCR
                  (_extractScreenshotText → openai-proxy) fills this field and the
                  uploaded image shows as a small thumbnail in its own row below.
                  #asst-preview-bubble kept as the id on the text field so existing
                  code that reads/writes the message still works. -->
             <div class="preview-block" id="yr-preview-block">
               <span class="yr-label">Her message</span>
-              <div class="yr-message-combined" id="yr-message-combined">
+              <div class="yr-message-combined" id="yr-message-combined" onclick="onMessageBoxTap()">
                 <textarea class="yr-message-input" id="asst-preview-bubble"
-                          placeholder="Paste a message she sent…" maxlength="4000"
+                          placeholder="Paste a message, or tap to add a screenshot…" maxlength="4000"
                           oninput="onResultMessageInput()" onblur="onResultMessageCommit()"></textarea>
-                <!-- Decorative + unobtrusive upload trigger (replaces the photo
-                     icon): a soft on-brand sparkle that opens the file picker. -->
-                <button class="yr-message-spark" id="yr-message-spark" type="button"
-                        onclick="triggerResultUpload()" aria-label="Add a screenshot" title="Add a screenshot">
-                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
-                </button>
                 <input type="file" id="result-screenshot-input" accept="image/*"
                        style="display:none" onchange="onResultScreenshot(this)" />
               </div>
-              <!-- Thumbnail — its own row BELOW the box (small, unchanged size). -->
-              <div class="yr-message-thumb-row" id="yr-message-thumb-row" hidden>
+              <!-- Reserved row BELOW the box, constant height so the cards never
+                   shift. Text reply → shows "Zelo's read" (a quick coaching take on
+                   her message). Screenshot reply → the box is hidden and the
+                   screenshot fills this whole area instead (see .has-shot rules). -->
+              <div class="yr-message-thumb-row" id="yr-message-thumb-row">
                 <div class="yr-message-thumb">
                   <img class="yr-message-thumb-img" id="yr-message-shot-img" alt="Uploaded screenshot" />
                   <button class="yr-message-thumb-remove" id="yr-message-shot-remove" type="button"
-                          onclick="removeResultScreenshot()" aria-label="Remove screenshot">−</button>
+                          onclick="event.stopPropagation(); removeResultScreenshot()" aria-label="Remove screenshot">−</button>
+                </div>
+                <div class="yr-zelo-read" id="yr-zelo-read">
+                  <span class="yr-zelo-read-label">✦ Zelo's read</span>
+                  <p class="yr-zelo-read-text" id="yr-zelo-read-text"></p>
                 </div>
               </div>
             </div>
