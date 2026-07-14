@@ -347,13 +347,15 @@ textarea { font-family: inherit; }
   letter-spacing: 0.04em;
 }
 
-/* Card footer — upload (left) + character count (right) on one quiet row */
+/* Card footer / action row — upload (left) + CTA (right). No border-top of its
+   own: the divider is owned by .scan-inline-textarea's border-bottom instead,
+   so the thumbnail (which lands in this row) reads as sitting seamlessly
+   against the zone above it rather than behind a second, redundant line. */
 .msg-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px 12px 10px;
-  border-top: 1px solid var(--border);
   transition: padding 0.12s;
 }
 
@@ -429,36 +431,25 @@ textarea { font-family: inherit; }
   min-height: 60px;
 }
 
-/* Inline message textarea on the main Scan page */
-/* Fixed-height stage — EXACT height (not min-height), so it can never grow or
-   shrink regardless of which child (textarea vs. thumbnail) is showing. That
-   guarantees the divider/footer below it never move. */
-.scan-inline-stage {
-  position: relative;
-  height: 78px;
-}
+/* Inline message textarea on the main Scan page — tall enough for 3-4
+   comfortable lines. Owns the divider (border-bottom) between itself and the
+   action row below, so the footer never carries a second/redundant border. */
 .scan-inline-textarea {
-  position: absolute;
-  inset: 0;
-  height: 100%;
+  min-height: 84px;
   padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
 }
-/* .msg-textarea already sets display:block (author-origin), which otherwise
-   beats the UA [hidden] rule — this explicit override is required for the
-   attribute to actually hide it (same pattern already used for scan-thumb-preview). */
-.scan-inline-textarea[hidden] { display: none; }
 
 .scan-inline-textarea:focus { outline: none; }
 
-/* Screenshot preview — replaces the textarea IN THE SAME STAGE (absolutely
-   positioned within its exact box) once a file is picked, so the stage's
-   height never changes and nothing below it shifts. */
+/* Screenshot preview — lives in the action row (.msg-footer), replacing
+   Upload Screenshot in that same flex row once a file is picked. The textarea
+   above stays visible and empty; only this footer row's content changes. */
 .scan-thumb-preview {
-  position: absolute;
-  left: 18px;
-  top: 14px;
-  width: 50px;
-  height: 50px;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
 }
 
 .scan-thumb-preview[hidden] { display: none; }
@@ -4945,10 +4936,12 @@ textarea { font-family: inherit; }
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  margin-top: 2px;
+  gap: 8px;
+  margin-top: 14px;
 }
-.scan-headline-text { flex: 1; min-width: 0; }
+/* +6px left breathing room beyond the tab's own 22px side padding — the
+   headline/subline read too close to the edge otherwise. */
+.scan-headline-text { flex: 1; min-width: 0; padding-left: 6px; }
 .scan-headline {
   position: relative;
   font-size: 24px;
@@ -5007,7 +5000,7 @@ textarea { font-family: inherit; }
 .hero-spark--3 { width: 5px; height: 5px; bottom: 14px; right: -4px; }
 .hero-spark--4 { width: 4px; height: 4px; bottom: 0;  left: 22px; }
 
-.scan-who-section { margin-top: 36px; }
+.scan-who-section { margin-top: 56px; }
 .scan-who-title {
   font-size: 1rem;
   font-weight: 800;
@@ -5023,8 +5016,8 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px 6px 14px;
+  gap: 6px;
+  padding: 10px 6px;
   background: var(--s1);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
@@ -5077,12 +5070,11 @@ textarea { font-family: inherit; }
   transition: transform 0.1s;
 }
 .asst-coach-banner:active { transform: scale(0.995); }
+/* No wrapping circle — the sparkle renders directly on the banner's own dark
+   gradient, no border/background/box-shadow/border-radius of its own. */
 .asst-coach-avatar {
   flex-shrink: 0;
-  width: 56px; height: 56px;
-  border-radius: 50%;
-  background: rgba(236, 72, 153, 0.16);
-  box-shadow: 0 0 0 1px rgba(236, 72, 153, 0.4), 0 0 22px rgba(236, 72, 153, 0.5);
+  width: 40px; height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;

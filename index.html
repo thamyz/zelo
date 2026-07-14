@@ -76,33 +76,23 @@
             </button>
           </div>
 
-          <!-- MESSAGE — inline editable textarea -->
+          <!-- MESSAGE — inline editable textarea. Stays visible and empty even
+               when a screenshot is attached (per this fix); the thumbnail lives
+               in the action row below instead — see .msg-footer. -->
           <div class="input-card scan-message">
+            <textarea
+              id="asst-input"
+              class="msg-textarea scan-inline-textarea"
+              placeholder="Paste a message she sent…"
+              maxlength="4000"
+              oninput="onAsstInput()"
+            ></textarea>
 
-            <!-- Fixed-height stage: textarea (typing) OR thumbnail (screenshot
-                 attached) — never both, never a different height either way, so
-                 the divider below and the footer never shift regardless of state. -->
-            <div class="scan-inline-stage">
-              <textarea
-                id="asst-input"
-                class="msg-textarea scan-inline-textarea"
-                placeholder="Paste a message she sent…"
-                maxlength="4000"
-                oninput="onAsstInput()"
-              ></textarea>
-
-              <!-- Shown instead of the textarea once a screenshot is attached.
-                   No text is extracted here; that happens silently at Analyze
-                   time and is never shown to the user. -->
-              <div class="scan-thumb-preview" id="scan-thumb-preview" hidden>
-                <img class="scan-thumb-preview-img" id="scan-thumb-preview-img" alt="Uploaded screenshot" />
-                <button class="scan-thumb-remove-btn" id="scan-thumb-remove-btn" type="button"
-                        onclick="event.stopPropagation(); clearUploadedPhoto()" aria-label="Remove screenshot">−</button>
-              </div>
-            </div>
-
-            <!-- Footer — divider + action row. Content here is constant in every
-                 state (never swaps, never resizes), so it never moves. -->
+            <!-- Footer / action row. The divider itself is owned by the textarea's
+                 own bottom edge (border-bottom on .scan-inline-textarea) — this
+                 element has no border-top of its own, so the thumbnail (which
+                 replaces Upload Screenshot in this same row once attached) reads
+                 as sitting seamlessly between the two zones. -->
             <div class="msg-footer">
               <button class="upload-row" id="upload-row" type="button" onclick="openScanUpload()">
                 <span class="upload-icon-sm" id="upload-icon-sm">
@@ -116,6 +106,15 @@
                 </span>
                 <span class="upload-label-text" id="upload-label-text">Upload Screenshot</span>
               </button>
+
+              <!-- Replaces the row above once a screenshot is attached — same
+                   footer slot. No text is extracted here; that happens silently
+                   at Analyze time and is never shown to the user. -->
+              <div class="scan-thumb-preview" id="scan-thumb-preview" hidden>
+                <img class="scan-thumb-preview-img" id="scan-thumb-preview-img" alt="Uploaded screenshot" />
+                <button class="scan-thumb-remove-btn" id="scan-thumb-remove-btn" type="button"
+                        onclick="event.stopPropagation(); clearUploadedPhoto()" aria-label="Remove screenshot">−</button>
+              </div>
 
               <!-- Primary CTA — checkGenerateReady() still toggles [disabled]
                    on this exact element unchanged. -->
@@ -170,7 +169,7 @@
                correct existing hook rather than inventing a new paywall flow. -->
           <div class="asst-coach-banner" id="aicoach-card" onclick="openAiCoach()">
             <span class="asst-coach-avatar" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="#ec4899">
                 <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
               </svg>
             </span>
