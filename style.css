@@ -126,6 +126,10 @@ textarea { font-family: inherit; }
 }
 
 .tab-bottom-spacer { height: 28px; }
+/* Scoped to this tab only (Practice tab keeps the default 28px) — the trust
+   line uses margin-top: auto to hug the bottom, so this spacer just needs to
+   clear the floating Scan FAB, not act as generic bottom padding. */
+#tab-assistant .tab-bottom-spacer { height: 30px; }
 
 
 /* ----------------------------------------------------------------
@@ -355,9 +359,19 @@ textarea { font-family: inherit; }
 .msg-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 12px 14px 12px 10px;
   transition: padding 0.12s;
+}
+
+/* Vertical separator between Upload Screenshot and Get Suggestions. Explicit
+   margins (not space-between distribution — with 3 flex children and little
+   free width, that squeezed the divider flush against both neighbors). */
+.msg-footer-divider {
+  width: 1px;
+  height: 20px;
+  flex-shrink: 0;
+  margin: 0 12px;
+  background: #E8DDD2;
 }
 
 /* Upload — a quiet, accent-tinted affordance inside the footer */
@@ -383,6 +397,7 @@ textarea { font-family: inherit; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-left: auto; /* pushes to the footer's right edge now that .msg-footer no longer uses space-between */
   gap: 6px;
   padding: 10px 18px;
   background: linear-gradient(135deg, #FF4FA0, #EC4899);
@@ -4945,12 +4960,17 @@ textarea { font-family: inherit; }
 .scan-headline-text { flex: 1; min-width: 0; padding-left: 6px; }
 .scan-headline {
   position: relative;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.5px;
   color: var(--text);
 }
+/* Forces "Get the right words," to render as one unbroken line — a real nbsp
+   character between "right" and "words," was confirmed present in the DOM
+   (char code 160) but Chrome still broke the line there anyway; white-space:
+   nowrap on the whole phrase is the reliable fix. */
+.scan-headline-line1 { white-space: nowrap; }
 /* The accent word ("right") — pink, with a short rounded underline sized to
    the word itself (% width), not the whole headline block. */
 .scan-headline-accent {
@@ -5104,7 +5124,8 @@ textarea { font-family: inherit; }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 14px;
+  margin-top: auto; /* pushes to the bottom of .scan-main, close to the tab bar — the AI Coach banner above stays put */
+  padding-top: 14px;
   font-size: 0.8rem;
   color: var(--text-3);
 }
