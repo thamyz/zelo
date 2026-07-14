@@ -78,15 +78,31 @@
 
           <!-- MESSAGE — inline editable textarea -->
           <div class="input-card scan-message">
-            <textarea
-              id="asst-input"
-              class="msg-textarea scan-inline-textarea"
-              placeholder="Paste a message she sent…"
-              maxlength="4000"
-              oninput="onAsstInput()"
-            ></textarea>
 
-            <!-- Footer: screenshot upload — tapping navigates to its own upload page -->
+            <!-- Fixed-height stage: textarea (typing) OR thumbnail (screenshot
+                 attached) — never both, never a different height either way, so
+                 the divider below and the footer never shift regardless of state. -->
+            <div class="scan-inline-stage">
+              <textarea
+                id="asst-input"
+                class="msg-textarea scan-inline-textarea"
+                placeholder="Paste a message she sent…"
+                maxlength="4000"
+                oninput="onAsstInput()"
+              ></textarea>
+
+              <!-- Shown instead of the textarea once a screenshot is attached.
+                   No text is extracted here; that happens silently at Analyze
+                   time and is never shown to the user. -->
+              <div class="scan-thumb-preview" id="scan-thumb-preview" hidden>
+                <img class="scan-thumb-preview-img" id="scan-thumb-preview-img" alt="Uploaded screenshot" />
+                <button class="scan-thumb-remove-btn" id="scan-thumb-remove-btn" type="button"
+                        onclick="event.stopPropagation(); clearUploadedPhoto()" aria-label="Remove screenshot">−</button>
+              </div>
+            </div>
+
+            <!-- Footer — divider + action row. Content here is constant in every
+                 state (never swaps, never resizes), so it never moves. -->
             <div class="msg-footer">
               <button class="upload-row" id="upload-row" type="button" onclick="openScanUpload()">
                 <span class="upload-icon-sm" id="upload-icon-sm">
@@ -101,19 +117,8 @@
                 <span class="upload-label-text" id="upload-label-text">Upload Screenshot</span>
               </button>
 
-              <!-- Replaces the row above once a screenshot is attached — same
-                   footer slot, no extra vertical space. No text is extracted
-                   here; that happens silently at Analyze time and is never
-                   shown to the user. -->
-              <div class="scan-thumb-preview" id="scan-thumb-preview" hidden>
-                <img class="scan-thumb-preview-img" id="scan-thumb-preview-img" alt="Uploaded screenshot" />
-                <button class="scan-thumb-remove-btn" id="scan-thumb-remove-btn" type="button"
-                        onclick="event.stopPropagation(); clearUploadedPhoto()" aria-label="Remove screenshot">−</button>
-              </div>
-
-              <!-- Primary CTA — lives in the input card's footer now, beside
-                   Upload Screenshot. Same id/onclick as before: checkGenerateReady()
-                   still toggles [disabled] on this exact element unchanged. -->
+              <!-- Primary CTA — checkGenerateReady() still toggles [disabled]
+                   on this exact element unchanged. -->
               <button class="asst-suggest-btn" id="asst-generate-btn" onclick="generateReplies()">
                 Get Suggestions
                 <svg class="asst-suggest-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -128,17 +133,13 @@
 
           <!-- WHO'S THIS ABOUT — two quick-pick shortcuts + full context wizard -->
           <div class="scan-who-section">
-            <div class="scan-who-header">
-              <h3 class="scan-who-title">Who's this about?</h3>
-              <span class="scan-who-learnmore">Learn more ›</span>
-            </div>
+            <h3 class="scan-who-title">Who's this about?</h3>
             <div class="scan-who-grid">
               <button type="button" class="scan-who-card" id="scan-who-dating" onclick="scanQuickWho('Dating', this)">
                 <span class="scan-who-icon">
                   <svg width="30" height="30" viewBox="0 0 24 24" fill="#ec4899"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </span>
                 <span class="scan-who-label">Dating</span>
-                <span class="scan-who-sub">Build attraction and connection</span>
               </button>
               <button type="button" class="scan-who-card" id="scan-who-crush" onclick="scanQuickWho('Crush', this)">
                 <span class="scan-who-icon">
@@ -146,14 +147,18 @@
                   <svg class="scan-who-icon-badge" width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
                 </span>
                 <span class="scan-who-label">Crush</span>
-                <span class="scan-who-sub">Start flirty conversations</span>
               </button>
               <button type="button" class="scan-who-card scan-who-card--tellzelo" id="tellzelo-card" onclick="openTellZelo()">
                 <span class="scan-who-icon">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="#ec4899"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
                 </span>
                 <span class="scan-who-label">Other</span>
-                <span class="scan-who-sub tellzelo-sub" id="tellzelo-sub">Friends, situations or anything else</span>
+                <!-- Kept in the DOM (not deleted) but visually hidden — this id is
+                     still written to by updateTellZeloSummary() to toggle .filled
+                     on the card once wizard details are set; removing the element
+                     entirely would silently break that existing feedback. No text
+                     is ever shown here per this fix. -->
+                <span class="tellzelo-sub" id="tellzelo-sub" hidden>Friends, situations or anything else</span>
               </button>
             </div>
           </div>

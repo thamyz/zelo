@@ -430,21 +430,35 @@ textarea { font-family: inherit; }
 }
 
 /* Inline message textarea on the main Scan page */
+/* Fixed-height stage — EXACT height (not min-height), so it can never grow or
+   shrink regardless of which child (textarea vs. thumbnail) is showing. That
+   guarantees the divider/footer below it never move. */
+.scan-inline-stage {
+  position: relative;
+  height: 78px;
+}
 .scan-inline-textarea {
-  min-height: 78px;
+  position: absolute;
+  inset: 0;
+  height: 100%;
   padding: 16px 18px 14px;
 }
+/* .msg-textarea already sets display:block (author-origin), which otherwise
+   beats the UA [hidden] rule — this explicit override is required for the
+   attribute to actually hide it (same pattern already used for scan-thumb-preview). */
+.scan-inline-textarea[hidden] { display: none; }
 
 .scan-inline-textarea:focus { outline: none; }
 
-/* Small preview of the uploaded screenshot — replaces the Upload Screenshot
-   row in the same footer slot once a file is picked, so it costs no extra
-   vertical space. Fixed small size, never stretches. */
+/* Screenshot preview — replaces the textarea IN THE SAME STAGE (absolutely
+   positioned within its exact box) once a file is picked, so the stage's
+   height never changes and nothing below it shifts. */
 .scan-thumb-preview {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  flex-shrink: 0;
+  position: absolute;
+  left: 18px;
+  top: 14px;
+  width: 50px;
+  height: 50px;
 }
 
 .scan-thumb-preview[hidden] { display: none; }
@@ -4974,13 +4988,14 @@ textarea { font-family: inherit; }
   width: 110px;
   height: 110px;
   margin-top: 2px;
+  background: transparent;
 }
 .scan-hero-illustration-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 8px 16px rgba(236, 72, 153, 0.22));
+  background: transparent;
 }
 .hero-spark {
   position: absolute;
@@ -4992,24 +5007,12 @@ textarea { font-family: inherit; }
 .hero-spark--3 { width: 5px; height: 5px; bottom: 14px; right: -4px; }
 .hero-spark--4 { width: 4px; height: 4px; bottom: 0;  left: 22px; }
 
-.scan-who-section { margin-top: 20px; }
-.scan-who-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
+.scan-who-section { margin-top: 36px; }
 .scan-who-title {
   font-size: 1rem;
   font-weight: 800;
   color: var(--text);
-}
-/* Plain text, not a real link yet — no destination exists for this in the
-   app today, so it's intentionally non-interactive rather than a dead tap. */
-.scan-who-learnmore {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--accent);
+  margin-bottom: 12px;
 }
 .scan-who-grid {
   display: grid;
@@ -5020,8 +5023,8 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 14px 6px 12px;
+  gap: 8px;
+  padding: 16px 6px 14px;
   background: var(--s1);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
@@ -5049,11 +5052,6 @@ textarea { font-family: inherit; }
   font-weight: 700;
   color: var(--text);
   line-height: 1.25;
-}
-.scan-who-sub {
-  font-size: 0.7rem;
-  line-height: 1.3;
-  color: var(--text-2);
 }
 /* "Or tell zelo more" card shows a filled state once context is set —
    updateTellZeloSummary() still runs unchanged; this just restyles the

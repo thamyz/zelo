@@ -1640,9 +1640,9 @@ function handleUpload(input) {
   const clearBtn  = document.getElementById("scan-upload-clear-btn");
   const minusBtn  = document.getElementById("scan-photo-minus-btn");
 
-  const uploadRow = document.getElementById("upload-row");
   const thumbWrap = document.getElementById("scan-thumb-preview");
   const thumbImg  = document.getElementById("scan-thumb-preview-img");
+  const inlineTa  = document.getElementById("asst-input");
   const ocrErr    = document.getElementById("scan-ocr-error");
 
   if (file) {
@@ -1656,9 +1656,11 @@ function handleUpload(input) {
       dzThumb.src    = reader.result;
       dzThumb.hidden = false;
 
+      // Thumbnail replaces the textarea IN PLACE (same fixed-height stage) —
+      // the footer/divider below never move, in either state.
       if (thumbImg)  thumbImg.src = reader.result;
       if (thumbWrap) thumbWrap.hidden = false;
-      if (uploadRow) uploadRow.hidden = true;
+      if (inlineTa)  inlineTa.hidden = true;
     };
     reader.readAsDataURL(file);
 
@@ -1683,8 +1685,8 @@ function handleUpload(input) {
 
     if (thumbWrap) thumbWrap.hidden = true;
     if (thumbImg)  thumbImg.src = "";
+    if (inlineTa)  inlineTa.hidden = false;
     if (ocrErr)    ocrErr.hidden = true;
-    if (uploadRow) uploadRow.hidden = false;
   }
 
   checkGenerateReady();
