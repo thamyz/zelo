@@ -240,7 +240,7 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 4px;
   padding: 12px 0 4px;
 }
 
@@ -4945,7 +4945,7 @@ textarea { font-family: inherit; }
 .scan-headline-text { flex: 1; min-width: 0; padding-left: 6px; }
 .scan-headline {
   position: relative;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.5px;
@@ -4966,7 +4966,7 @@ textarea { font-family: inherit; }
   background: var(--accent);
 }
 .scan-headline-sub {
-  margin-top: 18px;
+  margin-top: 20px;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-2);
@@ -4996,10 +4996,10 @@ textarea { font-family: inherit; }
   border-radius: 50%;
   background: rgba(236, 72, 153, 0.3);
 }
-.hero-spark--1 { width: 6px; height: 6px; top: 2px;   left: 4px; }
-.hero-spark--2 { width: 4px; height: 4px; top: 20px;  right: 0; }
-.hero-spark--3 { width: 5px; height: 5px; bottom: 14px; right: -4px; }
-.hero-spark--4 { width: 4px; height: 4px; bottom: 0;  left: 22px; }
+.hero-spark--1 { width: 6px; height: 6px; top: -16px;   left: -16px; }
+.hero-spark--2 { width: 4px; height: 4px; top: -14px;   right: -14px; }
+.hero-spark--3 { width: 5px; height: 5px; bottom: -15px; right: -15px; }
+.hero-spark--4 { width: 4px; height: 4px; bottom: -14px; left: -14px; }
 
 .scan-who-section { margin-top: 12px; }
 .scan-who-title {
@@ -5064,7 +5064,7 @@ textarea { font-family: inherit; }
   width: 100%;
   padding: 14px 16px;
   margin-top: 14px;
-  background: linear-gradient(135deg, #2D1B2E, #1C0F1E);
+  background: linear-gradient(135deg, #C2185B 0%, #880E4F 40%, #1C0F1E 100%);
   border-radius: var(--r-lg);
   text-align: left;
   cursor: pointer;
