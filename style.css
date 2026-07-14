@@ -308,6 +308,7 @@ textarea { font-family: inherit; }
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   overflow: hidden;
+  margin-top: 36px; /* + .scan-main's 12px flex gap = 48px total below the subline */
 }
 
 .msg-textarea {
@@ -4937,7 +4938,7 @@ textarea { font-family: inherit; }
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 24px;
 }
 /* +6px left breathing room beyond the tab's own 22px side padding — the
    headline/subline read too close to the edge otherwise. */
@@ -4965,7 +4966,7 @@ textarea { font-family: inherit; }
   background: var(--accent);
 }
 .scan-headline-sub {
-  margin-top: 12px;
+  margin-top: 18px;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-2);
@@ -5000,7 +5001,7 @@ textarea { font-family: inherit; }
 .hero-spark--3 { width: 5px; height: 5px; bottom: 14px; right: -4px; }
 .hero-spark--4 { width: 4px; height: 4px; bottom: 0;  left: 22px; }
 
-.scan-who-section { margin-top: 56px; }
+.scan-who-section { margin-top: 12px; }
 .scan-who-title {
   font-size: 1rem;
   font-weight: 800;
