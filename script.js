@@ -4331,18 +4331,15 @@ function interstitialEnd() {
 let _paywallOnClose = null;
 let _paywallAnimated = false;
 let _paywallAnimationTimers = [];
-let _paywallKeyAnimTimer = null;
-let _paywallKeyAnimPlaying = false;
 
 function showPaywallNow() {
   _replaceActiveScreen('paywall');
   if (!_paywallAnimated) {
     _paywallAnimated = true;
     const timelineTotalMs = playPaywallTimelineIntro();
-    // Yearly bounce and the lock's idle shake loop must not overlap the
-    // timeline reveal — both only start once the reveal has fully finished.
+    // Yearly bounce must not overlap the timeline reveal — it only starts
+    // once the reveal sequence has fully finished.
     _paywallAnimationTimers.push(setTimeout(playPaywallYearlyBouncePattern, timelineTotalMs));
-    _paywallAnimationTimers.push(setTimeout(startPaywallLockShakeLoop, timelineTotalMs));
   }
 }
 
@@ -4351,40 +4348,116 @@ function closePaywall() {
   _paywallAnimated = false; // screen was left — replay entry animations if reopened
   _paywallAnimationTimers.forEach(clearTimeout);
   _paywallAnimationTimers = [];
-  // Don't leave the key-tap feedback stuck mid-flight or blocking future taps.
-  clearTimeout(_paywallKeyAnimTimer);
-  _paywallKeyAnimTimer = null;
-  _paywallKeyAnimPlaying = false;
-  const key = document.getElementById('paywall-key-icon');
-  if (key) key.classList.remove('paywall-key-icon--active');
+  // Reset the checkmark overlay/handoff so a mid-animation close doesn't
+  // leave the real step-1 icon stuck hidden or the overlay stuck visible.
+  const overlay = document.getElementById('paywall-checkmark-overlay');
+  if (overlay) {
+    overlay.classList.remove('paywall-checkmark-overlay--pop');
+    overlay.style.transition = 'none';
+    overlay.style.transform = 'translate(0, 0) scale(1)';
+    overlay.style.opacity = '0';
+  }
+  const checkmarkIcon = document.getElementById('paywall-checkmark-icon');
+  if (checkmarkIcon) checkmarkIcon.classList.remove('paywall-checkmark-pending');
   const cb = _paywallOnClose;
   _paywallOnClose = null;
   if (typeof cb === 'function') cb();
 }
 
-// Sequential "completing a checklist" reveal: icon, then the line below it
-// draws down, then the next icon, and so on. Each step only starts once the
-// previous one's transition has finished — not a simultaneous fade. Durations
-// must match the CSS transition-durations on .paywall-step-icon/-line (260ms
-// / 340ms) so the schedule lines up with what's actually visible; total
-// sequence lands at ~2s. Returns the total duration in ms.
+// Sequential "completing a checklist" reveal. Step 1's checkmark plays a
+// dedicated center-stage-then-travel beat (see playPaywallCheckmarkIntro()),
+// then the rest proceeds: line 1->2 draws down, step 2 icon appears, line
+// 2->3, step 3, line 3->4, step 4. Each step only starts once the previous
+// one's transition has finished — not a simultaneous fade. Durations must
+// match the CSS transition-durations on .paywall-step-icon/-line (260ms /
+// 340ms) so the schedule lines up with what's actually visible. Returns the
+// total duration in ms.
 function playPaywallTimelineIntro() {
   const timeline = document.querySelector('#screen-paywall .paywall-timeline');
   if (!timeline) return 0;
   const icons = Array.from(timeline.querySelectorAll('.paywall-step-icon'));
   const lines = Array.from(timeline.querySelectorAll('.paywall-step-line'));
-  const seq = [icons[0], lines[0], icons[1], lines[1], icons[2], lines[2], icons[3]]
+  const restSeq = [lines[0], icons[1], lines[1], icons[2], lines[2], icons[3]]
     .filter(Boolean);
-  const durations = [260, 340, 260, 340, 260, 340, 260];
+  const restDurations = [340, 260, 340, 260, 340, 260];
 
-  seq.forEach(el => el.classList.add('tl-hidden'));
+  restSeq.forEach(el => el.classList.add('tl-hidden'));
   void timeline.offsetWidth; // force reflow so the hidden state is applied before revealing
 
-  let t = 0;
-  seq.forEach((el, i) => {
+  let t = playPaywallCheckmarkIntro();
+  restSeq.forEach((el, i) => {
     _paywallAnimationTimers.push(setTimeout(() => el.classList.remove('tl-hidden'), t));
-    t += durations[i] || 260;
+    t += restDurations[i] || 260;
   });
+  return t;
+}
+
+const PAYWALL_CHECKMARK_DRAW_MS = 100;
+const PAYWALL_CHECKMARK_POP_MS = 140;
+const PAYWALL_CHECKMARK_HOLD_MS = 200;
+const PAYWALL_CHECKMARK_TRAVEL_MS = 250;
+
+// Step 1's checkmark: pops in large & centered on screen (point A) with a
+// stroke draw-on + elastic scale settle, holds briefly, then travels
+// (position + scale together, one continuous motion) into its real resting
+// spot — the step 1 circle in the timeline (point B). The real step-1 icon
+// stays hidden the whole time; the overlay hands off to it the instant the
+// travel finishes, so it reads as one object landing into place, not a cut.
+// Returns the total duration in ms (~690ms), so the ~1.8s "rest" sequence
+// after it lands still totals ~2.5s, not past it.
+function playPaywallCheckmarkIntro() {
+  const overlay = document.getElementById('paywall-checkmark-overlay');
+  const path = document.getElementById('paywall-checkmark-overlay-path');
+  const stepIcon = document.getElementById('paywall-checkmark-icon');
+  if (!overlay || !path || !stepIcon) return 0;
+
+  // Reset to the point-A resting state in case this is a replay.
+  overlay.classList.remove('paywall-checkmark-overlay--pop');
+  overlay.style.transition = 'none';
+  overlay.style.transform = 'translate(0, 0) scale(1)';
+  overlay.style.opacity = '1';
+  const len = path.getTotalLength();
+  path.style.transition = 'none';
+  path.style.strokeDasharray = String(len);
+  path.style.strokeDashoffset = String(len);
+  stepIcon.classList.add('paywall-checkmark-pending');
+  void overlay.offsetWidth; // force reflow so the reset state applies before animating
+
+  let t = 0;
+
+  // 1. Stroke draws on.
+  path.style.transition = `stroke-dashoffset ${PAYWALL_CHECKMARK_DRAW_MS}ms ease`;
+  path.style.strokeDashoffset = '0';
+  t += PAYWALL_CHECKMARK_DRAW_MS;
+
+  // 2. Elastic scale overshoot/settle.
+  _paywallAnimationTimers.push(setTimeout(() => {
+    overlay.classList.add('paywall-checkmark-overlay--pop');
+  }, t));
+  t += PAYWALL_CHECKMARK_POP_MS;
+
+  // 3. Brief hold at point A.
+  t += PAYWALL_CHECKMARK_HOLD_MS;
+
+  // 4. Travel — position + scale together, into the real step-1 icon's spot.
+  _paywallAnimationTimers.push(setTimeout(() => {
+    overlay.classList.remove('paywall-checkmark-overlay--pop'); // free up `transform` for the travel transition
+    const overlayRect = overlay.getBoundingClientRect();
+    const targetRect = stepIcon.getBoundingClientRect();
+    const dx = (targetRect.left + targetRect.width / 2) - (overlayRect.left + overlayRect.width / 2);
+    const dy = (targetRect.top + targetRect.height / 2) - (overlayRect.top + overlayRect.height / 2);
+    const scale = targetRect.width / overlayRect.width;
+    overlay.style.transition = `transform ${PAYWALL_CHECKMARK_TRAVEL_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+    overlay.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+  }, t));
+  t += PAYWALL_CHECKMARK_TRAVEL_MS;
+
+  // 5. Handoff — hide the overlay and reveal the real icon at the same instant.
+  _paywallAnimationTimers.push(setTimeout(() => {
+    overlay.style.opacity = '0';
+    stepIcon.classList.remove('paywall-checkmark-pending');
+  }, t));
+
   return t;
 }
 
@@ -4414,50 +4487,6 @@ function playPaywallYearlyBouncePattern() {
   _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 3
   t += PAYWALL_BOUNCE_MS + PAYWALL_BOUNCE_PAUSE_MS;
   _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 4
-}
-
-const PAYWALL_LOCK_SHAKE_MS = 400;
-const PAYWALL_LOCK_SHAKE_PAUSE_MS = 5000;
-
-function triggerPaywallLockShake() {
-  const icon = document.getElementById('paywall-lock-icon');
-  if (!icon) return;
-  icon.classList.remove('paywall-lock-shake');
-  void icon.offsetWidth;
-  icon.classList.add('paywall-lock-shake');
-}
-
-// Ambient idle loop, independent of user interaction: shake 0.4s, rest 5s,
-// repeat indefinitely while the paywall is open. A recursive setTimeout
-// chain (not setInterval) so each cycle's timer is individually tracked in
-// _paywallAnimationTimers and clearing the pending one halts the whole
-// loop — closePaywall() does exactly that, so nothing keeps running once
-// the screen is left, and showPaywallNow() restarts it cleanly on return.
-function startPaywallLockShakeLoop() {
-  triggerPaywallLockShake();
-  _paywallAnimationTimers.push(setTimeout(
-    startPaywallLockShakeLoop,
-    PAYWALL_LOCK_SHAKE_MS + PAYWALL_LOCK_SHAKE_PAUSE_MS
-  ));
-}
-
-// Visual-only tap feedback — a key flies in and settles over the lock icon,
-// then fades back out. No purchase, no navigation, no state change.
-// TODO: once RevenueCat/StoreKit is wired, this key animation should play
-// on actual purchase confirmation (success callback), and should then
-// navigate/unlock real Pro state — currently just a visual placeholder for
-// tap feedback.
-function paywallCtaTap() {
-  if (_paywallKeyAnimPlaying) return; // ignore repeat taps while one is in progress
-  const key = document.getElementById('paywall-key-icon');
-  if (!key) return;
-  _paywallKeyAnimPlaying = true;
-  key.classList.add('paywall-key-icon--active');
-  clearTimeout(_paywallKeyAnimTimer);
-  _paywallKeyAnimTimer = setTimeout(() => {
-    key.classList.remove('paywall-key-icon--active');
-    _paywallKeyAnimPlaying = false;
-  }, 900);
 }
 
 let paywallSelectedPlan = 'yearly';

@@ -5228,7 +5228,6 @@ textarea { font-family: inherit; }
   flex-shrink: 0;
 }
 .paywall-step-icon {
-  position: relative; /* positioning context for the key-icon overlay on the lock icon */
   width: 26px;
   height: 26px;
   border-radius: 50%;
@@ -5239,40 +5238,6 @@ textarea { font-family: inherit; }
 }
 .paywall-step-icon--done { background: #EC4899; color: #fff; }
 .paywall-step-icon--muted { background: #FFE1F0; color: var(--text-2); }
-
-/* Ambient idle shake on the lock icon (step 2) — self-running loop, starts
-   only after the timeline reveal finishes (see startPaywallLockShakeLoop()
-   in script.js). Gentle jiggle, not violent — small px/deg offsets. */
-@keyframes paywallLockShake {
-  0%   { transform: translateX(0) rotate(0deg); }
-  15%  { transform: translateX(-2.5px) rotate(-7deg); }
-  30%  { transform: translateX(2.5px) rotate(7deg); }
-  45%  { transform: translateX(-2px) rotate(-5deg); }
-  60%  { transform: translateX(2px) rotate(4deg); }
-  75%  { transform: translateX(-1px) rotate(-2deg); }
-  100% { transform: translateX(0) rotate(0deg); }
-}
-.paywall-lock-shake {
-  animation: paywallLockShake 0.4s ease-in-out;
-}
-
-/* Key icon — hidden by default, flies in and settles over the lock icon on
-   CTA tap (see paywallCtaTap() in script.js), then auto-fades back out.
-   Visual-only tap feedback; no state change. */
-.paywall-key-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  color: #fff;
-  opacity: 0;
-  transform: translate(-50%, -50%) translate(14px, -14px) scale(0.5) rotate(-35deg);
-  pointer-events: none;
-  transition: opacity 0.32s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.paywall-key-icon--active {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1) rotate(0deg);
-}
 .paywall-step-line {
   width: 2px;
   flex: 1;
@@ -5306,6 +5271,46 @@ textarea { font-family: inherit; }
 }
 .paywall-step-line.tl-hidden {
   transform: scaleY(0);
+}
+
+/* Step 1's checkmark reveal — a decoupled overlay pops in large & centered
+   on screen (point A), then travels + scales down into the real step-1
+   icon's actual position (point B), handing off seamlessly. See
+   playPaywallCheckmarkIntro() in script.js. #screen-paywall (.screen) is
+   already position:absolute, so this positions relative to the screen. */
+.paywall-checkmark-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  background: #EC4899;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  z-index: 20;
+  pointer-events: none;
+  transform: translate(0, 0) scale(1);
+}
+@keyframes paywallCheckmarkPop {
+  0%   { transform: scale(0.7); }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.paywall-checkmark-overlay--pop {
+  animation: paywallCheckmarkPop 0.14s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Real step-1 icon stays hidden (plain opacity, no bounce transition of its
+   own) until playPaywallCheckmarkIntro()'s travel beat hands off to it —
+   avoids a visible "double pop" on top of the overlay's own pop-in. */
+.paywall-checkmark-pending {
+  opacity: 0;
+  transition: opacity 0.08s ease;
 }
 .paywall-step-title {
   font-size: 15px;

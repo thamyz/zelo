@@ -1245,15 +1245,24 @@
           </div>
 
           <div class="paywall-hero">
-            <img class="paywall-hero-img" src="assets/icons/paywall-hero-v2.png" alt="" />
+            <img class="paywall-hero-img" src="assets/icons/new-paywall.png" alt="" />
           </div>
 
           <h2 class="paywall-headline">How your 7-day<br><span class="paywall-headline-accent">free trial</span> works</h2>
 
+          <!-- Step 1's checkmark pops in large & centered here (point A),
+               then travels + scales down into the step-1 circle below
+               (point B). See playPaywallCheckmarkIntro() in script.js. -->
+          <div class="paywall-checkmark-overlay" id="paywall-checkmark-overlay" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline id="paywall-checkmark-overlay-path" points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+
           <div class="paywall-timeline">
             <div class="paywall-step">
               <div class="paywall-step-icon-col">
-                <span class="paywall-step-icon paywall-step-icon--done">
+                <span class="paywall-step-icon paywall-step-icon--done" id="paywall-checkmark-icon">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </span>
                 <span class="paywall-step-line"></span>
@@ -1266,15 +1275,10 @@
 
             <div class="paywall-step">
               <div class="paywall-step-icon-col">
-                <span class="paywall-step-icon paywall-step-icon--done" id="paywall-lock-icon">
+                <span class="paywall-step-icon paywall-step-icon--done">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="5" y="11" width="14" height="10" rx="2" ry="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
                   </svg>
-                  <span class="paywall-key-icon" id="paywall-key-icon" aria-hidden="true">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2 11.4 11.6"/><path d="M15.5 7.5 18.5 10.5 22 7 19 4"/>
-                    </svg>
-                  </span>
                 </span>
                 <span class="paywall-step-line"></span>
               </div>
@@ -1345,7 +1349,7 @@
             </button>
           </div>
 
-          <button type="button" class="paywall-cta" onclick="paywallCtaTap()">Try FREE and Subscribe</button>
+          <button type="button" class="paywall-cta">Try FREE and Subscribe</button>
 
         </div>
       </div>
