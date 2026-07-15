@@ -5141,6 +5141,337 @@ textarea { font-family: inherit; }
 
 
 /* ================================================================
+   PAYWALL — trial-explainer format. UI mock only, no payment logic.
+   Cream bg (distinct from the app's white --bg) per spec. Must fit
+   390x844 with zero scroll — .paywall-cta uses margin-top:auto so any
+   leftover space becomes breathing room above the button instead of
+   guarantee-text that this screen intentionally omits.
+   ================================================================ */
+#screen-paywall { background: #FFFDFC; }
+
+.paywall-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 14px 20px 22px;
+}
+
+.paywall-topbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+.paywall-close-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #E8DDD2;
+  background: #fff;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.paywall-brand.scan-page-brand {
+  font-size: 1.2rem;
+}
+
+.paywall-hero {
+  align-self: center;
+  width: 88px;
+  height: 88px;
+  margin: 2px 0 6px;
+  flex-shrink: 0;
+}
+.paywall-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.paywall-headline {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+.paywall-headline-accent { color: #EC4899; }
+
+.paywall-timeline {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+.paywall-step {
+  display: flex;
+  gap: 12px;
+}
+.paywall-step-icon-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 26px;
+  flex-shrink: 0;
+}
+.paywall-step-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.paywall-step-icon--done { background: #EC4899; color: #fff; }
+.paywall-step-icon--muted { background: #FFE1F0; color: var(--text-2); }
+.paywall-step-line {
+  width: 2px;
+  flex: 1;
+  min-height: 12px;
+  background: #EC4899;
+  margin: 3px 0;
+}
+.paywall-step-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 10px;
+}
+.paywall-step:last-child .paywall-step-body { padding-bottom: 0; }
+.paywall-step-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+.paywall-step-sub {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+.paywall-plans {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+.paywall-plan {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  background: #fff;
+  border: 1px solid #E8DDD2;
+  border-radius: var(--r-lg);
+  text-align: left;
+}
+.paywall-plan--selected {
+  border-color: #EC4899;
+  box-shadow: 0 0 0 1px #EC4899 inset;
+}
+.paywall-plan-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #E8DDD2;
+  flex-shrink: 0;
+}
+.paywall-plan-check {
+  display: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #EC4899;
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.paywall-plan--selected .paywall-plan-radio { display: none; }
+.paywall-plan--selected .paywall-plan-check { display: flex; }
+.paywall-plan-badge {
+  position: absolute;
+  top: -9px;
+  left: 14px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #fff;
+  background: #EC4899;
+  border-radius: 999px;
+}
+.paywall-plan-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.paywall-plan-price {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+}
+.paywall-plan-price small { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.paywall-plan-price--accent { color: #EC4899; }
+.paywall-plan-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.paywall-plan-strike {
+  font-size: 13px;
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+.paywall-plan-note {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.paywall-plan-permo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.paywall-plan-permo-big { font-size: 15px; font-weight: 800; color: #EC4899; }
+.paywall-plan-permo-big small { font-size: 11px; font-weight: 600; }
+.paywall-plan-permo-pill {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: #FFE1F0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* One-off exception per spec — every other CTA in the app keeps the
+   pill-shaped .asst-suggest-btn treatment; this one is explicitly
+   60px tall / 30px radius and must stay a dead button (no onclick). */
+.paywall-cta {
+  margin-top: auto;
+  width: 100%;
+  height: 60px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #FF4FA0, #EC4899);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(236, 72, 153, 0.35);
+}
+.paywall-cta:active { transform: scale(0.98); }
+
+
+/* ================================================================
+   SELF-PROMO INTERSTITIAL — in-app promo card (not a third-party ad).
+   Auto-plays via the progress-bar fill; skip is visible immediately
+   but only becomes tappable once .interstitial-skip-active is added
+   (~3s, see script.js). Skip or auto-end both hand off to the paywall.
+   ================================================================ */
+#screen-interstitial { background: #FFFDFC; }
+
+.interstitial-layout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 18px 20px 40px;
+  background: linear-gradient(180deg, #FFF5FA 0%, #FFFDFC 55%);
+}
+.interstitial-progress-track {
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: #FFE1F0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.interstitial-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: #EC4899;
+  border-radius: 999px;
+}
+.interstitial-skip-btn {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(28,25,23,0.06);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.interstitial-skip-btn.interstitial-skip-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.interstitial-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+}
+.interstitial-sparkle { color: #EC4899; margin-bottom: 4px; }
+.interstitial-hero-img {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+.interstitial-headline {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.interstitial-sub {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+  max-width: 280px;
+  margin-top: 6px;
+}
+
+
+/* ================================================================
    AI COACH — full page  (Fix 6)
    ================================================================ */
 /* No background override — uses the normal .screen background (var(--bg)),

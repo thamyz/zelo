@@ -3052,11 +3052,11 @@ function cineFinishPhase2() {
     }, 360);
   }
   if (state.activeTab !== 'assistant') showTab('assistant');
-  showSignupPrompt(
+  showInterstitial(() => showSignupPrompt(
     'Save your progress',
     'Create an account to save your history, chats, and leaderboard score.',
     null
-  );
+  ));
 }
 
 // X-skip bypasses the sign-up prompt entirely — lands straight on Scan.
@@ -4256,8 +4256,96 @@ function renderHistory() {
   }
 }
 
-// TODO connect to paywall
-function upgradeNow() {}
+function upgradeNow() {
+  showInterstitial(null);
+}
+
+
+// ================================================================
+// PAYWALL + SELF-PROMO INTERSTITIAL — UI mock only, no payment logic.
+// RevenueCat/StoreKit integration comes later.
+//
+// Both entry points (upgradeNow(), called from the AI Coach / History
+// upgrade buttons, and the onboarding-complete flow in
+// cineFinishPhase2()) funnel through showInterstitial(), which always
+// hands off to the paywall on skip or auto-end — it never dead-ends.
+// Neither screen is pushed onto state.screenStack: they sit on top of
+// whatever was active and closePaywall() unwinds straight back to it
+// via the existing popScreen()/showTab() fallback.
+// ================================================================
+
+let _interstitialOnDone = null;
+let _interstitialSkipTimer = null;
+let _interstitialAutoTimer = null;
+const INTERSTITIAL_SKIP_DELAY_MS = 3000;
+const INTERSTITIAL_TOTAL_MS = 6500;
+
+function _replaceActiveScreen(name) {
+  document.querySelectorAll(".tab, .screen").forEach(el => el.classList.remove("active"));
+  document.getElementById("screen-" + name).classList.add("active");
+  document.getElementById("tab-bar").classList.add("hidden");
+  state.activeScreen = name;
+}
+
+function showInterstitial(onDone) {
+  _interstitialOnDone = typeof onDone === 'function' ? onDone : null;
+  pushScreen('interstitial');
+
+  const skipBtn = document.getElementById('interstitial-skip-btn');
+  const fill = document.getElementById('interstitial-progress-fill');
+  if (skipBtn) skipBtn.classList.remove('interstitial-skip-active');
+  if (fill) {
+    fill.style.transition = 'none';
+    fill.style.width = '0%';
+    void fill.offsetWidth; // force reflow so the width transition below starts from 0%
+    fill.style.transition = `width ${INTERSTITIAL_TOTAL_MS}ms linear`;
+    fill.style.width = '100%';
+  }
+
+  clearTimeout(_interstitialSkipTimer);
+  clearTimeout(_interstitialAutoTimer);
+  _interstitialSkipTimer = setTimeout(() => {
+    if (skipBtn) skipBtn.classList.add('interstitial-skip-active');
+  }, INTERSTITIAL_SKIP_DELAY_MS);
+  _interstitialAutoTimer = setTimeout(interstitialEnd, INTERSTITIAL_TOTAL_MS);
+}
+
+function interstitialSkip() {
+  const skipBtn = document.getElementById('interstitial-skip-btn');
+  if (!skipBtn || !skipBtn.classList.contains('interstitial-skip-active')) return;
+  interstitialEnd();
+}
+
+function interstitialEnd() {
+  clearTimeout(_interstitialSkipTimer);
+  clearTimeout(_interstitialAutoTimer);
+  _interstitialSkipTimer = null;
+  _interstitialAutoTimer = null;
+
+  const onDone = _interstitialOnDone;
+  _interstitialOnDone = null;
+  _paywallOnClose = onDone;
+  _replaceActiveScreen('paywall');
+}
+
+let _paywallOnClose = null;
+
+function closePaywall() {
+  popScreen();
+  const cb = _paywallOnClose;
+  _paywallOnClose = null;
+  if (typeof cb === 'function') cb();
+}
+
+let paywallSelectedPlan = 'yearly';
+function selectPaywallPlan(plan) {
+  if (plan !== 'monthly' && plan !== 'yearly') return;
+  paywallSelectedPlan = plan;
+  document.getElementById('paywall-plan-monthly')
+    .classList.toggle('paywall-plan--selected', plan === 'monthly');
+  document.getElementById('paywall-plan-yearly')
+    .classList.toggle('paywall-plan--selected', plan === 'yearly');
+}
 
 // Back button on result screen — check if scan has been saved first
 function goBackFromResult() {
