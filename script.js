@@ -4325,16 +4325,60 @@ function interstitialEnd() {
   const onDone = _interstitialOnDone;
   _interstitialOnDone = null;
   _paywallOnClose = onDone;
-  _replaceActiveScreen('paywall');
+  showPaywallNow();
 }
 
 let _paywallOnClose = null;
+let _paywallAnimated = false;
+
+function showPaywallNow() {
+  _replaceActiveScreen('paywall');
+  if (!_paywallAnimated) {
+    _paywallAnimated = true;
+    playPaywallTimelineIntro();
+    playPaywallYearlyBounce();
+  }
+}
 
 function closePaywall() {
   popScreen();
+  _paywallAnimated = false; // screen was left — replay entry animations if reopened
   const cb = _paywallOnClose;
   _paywallOnClose = null;
   if (typeof cb === 'function') cb();
+}
+
+// Sequential "completing a checklist" reveal: icon, then the line below it
+// draws down, then the next icon, and so on. Each step only starts once the
+// previous one's transition has finished — not a simultaneous fade.
+function playPaywallTimelineIntro() {
+  const timeline = document.querySelector('#screen-paywall .paywall-timeline');
+  if (!timeline) return;
+  const icons = Array.from(timeline.querySelectorAll('.paywall-step-icon'));
+  const lines = Array.from(timeline.querySelectorAll('.paywall-step-line'));
+  const seq = [icons[0], lines[0], icons[1], lines[1], icons[2], lines[2], icons[3]]
+    .filter(Boolean);
+  const durations = [150, 200, 150, 200, 150, 200, 150];
+
+  seq.forEach(el => el.classList.add('tl-hidden'));
+  void timeline.offsetWidth; // force reflow so the hidden state is applied before revealing
+
+  let t = 0;
+  seq.forEach((el, i) => {
+    setTimeout(() => el.classList.remove('tl-hidden'), t);
+    t += durations[i] || 150;
+  });
+}
+
+// Uniform scale "pop" on the Yearly card to draw the eye to the
+// pre-selected/best-value option. Re-triggerable: remove + reflow + re-add
+// so it can replay if the paywall is left and reopened.
+function playPaywallYearlyBounce() {
+  const card = document.getElementById('paywall-plan-yearly');
+  if (!card) return;
+  card.classList.remove('paywall-plan--bounce');
+  void card.offsetWidth;
+  card.classList.add('paywall-plan--bounce');
 }
 
 let paywallSelectedPlan = 'yearly';
