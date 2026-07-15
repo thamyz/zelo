@@ -5143,9 +5143,9 @@ textarea { font-family: inherit; }
 /* ================================================================
    PAYWALL — trial-explainer format. UI mock only, no payment logic.
    Cream bg (distinct from the app's white --bg) per spec. Must fit
-   390x844 with zero scroll — .paywall-cta uses margin-top:auto so any
-   leftover space becomes breathing room above the button instead of
-   guarantee-text that this screen intentionally omits.
+   390x844 with zero scroll — this screen intentionally omits any
+   money-back-guarantee text. All vertical gaps are fixed values (no
+   flexible/auto-margin spacer) so section spacing stays predictable.
    ================================================================ */
 #screen-paywall { background: #FFFDFC; }
 
@@ -5186,8 +5186,8 @@ textarea { font-family: inherit; }
 
 .paywall-hero {
   align-self: center;
-  width: 128px;
-  height: 128px;
+  width: 156px;
+  height: 156px;
   margin: 0 0 2px;
   flex-shrink: 0;
 }
@@ -5213,7 +5213,7 @@ textarea { font-family: inherit; }
 .paywall-timeline {
   display: flex;
   flex-direction: column;
-  margin-bottom: 16px;
+  margin-bottom: 24px; /* fixed gap down to the pricing cards, ~20-30px per spec */
   flex-shrink: 0;
 }
 .paywall-step {
@@ -5256,10 +5256,14 @@ textarea { font-family: inherit; }
 /* Entry animation — "completing a checklist" reveal. Elements start in
    their normal, fully-visible state so the screen degrades gracefully if
    the JS trigger (playPaywallTimelineIntro()) never runs; .tl-hidden is
-   only ever added briefly, right before being removed on a stagger. */
-.paywall-step-icon,
+   only ever added briefly, right before being removed on a stagger.
+   Durations here must match the JS schedule in playPaywallTimelineIntro()
+   (260ms icons / 340ms lines) so the full sequence lands at ~2s. */
+.paywall-step-icon {
+  transition: opacity 0.26s ease, transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 .paywall-step-line {
-  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .paywall-step-icon.tl-hidden {
   opacity: 0;
@@ -5285,9 +5289,8 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: auto; /* pushes the cards down toward the CTA — any leftover
-    vertical space on the screen collects above the cards instead of
-    between the cards and the button. */
+  margin-top: 0; /* gap to the timeline above is fixed via .paywall-timeline's
+    margin-bottom instead, per spec (~20-30px, not a flexible/collected gap). */
   flex-shrink: 0;
 }
 .paywall-plan {
@@ -5306,8 +5309,11 @@ textarea { font-family: inherit; }
   border-color: #EC4899;
   box-shadow: 0 0 0 1px #EC4899 inset;
 }
-/* Uniform scale pop on entry — draws the eye to the pre-selected Yearly
-   card. Scale only (no glow/border pulsing), grows then settles back. */
+/* Uniform scale pop — draws the eye to the pre-selected Yearly card. Scale
+   only (no glow/border pulsing), grows then settles back. Single-bounce
+   keyframe; the 1-pause-2-pause-1 sequence and its start delay (after the
+   timeline reveal fully finishes) live in playPaywallYearlyBouncePattern()
+   in script.js, which re-triggers this class on a schedule. */
 @keyframes paywallYearlyBounce {
   0%   { transform: scale(1); }
   35%  { transform: scale(1.045); }

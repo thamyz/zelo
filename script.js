@@ -4330,19 +4330,24 @@ function interstitialEnd() {
 
 let _paywallOnClose = null;
 let _paywallAnimated = false;
+let _paywallAnimationTimers = [];
 
 function showPaywallNow() {
   _replaceActiveScreen('paywall');
   if (!_paywallAnimated) {
     _paywallAnimated = true;
-    playPaywallTimelineIntro();
-    playPaywallYearlyBounce();
+    const timelineTotalMs = playPaywallTimelineIntro();
+    // Yearly bounce must not overlap the timeline reveal — it only starts
+    // once the reveal sequence has fully finished.
+    _paywallAnimationTimers.push(setTimeout(playPaywallYearlyBouncePattern, timelineTotalMs));
   }
 }
 
 function closePaywall() {
   popScreen();
   _paywallAnimated = false; // screen was left — replay entry animations if reopened
+  _paywallAnimationTimers.forEach(clearTimeout);
+  _paywallAnimationTimers = [];
   const cb = _paywallOnClose;
   _paywallOnClose = null;
   if (typeof cb === 'function') cb();
@@ -4350,35 +4355,56 @@ function closePaywall() {
 
 // Sequential "completing a checklist" reveal: icon, then the line below it
 // draws down, then the next icon, and so on. Each step only starts once the
-// previous one's transition has finished — not a simultaneous fade.
+// previous one's transition has finished — not a simultaneous fade. Durations
+// must match the CSS transition-durations on .paywall-step-icon/-line (260ms
+// / 340ms) so the schedule lines up with what's actually visible; total
+// sequence lands at ~2s. Returns the total duration in ms.
 function playPaywallTimelineIntro() {
   const timeline = document.querySelector('#screen-paywall .paywall-timeline');
-  if (!timeline) return;
+  if (!timeline) return 0;
   const icons = Array.from(timeline.querySelectorAll('.paywall-step-icon'));
   const lines = Array.from(timeline.querySelectorAll('.paywall-step-line'));
   const seq = [icons[0], lines[0], icons[1], lines[1], icons[2], lines[2], icons[3]]
     .filter(Boolean);
-  const durations = [150, 200, 150, 200, 150, 200, 150];
+  const durations = [260, 340, 260, 340, 260, 340, 260];
 
   seq.forEach(el => el.classList.add('tl-hidden'));
   void timeline.offsetWidth; // force reflow so the hidden state is applied before revealing
 
   let t = 0;
   seq.forEach((el, i) => {
-    setTimeout(() => el.classList.remove('tl-hidden'), t);
-    t += durations[i] || 150;
+    _paywallAnimationTimers.push(setTimeout(() => el.classList.remove('tl-hidden'), t));
+    t += durations[i] || 260;
   });
+  return t;
 }
 
-// Uniform scale "pop" on the Yearly card to draw the eye to the
-// pre-selected/best-value option. Re-triggerable: remove + reflow + re-add
-// so it can replay if the paywall is left and reopened.
-function playPaywallYearlyBounce() {
+const PAYWALL_BOUNCE_MS = 550; // matches @keyframes paywallYearlyBounce duration
+const PAYWALL_BOUNCE_PAUSE_MS = 1000;
+
+// Uniform scale "pop" on the Yearly card. Re-triggerable: remove + reflow +
+// re-add so consecutive bounces (and replays on reopen) actually restart
+// the CSS animation instead of being no-ops.
+function triggerPaywallYearlyBounce() {
   const card = document.getElementById('paywall-plan-yearly');
   if (!card) return;
   card.classList.remove('paywall-plan--bounce');
   void card.offsetWidth;
   card.classList.add('paywall-plan--bounce');
+}
+
+// Pattern: 1 bounce -> pause 1s -> 2 bounces back-to-back -> pause 1s ->
+// 1 more bounce (4 total), then stop. Only called after the timeline reveal
+// has fully finished (see showPaywallNow()).
+function playPaywallYearlyBouncePattern() {
+  let t = 0;
+  _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 1
+  t += PAYWALL_BOUNCE_MS + PAYWALL_BOUNCE_PAUSE_MS;
+  _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 2
+  t += PAYWALL_BOUNCE_MS; // back-to-back, no pause
+  _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 3
+  t += PAYWALL_BOUNCE_MS + PAYWALL_BOUNCE_PAUSE_MS;
+  _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 4
 }
 
 let paywallSelectedPlan = 'yearly';
