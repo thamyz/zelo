@@ -4331,15 +4331,18 @@ function interstitialEnd() {
 let _paywallOnClose = null;
 let _paywallAnimated = false;
 let _paywallAnimationTimers = [];
+let _paywallKeyAnimTimer = null;
+let _paywallKeyAnimPlaying = false;
 
 function showPaywallNow() {
   _replaceActiveScreen('paywall');
   if (!_paywallAnimated) {
     _paywallAnimated = true;
     const timelineTotalMs = playPaywallTimelineIntro();
-    // Yearly bounce must not overlap the timeline reveal — it only starts
-    // once the reveal sequence has fully finished.
+    // Yearly bounce and the lock's idle shake loop must not overlap the
+    // timeline reveal — both only start once the reveal has fully finished.
     _paywallAnimationTimers.push(setTimeout(playPaywallYearlyBouncePattern, timelineTotalMs));
+    _paywallAnimationTimers.push(setTimeout(startPaywallLockShakeLoop, timelineTotalMs));
   }
 }
 
@@ -4348,6 +4351,12 @@ function closePaywall() {
   _paywallAnimated = false; // screen was left — replay entry animations if reopened
   _paywallAnimationTimers.forEach(clearTimeout);
   _paywallAnimationTimers = [];
+  // Don't leave the key-tap feedback stuck mid-flight or blocking future taps.
+  clearTimeout(_paywallKeyAnimTimer);
+  _paywallKeyAnimTimer = null;
+  _paywallKeyAnimPlaying = false;
+  const key = document.getElementById('paywall-key-icon');
+  if (key) key.classList.remove('paywall-key-icon--active');
   const cb = _paywallOnClose;
   _paywallOnClose = null;
   if (typeof cb === 'function') cb();
@@ -4405,6 +4414,50 @@ function playPaywallYearlyBouncePattern() {
   _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 3
   t += PAYWALL_BOUNCE_MS + PAYWALL_BOUNCE_PAUSE_MS;
   _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 4
+}
+
+const PAYWALL_LOCK_SHAKE_MS = 400;
+const PAYWALL_LOCK_SHAKE_PAUSE_MS = 5000;
+
+function triggerPaywallLockShake() {
+  const icon = document.getElementById('paywall-lock-icon');
+  if (!icon) return;
+  icon.classList.remove('paywall-lock-shake');
+  void icon.offsetWidth;
+  icon.classList.add('paywall-lock-shake');
+}
+
+// Ambient idle loop, independent of user interaction: shake 0.4s, rest 5s,
+// repeat indefinitely while the paywall is open. A recursive setTimeout
+// chain (not setInterval) so each cycle's timer is individually tracked in
+// _paywallAnimationTimers and clearing the pending one halts the whole
+// loop — closePaywall() does exactly that, so nothing keeps running once
+// the screen is left, and showPaywallNow() restarts it cleanly on return.
+function startPaywallLockShakeLoop() {
+  triggerPaywallLockShake();
+  _paywallAnimationTimers.push(setTimeout(
+    startPaywallLockShakeLoop,
+    PAYWALL_LOCK_SHAKE_MS + PAYWALL_LOCK_SHAKE_PAUSE_MS
+  ));
+}
+
+// Visual-only tap feedback — a key flies in and settles over the lock icon,
+// then fades back out. No purchase, no navigation, no state change.
+// TODO: once RevenueCat/StoreKit is wired, this key animation should play
+// on actual purchase confirmation (success callback), and should then
+// navigate/unlock real Pro state — currently just a visual placeholder for
+// tap feedback.
+function paywallCtaTap() {
+  if (_paywallKeyAnimPlaying) return; // ignore repeat taps while one is in progress
+  const key = document.getElementById('paywall-key-icon');
+  if (!key) return;
+  _paywallKeyAnimPlaying = true;
+  key.classList.add('paywall-key-icon--active');
+  clearTimeout(_paywallKeyAnimTimer);
+  _paywallKeyAnimTimer = setTimeout(() => {
+    key.classList.remove('paywall-key-icon--active');
+    _paywallKeyAnimPlaying = false;
+  }, 900);
 }
 
 let paywallSelectedPlan = 'yearly';
