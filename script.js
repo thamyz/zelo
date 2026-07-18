@@ -32,7 +32,11 @@ const state = {
   asstCurrentSet:   null,  // cache: style → reply text, populated on demand
   asstMessage:      "",    // message text for the current scan
   asstContext:      "",    // scanContextString() snapshot for the current scan
-  scanContext:      {},    // structured "Tell Zelo More" selections { who, situation, goal }
+  scanContext:      {},    // ACTIVE who/situation/goal selection used for the pending scan
+  tellzeloAnswers:  {},    // the "Other" (Tell Zelo More) wizard's own saved answers — persists
+                           // across Dating/Crush taps; copied into scanContext on completion;
+                           // only cleared once a scan actually finishes generating (see _onReplyRevealed())
+  scanWhoCard:      null,  // which "Who's this about?" card is exclusively selected: 'dating' | 'crush' | 'other' | null
   tzStep:           0,     // current step in the Tell Zelo More flow
   eligibleStyles:   [],    // ordered styles for the current scan's Situation+Goal (see getEligibleStyles())
   currentStyleIndex: 0,    // index into eligibleStyles for the card currently shown
@@ -1340,17 +1344,12 @@ function clearScanInput() {
   state.asstMessage = '';
   state.asstContext = '';
   state.scanContext = {};
+  state.tellzeloAnswers = {};
+  state.scanWhoCard = null;
   const input = document.getElementById('asst-input');
   if (input) input.value = '';
   updateScanMessagePreview();
-  // Reset Tell Zelo More sub-label
-  const sub = document.getElementById('tellzelo-sub');
-  if (sub) sub.textContent = 'Friends, situations or anything else';
-  const card = document.getElementById('tellzelo-card');
-  if (card) card.classList.remove('filled');
-  // Reset the two "Who's this about?" quick-pick cards
-  document.getElementById('scan-who-dating')?.classList.remove('selected');
-  document.getElementById('scan-who-crush')?.classList.remove('selected');
+  updateTellZeloSummary(); // resets the "Or tell zelo more" subtitle + all 3 card highlights
   // Full reset once a scan is done — screenshot goes too, back to a blank Scan tab
   clearUploadedPhoto();
 }
@@ -1474,21 +1473,26 @@ const TELLZELO_STEPS = [
 // the "Or tell zelo more" card as filled/highlighted, showing two selected
 // cards at once. Only one card should ever look selected at a time.
 function scanQuickWho(label, el) {
-  state.scanContext.who = label;
-  document.getElementById('scan-who-dating')?.classList.remove('selected');
-  document.getElementById('scan-who-crush')?.classList.remove('selected');
-  if (el) el.classList.add('selected');
+  // Quick-picks replace the ACTIVE selection only — state.tellzeloAnswers
+  // (the Other wizard's own progress) is deliberately left untouched so it's
+  // still there if the user taps back into Other later this session.
+  state.scanContext = { who: label };
+  state.scanWhoCard = label === 'Dating' ? 'dating' : 'crush';
+  refreshScanWhoCards();
   navigator.vibrate?.(4);
 }
 
-// Re-highlight whichever quick-pick card matches the current context
-// (or neither, if "who" was set to something only the full wizard offers).
+// Single source of truth for the "Who's this about?" highlight — exactly one
+// of Dating / Crush / Other is ever marked selected, driven off
+// state.scanWhoCard (not off scanContext content, since a completed Other
+// answer can coincidentally share a label with a quick-pick, e.g. "Crush").
 function refreshScanWhoCards() {
-  const who    = state.scanContext.who;
   const dating = document.getElementById('scan-who-dating');
   const crush  = document.getElementById('scan-who-crush');
-  dating?.classList.toggle('selected', who === 'Dating');
-  crush?.classList.toggle('selected', who === 'Crush');
+  const other  = document.getElementById('tellzelo-card');
+  dating?.classList.toggle('selected', state.scanWhoCard === 'dating');
+  crush?.classList.toggle('selected', state.scanWhoCard === 'crush');
+  other?.classList.toggle('filled', state.scanWhoCard === 'other');
 }
 
 // Open the flow — always start at the first step, keep prior selections.
@@ -1529,9 +1533,9 @@ function renderTellZeloStep() {
     ta.id          = "tz-freetext";
     ta.className   = "msg-textarea tz-freetext";
     ta.placeholder = step.placeholder || "";
-    ta.value       = state.scanContext[step.key] || "";
+    ta.value       = state.tellzeloAnswers[step.key] || "";
     ta.oninput     = () => {
-      state.scanContext[step.key] = ta.value;
+      state.tellzeloAnswers[step.key] = ta.value;
       // "Done" is always enabled on the free-text step (it's optional seasoning)
       document.getElementById("tz-next").disabled = false;
     };
@@ -1540,7 +1544,7 @@ function renderTellZeloStep() {
     document.getElementById("tz-next").disabled = false;
   } else {
     // Radio-style quick-select options
-    const chosen = state.scanContext[step.key];
+    const chosen = state.tellzeloAnswers[step.key];
     step.options.forEach(opt => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -1557,23 +1561,29 @@ function renderTellZeloStep() {
         </span>`;
       wrap.appendChild(btn);
     });
-    document.getElementById("tz-next").disabled = !state.scanContext[step.key];
+    document.getElementById("tz-next").disabled = !state.tellzeloAnswers[step.key];
   }
 }
 
 function tellZeloSelect(key, label) {
-  state.scanContext[key] = label;
+  state.tellzeloAnswers[key] = label;
   renderTellZeloStep();
 }
 
 function tellZeloNext() {
   const step = TELLZELO_STEPS[state.tzStep];
-  if (!step.freeText && !state.scanContext[step.key]) return;  // require a choice (not for free-text)
+  if (!step.freeText && !state.tellzeloAnswers[step.key]) return;  // require a choice (not for free-text)
 
   if (state.tzStep < TELLZELO_STEPS.length - 1) {
     state.tzStep++;
     renderTellZeloStep();
   } else {
+    // Wizard complete — this becomes the ACTIVE selection for the pending
+    // scan and "Other" becomes the exclusively-highlighted card. The
+    // underlying answers stay in state.tellzeloAnswers so they're still
+    // there if the user taps back into Other again later this session.
+    state.scanContext = { ...state.tellzeloAnswers };
+    state.scanWhoCard = 'other';
     updateTellZeloSummary();
     popScreen();
   }
@@ -1589,23 +1599,23 @@ function tellZeloBack() {
 }
 
 function updateTellZeloSummary() {
-  const sub  = document.getElementById('tellzelo-sub');
-  const card = document.getElementById('tellzelo-card');
-  if (!sub || !card) return;
-  const ctx = scanContextString();
-  if (ctx) {
-    sub.textContent = ctx;
-    card.classList.add('filled');
-  } else {
-    sub.textContent = 'Friends, situations or anything else';
-    card.classList.remove('filled');
-  }
+  const sub = document.getElementById('tellzelo-sub');
+  if (sub) sub.textContent = tellzeloAnswersString() || 'Friends, situations or anything else';
+  refreshScanWhoCards();
 }
 
-// Build a single context string for generation from the structured selections.
+// Build a single context string for generation from the ACTIVE selection.
 function scanContextString() {
   const order = ["who", "situation", "goal"];
   return order.map(k => state.scanContext[k]).filter(Boolean).join(" · ");
+}
+
+// Preview string built from the Other/tellzelo wizard's own saved answers —
+// independent of state.scanContext so it still reflects prior progress even
+// while Dating/Crush is the currently active selection.
+function tellzeloAnswersString() {
+  const order = ["who", "situation", "goal"];
+  return order.map(k => state.tellzeloAnswers[k]).filter(Boolean).join(" · ");
 }
 
 // Get Suggestions stays fully pink/glowing at all times now — it's never
@@ -2275,6 +2285,11 @@ async function generateReplies() {
 
 // Runs once per scan after the first reply is revealed.
 function _onReplyRevealed() {
+  // Fix 5: the Other/tellzelo wizard's own saved answers only reset once a
+  // scan actually completes — not on every Dating/Crush/Other switch.
+  state.tellzeloAnswers = {};
+  updateTellZeloSummary();
+
   // Reset the thread-save prompt so it appears fresh on every new scan
   const tsp = document.getElementById('thread-save-prompt');
   if (tsp) {
@@ -3052,11 +3067,12 @@ function cineFinishPhase2() {
     }, 360);
   }
   if (state.activeTab !== 'assistant') showTab('assistant');
-  showInterstitial(() => showSignupPrompt(
+  _paywallOnClose = () => showSignupPrompt(
     'Save your progress',
     'Create an account to save your history, chats, and leaderboard score.',
     null
-  ));
+  );
+  showPaywallNow();
 }
 
 // X-skip bypasses the sign-up prompt entirely — lands straight on Scan.
@@ -4257,75 +4273,27 @@ function renderHistory() {
 }
 
 function upgradeNow() {
-  showInterstitial(null);
+  showPaywallNow();
 }
 
 
 // ================================================================
-// PAYWALL + SELF-PROMO INTERSTITIAL — UI mock only, no payment logic.
-// RevenueCat/StoreKit integration comes later.
+// PAYWALL — UI mock only, no payment logic. RevenueCat/StoreKit
+// integration comes later.
 //
 // Both entry points (upgradeNow(), called from the AI Coach / History
 // upgrade buttons, and the onboarding-complete flow in
-// cineFinishPhase2()) funnel through showInterstitial(), which always
-// hands off to the paywall on skip or auto-end — it never dead-ends.
-// Neither screen is pushed onto state.screenStack: they sit on top of
-// whatever was active and closePaywall() unwinds straight back to it
-// via the existing popScreen()/showTab() fallback.
+// cineFinishPhase2()) navigate straight to the paywall — it never
+// dead-ends. The screen isn't pushed onto state.screenStack: it sits on
+// top of whatever was active and closePaywall() unwinds straight back to
+// it via the existing popScreen()/showTab() fallback.
 // ================================================================
-
-let _interstitialOnDone = null;
-let _interstitialSkipTimer = null;
-let _interstitialAutoTimer = null;
-const INTERSTITIAL_SKIP_DELAY_MS = 3000;
-const INTERSTITIAL_TOTAL_MS = 6500;
 
 function _replaceActiveScreen(name) {
   document.querySelectorAll(".tab, .screen").forEach(el => el.classList.remove("active"));
   document.getElementById("screen-" + name).classList.add("active");
   document.getElementById("tab-bar").classList.add("hidden");
   state.activeScreen = name;
-}
-
-function showInterstitial(onDone) {
-  _interstitialOnDone = typeof onDone === 'function' ? onDone : null;
-  pushScreen('interstitial');
-
-  const skipBtn = document.getElementById('interstitial-skip-btn');
-  const fill = document.getElementById('interstitial-progress-fill');
-  if (skipBtn) skipBtn.classList.remove('interstitial-skip-active');
-  if (fill) {
-    fill.style.transition = 'none';
-    fill.style.width = '0%';
-    void fill.offsetWidth; // force reflow so the width transition below starts from 0%
-    fill.style.transition = `width ${INTERSTITIAL_TOTAL_MS}ms linear`;
-    fill.style.width = '100%';
-  }
-
-  clearTimeout(_interstitialSkipTimer);
-  clearTimeout(_interstitialAutoTimer);
-  _interstitialSkipTimer = setTimeout(() => {
-    if (skipBtn) skipBtn.classList.add('interstitial-skip-active');
-  }, INTERSTITIAL_SKIP_DELAY_MS);
-  _interstitialAutoTimer = setTimeout(interstitialEnd, INTERSTITIAL_TOTAL_MS);
-}
-
-function interstitialSkip() {
-  const skipBtn = document.getElementById('interstitial-skip-btn');
-  if (!skipBtn || !skipBtn.classList.contains('interstitial-skip-active')) return;
-  interstitialEnd();
-}
-
-function interstitialEnd() {
-  clearTimeout(_interstitialSkipTimer);
-  clearTimeout(_interstitialAutoTimer);
-  _interstitialSkipTimer = null;
-  _interstitialAutoTimer = null;
-
-  const onDone = _interstitialOnDone;
-  _interstitialOnDone = null;
-  _paywallOnClose = onDone;
-  showPaywallNow();
 }
 
 let _paywallOnClose = null;

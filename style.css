@@ -5021,6 +5021,11 @@ textarea { font-family: inherit; }
   width: 130px;
   height: 130px;
   background: transparent;
+  /* Box stays this size (headline/subline positions are unaffected either
+     way since this sits behind them at z-index: 1) — the image itself is
+     visually enlarged via transform: scale below and allowed to spill past
+     this box rather than being clipped to it. */
+  overflow: visible;
 }
 .scan-hero-illustration-img {
   width: 100%;
@@ -5028,6 +5033,7 @@ textarea { font-family: inherit; }
   object-fit: contain;
   display: block;
   background: transparent;
+  transform: scale(1.3);
 }
 
 .scan-who-section { margin-top: 12px; }
@@ -5093,7 +5099,11 @@ textarea { font-family: inherit; }
   width: 100%;
   padding: 14px 16px;
   margin-top: 14px;
-  background: linear-gradient(135deg, #C2185B 0%, #880E4F 40%, #1C0F1E 100%);
+  /* On-brand pink gradient (was a dark maroon/near-black fade). Soft pink is
+     confined to the first ~20%, behind the sparkle avatar, so it resolves to
+     the two saturated brand pinks well before the title/subtitle text starts
+     — keeps white text/icon contrast solid across the whole banner. */
+  background: linear-gradient(135deg, #FFE1F0 0%, #EC4899 22%, #DB2777 100%);
   border-radius: var(--r-lg);
   text-align: left;
   cursor: pointer;
@@ -5181,7 +5191,7 @@ textarea { font-family: inherit; }
   flex-shrink: 0;
 }
 .paywall-brand.scan-page-brand {
-  font-size: 1.2rem;
+  font-size: 1.5rem;
 }
 
 .paywall-hero {
@@ -5190,16 +5200,21 @@ textarea { font-family: inherit; }
   height: 156px;
   margin: 0 0 2px;
   flex-shrink: 0;
+  /* Box stays this size for layout purposes (nothing below shifts) — the
+     image itself is visually enlarged via transform: scale below and is
+     allowed to spill outside this box. */
+  overflow: visible;
 }
 .paywall-hero-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
+  transform: scale(1.5);
 }
 
 .paywall-headline {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1.18;
   letter-spacing: -0.5px;
@@ -5474,89 +5489,6 @@ textarea { font-family: inherit; }
   box-shadow: 0 6px 18px rgba(236, 72, 153, 0.35);
 }
 .paywall-cta:active { transform: scale(0.98); }
-
-
-/* ================================================================
-   SELF-PROMO INTERSTITIAL — in-app promo card (not a third-party ad).
-   Auto-plays via the progress-bar fill; skip is visible immediately
-   but only becomes tappable once .interstitial-skip-active is added
-   (~3s, see script.js). Skip or auto-end both hand off to the paywall.
-   ================================================================ */
-#screen-interstitial { background: #FFFDFC; }
-
-.interstitial-layout {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 18px 20px 40px;
-  background: linear-gradient(180deg, #FFF5FA 0%, #FFFDFC 55%);
-}
-.interstitial-progress-track {
-  width: 100%;
-  height: 3px;
-  border-radius: 999px;
-  background: #FFE1F0;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-.interstitial-progress-fill {
-  width: 0%;
-  height: 100%;
-  background: #EC4899;
-  border-radius: 999px;
-}
-.interstitial-skip-btn {
-  position: absolute;
-  top: 18px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(28,25,23,0.06);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  opacity: 0.45;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-.interstitial-skip-btn.interstitial-skip-active {
-  opacity: 1;
-  pointer-events: auto;
-}
-.interstitial-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 6px;
-}
-.interstitial-sparkle { color: #EC4899; margin-bottom: 4px; }
-.interstitial-hero-img {
-  width: 150px;
-  height: 150px;
-  object-fit: contain;
-  margin-bottom: 8px;
-}
-.interstitial-headline {
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1.25;
-  letter-spacing: -0.5px;
-  color: var(--text);
-}
-.interstitial-sub {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-2);
-  max-width: 280px;
-  margin-top: 6px;
-}
 
 
 /* ================================================================

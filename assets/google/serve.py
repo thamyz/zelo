@@ -9,7 +9,7 @@ import http.server
 import socketserver
 import sys
 
-ROOT = "/Volumes/PBE Main HD/VSC/ChatPracticeWeb"
+ROOT = "/Volumes/Thammy/VSC/ChatPracticeWeb"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8123
 
 Handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=ROOT)
