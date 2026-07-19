@@ -1203,14 +1203,19 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding: 22px 20px 28px;
+  /* Fluid vertical padding — see the .paywall-layout comment for why dvh
+     (not vh/fixed px): tracks Safari's real visible viewport as the address
+     bar collapses/expands. Unchanged at 390px+ height where it already fit;
+     compresses on short viewports (SE, common Android) where 7 stacked
+     options genuinely didn't fit at full size. */
+  padding: clamp(10px, 2.6dvh, 22px) 20px clamp(12px, 3.3dvh, 28px);
 }
 
 /* Segmented step progress (one segment per step) */
 .tz-progress {
   display: flex;
   gap: 8px;
-  margin-bottom: 26px;
+  margin-bottom: clamp(10px, 3dvh, 26px);
 }
 
 .tz-seg {
@@ -1224,7 +1229,7 @@ textarea { font-family: inherit; }
 .tz-seg.done { background: var(--accent); }
 
 .tz-question {
-  font-size: 1.45rem;
+  font-size: clamp(18px, 2.75dvh, 1.45rem);
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--text);
@@ -1242,7 +1247,11 @@ textarea { font-family: inherit; }
 .tz-options {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  /* Steps 1/2 stack 7 options each — this gap and each option's own padding/
+     icon size below are the biggest levers for fitting short viewports
+     (see .tz-layout comment); unchanged at 390px+ height where 7 rows at
+     full size already fit. */
+  gap: clamp(4px, 1.2dvh, 11px);
 }
 
 .tz-option {
@@ -1250,7 +1259,7 @@ textarea { font-family: inherit; }
   align-items: center;
   gap: 14px;
   width: 100%;
-  padding: 15px 16px;
+  padding: clamp(6px, 1.7dvh, 15px) 16px;
   background: var(--s1);
   border: 1.5px solid var(--border);
   border-radius: var(--r-md);
@@ -1264,8 +1273,8 @@ textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: clamp(24px, 4.3dvh, 38px);
+  height: clamp(24px, 4.3dvh, 38px);
   flex-shrink: 0;
   border-radius: 11px;
   background: var(--s2);
@@ -1308,7 +1317,7 @@ textarea { font-family: inherit; }
 .tz-option.selected .tz-option-radio svg { opacity: 1; transform: scale(1); }
 
 /* Pushes the Next button to the bottom of the viewport */
-.tz-spacer { flex: 1; min-height: 24px; }
+.tz-spacer { flex: 1; min-height: clamp(6px, 1.7dvh, 24px); }
 
 .tz-next {
   display: flex;
