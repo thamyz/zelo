@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260719g" />
+    <link rel="stylesheet" href="style.css?v=20260719h" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -162,8 +162,10 @@
           </div>
 
           <!-- AI COACH — plain white card, matches the other cards on this screen.
-               Tapping anywhere opens the full page via openAiCoach() — no more
-               nested Upgrade button/pill, just a decorative chevron. -->
+               Tapping the card body opens the full page via openAiCoach();
+               the Upgrade pill is its own nested button (stopPropagation) wired
+               to upgradeNow() — same dual-action split as before the white-card
+               redesign, just restyled for the light background. -->
           <div class="asst-coach-banner" id="aicoach-card" onclick="openAiCoach()">
             <span class="asst-coach-avatar" aria-hidden="true">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="#ec4899">
@@ -174,11 +176,12 @@
               <span class="asst-coach-title">AI Coach</span>
               <span class="asst-coach-sub">Level up your conversations with personalized tips.</span>
             </span>
-            <span class="asst-coach-chevron" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <button type="button" class="asst-coach-upgrade-btn" onclick="event.stopPropagation(); upgradeNow();">
+              Upgrade
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
-            </span>
+            </button>
           </div>
 
           <p class="scan-privacy-note">
@@ -849,24 +852,13 @@
               </div>
             </div>
 
-            <!-- Save-to-thread prompt: Save opens a thread picker; Skip hides the prompt -->
-            <div class="thread-save-prompt" id="thread-save-prompt">
-              <div class="thread-save-main" id="thread-save-main">
-                <span class="thread-save-icon" aria-hidden="true">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                </span>
-                <span class="thread-save-copy">
-                  <p class="thread-save-q">Save to a thread?</p>
-                  <p class="thread-save-sub">Keep this conversation organized and easy to find later.</p>
-                </span>
-                <div class="thread-save-actions">
-                  <button class="thread-save-skip" onclick="skipThreadSave()">Skip</button>
-                  <button class="yr-save-btn" onclick="openThreadPicker()">Save</button>
-                </div>
-              </div>
-              <!-- Picker is rendered dynamically by openThreadPicker() -->
-              <div class="thread-picker" id="thread-picker" hidden></div>
-            </div>
+            <!-- Persistent "Save to a thread?" card removed — saving now only
+                 happens via the back-button reminder (goBackFromResult() /
+                 showSaveBeforeLeave(), unchanged). This element stays as a
+                 hidden container only for the brief auto-save confirmation
+                 toast (_onReplyRevealed()'s state.preselectThreadId branch),
+                 which reuses its id and CSS box. -->
+            <div class="thread-save-prompt" id="thread-save-prompt" hidden></div>
 
           </div>
 
@@ -1732,6 +1724,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260708a"></script>
+    <script src="script.js?v=20260719a"></script>
   </body>
 </html>

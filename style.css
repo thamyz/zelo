@@ -5156,12 +5156,20 @@ textarea { font-family: inherit; }
 .asst-coach-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .asst-coach-title { font-size: 16px; font-weight: 700; color: var(--text); }
 .asst-coach-sub    { font-size: 13px; line-height: 1.3; color: var(--text-2); }
-.asst-coach-chevron {
+.asst-coach-upgrade-btn {
   flex-shrink: 0;
-  color: var(--text-2);
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  gap: 3px;
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+  white-space: nowrap;
 }
+.asst-coach-upgrade-btn:active { transform: scale(0.96); }
 
 .scan-privacy-note {
   display: flex;

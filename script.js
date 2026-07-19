@@ -2290,17 +2290,8 @@ function _onReplyRevealed() {
   state.tellzeloAnswers = {};
   updateTellZeloSummary();
 
-  // Reset the thread-save prompt so it appears fresh on every new scan
-  const tsp = document.getElementById('thread-save-prompt');
-  if (tsp) {
-    tsp.hidden = false;
-    const main   = document.getElementById('thread-save-main');
-    const picker = document.getElementById('thread-picker');
-    if (main)   main.hidden = false;
-    if (picker) { picker.hidden = true; picker.innerHTML = ''; }
-  }
-
-  // If a thread was pre-selected on the typing screen, auto-save now
+  // If a thread was pre-selected on the typing screen, auto-save now and
+  // show a brief confirmation toast (the only remaining use of thread-save-prompt).
   if (state.preselectThreadId) {
     const preMsg   = state.asstMessage;
     const preReply = _currentReplyText();
@@ -2311,8 +2302,10 @@ function _onReplyRevealed() {
       saveThreads(allThr);
       renderThreadList();
       state.scanSavedToThread = true;
+      const tsp = document.getElementById('thread-save-prompt');
       if (tsp) {
         tsp.innerHTML = `<p class="thread-save-q thread-save-success">Saved to "${preThr.name}" ✓</p>`;
+        tsp.hidden = false;
         setTimeout(() => { tsp.hidden = true; }, 1500);
       }
     }
