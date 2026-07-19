@@ -4281,8 +4281,8 @@ function upgradeNow() {
 // PAYWALL — UI mock only, no payment logic. RevenueCat/StoreKit
 // integration comes later.
 //
-// Both entry points (upgradeNow(), called from the AI Coach / History
-// upgrade buttons, and the onboarding-complete flow in
+// Both entry points (upgradeNow(), called from the History tab's upgrade
+// button, and the onboarding-complete flow in
 // cineFinishPhase2()) navigate straight to the paywall — it never
 // dead-ends. The screen isn't pushed onto state.screenStack: it sits on
 // top of whatever was active and closePaywall() unwinds straight back to

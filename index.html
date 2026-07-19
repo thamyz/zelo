@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260708a" />
+    <link rel="stylesheet" href="style.css?v=20260719d" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -161,14 +161,12 @@
             </div>
           </div>
 
-          <!-- AI COACH — dark promo banner. Tapping the banner opens the full page;
-               the Upgrade pill is its own nested button (stopPropagation) wired to
-               the existing upgradeNow() stub — no real paywall exists yet in this
-               codebase (isPaidUser() is a permanent-true stub), so this is the
-               correct existing hook rather than inventing a new paywall flow. -->
+          <!-- AI COACH — plain white card, matches the other cards on this screen.
+               Tapping anywhere opens the full page via openAiCoach() — no more
+               nested Upgrade button/pill, just a decorative chevron. -->
           <div class="asst-coach-banner" id="aicoach-card" onclick="openAiCoach()">
             <span class="asst-coach-avatar" aria-hidden="true">
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="#ec4899">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#ec4899">
                 <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
               </svg>
             </span>
@@ -176,12 +174,11 @@
               <span class="asst-coach-title">AI Coach</span>
               <span class="asst-coach-sub">Level up your conversations with personalized tips.</span>
             </span>
-            <button type="button" class="asst-coach-upgrade-btn" onclick="event.stopPropagation(); upgradeNow();">
-              Upgrade
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <span class="asst-coach-chevron" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
-            </button>
+            </span>
           </div>
 
           <p class="scan-privacy-note">
@@ -931,7 +928,7 @@
           <div class="cine-p1-stage">
             <h1 class="cine-p1-type" id="cine-p1-type"></h1>
             <div class="cine-p1-word" id="cine-p1-word" hidden></div>
-            <div class="cine-p1-logo" id="cine-p1-logo" hidden>Zelo<span class="cine-p1-spark">✦</span></div>
+            <div class="cine-p1-logo" id="cine-p1-logo" hidden>Zelo<span class="cine-p1-spark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span></div>
           </div>
         </section>
 
@@ -943,7 +940,7 @@
               <div class="cine-phone-notch"></div>
               <div class="cine-phone-screen">
                 <div class="cine-phone-top">
-                  <span class="cine-phone-brand">Zelo<span class="cine-phone-spark">✦</span></span>
+                  <span class="cine-phone-brand">Zelo<span class="cine-phone-spark" aria-hidden="true"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span></span>
                 </div>
                 <div class="cine-phone-card">
                   <div class="cine-phone-msg">haha yeah I guess, idk what do you wanna do</div>
