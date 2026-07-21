@@ -4,6 +4,42 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#faf6f0" />
+    <script>
+      // Safe-area reliability shim. env(safe-area-inset-*) referenced
+      // directly from an external stylesheet doesn't always resolve inside
+      // the native Capacitor WKWebView (confirmed via diagnostic testing —
+      // it silently computes to 0 on some device configs even though the
+      // meta viewport is correct). The same env() set via an *inline* style
+      // does resolve correctly — but only once the WKWebView has actually
+      // established its safe-area geometry, which isn't guaranteed yet at
+      // the very first measurement (a single early read can permanently
+      // cache a stale 0 on some devices/timings — confirmed via diagnostic
+      // testing on a Dynamic Island simulator). So re-measure at several
+      // lifecycle points and on resize/orientation change, not just once.
+      // Every safe-area rule in style.css reads var(--safe-top/--safe-bottom,
+      // env(...)) so it still degrades gracefully to raw env() if this ever
+      // fails to run at all.
+      (function () {
+        function measure() {
+          var probe = document.createElement('div');
+          probe.style.cssText = 'position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none;';
+          document.documentElement.appendChild(probe);
+          var cs = getComputedStyle(probe);
+          document.documentElement.style.setProperty('--safe-top', cs.paddingTop);
+          document.documentElement.style.setProperty('--safe-bottom', cs.paddingBottom);
+          probe.remove();
+        }
+        measure();
+        document.addEventListener('DOMContentLoaded', measure);
+        window.addEventListener('load', function () {
+          measure();
+          requestAnimationFrame(function () { requestAnimationFrame(measure); });
+          setTimeout(measure, 500);
+        });
+        window.addEventListener('resize', measure);
+        window.addEventListener('orientationchange', measure);
+      })();
+    </script>
     <title>Zelo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
