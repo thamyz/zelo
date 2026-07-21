@@ -83,8 +83,8 @@ textarea { font-family: inherit; }
 .tab {
   position: absolute;
   inset: 0;
-  bottom: calc(var(--tab-h) + var(--safe-bottom, env(safe-area-inset-bottom)));
-  padding-top: var(--safe-top, env(safe-area-inset-top));
+  bottom: calc(var(--tab-h) + 34px);
+  padding-top: 92px;
   overflow-y: auto;
   overflow-x: hidden;
   opacity: 0;
@@ -112,8 +112,8 @@ textarea { font-family: inherit; }
      viewport-fit=cover set, so Safari already keeps content clear of the
      notch/home-indicator by default) but starts protecting for real the
      moment that ever changes, without needing to touch every screen. */
-  padding-top: var(--safe-top, env(safe-area-inset-top));
-  padding-bottom: var(--safe-bottom, env(safe-area-inset-bottom));
+  padding-top: 92px;
+  padding-bottom: 34px;
 }
 
 .screen.active {
@@ -1896,8 +1896,8 @@ textarea { font-family: inherit; }
   /* Grows to include the safe area (env() is 0 today, so this is identical
      to the old fixed 64px — see the .screen comment above) rather than
      shrinking the 64px of actual tap area to make room for it. */
-  height: calc(var(--tab-h) + var(--safe-bottom, env(safe-area-inset-bottom)));
-  padding-bottom: var(--safe-bottom, env(safe-area-inset-bottom));
+  height: calc(var(--tab-h) + 34px);
+  padding-bottom: 34px;
   background: var(--nav-bg);
   border-top: 1px solid var(--border);
   display: flex;
@@ -2011,6 +2011,11 @@ textarea { font-family: inherit; }
   flex-direction: column;
   align-items: center;
   padding: 0;
+  /* This ID selector's shorthand `padding: 0` otherwise wins over .tab's
+     padding-top (higher specificity) and silently zeroes it — this was the
+     actual reason the header kept clipping under the notch/Dynamic Island
+     no matter what mechanism was used to set that padding-top value. */
+  padding-top: 92px;
   overflow: hidden;
 }
 
@@ -2020,6 +2025,8 @@ textarea { font-family: inherit; }
   flex-direction: column;
   overflow: hidden;
   padding: 0;
+  /* See #tab-practice above — same ID-specificity override problem. */
+  padding-top: 92px;
 }
 
 #tab-assistant .tab-scroll,
@@ -3139,7 +3146,7 @@ textarea { font-family: inherit; }
 }
 
 .profile-detail-actions {
-  padding: 14px 20px calc(18px + var(--safe-bottom, env(safe-area-inset-bottom)));
+  padding: 14px 20px calc(18px + 34px);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -3228,7 +3235,7 @@ textarea { font-family: inherit; }
   /* Appended directly to #app (see flashLimitToast() in script.js) — a
      sibling of .screen/.tab, not a descendant, so it has no inherited
      safe-area padding of its own. */
-  top: calc(16px + var(--safe-top, env(safe-area-inset-top)));
+  top: calc(16px + 92px);
   left: 50%;
   transform: translate(-50%, -12px);
   max-width: 86%;
@@ -4262,8 +4269,8 @@ textarea { font-family: inherit; }
   align-items: center;
   /* Sibling of .screen/.tab under #app, not a descendant — doesn't inherit
      their safe-area padding, so it needs its own (see .auth-dismiss-btn). */
-  padding-top: var(--safe-top, env(safe-area-inset-top));
-  padding-bottom: var(--safe-bottom, env(safe-area-inset-bottom));
+  padding-top: 92px;
+  padding-bottom: 34px;
 }
 
 .auth-overlay[hidden] { display: none; }
@@ -4677,7 +4684,7 @@ textarea { font-family: inherit; }
   right: 0;
   background: var(--bg-card, #fff);
   border-radius: 16px 16px 0 0;
-  padding: 8px 0 calc(20px + var(--safe-bottom, env(safe-area-inset-bottom)));
+  padding: 8px 0 calc(20px + 34px);
   overflow: hidden;
 }
 
@@ -5209,7 +5216,7 @@ textarea { font-family: inherit; }
      tracks Safari's real, currently-visible viewport as the address bar
      collapses/expands, not the theoretical full-screen height. Horizontal
      padding is untouched — width isn't the constrained dimension here. */
-  padding: clamp(4px, 1.3dvh, 14px) 20px calc(clamp(5px, 1.9dvh, 22px) + var(--safe-bottom, env(safe-area-inset-bottom)));
+  padding: clamp(4px, 1.3dvh, 14px) 20px calc(clamp(5px, 1.9dvh, 22px) + 34px);
 }
 
 .paywall-topbar {
@@ -5905,7 +5912,7 @@ textarea { font-family: inherit; }
   /* Sibling of .screen/.tab under #app — keeps the close button (top-right
      of the card) clear of the notch if the card ever grows tall enough
      to reach the top edge. */
-  padding: max(24px, var(--safe-top, env(safe-area-inset-top))) 24px max(24px, var(--safe-bottom, env(safe-area-inset-bottom)));
+  padding: max(24px, 92px) 24px max(24px, 34px);
 }
 .aicoach-hiw-overlay[hidden] { display: none; }
 .aicoach-hiw-card {
@@ -5940,7 +5947,7 @@ textarea { font-family: inherit; }
   align-items: center;
   justify-content: center;
   /* Sibling of .screen/.tab under #app — see .aicoach-hiw-overlay above. */
-  padding: max(24px, var(--safe-top, env(safe-area-inset-top))) 24px max(24px, var(--safe-bottom, env(safe-area-inset-bottom)));
+  padding: max(24px, 92px) 24px max(24px, 34px);
 }
 .gib-confirm-overlay[hidden] { display: none; }
 
@@ -6018,7 +6025,7 @@ textarea { font-family: inherit; }
 .thread-link-card {
   background: #fff;
   border-radius: 24px 24px 0 0;
-  padding: 24px 22px calc(24px + var(--safe-bottom, env(safe-area-inset-bottom)));
+  padding: 24px 22px calc(24px + 34px);
   width: 100%;
   max-width: 430px;
   max-height: 70%;
@@ -6098,7 +6105,7 @@ textarea { font-family: inherit; }
      #app, not a descendant — it has no safe-area padding of its own, so this
      button (and .cine-dots below) need it applied directly or they render
      under the status bar/notch. */
-  top: calc(15px + var(--safe-top, env(safe-area-inset-top))); right: 16px;
+  top: calc(15px + 92px); right: 16px;
   z-index: 40;
   width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
@@ -6112,7 +6119,7 @@ textarea { font-family: inherit; }
 
 .cine-dots {
   position: absolute;
-  top: calc(20px + var(--safe-top, env(safe-area-inset-top))); left: 50%;
+  top: calc(20px + 92px); left: 50%;
   transform: translateX(-50%);
   z-index: 30;
   display: flex; gap: 6px;

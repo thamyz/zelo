@@ -1,10 +1,5 @@
 {
   "appId": "com.zelo.app",
   "appName": "Zelo",
-  "webDir": "www",
-  "plugins": {
-    "SystemBars": {
-      "insetsHandling": "disable"
-    }
-  }
+  "webDir": "www"
 }
