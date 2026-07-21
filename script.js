@@ -106,15 +106,10 @@ window.addEventListener('DOMContentLoaded', () => {
 // ================================================================
 
 function showTab(name) {
-  // Chats stays hard-gated behind sign-up at the tab level. Practice (Home)
-  // is intentionally NOT gated here anymore — anonymous users can see the
-  // mode-selection popup / locked deck; the auth check happens when they
-  // actually try to act (see homeModeSelect()).
-  if (name === 'chats' && !AUTH.signedIn() && !tourSwitchingTab) {
-    if (!DEV_MODE) AUTH.requireAuth(name, () => showTab(name));
-    else showTab(name);
-    return;
-  }
+  // Chats is never gated at the tab level — anonymous users with zero chat
+  // history land on the tab's own empty state (see renderChatsList()) same
+  // as Practice (Home); the auth check only happens when they actually try
+  // to act (see homeModeSelect()).
 
   // History overlay keeps the tab bar visible — close it on any tab nav
   closeHistory();
