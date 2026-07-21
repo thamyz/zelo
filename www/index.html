@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260721f" />
+    <link rel="stylesheet" href="style.css?v=20260721g" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -900,6 +900,10 @@
            ============================================================ -->
       <div class="cine" id="cine-onboarding" hidden onclick="cineScreenTap(event)">
 
+        <!-- Brief black hold before the intro animation starts (see
+             startCineOnboarding() in script.js) -->
+        <div class="cine-preblack" id="cine-preblack"></div>
+
         <!-- Skip — top right on every Phase 2 screen (not on showcase) -->
         <button class="cine-skip cine-hidden" id="cine-skip" onclick="cineSkip(event)" aria-label="Skip onboarding">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
@@ -1724,6 +1728,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260721e"></script>
+    <script src="script.js?v=20260721f"></script>
   </body>
 </html>

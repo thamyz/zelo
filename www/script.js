@@ -2746,7 +2746,15 @@ function startCineOnboarding() {
   document.querySelectorAll('.cine-screen').forEach(s => {
     s.classList.toggle('active', s.dataset.screen === '0');
   });
-  cinePhase1();
+
+  // Brief black hold before the animation starts — the typewriter felt like
+  // it snapped in too abruptly with no beat to land on first.
+  const preblack = document.getElementById('cine-preblack');
+  if (preblack) preblack.classList.remove('cine-preblack-out');
+  _cineDelay(() => {
+    if (preblack) preblack.classList.add('cine-preblack-out');
+    cinePhase1();
+  }, 700);
 }
 
 // Chrome modes: 'none' (Phase 1 + showcase — no skip, no dots),

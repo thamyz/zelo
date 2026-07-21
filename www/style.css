@@ -2031,7 +2031,12 @@ textarea { font-family: inherit; }
 #tab-assistant {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* overflow-y: auto (not hidden) on purpose — content fits without actually
+     needing to scroll, but this keeps the native touch-drag/rubber-band give.
+     A fully "overflow: hidden" screen feels dead to the touch. No visible
+     scrollbar either way (see .tab::-webkit-scrollbar above). */
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 0;
   /* See #tab-practice above — same ID-specificity override problem. */
   padding-top: 34px;
@@ -4285,8 +4290,9 @@ textarea { font-family: inherit; }
   flex-direction: column;
   align-items: center;
   /* Sibling of .screen/.tab under #app, not a descendant — doesn't inherit
-     their safe-area padding, so it needs its own (see .auth-dismiss-btn). */
-  padding-top: 92px;
+     their safe-area padding, so it needs its own (see .auth-dismiss-btn).
+     34px matches the tightened offset used everywhere else now. */
+  padding-top: 34px;
   padding-bottom: 34px;
 }
 
@@ -6122,6 +6128,18 @@ textarea { font-family: inherit; }
 
 .cine-hidden { display: none !important; }
 
+/* Brief black hold before Phase 1 starts — see startCineOnboarding(). */
+.cine-preblack {
+  position: absolute;
+  inset: 0;
+  z-index: 2000;
+  background: #000;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.cine-preblack.cine-preblack-out { opacity: 0; }
+
 /* ---- Skip (X) — top right, present on every Phase 2 screen ---- */
 .cine-skip {
   position: absolute;
@@ -6129,7 +6147,7 @@ textarea { font-family: inherit; }
      #app, not a descendant — it has no safe-area padding of its own, so this
      button (and .cine-dots below) need it applied directly or they render
      under the status bar/notch. */
-  top: calc(15px + 92px); right: 16px;
+  top: calc(15px + 34px); right: 16px;
   z-index: 40;
   width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
@@ -6143,7 +6161,7 @@ textarea { font-family: inherit; }
 
 .cine-dots {
   position: absolute;
-  top: calc(20px + 92px); left: 50%;
+  top: calc(20px + 34px); left: 50%;
   transform: translateX(-50%);
   z-index: 30;
   display: flex; gap: 6px;
