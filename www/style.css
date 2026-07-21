@@ -2019,7 +2019,17 @@ textarea { font-family: inherit; }
   overflow: hidden;
 }
 
-#tab-assistant,
+#tab-assistant {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  /* See #tab-practice above — same ID-specificity override problem.
+     Home/Scan screen only: tuned tighter than the other tabs per explicit
+     request — sits close to the Dynamic Island without touching it. */
+  padding-top: 34px;
+}
+
 #tab-chats {
   display: flex;
   flex-direction: column;
