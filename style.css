@@ -6091,7 +6091,11 @@ textarea { font-family: inherit; }
 /* ---- Skip (X) — top right, present on every Phase 2 screen ---- */
 .cine-skip {
   position: absolute;
-  top: 15px; right: 16px;
+  /* .cine (id="cine-onboarding") is a top-level sibling of .screen/.tab under
+     #app, not a descendant — it has no safe-area padding of its own, so this
+     button (and .cine-dots below) need it applied directly or they render
+     under the status bar/notch. */
+  top: calc(15px + env(safe-area-inset-top)); right: 16px;
   z-index: 40;
   width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
@@ -6105,7 +6109,7 @@ textarea { font-family: inherit; }
 
 .cine-dots {
   position: absolute;
-  top: 20px; left: 50%;
+  top: calc(20px + env(safe-area-inset-top)); left: 50%;
   transform: translateX(-50%);
   z-index: 30;
   display: flex; gap: 6px;

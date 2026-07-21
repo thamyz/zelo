@@ -2823,7 +2823,14 @@ function cinePhase1() {
     logo.hidden = false;
     void logo.offsetWidth;
     logo.classList.add('cine-p1-logo--in');
-    // No haptic here or after — haptics stop entirely once the logo reveal begins.
+    // Exactly one haptic tick in this beat, timed to the spark's own pop-in
+    // (.cine-p1-logo--in .cine-p1-spark has a 0.28s animation-delay in CSS —
+    // this mirrors that so the buzz lands right as the star appears).
+    // Nothing before or after it.
+    _cineDelay(() => {
+      navigator.vibrate?.(6);
+      _cineHaptic('MEDIUM');
+    }, 280);
     _cineDelay(() => { cineGoToShowcase(); }, 1000);
   }
 }
