@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#faf6f0" />
+    <title>Zelo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css?v=20260719h" />
+    <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  </head>
+  <body>
+    <div id="app">
+
+      <!-- ============================================================
+           TAB: REPLY  (homepage / assistant)
+           ============================================================ -->
+      <div class="tab active" id="tab-assistant">
+
+        <!-- Fixed header — stays at top, does not scroll -->
+        <header class="app-header app-header--pad">
+          <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span class="online-dot" aria-hidden="true"></span>
+          </button>
+          <h1 class="scan-page-brand">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </h1>
+          <button class="history-btn" onclick="openHistory()" aria-label="History">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+          </button>
+        </header>
+
+        <div class="tab-scroll">
+
+          <!-- Input block -->
+          <div class="scan-main">
+
+          <!-- Headline + real chat-bubble illustration (assets/icons/chat-bubble-hero.png) -->
+          <div class="scan-headline-row">
+            <div class="scan-headline-text">
+              <h2 class="scan-headline">Get the <span class="scan-headline-accent">right</span> words,<br>effortlessly.</h2>
+              <p class="scan-headline-sub">Smart, natural replies for any conversation.</p>
+              <span class="scan-headline-divider" aria-hidden="true"></span>
+            </div>
+            <div class="scan-hero-illustration">
+              <img class="scan-hero-illustration-img" src="assets/icons/chat-bubble-hero.png" alt="" />
+            </div>
+          </div>
+
+          <!-- Free-tier daily scan counter + mocked rewarded-ad upsell.
+               Hidden entirely for paid users. -->
+          <div class="scan-limit-banner" id="scan-limit-banner" hidden>
+            <span class="scan-limit-text" id="scan-limit-text"></span>
+            <button class="scan-limit-ad-btn" id="scan-limit-ad-btn" type="button" onclick="watchRewardedAd()" hidden>
+              Watch Ad for +3
+            </button>
+          </div>
+
+          <!-- MESSAGE — inline editable textarea. Stays visible and empty even
+               when a screenshot is attached (per this fix); the thumbnail lives
+               in the action row below instead — see .msg-footer. -->
+          <div class="input-card scan-message">
+            <textarea
+              id="asst-input"
+              class="msg-textarea scan-inline-textarea"
+              placeholder="Paste a message she sent…"
+              maxlength="4000"
+              oninput="onAsstInput()"
+            ></textarea>
+
+            <!-- Footer / action row. The divider itself is owned by the textarea's
+                 own bottom edge (border-bottom on .scan-inline-textarea) — this
+                 element has no border-top of its own, so the thumbnail (which
+                 replaces Upload Screenshot in this same row once attached) reads
+                 as sitting seamlessly between the two zones. -->
+            <div class="msg-footer">
+              <button class="upload-row" id="upload-row" type="button" onclick="openScanUpload()">
+                <span class="upload-icon-sm" id="upload-icon-sm">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </span>
+                <span class="upload-label-text" id="upload-label-text">Upload Screenshot</span>
+              </button>
+
+              <!-- Replaces the row above once a screenshot is attached — same
+                   footer slot. No text is extracted here; that happens silently
+                   at Analyze time and is never shown to the user. -->
+              <div class="scan-thumb-preview" id="scan-thumb-preview" hidden>
+                <img class="scan-thumb-preview-img" id="scan-thumb-preview-img" alt="Uploaded screenshot" />
+                <button class="scan-thumb-remove-btn" id="scan-thumb-remove-btn" type="button"
+                        onclick="event.stopPropagation(); clearUploadedPhoto()" aria-label="Remove screenshot">−</button>
+              </div>
+
+              <span class="msg-footer-divider" aria-hidden="true"></span>
+
+              <!-- Primary CTA — checkGenerateReady() still toggles [disabled]
+                   on this exact element unchanged. -->
+              <button class="asst-suggest-btn" id="asst-generate-btn" onclick="generateReplies()">
+                Get Suggestions
+                <svg class="asst-suggest-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Shown only if Analyze's silent background OCR extraction fails -->
+          <p class="scan-ocr-error" id="scan-ocr-error" hidden>Couldn't read the screenshot. Try pasting the message instead.</p>
+
+          <!-- WHO'S THIS ABOUT — two quick-pick shortcuts + full context wizard -->
+          <div class="scan-who-section">
+            <h3 class="scan-who-title">Who's this about?</h3>
+            <div class="scan-who-grid">
+              <button type="button" class="scan-who-card" id="scan-who-dating" onclick="scanQuickWho('Dating', this)">
+                <span class="scan-who-icon">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="#ec4899"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </span>
+                <span class="scan-who-label">Dating</span>
+              </button>
+              <button type="button" class="scan-who-card" id="scan-who-crush" onclick="scanQuickWho('Crush', this)">
+                <span class="scan-who-icon">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="#8b7cf6"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  <svg class="scan-who-icon-badge" width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
+                </span>
+                <span class="scan-who-label">Crush</span>
+              </button>
+              <button type="button" class="scan-who-card scan-who-card--tellzelo" id="tellzelo-card" onclick="openTellZelo()">
+                <span class="scan-who-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="#ec4899"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
+                </span>
+                <span class="scan-who-label">Other</span>
+                <!-- Kept in the DOM (not deleted) but visually hidden — this id is
+                     still written to by updateTellZeloSummary() to toggle .filled
+                     on the card once wizard details are set; removing the element
+                     entirely would silently break that existing feedback. No text
+                     is ever shown here per this fix. -->
+                <span class="tellzelo-sub" id="tellzelo-sub" hidden>Friends, situations or anything else</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- AI COACH — plain white card, matches the other cards on this screen.
+               Tapping the card body opens the full page via openAiCoach();
+               the Upgrade pill is its own nested button (stopPropagation) wired
+               to upgradeNow() — same dual-action split as before the white-card
+               redesign, just restyled for the light background. -->
+          <div class="asst-coach-banner" id="aicoach-card" onclick="openAiCoach()">
+            <span class="asst-coach-avatar" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#ec4899">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+            <span class="asst-coach-copy">
+              <span class="asst-coach-title">AI Coach</span>
+              <span class="asst-coach-sub">Level up your conversations with personalized tips.</span>
+            </span>
+            <button type="button" class="asst-coach-upgrade-btn" onclick="event.stopPropagation(); upgradeNow();">
+              Upgrade
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+          </div>
+
+          <p class="scan-privacy-note">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>
+            Your chats are private and secure.
+          </p>
+
+          </div><!-- /.scan-main -->
+
+          <div class="tab-bottom-spacer"></div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           TAB: PRACTICE — Swipe card deck
+           ============================================================ -->
+      <div class="tab" id="tab-practice">
+
+        <header class="app-header app-header--pad">
+          <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span class="online-dot" aria-hidden="true"></span>
+          </button>
+          <h1 class="home-brand">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </h1>
+          <button class="settings-btn" onclick="openDashboard()" aria-label="Settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+        </header>
+
+        <!-- Section heading -->
+        <div class="home-section">
+          <h2 class="home-section-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="home-section-spark" aria-hidden="true">
+              <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+            </svg>
+            Today's Top Match
+          </h2>
+          <p class="home-section-sub">Handpicked for you. Get to know her better.</p>
+        </div>
+
+        <!-- Card stack — populated by JS renderDeck() -->
+        <div class="card-deck" id="card-deck"></div>
+
+        <!-- Action buttons -->
+        <div class="swipe-actions">
+          <button class="swipe-action-btn swipe-action-btn--skip" id="btn-skip" onclick="onSkipBtn()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            Skip
+          </button>
+          <button class="swipe-action-btn swipe-action-btn--like" id="btn-like" onclick="onLikeBtn()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            I'm Interested
+          </button>
+        </div>
+
+        <!-- Locked state — shown when a practice mode is chosen but the
+             user hasn't signed up yet. Deck stays visible (dimmed) behind it. -->
+        <div class="home-locked-overlay" id="home-locked-overlay" hidden onclick="homeLockedTap()">
+          <div class="home-locked-card">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="4" y="10" width="16" height="10" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/>
+            </svg>
+            <p class="home-locked-title">Sign up to start matching</p>
+            <p class="home-locked-sub">Create an account to unlock swiping and start real conversations.</p>
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- ============================================================
+           TAB: CHATS
+           ============================================================ -->
+      <div class="tab" id="tab-chats">
+
+        <!-- Fixed header — stays at top, does not scroll -->
+        <header class="app-header app-header--pad">
+          <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span class="online-dot" aria-hidden="true"></span>
+          </button>
+          <h1 class="home-brand">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </h1>
+          <span class="header-spacer"></span>
+        </header>
+
+        <div class="tab-scroll">
+          <h2 class="chats-title">Chats</h2>
+          <div class="chats-empty" id="chats-empty">
+            <div class="chats-empty-icon">💬</div>
+            <p class="chats-empty-text">No chats yet</p>
+            <p class="chats-empty-sub">Start a match in Home to begin</p>
+          </div>
+          <div class="chats-list" id="chats-list"></div>
+          <div class="tab-bottom-spacer"></div>
+        </div>
+      </div>
+
+
+
+
+      <!-- ============================================================
+           SCREEN: PROFILE / DASHBOARD  (overlay — opened from header)
+           ============================================================ -->
+      <div class="screen" id="screen-dashboard">
+
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()">‹</button>
+          <span class="screen-title">Account</span>
+        </div>
+
+        <div class="dash-layout">
+
+          <!-- Header: avatar, display name (or "Player #XXXX" fallback), member
+               label — tapping opens the Login page (name/email/password) -->
+          <button class="dash-profile-card" onclick="openSettingsSubpage('login')">
+            <div class="dash-avatar" id="dash-avatar">Y</div>
+            <div class="dash-profile-info">
+              <span class="dash-name" id="dash-name">You</span>
+              <span class="dash-sub">Zelo member</span>
+            </div>
+            <span class="dash-profile-chevron" aria-hidden="true">›</span>
+          </button>
+
+          <!-- Stats row -->
+          <div class="dash-stats">
+            <div class="dash-stat">
+              <span class="dash-stat-num" id="stat-scans">0</span>
+              <span class="dash-stat-label">Scans</span>
+            </div>
+            <div class="dash-stat">
+              <span class="dash-stat-num" id="stat-matches">0</span>
+              <span class="dash-stat-label">Matches</span>
+            </div>
+            <div class="dash-stat">
+              <span class="dash-stat-num" id="stat-chats">0</span>
+              <span class="dash-stat-label">Chats</span>
+            </div>
+          </div>
+
+          <!-- History — reuses the exact same data/rows as the full History
+               screen (getThreads() for Scans, chatStore for Matches, see
+               screen-history). One data source, tabbed here as a compact
+               preview; "See all" opens the full screen on the same tab. -->
+          <div class="dash-section">
+            <div class="dash-section-head">
+              <span class="block-label">History</span>
+              <button class="dash-seeall-btn" onclick="openHistory(_dashHistoryTab)">See all</button>
+            </div>
+            <div class="dash-history-tabs">
+              <button class="dash-history-tab active" id="dash-history-tab-scans"
+                      onclick="setDashHistoryTab('scans')">Scans</button>
+              <button class="dash-history-tab" id="dash-history-tab-matches"
+                      onclick="setDashHistoryTab('matches')">Matches</button>
+            </div>
+            <div class="dash-list" id="dash-history-list"></div>
+          </div>
+
+          <!-- Leaderboard — compact card, reuses the same rank computation
+               as the full leaderboard screen (getMyLeaderboardEntry()). -->
+          <div class="dash-section">
+            <button class="dash-lb-card" id="dash-lb-card" onclick="openLeaderboard()">
+              <span class="dash-lb-icon" aria-hidden="true">🏆</span>
+              <span class="dash-lb-text">
+                <span class="dash-lb-title">Leaderboard</span>
+                <span class="dash-lb-rank" id="dash-lb-rank">Rank #—</span>
+              </span>
+              <span class="dash-lb-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+
+          <!-- Settings — section label that expands inline, not a new page.
+               Each row still opens its own sub-page (screen-settings). -->
+          <div class="dash-section">
+            <button class="dash-menu-row dash-settings-btn" id="dash-settings-btn" onclick="toggleSettingsDropdown()">
+              Settings <span class="dash-settings-chevron" id="dash-settings-chevron">›</span>
+            </button>
+            <div class="dash-settings-dropdown" id="dash-settings-dropdown" hidden>
+              <div class="dash-menu">
+                <button class="dash-menu-row" onclick="openSettingsSubpage('security')">
+                  Security <span>›</span>
+                </button>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('notifications')">
+                  Notifications <span>›</span>
+                </button>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('privacy')">
+                  Privacy <span>›</span>
+                </button>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('help')">
+                  Help &amp; Support <span>›</span>
+                </button>
+              </div>
+              <!-- Separate from the list above; signs out immediately, no confirmation -->
+              <button class="settings-signout-btn" onclick="AUTH.signOut()">Sign Out</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: ACCOUNT SETTINGS
+           Distinct from the top-level Account page (screen-dashboard) —
+           "Login & Security" below is intentionally never called
+           "Account", to avoid confusion between the two in code and UI.
+           Entry point is the inline Settings dropdown on the Account page,
+           not a list page here — each row pushes straight to its panel,
+           and the back button returns straight to Account.
+           ============================================================ -->
+      <div class="screen" id="screen-settings">
+
+        <div class="screen-header">
+          <button class="back-btn" onclick="settingsBack()">‹</button>
+          <span class="screen-title" id="settings-screen-title">Settings</span>
+        </div>
+
+        <div class="settings-layout">
+
+          <!-- LOGIN — entered from the profile card at the top of Account,
+               not from the Settings dropdown -->
+          <div id="settings-panel-login" hidden>
+            <div class="settings-field">
+              <label class="settings-field-label">Display name</label>
+              <div class="settings-field-row">
+                <input type="text" id="settings-display-name-input" class="settings-input" maxlength="30" />
+                <button class="settings-save-btn" onclick="saveAccountDisplayName()">Save</button>
+              </div>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-field-label">Email</label>
+              <div class="settings-field-row">
+                <input type="email" id="settings-email-input" class="settings-input" placeholder="you@example.com" />
+                <button class="settings-save-btn" onclick="changeAccountEmail()">Save</button>
+              </div>
+              <p class="settings-field-msg" id="settings-email-msg"></p>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-field-label">New password</label>
+              <div class="settings-field-row">
+                <input type="password" id="settings-password-input" class="settings-input" placeholder="New password" />
+                <button class="settings-save-btn" onclick="changeAccountPassword()">Save</button>
+              </div>
+              <p class="settings-field-msg" id="settings-password-msg"></p>
+            </div>
+          </div>
+
+          <!-- SECURITY — stays in the Settings dropdown, in the same place
+               "Login & Security" used to be -->
+          <div id="settings-panel-security" hidden>
+            <button class="dash-menu-row" onclick="exportAccountData()">
+              Export my data (GDPR) <span>›</span>
+            </button>
+
+            <button class="settings-delete-account-btn" onclick="confirmDeleteAccount()">
+              Delete account permanently
+            </button>
+          </div>
+
+          <!-- NOTIFICATIONS -->
+          <div id="settings-panel-notifications" hidden>
+            <label class="settings-toggle-row">
+              <span class="settings-toggle-label">Push notifications</span>
+              <span class="settings-toggle">
+                <input type="checkbox" id="toggle-push-notifications"
+                       onchange="onSettingsToggle('zelo_push_notifications', this.checked)">
+                <span class="settings-toggle-slider"></span>
+              </span>
+            </label>
+            <label class="settings-toggle-row">
+              <span class="settings-toggle-label">Email notifications</span>
+              <span class="settings-toggle">
+                <input type="checkbox" id="toggle-email-notifications"
+                       onchange="onSettingsToggle('zelo_email_notifications', this.checked)">
+                <span class="settings-toggle-slider"></span>
+              </span>
+            </label>
+          </div>
+
+          <!-- PRIVACY -->
+          <div id="settings-panel-privacy" hidden>
+            <a class="dash-menu-row" href="#" onclick="return false;">
+              Privacy Policy <span>›</span>
+            </a>
+            <label class="settings-toggle-row">
+              <span class="settings-toggle-label">Do Not Sell My Data (CCPA)</span>
+              <span class="settings-toggle">
+                <input type="checkbox" id="toggle-do-not-sell"
+                       onchange="onSettingsToggle('zelo_do_not_sell', this.checked)">
+                <span class="settings-toggle-slider"></span>
+              </span>
+            </label>
+            <div class="settings-info-block">
+              <p class="settings-info-title">AI Disclosure</p>
+              <p class="settings-info-text">
+                Every character you chat with in Practice mode is an AI, not a real person.
+                Scan and AI Coach analyze real conversations you paste in or upload — Zelo
+                itself never pretends to be a real match.
+              </p>
+            </div>
+            <div class="settings-field">
+              <label class="settings-field-label">Scan history retention</label>
+              <select class="settings-select" id="settings-retention-select" onchange="onRetentionChange(this.value)">
+                <option value="7">7 days</option>
+                <option value="30">30 days</option>
+                <option value="90">90 days</option>
+                <option value="forever">Keep forever</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- HELP & SUPPORT -->
+          <div id="settings-panel-help" hidden>
+            <a class="dash-menu-row" href="mailto:support@zelo.app">
+              Contact us <span>›</span>
+            </a>
+            <button class="dash-menu-row" onclick="toggleHelpFaq()">
+              FAQ <span>›</span>
+            </button>
+            <div class="settings-faq-content" id="settings-faq-content" hidden>
+              <div class="settings-faq-item">
+                <p class="settings-faq-q">Is Zelo free to use?</p>
+                <p class="settings-faq-a">Yes — Zelo has a free daily scan limit and free thread storage. Upgrading removes the daily caps.</p>
+              </div>
+              <div class="settings-faq-item">
+                <p class="settings-faq-q">Are the people I practice with real?</p>
+                <p class="settings-faq-a">No — Practice mode characters are AI. Scan and AI Coach work on real conversations you provide.</p>
+              </div>
+              <div class="settings-faq-item">
+                <p class="settings-faq-q">How do I delete my account?</p>
+                <p class="settings-faq-a">Go to Settings → Login &amp; Security → Delete account permanently.</p>
+              </div>
+            </div>
+            <a class="dash-menu-row" href="mailto:support@zelo.app?subject=Report%20a%20problem">
+              Report a problem <span>›</span>
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: MATCH  (overlay — shown after swipe right)
+           ============================================================ -->
+      <div class="screen" id="screen-match">
+        <div class="match-content">
+
+          <h1 class="match-heading">It's a Match</h1>
+          <p class="match-sub">You and <strong id="match-name"></strong> liked each other</p>
+
+          <div class="match-avatars">
+            <div class="match-avatar match-avatar--you">YOU</div>
+            <div class="match-heart-medallion">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
+            <div class="match-avatar" id="match-avatar-them"></div>
+          </div>
+
+          <button class="start-btn match-start-btn" onclick="onStartChatting()">
+            Start Chatting
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+          <button class="match-skip-btn" onclick="showTab('practice')">
+            Keep swiping
+          </button>
+
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: CHAT  (overlay)
+           ============================================================ -->
+      <div class="screen" id="screen-chat">
+
+        <div class="chat-header">
+          <button class="back-btn" onclick="exitChat()">‹</button>
+          <div class="chat-avatar"      id="chat-header-avatar"></div>
+          <div class="chat-header-info">
+            <span class="chat-hname"   id="chat-header-name"></span>
+            <span class="chat-hstatus" id="chat-header-status">online</span>
+          </div>
+          <div class="mode-pill" id="chat-mode-pill"></div>
+          <button class="chat-settings-btn" onclick="openChatSettings()" aria-label="Chat settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/>
+              <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
+              <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Chat settings sheet -->
+        <div class="chat-settings-sheet" id="chat-settings-sheet" hidden>
+          <div class="chat-settings-backdrop" onclick="closeChatSettings()"></div>
+          <div class="chat-settings-panel">
+            <button class="chat-settings-row" id="chat-settings-timing-btn" onclick="chatSettingsToggleInstant()">
+              <span id="chat-settings-timing-label">Switch to Instant</span>
+            </button>
+            <div class="chat-settings-divider"></div>
+            <button class="chat-settings-row" onclick="chatSettingsReset()">Reset Chat</button>
+            <div class="chat-settings-divider"></div>
+            <button class="chat-settings-row chat-settings-row--danger" onclick="chatSettingsDelete()">Delete Chat</button>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages"></div>
+
+        <!-- ONE-TIME mode-selection modal — no skip, must choose -->
+        <div class="chat-mode-modal" id="chat-mode-modal" hidden>
+          <div class="chat-mode-card">
+            <h2 class="chat-mode-modal-title">Set the pace</h2>
+            <p class="chat-mode-modal-sub">How should <strong id="chat-mode-modal-name"></strong> reply in this conversation?</p>
+            <div class="chat-mode-options">
+              <button class="chat-mode-option chat-mode-option--light" id="chat-mode-btn-training" onclick="handleChatModeOptionClick('training')">
+                <span class="chat-mode-option-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </span>
+                <span class="chat-mode-option-copy">
+                  <span class="chat-mode-option-label" id="chat-mode-label-training">Instant replies</span>
+                  <span class="chat-mode-option-desc" id="chat-mode-desc-training">She responds right away</span>
+                </span>
+              </button>
+              <button class="chat-mode-option chat-mode-option--bold" id="chat-mode-btn-realistic" onclick="handleChatModeOptionClick('realistic')">
+                <span class="chat-mode-option-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </span>
+                <span class="chat-mode-option-copy">
+                  <span class="chat-mode-option-label" id="chat-mode-label-realistic">Realistic timing</span>
+                  <span class="chat-mode-option-desc" id="chat-mode-desc-realistic">Her responses are delayed</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-bar">
+          <input
+            type="text"
+            id="message-input"
+            class="message-input"
+            placeholder="Message…"
+            onkeydown="handleKeyDown(event)"
+          />
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+
+
+
+
+      <!-- ============================================================
+           SCREEN: SCAN — TYPE MESSAGE  (overlay — dedicated typing page)
+           ============================================================ -->
+      <div class="screen" id="screen-scan-type">
+
+        <div class="screen-header">
+          <button class="back-btn" onclick="confirmScanType()">‹</button>
+          <span class="screen-title">Your Message</span>
+        </div>
+
+        <div class="scan-type-layout">
+          <textarea
+            class="msg-textarea msg-textarea--primary scan-type-textarea"
+            placeholder="Paste a message, describe the situation…"
+            maxlength="4000"
+          ></textarea>
+
+          <!-- Thread pre-select — rendered by renderScanTypeThreadPicker() -->
+          <div id="scan-type-thread-picker" class="scan-type-thread-picker"></div>
+
+          <span class="scan-type-spacer"></span>
+
+          <button class="generate-btn" id="scan-type-continue-btn" onclick="confirmScanType()">
+            Continue
+          </button>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: SCAN — UPLOAD SCREENSHOT  (overlay — dedicated upload page)
+           ============================================================ -->
+      <div class="screen" id="screen-scan-upload">
+
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()">‹</button>
+          <span class="screen-title">Upload Screenshot</span>
+        </div>
+
+        <div class="scan-upload-layout">
+          <div class="scan-dropzone-wrap">
+          <button class="scan-dropzone" id="scan-dropzone" type="button" onclick="triggerUpload()">
+            <span class="scan-dropzone-icon" id="scan-dropzone-icon">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </span>
+            <span class="scan-dropzone-title" id="scan-dropzone-title">No Screenshot Uploaded</span>
+            <span class="scan-dropzone-sub" id="scan-dropzone-sub">Upload your screenshot to get a response.</span>
+            <img class="scan-dropzone-thumb" id="scan-dropzone-thumb" alt="Uploaded screenshot" hidden />
+          </button>
+          <button class="scan-photo-minus-btn" id="scan-photo-minus-btn" type="button"
+                  onclick="event.stopPropagation(); clearUploadedPhoto()" hidden>−</button>
+          </div>
+
+          <!-- Hidden real file input -->
+          <input
+            type="file"
+            id="screenshot-input"
+            accept="image/*"
+            style="display:none"
+            onchange="handleUpload(this)"
+          />
+
+          <span class="scan-type-spacer"></span>
+
+          <button class="scan-upload-clear-btn" id="scan-upload-clear-btn" onclick="clearUploadedPhoto()" hidden>
+            Remove Photo
+          </button>
+
+          <button class="generate-btn" id="scan-upload-continue-btn" onclick="popScreen()">
+            Done
+          </button>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: SCAN — RESULT  (overlay — generated reply, its own page)
+           ============================================================ -->
+      <div class="screen" id="screen-scan-result">
+
+        <div class="screen-header">
+          <button class="back-btn" onclick="goBackFromResult()" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Your Reply</span>
+          <!-- Same .history-btn treatment as the Scan page header -->
+          <button class="history-btn" onclick="openHistory()" aria-label="History">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="scan-result-layout">
+
+          <!-- Loading state — sparkle pulse while the reply "thinks" -->
+          <div class="scan-result-loading" id="scan-result-loading">
+            <span class="scan-result-loading-spark" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+            <p class="scan-result-loading-text">Zelo is thinking…</p>
+          </div>
+
+          <!-- Result content — revealed once the reply is ready -->
+          <div class="scan-result-content" id="scan-result-content" hidden>
+
+            <!-- Her message — compact editable text box. No icons: tapping the
+                 box itself opens the file picker (onclick below); the OCR
+                 (_extractScreenshotText → openai-proxy) fills this field and the
+                 uploaded image shows as a small thumbnail in its own row below.
+                 #asst-preview-bubble kept as the id on the text field so existing
+                 code that reads/writes the message still works. -->
+            <div class="preview-block" id="yr-preview-block">
+              <span class="yr-label">Her message</span>
+              <div class="yr-message-combined" id="yr-message-combined" onclick="onMessageBoxTap()">
+                <textarea class="yr-message-input" id="asst-preview-bubble"
+                          placeholder="Paste a message, or tap to add a screenshot…" maxlength="4000"
+                          oninput="onResultMessageInput()" onblur="onResultMessageCommit()"></textarea>
+                <input type="file" id="result-screenshot-input" accept="image/*"
+                       style="display:none" onchange="onResultScreenshot(this)" />
+              </div>
+              <!-- Reserved row BELOW the box, constant height so the cards never
+                   shift. Text reply → shows "Zelo's read" (a quick coaching take on
+                   her message). Screenshot reply → the box is hidden and the
+                   screenshot fills this whole area instead (see .has-shot rules). -->
+              <div class="yr-message-thumb-row" id="yr-message-thumb-row">
+                <div class="yr-message-thumb">
+                  <img class="yr-message-thumb-img" id="yr-message-shot-img" alt="Uploaded screenshot" />
+                  <button class="yr-message-thumb-remove" id="yr-message-shot-remove" type="button"
+                          onclick="event.stopPropagation(); removeResultScreenshot()" aria-label="Remove screenshot">−</button>
+                </div>
+                <div class="yr-zelo-read" id="yr-zelo-read">
+                  <span class="yr-zelo-read-label">✦ Zelo's read</span>
+                  <p class="yr-zelo-read-text" id="yr-zelo-read-text"></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Suggests row + carousel + dots/hint, grouped so they share a
+                 tight 12px internal rhythm distinct from the looser 28px
+                 gap between top-level sections. -->
+            <div class="yr-suggests-group">
+              <div class="yr-suggests-row">
+                <span class="yr-suggests-label">✦ Zelo Suggests</span>
+                <div class="yr-suggests-actions">
+                  <button class="copy-btn" id="copy-btn" onclick="copyCurrentReply()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span id="copy-btn-label">Copy</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Horizontal snap carousel — one real card per eligible style,
+                   rendered by JS (see renderReplyCarousel() in script.js). -->
+              <div class="yr-carousel" id="reply-carousel"></div>
+
+              <div class="yr-carousel-footer">
+                <div class="reply-dots" id="reply-dots"></div>
+                <p class="reply-swipe-hint" id="reply-swipe-hint">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                  Swipe for more suggestions
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </p>
+              </div>
+            </div>
+
+            <!-- Persistent "Save to a thread?" card removed — saving now only
+                 happens via the back-button reminder (goBackFromResult() /
+                 showSaveBeforeLeave(), unchanged). This element stays as a
+                 hidden container only for the brief auto-save confirmation
+                 toast (_onReplyRevealed()'s state.preselectThreadId branch),
+                 which reuses its id and CSS box. -->
+            <div class="thread-save-prompt" id="thread-save-prompt" hidden></div>
+
+          </div>
+
+        </div>
+      </div>
+
+
+
+
+      <!-- ============================================================
+           SCREEN: TELL ZELO MORE  (3-step context wizard)
+           ============================================================ -->
+      <div class="screen" id="screen-tellzelo">
+        <div class="screen-header">
+          <button class="back-btn" onclick="tellZeloBack()">‹</button>
+          <span class="screen-title">Tell Zelo More</span>
+        </div>
+        <div class="tz-layout">
+          <div class="tz-progress" id="tz-progress"></div>
+          <p class="tz-question" id="tz-question"></p>
+          <p class="tz-help" id="tz-help"></p>
+          <div class="tz-options" id="tz-options"></div>
+          <span class="tz-spacer"></span>
+          <button class="generate-btn tz-next" id="tz-next" onclick="tellZeloNext()">
+            <span id="tz-next-label">Next</span>
+            <svg class="tz-next-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           CINEMATIC ONBOARDING — 5-screen first-launch flow
+           (legacy 3-slide onboarding + spotlight tour archived in
+            archive/legacy-onboarding.js — disabled, kept for rollback)
+           ============================================================ -->
+      <div class="cine" id="cine-onboarding" hidden onclick="cineScreenTap(event)">
+
+        <!-- Skip — top right on every Phase 2 screen (not on showcase) -->
+        <button class="cine-skip cine-hidden" id="cine-skip" onclick="cineSkip(event)" aria-label="Skip onboarding">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
+            <line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>
+          </svg>
+        </button>
+
+        <div class="cine-dots cine-hidden" id="cine-dots" aria-hidden="true">
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+          <span class="cine-dot"></span>
+        </div>
+
+        <!-- ============ PHASE 1 — auto-playing intro (no interaction) — UNCHANGED ============ -->
+        <section class="cine-screen cine-phase1 active" data-screen="0">
+          <div class="cine-p1-stage">
+            <h1 class="cine-p1-type" id="cine-p1-type"></h1>
+            <div class="cine-p1-word" id="cine-p1-word" hidden></div>
+            <div class="cine-p1-logo" id="cine-p1-logo" hidden>Zelo<span class="cine-p1-spark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span></div>
+          </div>
+        </section>
+
+        <!-- ============ SHOWCASE — Cal AI style landing, between Phase 1 and Phase 2 ============
+             No dots, no skip. Static, renders immediately after Phase 1 ends. -->
+        <section class="cine-screen cine-showcase" data-screen="showcase">
+          <div class="cine-showcase-top">
+            <div class="cine-phone">
+              <div class="cine-phone-notch"></div>
+              <div class="cine-phone-screen">
+                <div class="cine-phone-top">
+                  <span class="cine-phone-brand">Zelo<span class="cine-phone-spark" aria-hidden="true"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span></span>
+                </div>
+                <div class="cine-phone-card">
+                  <div class="cine-phone-msg">haha yeah I guess, idk what do you wanna do</div>
+                  <div class="cine-phone-foot">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Upload Screenshot
+                  </div>
+                </div>
+                <div class="cine-phone-reply">
+                  <span class="cine-phone-reply-label">✦ ZELO SUGGESTS</span>
+                  How about tacos Friday, you in?
+                </div>
+                <div class="cine-phone-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
+                  Analyze
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cine-showcase-bottom">
+            <h1 class="cine-showcase-head">Even smooth talkers get stuck.<br>Zelo doesn't.</h1>
+            <button class="cine-showcase-cta" onclick="cineShowcaseStart(event)">Get Started</button>
+            <button class="cine-showcase-signin" onclick="cineShowcaseSignIn(event)">Already have an account? <span>Sign in</span></button>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 1 — Name input ============ -->
+        <section class="cine-screen cine-screen--name" data-screen="1">
+          <h2 class="cine-head">Pick your name</h2>
+          <p class="cine-sub">This is how you'll appear on the leaderboard.</p>
+          <input type="text" class="cine-name-input" id="cine-name-input" placeholder="Choose any name"
+                 maxlength="30" autocomplete="off" oninput="cineNameInput()"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault(); cineNext();}" />
+          <p class="cine-name-error" id="cine-name-error"></p>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 2 — Swipe demo -> Match (combined, internal state) ============ -->
+        <section class="cine-screen cine-screen--swipe" data-screen="2">
+          <h2 class="cine-head">Find someone to<br><span class="hl">practice</span> with</h2>
+          <p class="cine-sub">Match and practice with AI girls that actually feel real.</p>
+
+          <!-- Decorative sparkles/swirl — only shown during the like state -->
+          <div class="cine-swipe-deco" id="cine-swipe-deco">
+            <span class="cine-deco cine-spark-deco" style="bottom:27%;left:12%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+            <span class="cine-deco cine-spark-deco sm" style="bottom:27%;right:14%"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+            <span class="cine-deco cine-swirl" style="top:39%;right:6%"><svg width="72" height="40" viewBox="0 0 72 40" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 24 C 22 16, 34 20, 48 15"/><path d="M42 7 L54 14 L45 25"/></svg></span>
+          </div>
+
+          <!-- Locked-position card deck — absolutely positioned so the card
+               sits at the exact same spot on screen in both states. Only
+               the internal content (like cards vs. match cards) swaps. -->
+          <div class="cine-swipe-deck">
+            <div class="cine-swipe-stage" id="cine-swipe-stage">
+              <div class="cine-swipe-card cine-swipe-card--back"></div>
+              <div class="cine-swipe-card" id="cine-swipe-card">
+                <div class="cine-swipe-like">LIKE</div>
+              </div>
+            </div>
+
+            <div class="cine-match-cards" id="cine-match-cards" style="display:none">
+              <div class="cine-match-card cine-match-card--back"></div>
+              <div class="cine-match-card" id="cine-match-card">
+                <span class="cine-match-spark">✦</span>
+                <span class="cine-match-title">It's a<br>Match!</span>
+              </div>
+              <span class="cine-match-burst" aria-hidden="true">
+                <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="30" y1="6" x2="24" y2="12"/><line x1="32" y1="16" x2="24" y2="18"/><line x1="24" y1="4" x2="21" y2="11"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Bottom row — swipe controls (like state) / CTA text (match state) -->
+          <div class="cine-swipe-controls" id="cine-swipe-controls">
+            <span class="cine-swipe-btn pass"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+            <span class="cine-swipe-hint"><b>Swipe right</b><span>to like</span></span>
+            <span class="cine-swipe-btn like"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.4-8.6C.9 9.3 2.4 6 5.6 6c2 0 3.3 1.2 4.4 2.6C11 7.2 12.4 6 14.4 6c3.2 0 4.7 3.3 3 6.4C19 16.4 12 21 12 21z"/></svg></span>
+          </div>
+
+          <div class="cine-match-cta" id="cine-match-cta" style="display:none">
+            <b>Start practicing</b>
+            <span>and improve your replies</span>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 3 — Notifications ============ -->
+        <section class="cine-screen cine-screen--notif" data-screen="3">
+          <span class="cine-deco cine-spark-deco" style="top:19%;left:23%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-spark-deco" style="top:17%;right:23%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-spark-deco sm" style="top:40%;right:22%"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+
+          <div class="cine-notif-stage">
+            <div class="cine-bell">
+              <span class="cine-bell-glow"></span>
+              <span class="cine-bell-body">
+                <svg width="118" height="118" viewBox="0 0 100 100" fill="none">
+                  <defs><linearGradient id="cineBellG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9a8d4"/><stop offset="0.55" stop-color="#f0559f"/><stop offset="1" stop-color="#db2777"/></linearGradient></defs>
+                  <circle cx="50" cy="12" r="4.5" fill="url(#cineBellG)"/>
+                  <path fill="url(#cineBellG)" d="M50 15 C 32 15, 26 31, 26 47 C 26 61, 20 67, 15 74 C 13.5 75.6 14.6 78 17 78 L83 78 C 85.4 78 86.5 75.6 85 74 C 80 67, 74 61, 74 47 C 74 31, 68 15, 50 15 Z"/>
+                  <circle cx="50" cy="86" r="7" fill="url(#cineBellG)"/>
+                  <path fill="#fff" d="M50 31 l4.2 11.5 a5.5 5.5 0 0 0 3.8 3.8 L69.5 49.5 l-11.5 4.2 a5.5 5.5 0 0 0-3.8 3.8 L50 68 l-4.2-11.5 a5.5 5.5 0 0 0-3.8-3.8 L30.5 49.5 l11.5-4.2 a5.5 5.5 0 0 0 3.8-3.8 Z"/>
+                </svg>
+              </span>
+              <span class="cine-bell-badge">1</span>
+            </div>
+
+            <h2 class="cine-head" style="margin-bottom:6px"><span class="hl">Get notified</span> when<br>she replies</h2>
+            <p class="cine-sub">"Zelo" would like to send you notifications so you never miss an important reply.</p>
+
+            <div class="cine-feat-card">
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a6 6 0 0 0-6 6c0 3.6-1.3 5.2-2.1 6.1-.5.6-.1 1.4.7 1.4h14.8c.8 0 1.2-.8.7-1.4C19.3 13.2 18 11.6 18 8a6 6 0 0 0-6-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">Instant alerts</span><span class="cine-feat-sub">Know right away when she replies.</span></span>
+              </div>
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">Sounds &amp; badges</span><span class="cine-feat-sub">Customize how you get notified.</span></span>
+              </div>
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V5l8-3z"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">You're in control</span><span class="cine-feat-sub">Manage your preferences anytime in Settings.</span></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 4 — Tracking ============ -->
+        <section class="cine-screen cine-screen--track" data-screen="4">
+          <span class="cine-deco cine-spark-deco" style="top:24%;left:13%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+          <span class="cine-deco cine-spark-deco" style="top:34%;right:13%"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+
+          <div class="cine-track-stage">
+            <div class="cine-appicon" aria-hidden="true">
+              <svg width="42" height="42" viewBox="0 0 24 24" fill="#fff"><path d="M12 1.5l2.3 6.8a3.4 3.4 0 0 0 2.1 2.1L23.5 12l-7.1 1.6a3.4 3.4 0 0 0-2.1 2.1L12 22.5l-2.3-6.8a3.4 3.4 0 0 0-2.1-2.1L0.5 12l7.1-1.6a3.4 3.4 0 0 0 2.1-2.1z"/></svg>
+            </div>
+
+            <h2 class="cine-head" style="margin-bottom:6px">Know what to say,<br><span class="hl">every time.</span></h2>
+            <p class="cine-sub">Allow Zelo to personalize your experience and show you better suggestions.</p>
+
+            <div class="cine-feat-card">
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="4"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">Better suggestions</span><span class="cine-feat-sub">We learn what works best for you.</span></span>
+              </div>
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">More relevant experience</span><span class="cine-feat-sub">See examples and tips that fit your style.</span></span>
+              </div>
+              <div class="cine-feat-row">
+                <span class="cine-feat-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V5l8-3z"/></svg></span>
+                <span class="cine-feat-txt"><span class="cine-feat-title">Your privacy matters</span><span class="cine-feat-sub">You're in control. You can change this anytime in settings.</span></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PHASE 2 · Screen 5 — Age range ============ -->
+        <section class="cine-screen cine-screen--age" data-screen="5">
+          <div class="cine-age-wrap">
+            <h2 class="cine-head">How old are you?</h2>
+            <p class="cine-sub">This helps Zelo match how the AI talks to you.</p>
+            <div class="cine-age-grid">
+              <button type="button" class="cine-age-pill" data-age="18-24" onclick="cineSelectAge('18-24', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>18-24<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
+              <button type="button" class="cine-age-pill" data-age="25-30" onclick="cineSelectAge('25-30', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>25-30<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
+              <button type="button" class="cine-age-pill" data-age="31-39" onclick="cineSelectAge('31-39', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>31-39<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
+              <button type="button" class="cine-age-pill" data-age="40+" onclick="cineSelectAge('40+', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>40+<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
+            </div>
+          </div>
+        </section>
+
+        <button class="cine-next cine-hidden" id="cine-next" onclick="cineNext()">Next</button>
+      </div>
+
+
+      <!-- ============================================================
+           SIGN-UP PROMPT — full-screen overlay shown once onboarding
+           Screen 5 completes, before landing on Scan.
+           ============================================================ -->
+      <div class="signup-prompt" id="signup-prompt-overlay" hidden>
+        <div class="signup-prompt-logo">Zelo<span class="scan-spark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
+        </span></div>
+        <h1 class="signup-prompt-head" id="signup-prompt-head">Save your progress</h1>
+        <p class="signup-prompt-sub" id="signup-prompt-sub">Create an account to save your history, chats, and leaderboard score.</p>
+        <button class="signup-prompt-cta" onclick="signupPromptCreateAccount()">Create account</button>
+        <button class="signup-prompt-later" onclick="signupPromptLater()">Maybe later</button>
+      </div>
+
+
+      <!-- ============================================================
+           HOME TAB — first-visit practice-mode selection popup
+           ============================================================ -->
+      <div class="home-mode-popup" id="home-mode-popup" hidden>
+        <div class="home-mode-card">
+          <h2 class="home-mode-head">Who do you want to practice with?</h2>
+          <div class="home-mode-grid">
+            <button type="button" class="home-mode-card-btn" onclick="homeModeSelect('women', this)">
+              <span class="home-mode-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg></span>
+              <span class="home-mode-main">Women</span>
+              <span class="home-mode-tag">Zelo</span>
+            </button>
+            <button type="button" class="home-mode-card-btn" onclick="homeModeSelect('men', this)">
+              <span class="home-mode-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg></span>
+              <span class="home-mode-main">Men</span>
+              <span class="home-mode-tag">Zole</span>
+            </button>
+            <button type="button" class="home-mode-card-btn" onclick="homeModeSelect('both', this)">
+              <span class="home-mode-orb both">
+                <svg width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg>
+                <svg width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg>
+              </span>
+              <span class="home-mode-main">Both</span>
+              <span class="home-mode-tag">Zelo &amp; Zole</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           WELCOME BACK — typewriter overlay for returning users
+           (onboarding already completed). Fully automatic.
+           ============================================================ -->
+      <div class="welcome-back" id="welcome-back-overlay" hidden>
+        <h1 class="welcome-back-type" id="welcome-back-type"></h1>
+      </div>
+
+
+
+
+      <!-- ============================================================
+           SCREEN: THREAD DETAIL  (Feature 5+6)
+           ============================================================ -->
+      <div class="screen" id="screen-thread-detail">
+        <div class="screen-header">
+          <button class="back-btn" onclick="closeThreadDetail()">‹</button>
+          <span class="screen-title" id="thread-detail-name"></span>
+        </div>
+        <div class="thread-detail-layout">
+          <!-- Chronological scan history -->
+          <div class="thread-scans" id="thread-scans"></div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: HISTORY  (Fix 2/3 — opened from Scan top-right icon)
+           Full-screen overlay; bottom tab bar stays visible. X to close.
+           ============================================================ -->
+      <div class="screen screen--history" id="screen-history">
+        <header class="app-header app-header--pad">
+          <button class="back-btn" onclick="closeHistory()" aria-label="Back">‹</button>
+          <h1 class="home-brand">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </h1>
+        </header>
+
+        <div class="history-layout">
+          <h2 class="history-title">History</h2>
+
+          <div class="history-tabs">
+            <button class="history-tab active" id="history-tab-scans"
+                    onclick="setHistoryTab('scans')">Scans</button>
+            <button class="history-tab" id="history-tab-matches"
+                    onclick="setHistoryTab('matches')">Matches</button>
+          </div>
+
+          <p class="history-counter" id="history-counter" hidden></p>
+
+          <div class="history-list" id="history-list"></div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: PAYWALL — UI MOCK ONLY, no real payment logic.
+           RevenueCat/StoreKit integration comes later.
+           ============================================================ -->
+      <div class="screen" id="screen-paywall">
+        <div class="paywall-layout">
+
+          <div class="paywall-topbar">
+            <button class="paywall-close-btn" onclick="closePaywall()" aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+            <h1 class="scan-page-brand paywall-brand">
+              Zelo<span class="scan-spark" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+                </svg>
+              </span>
+            </h1>
+          </div>
+
+          <div class="paywall-hero">
+            <img class="paywall-hero-img" src="assets/icons/new-paywall.png" alt="" />
+          </div>
+
+          <h2 class="paywall-headline">How your 7-day<br><span class="paywall-headline-accent">free trial</span> works</h2>
+
+          <!-- Step 1's checkmark pops in large & centered here (point A),
+               then travels + scales down into the step-1 circle below
+               (point B). See playPaywallCheckmarkIntro() in script.js. -->
+          <div class="paywall-checkmark-overlay" id="paywall-checkmark-overlay" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline id="paywall-checkmark-overlay-path" points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+
+          <div class="paywall-timeline">
+            <div class="paywall-step">
+              <div class="paywall-step-icon-col">
+                <span class="paywall-step-icon paywall-step-icon--done" id="paywall-checkmark-icon">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <span class="paywall-step-line"></span>
+              </div>
+              <div class="paywall-step-body">
+                <p class="paywall-step-title">Complete Sign-up</p>
+                <p class="paywall-step-sub">You successfully created your profile.</p>
+              </div>
+            </div>
+
+            <div class="paywall-step">
+              <div class="paywall-step-icon-col">
+                <span class="paywall-step-icon paywall-step-icon--done">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="11" width="14" height="10" rx="2" ry="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                  </svg>
+                </span>
+                <span class="paywall-step-line"></span>
+              </div>
+              <div class="paywall-step-body">
+                <p class="paywall-step-title">Today: Get Instant Access</p>
+                <p class="paywall-step-sub">Unlock Pro and enjoy all features immediately.</p>
+              </div>
+            </div>
+
+            <div class="paywall-step">
+              <div class="paywall-step-icon-col">
+                <span class="paywall-step-icon paywall-step-icon--muted">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                  </svg>
+                </span>
+                <span class="paywall-step-line"></span>
+              </div>
+              <div class="paywall-step-body">
+                <p class="paywall-step-title">Day 5: Trial Reminder</p>
+                <p class="paywall-step-sub">We'll send you an email and notification before your trial ends.</p>
+              </div>
+            </div>
+
+            <div class="paywall-step">
+              <div class="paywall-step-icon-col">
+                <span class="paywall-step-icon paywall-step-icon--muted">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+                  </svg>
+                </span>
+              </div>
+              <div class="paywall-step-body">
+                <p class="paywall-step-title">Day 7: Trial Ends</p>
+                <p class="paywall-step-sub">You'll be charged. Cancel anytime before in the App Store.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="paywall-plans">
+            <button type="button" class="paywall-plan" id="paywall-plan-monthly" onclick="selectPaywallPlan('monthly')">
+              <span class="paywall-plan-radio" aria-hidden="true"></span>
+              <span class="paywall-plan-name-col">
+                <span class="paywall-plan-name">Monthly</span>
+              </span>
+              <span class="paywall-plan-price-col">
+                <span class="paywall-plan-price">$7.99 <small>/ mo</small></span>
+                <span class="paywall-plan-note">$7.99 billed monthly</span>
+              </span>
+            </button>
+
+            <button type="button" class="paywall-plan paywall-plan--selected" id="paywall-plan-yearly" onclick="selectPaywallPlan('yearly')">
+              <span class="paywall-plan-badge">BEST VALUE</span>
+              <span class="paywall-plan-check" aria-hidden="true">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="paywall-plan-name-col">
+                <span class="paywall-plan-name">Yearly</span>
+                <span class="paywall-plan-strike-row">
+                  <span class="paywall-plan-strike">$96.00</span>
+                  <span class="paywall-plan-strike-price">$49.99 / year</span>
+                </span>
+              </span>
+              <span class="paywall-plan-price-col">
+                <span class="paywall-plan-price paywall-plan-price--accent">$4.17 <small>/ mo</small></span>
+                <span class="paywall-plan-permo-pill">(~$4.17/mo)</span>
+              </span>
+            </button>
+          </div>
+
+          <button type="button" class="paywall-cta">Try FREE and Subscribe</button>
+
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCREEN: AI COACH  (Fix 6 — full page, real DeepSeek)
+           ============================================================ -->
+      <div class="screen" id="screen-ai-coach">
+        <div class="aicoach-header">
+          <button class="aicoach-back-btn" onclick="closeAiCoach()" aria-label="Back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          <div class="aicoach-header-titles">
+            <span class="aicoach-header-title">AI Coach <span class="aicoach-beta">Beta</span></span>
+            <span class="aicoach-header-sub">Get advice and reply suggestions</span>
+          </div>
+          <button class="aicoach-menu-btn" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Thread context row -->
+        <div class="aicoach-context-row" id="aicoach-context-row">
+          <span class="aicoach-context-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+          <div class="aicoach-context-info" id="aicoach-context-info"></div>
+          <button class="aicoach-change-btn" onclick="openThreadLinkPicker()" id="aicoach-change-btn">Change</button>
+        </div>
+
+        <div class="aicoach-messages" id="aicoach-messages"></div>
+
+        <!-- Inline limit message (Fix 8) -->
+        <div class="aicoach-limit" id="aicoach-limit" hidden>
+          You've used your daily limit. Come back tomorrow or upgrade.
+        </div>
+
+        <!-- Collapsible suggestions panel — anchored just above the input
+             bar so it doesn't scroll away with the chat history. Expanded
+             by default until the first message; auto-collapses after that,
+             but can always be reopened with the toggle. -->
+        <div class="aicoach-suggest-panel" id="aicoach-suggest-panel">
+          <button type="button" class="aicoach-suggest-toggle" id="aicoach-suggest-toggle" onclick="toggleAiCoachSuggestPanel()">
+            <span class="aicoach-suggest-toggle-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
+              Suggestions
+            </span>
+            <svg class="aicoach-suggest-toggle-chevron" id="aicoach-suggest-toggle-chevron" width="15" height="15"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="aicoach-suggest-body" id="aicoach-suggest-body"></div>
+        </div>
+
+        <div class="aicoach-input-bar">
+          <input class="aicoach-input" id="aicoach-input" type="text"
+                 placeholder="Ask a follow-up question…"
+                 onkeydown="handleAiCoachKeyDown(event)" />
+          <button class="aicoach-send-btn" onclick="sendAiCoachMessage()" aria-label="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </button>
+        </div>
+
+        <p class="aicoach-footer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Zelo analyzes conversations privately and securely.
+        </p>
+      </div>
+
+
+      <!-- ============================================================
+           AI COACH — "How it works" popup (Fix 5 — blank for now)
+           ============================================================ -->
+      <div class="aicoach-hiw-overlay" id="aicoach-hiw-overlay" hidden onclick="hideAiCoachHowItWorks()">
+        <div class="aicoach-hiw-card" onclick="event.stopPropagation()">
+          <button class="aicoach-hiw-close" onclick="hideAiCoachHowItWorks()" aria-label="Close">✕</button>
+          <h3 class="aicoach-hiw-title">How it works</h3>
+          <p class="aicoach-hiw-text">AI Coach uses your scan + optional thread context for deeper advice.</p>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCAN — random-text confirmation popup. Instant, client-side
+           heuristic only (no API call) — only flags genuine keyboard
+           mashing, never real short messages/slang.
+           ============================================================ -->
+      <div class="gib-confirm-overlay" id="gib-confirm-overlay" hidden onclick="gibConfirmEdit()">
+        <div class="gib-confirm-card" onclick="event.stopPropagation()">
+          <div id="gib-confirm-step-ask">
+            <p class="gib-confirm-text">This doesn't look like a real message — analyze it anyway?</p>
+            <div class="gib-confirm-actions">
+              <button class="gib-confirm-proceed-btn" onclick="gibConfirmProceed()">Analyze Anyway</button>
+              <button class="gib-confirm-edit-btn" onclick="gibConfirmEdit()">Let me fix it</button>
+            </div>
+            <button class="gib-confirm-report-link" onclick="gibReportFalsePositive()">This is a real message — report it</button>
+          </div>
+          <div id="gib-confirm-step-thanks" hidden>
+            <p class="gib-confirm-text">Thanks for letting us know — sorry for the inconvenience! We'll use this to get better.</p>
+            <div class="gib-confirm-actions">
+              <button class="gib-confirm-proceed-btn" onclick="gibConfirmProceed()">Continue</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           THREAD LINK PICKER  (Fix 7 — link a thread to AI Coach)
+           ============================================================ -->
+      <div class="thread-link-overlay" id="thread-link-overlay" hidden onclick="closeThreadLinkPicker()">
+        <div class="thread-link-card" onclick="event.stopPropagation()">
+          <h3 class="thread-link-title">Link a thread</h3>
+          <p class="thread-link-sub">Give Zelo the full conversation for deeper context.</p>
+          <div class="thread-link-list" id="thread-link-list"></div>
+          <button class="thread-link-cancel" onclick="closeThreadLinkPicker()">Cancel</button>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           SCREEN: LEADERBOARD  (Feature 9 — paid only)
+           ============================================================ -->
+      <div class="screen" id="screen-leaderboard">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()">‹</button>
+          <span class="screen-title">Leaderboard</span>
+        </div>
+        <div class="lb-layout">
+
+          <!-- Time filter tabs -->
+          <div class="lb-tabs">
+            <button class="lb-tab" id="lb-time-weekly"  onclick="setLbTimeFilter('weekly')">Weekly</button>
+            <button class="lb-tab" id="lb-time-monthly" onclick="setLbTimeFilter('monthly')">Monthly</button>
+            <button class="lb-tab" id="lb-time-alltime" onclick="setLbTimeFilter('alltime')">All Time</button>
+          </div>
+
+          <!-- Category tabs -->
+          <div class="lb-tabs lb-cat-tabs">
+            <button class="lb-tab" id="lb-cat-streak"   onclick="setLbCategory('streak')">Longest Streak</button>
+            <button class="lb-tab" id="lb-cat-messages" onclick="setLbCategory('messages')">Most Messages</button>
+            <button class="lb-tab" id="lb-cat-cold"     onclick="setLbCategory('cold')">Cold Conquests</button>
+          </div>
+
+          <!-- Podium -->
+          <div class="lb-podium" id="lb-podium"></div>
+
+          <!-- Scrollable list (rank 4+) -->
+          <div class="lb-list" id="lb-list"></div>
+
+          <!-- Pinned own rank -->
+          <div class="lb-my-rank" id="lb-my-rank"></div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           BOTTOM TAB BAR
+           ============================================================ -->
+      <nav class="tab-bar" id="tab-bar">
+        <button class="tab-btn" id="tabbtn-practice" onclick="showTab('practice')">
+          <svg class="tab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span class="tab-label">Home</span>
+        </button>
+        <button class="tab-btn tab-btn--scan active" id="tabbtn-assistant" onclick="showTab('assistant')">
+          <span class="scan-fab">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+              <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+              <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+              <line x1="7" y1="12" x2="17" y2="12"/>
+            </svg>
+          </span>
+          <span class="tab-label">Scan</span>
+        </button>
+        <button class="tab-btn" id="tabbtn-chats" onclick="showTab('chats')">
+          <svg class="tab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+          </svg>
+          <span class="tab-label">Chats</span>
+        </button>
+      </nav>
+
+
+      <!-- ============================================================
+           AUTH OVERLAY — provider picker
+           ============================================================ -->
+      <div class="auth-overlay" id="auth-overlay" hidden>
+        <div class="auth-card">
+          <button class="auth-dismiss-btn" onclick="AUTH.dismiss()" aria-label="Close">✕</button>
+          <div class="auth-logo">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </div>
+          <h1 class="auth-heading">Create your account</h1>
+          <div class="auth-providers">
+            <!-- TODO — enable once Apple OAuth is configured -->
+            <button class="auth-provider-btn" onclick="AUTH.signInWithApple()" hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+              </svg>
+              Continue with Apple
+            </button>
+            <!-- TODO — enable once Google OAuth is configured -->
+            <button class="auth-provider-btn" onclick="AUTH.signInWithGoogle()" hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Continue with Google
+            </button>
+            <button class="auth-provider-btn auth-provider-btn--email" onclick="AUTH.showEmailScreen()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="m2 7 10 6.5L22 7"/>
+              </svg>
+              Continue with Email
+            </button>
+          </div>
+          <p class="auth-error-msg" id="auth-provider-error"></p>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           AUTH OVERLAY — email / password form
+           ============================================================ -->
+      <div class="auth-overlay" id="auth-email-overlay" hidden>
+        <div class="auth-card">
+          <button class="auth-dismiss-btn" onclick="AUTH.dismiss()" aria-label="Close">✕</button>
+          <button class="auth-back-btn" onclick="AUTH.goBackToProviders()" aria-label="Back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          <div class="auth-logo">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </div>
+          <h1 class="auth-email-title">Create your account</h1>
+          <div class="auth-form">
+            <input id="auth-email-input" class="auth-input" type="email"
+                   placeholder="Email" autocomplete="email" />
+            <input id="auth-password-input" class="auth-input" type="password"
+                   placeholder="Password" autocomplete="current-password" />
+            <div id="auth-confirm-wrap">
+              <input id="auth-confirm-input" class="auth-input" type="password"
+                     placeholder="Confirm password" autocomplete="new-password" />
+            </div>
+            <p class="auth-error-msg" id="auth-email-error"></p>
+            <button class="auth-submit-btn" id="auth-submit-btn"
+                    onclick="AUTH.handleEmailSubmit()">Create account</button>
+            <button class="auth-forgot-btn"
+                    onclick="AUTH.handleForgotPassword()">Forgot password?</button>
+            <button class="auth-toggle-btn" id="auth-toggle-btn"
+                    onclick="AUTH.toggleEmailMode()">Already have an account? Sign in</button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           AUTH OVERLAY — post sign-up setup (username + age)
+           ============================================================ -->
+      <div class="auth-overlay" id="auth-setup-overlay" hidden>
+        <div class="auth-card auth-setup-card">
+          <div class="auth-logo">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </div>
+          <h1 class="auth-heading">Set up your profile</h1>
+          <div class="setup-form">
+            <div class="setup-field">
+              <label class="setup-label" for="setup-username-input">Username</label>
+              <input id="setup-username-input" class="auth-input" type="text"
+                     placeholder="Pick a name for the leaderboard" maxlength="30" />
+            </div>
+            <div class="setup-field">
+              <label class="setup-label">Age</label>
+              <div class="age-roller-wrap">
+                <div class="age-roller-highlight"></div>
+                <div class="age-roller" id="age-roller"></div>
+              </div>
+              <p class="age-warn" id="age-warn"></p>
+              <p class="setup-note">This helps Zelo match how the AI talks to you. You can change it anytime in settings.</p>
+            </div>
+            <button class="auth-submit-btn"
+                    onclick="AUTH.handleSetupContinue()">Let's go</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Detail Modal — lives at #app level so it covers the tab bar -->
+      <div class="profile-detail-modal" id="profile-detail-modal" hidden>
+        <div class="profile-detail-sheet">
+          <div class="profile-detail-scroll">
+            <div class="profile-detail-photo" id="pd-photo"></div>
+            <div class="profile-detail-body">
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <span class="swipe-card-name" id="pd-name" style="font-size:1.35rem;font-weight:700;"></span>
+                <span class="swipe-card-occ" id="pd-age" style="font-size:1.05rem;"></span>
+              </div>
+              <span class="swipe-card-occ" id="pd-occ" style="margin-top:2px;"></span>
+              <div class="profile-detail-section">
+                <span class="swipe-card-section-head">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  About Me
+                </span>
+                <p class="swipe-card-bio" id="pd-bio"></p>
+              </div>
+              <div class="profile-detail-section">
+                <span class="swipe-card-section-head">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  Likes
+                </span>
+                <div class="swipe-card-tags" id="pd-tags"></div>
+              </div>
+              <div class="card-mode-section profile-detail-section">
+                <div class="card-mode-pills" id="pd-mode-pills"></div>
+                <p class="card-mode-desc" id="pd-mode-desc"></p>
+              </div>
+            </div>
+          </div>
+          <div class="profile-detail-actions">
+            <div style="display:flex;gap:10px;">
+              <button class="swipe-action-btn swipe-action-btn--skip" style="flex:1;" onclick="closeProfileDetail();onSkipBtn();">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Skip
+              </button>
+              <button class="swipe-action-btn swipe-action-btn--like" style="flex:1;" onclick="closeProfileDetail();onLikeBtn();">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                I'm Interested
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="personas.js"></script>
+    <script src="data.js"></script>
+    <script src="services/supabase.js"></script>
+    <script src="services/auth.js"></script>
+    <script src="archive/legacy-onboarding.js"></script>
+    <script src="script.js?v=20260719a"></script>
+  </body>
+</html>

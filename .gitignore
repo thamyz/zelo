@@ -3,3 +3,4 @@ autopush.sh
 .DS_Store
 .claude/skills/
 .claude/best-practices/
+node_modules/

@@ -1,0 +1,30 @@
+{
+  "smooth": {
+    "accent": "#f470a7",
+    "bg": "#fdf3f6"
+  },
+  "funny": {
+    "accent": "#885cea",
+    "bg": "#f9f6fd"
+  },
+  "bolder": {
+    "accent": "#fe8e36",
+    "bg": "#fef7f3"
+  },
+  "direct": {
+    "accent": "#4488f6",
+    "bg": "#f4f7fd"
+  },
+  "warmer": {
+    "accent": "#f36fa6",
+    "bg": "#fcf2f6"
+  },
+  "shorter": {
+    "accent": "#48cba2",
+    "bg": "#f4f9f5"
+  },
+  "longer": {
+    "accent": "#936cec",
+    "bg": "#f4f2fc"
+  }
+}
