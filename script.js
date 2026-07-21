@@ -2764,6 +2764,14 @@ function cineSetChrome(mode) {
   });
 }
 
+// Native haptic tick for the Phase 1 intro only. window.Capacitor.Plugins is
+// injected by the native iOS runtime; on plain web (Netlify) it's undefined,
+// so this just no-ops and the existing navigator.vibrate calls carry the web
+// fallback exactly as before.
+function _cineHaptic(style) {
+  window.Capacitor?.Plugins?.Haptics?.impact({ style }).catch(() => {});
+}
+
 // ---- PHASE 1 — typewriter -> word morph -> logo -> auto-advance ----
 // (unchanged original sequence: "Never freeze up again." ->
 //  Confidence / Connection / Conversations -> Zelo logo)
@@ -2784,6 +2792,7 @@ function cinePhase1() {
     if (i < text.length) {
       type.textContent = text.slice(0, ++i);
       navigator.vibrate?.(1);
+      _cineHaptic('LIGHT');
       _cineDelay(tick, 38);
     } else {
       _cineDelay(runWords, 500);   // hold half a second
@@ -2802,6 +2811,7 @@ function cinePhase1() {
         word.classList.remove('cine-p1-word--in'); void word.offsetWidth;
         word.classList.add('cine-p1-word--in');
         navigator.vibrate?.(4);
+        _cineHaptic('MEDIUM');
       }, idx * 620);
     });
     _cineDelay(runLogo, words.length * 620 + 80);
@@ -2813,7 +2823,7 @@ function cinePhase1() {
     logo.hidden = false;
     void logo.offsetWidth;
     logo.classList.add('cine-p1-logo--in');
-    navigator.vibrate?.(12);
+    // No haptic here or after — haptics stop entirely once the logo reveal begins.
     _cineDelay(() => { cineGoToShowcase(); }, 1000);
   }
 }
@@ -3018,6 +3028,14 @@ function cineRunSwipeEntrance() {
 
 // ---- Screen 3 — notifications ----
 function requestNotifPermission() {
+  const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
+  if (LocalNotifications) {
+    LocalNotifications.requestPermissions()
+      .then(r => localStorage.setItem('zelo_notif_permission', r?.display || ''))
+      .catch(() => {});
+    return;
+  }
+  // Plain web (Netlify) fallback — no native runtime, use the browser API.
   try {
     if (window.Notification && typeof Notification.requestPermission === 'function') {
       const r = Notification.requestPermission();
@@ -3028,11 +3046,11 @@ function requestNotifPermission() {
 
 // ---- Screen 4 — tracking permission ----
 function requestTrackingPermission() {
-  try {
-    if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission().catch(() => {});
-    }
-  } catch (_) {}
+  const ATT = window.Capacitor?.Plugins?.AppTrackingTransparency;
+  if (!ATT) return;  // no ATT equivalent on plain web
+  ATT.requestPermission()
+    .then(r => localStorage.setItem('zelo_att_status', r?.status || ''))
+    .catch(() => {});
 }
 
 // ---- Screen 5 — age range ----
