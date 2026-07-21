@@ -108,11 +108,12 @@ textarea { font-family: inherit; }
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  /* Defensive/forward-compatible: env() resolves to 0 today (no
-     viewport-fit=cover set, so Safari already keeps content clear of the
-     notch/home-indicator by default) but starts protecting for real the
-     moment that ever changes, without needing to touch every screen. */
-  padding-top: 92px;
+  /* 36px + .screen-header's own 14px top padding = 50px total to the header
+     content — same target offset used for the tab headers, so every screen's
+     back button/title sits at the same distance from the Dynamic Island.
+     Screens with a differently-padded header (scan-result, chat, ai-coach,
+     history) override this below to hit the same 50px total. */
+  padding-top: 36px;
   padding-bottom: 34px;
 }
 
@@ -596,7 +597,9 @@ textarea { font-family: inherit; }
    "YOUR REPLY" SCREEN — rebuilt to exact spec (see PR/commit notes).
    Canvas 390px / 24px horizontal padding / background #FFFDFC.
    ================================================================ */
-#screen-scan-result { background: #FFFDFC; }
+/* .screen-header here overrides to 12px own top padding (see below),
+   so 38px + 12px = 50px total, matching the other screens' header offset. */
+#screen-scan-result { background: #FFFDFC; padding-top: 38px; }
 
 /* Nav bar — 69px total height per mockup measurement (44px circular
    buttons + 12px top/bottom padding + 1px border). */
@@ -1565,6 +1568,9 @@ textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* .chat-header has 12px own top padding, so 38px + 12px = 50px total,
+     matching the other screens' header offset. */
+  padding-top: 38px;
 }
 
 #screen-chat.active { display: flex; }
@@ -2014,8 +2020,11 @@ textarea { font-family: inherit; }
   /* This ID selector's shorthand `padding: 0` otherwise wins over .tab's
      padding-top (higher specificity) and silently zeroes it — this was the
      actual reason the header kept clipping under the notch/Dynamic Island
-     no matter what mechanism was used to set that padding-top value. */
-  padding-top: 92px;
+     no matter what mechanism was used to set that padding-top value.
+     34px + .app-header's own 16px top padding = 50px total to the header
+     content, matching #tab-assistant (same header markup, same target gap
+     against the Dynamic Island). */
+  padding-top: 34px;
   overflow: hidden;
 }
 
@@ -2024,9 +2033,7 @@ textarea { font-family: inherit; }
   flex-direction: column;
   overflow: hidden;
   padding: 0;
-  /* See #tab-practice above — same ID-specificity override problem.
-     Home/Scan screen only: tuned tighter than the other tabs per explicit
-     request — sits close to the Dynamic Island without touching it. */
+  /* See #tab-practice above — same ID-specificity override problem. */
   padding-top: 34px;
 }
 
@@ -2036,7 +2043,7 @@ textarea { font-family: inherit; }
   overflow: hidden;
   padding: 0;
   /* See #tab-practice above — same ID-specificity override problem. */
-  padding-top: 92px;
+  padding-top: 34px;
 }
 
 #tab-assistant .tab-scroll,
@@ -4780,6 +4787,10 @@ textarea { font-family: inherit; }
 .screen--history {
   bottom: var(--tab-h);
   background: var(--bg);
+  /* Uses .app-header (16px own top padding) like the tabs, not .screen-header —
+     34px + 16px = 50px total, matching the tabs' header offset so the Zelo
+     wordmark/sparkle sits at the same distance from the Dynamic Island. */
+  padding-top: 34px;
   /* Opened as an overlay on top of another already-active .screen (e.g.
      Account) rather than through pushScreen(). Without this, that other
      screen's position:sticky header creates its own compositing layer and
@@ -5561,6 +5572,9 @@ textarea { font-family: inherit; }
    ================================================================ */
 /* No background override — uses the normal .screen background (var(--bg)),
    same as every other screen in the app. */
+/* .aicoach-header has 16px own top padding, so 34px + 16px = 50px total,
+   matching the other screens' header offset. */
+#screen-ai-coach { padding-top: 34px; }
 
 .aicoach-header {
   display: flex;
