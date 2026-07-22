@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260722d" />
+    <link rel="stylesheet" href="style.css?v=20260722e" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -898,7 +898,7 @@
            (legacy 3-slide onboarding + spotlight tour archived in
             archive/legacy-onboarding.js — disabled, kept for rollback)
            ============================================================ -->
-      <div class="cine" id="cine-onboarding" hidden>
+      <div class="cine" id="cine-onboarding" hidden onclick="cineScreenTap(event)">
 
         <!-- Brief black hold before the intro animation starts (see
              startCineOnboarding() in script.js) -->
@@ -974,95 +974,60 @@
           <p class="cine-name-error" id="cine-name-error"></p>
         </section>
 
-        <!-- ============ PHASE 2 · Screen 2 — Conversation-started demo ============ -->
+        <!-- ============ PHASE 2 · Screen 2 — Swipe demo -> Match (combined, internal state) ============ -->
         <section class="cine-screen cine-screen--swipe" data-screen="2">
           <h2 class="cine-head">Find someone to<br><span class="hl">practice</span> with</h2>
           <p class="cine-sub">Match and practice with AI girls that actually feel real.</p>
 
-          <!-- Small centered icon — real chat-bubble glyph (same path as the
-               Chats tab icon, see #tabbtn-chats) with a sparkle "new
-               activity" mark, not a heart. -->
-          <div class="cine-convo-icon-wrap">
-            <span class="cine-convo-icon">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-              </svg>
-              <span class="cine-convo-icon-spark" aria-hidden="true">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
-              </span>
-            </span>
+          <!-- Decorative sparkles/swirl — only shown during the like state -->
+          <div class="cine-swipe-deco" id="cine-swipe-deco">
+            <span class="cine-deco cine-spark-deco" style="bottom:27%;left:12%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+            <span class="cine-deco cine-spark-deco sm" style="bottom:27%;right:14%"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
+            <span class="cine-deco cine-swirl" style="top:39%;right:6%"><svg width="72" height="40" viewBox="0 0 72 40" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 24 C 22 16, 34 20, 48 15"/><path d="M42 7 L54 14 L45 25"/></svg></span>
           </div>
 
-          <h1 class="cine-convo-heading">Conversation Started</h1>
-          <p class="cine-convo-sub"><span class="hl">Sophia</span> sent you her first message.</p>
-
-          <div class="cine-convo-stage">
-            <!-- Ambient floating chat bubbles / typing dots — replaces the
-                 old floating hearts/sparkles. Small and out of the way of
-                 the two cards. -->
-            <div class="cine-convo-deco" aria-hidden="true">
-              <span class="cine-deco cine-convo-bubble-deco" style="top:0%;left:1%">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-              </span>
-              <span class="cine-deco cine-spark-deco sm" style="top:4%;right:6%"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
-              <div class="cine-convo-typing-deco" style="bottom:2%;left:-2%">
-                <div class="typing-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
-              </div>
-              <span class="cine-deco cine-convo-bubble-deco sm" style="bottom:8%;right:0%">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-              </span>
+          <!-- Locked-position card deck — absolutely positioned so the card
+               sits at the exact same spot on screen in both states. Only
+               the internal content (like cards vs. match cards) swaps. -->
+          <div class="cine-swipe-deck">
+            <div class="cine-swipe-stage" id="cine-swipe-stage">
+              <div class="cine-swipe-card cine-swipe-card--back" id="cine-swipe-card-back"></div>
+              <div class="cine-swipe-card" id="cine-swipe-card"></div>
             </div>
 
-            <!-- Left: Sophia's real profile card (see buildCardElement() in
-                 script.js — same component the Home tab deck uses), filled
-                 in by cineRunConvoEntrance(). Right: the user's own
-                 placeholder card — neutral grey avatar, no photo. -->
-            <div class="cine-convo-cards">
-              <div class="cine-convo-card" id="cine-convo-sophia-card"></div>
-
-              <div class="cine-convo-card cine-convo-you-card">
-                <div class="cine-convo-you-avatar">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  <span class="cine-convo-you-edit" aria-hidden="true">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>
+            <!-- Reuses the real match screen's component (.match-content /
+                 .match-heading / .match-avatars — see #screen-match and
+                 showMatchOverlay() in script.js), not a separate mockup.
+                 Revealed via the same opacity-fade the real screen
+                 transition uses (see .cine-match-reveal--in), triggered
+                 only once the card has actually flown off-screen. -->
+            <div class="cine-match-reveal" id="cine-match-reveal">
+              <div class="match-content">
+                <h1 class="match-heading">It's a Match</h1>
+                <p class="match-sub">You and <strong id="cine-match-name"></strong> liked each other</p>
+                <div class="match-avatars">
+                  <div class="match-avatar match-avatar--you">YOU</div>
+                  <div class="match-heart-medallion">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
-                  </span>
+                  </div>
+                  <div class="match-avatar" id="cine-match-avatar-them"></div>
                 </div>
-                <span class="cine-convo-you-label">You</span>
-                <span class="cine-convo-you-sub">Ready to reply</span>
-              </div>
-
-              <!-- Real chat-bubble component — same .bubble.ai/.msg-timestamp
-                   classes #screen-chat uses (see appendAIBubble() in
-                   script.js), not a rebuilt one-off bubble. -->
-              <div class="cine-convo-msg-bubble">
-                <div class="bubble ai">Hey! What's something you're passionate about? 😊</div>
-                <div class="msg-timestamp">2:01 PM</div>
               </div>
             </div>
           </div>
 
-          <button type="button" class="cine-convo-cta" onclick="cineGoTo(3)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-            Start practicing
-          </button>
-          <p class="cine-convo-cta-sub">Reply naturally and build confidence.</p>
+          <!-- Bottom row — swipe controls (like state) / CTA text (match state) -->
+          <div class="cine-swipe-controls" id="cine-swipe-controls">
+            <span class="cine-swipe-btn pass"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+            <span class="cine-swipe-hint"><b>Swipe right</b><span>to like</span></span>
+            <span class="cine-swipe-btn like"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.4-8.6C.9 9.3 2.4 6 5.6 6c2 0 3.3 1.2 4.4 2.6C11 7.2 12.4 6 14.4 6c3.2 0 4.7 3.3 3 6.4C19 16.4 12 21 12 21z"/></svg></span>
+          </div>
 
-          <!-- Bottom row — same skip/continue pattern this step already
-               used (X = skip onboarding via cineSkip(), same as the
-               top-right X on every other Phase 2 screen; arrow = continue
-               to the next screen) — only the content stacked above this
-               row changed. -->
-          <div class="cine-convo-controls">
-            <button type="button" class="cine-convo-nav-btn skip" onclick="cineSkip(event)" aria-label="Skip">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-            </button>
-            <button type="button" class="cine-convo-nav-btn continue" onclick="cineGoTo(3)" aria-label="Continue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </button>
+          <div class="cine-match-cta" id="cine-match-cta" style="display:none">
+            <b>Start practicing</b>
+            <span>and improve your replies</span>
           </div>
         </section>
 
@@ -1790,6 +1755,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260722d"></script>
+    <script src="script.js?v=20260722e"></script>
   </body>
 </html>
