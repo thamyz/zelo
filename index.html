@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260721g" />
+    <link rel="stylesheet" href="style.css?v=20260722a" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -1104,6 +1104,28 @@
               <button type="button" class="cine-age-pill" data-age="31-39" onclick="cineSelectAge('31-39', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>31-39<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
               <button type="button" class="cine-age-pill" data-age="40+" onclick="cineSelectAge('40+', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>40+<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             </div>
+
+            <p class="cine-gender-label">I am a...</p>
+            <div class="cine-gender-grid">
+              <button type="button" class="cine-gender-pill" data-gender="man" onclick="cineSelectGender('man', this)">
+                <span class="cine-gender-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg></span>
+                <span class="cine-gender-main">Man</span>
+                <span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              </button>
+              <button type="button" class="cine-gender-pill" data-gender="woman" onclick="cineSelectGender('woman', this)">
+                <span class="cine-gender-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg></span>
+                <span class="cine-gender-main">Woman</span>
+                <span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              </button>
+              <button type="button" class="cine-gender-pill" data-gender="other" onclick="cineSelectGender('other', this)">
+                <span class="cine-gender-orb cine-gender-orb--both">
+                  <svg width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg>
+                  <svg width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg>
+                </span>
+                <span class="cine-gender-main">Other</span>
+                <span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -1223,11 +1245,6 @@
         <div class="paywall-layout">
 
           <div class="paywall-topbar">
-            <button class="paywall-close-btn" onclick="closePaywall()" aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
             <h1 class="scan-page-brand paywall-brand">
               Zelo<span class="scan-spark" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -1343,6 +1360,7 @@
           </div>
 
           <button type="button" class="paywall-cta">Try FREE and Subscribe</button>
+          <button type="button" class="paywall-decline" id="paywall-decline" onclick="closePaywall()" hidden>No thanks</button>
 
         </div>
       </div>
@@ -1728,6 +1746,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260721f"></script>
+    <script src="script.js?v=20260722a"></script>
   </body>
 </html>

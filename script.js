@@ -2878,9 +2878,12 @@ function cineGoTo(n) {
   if (nextBtn) {
     // Screen 2 (swipe -> match) drives its own transition — no shared CTA.
     nextBtn.classList.toggle('cine-hidden', n === 2);
+    // Screens 3/4 gate on the real permission answer (see cineNext) — reset
+    // that gate every time the screen is (re)entered.
+    delete nextBtn.dataset.answered;
     if (n === 1)      nextBtn.textContent = 'Next';
-    else if (n === 3) nextBtn.textContent = 'Allow & continue';
-    else if (n === 4) nextBtn.textContent = 'Allow & continue';
+    else if (n === 3) nextBtn.textContent = 'Allow';
+    else if (n === 4) nextBtn.textContent = 'Allow';
     else if (n === 5) nextBtn.textContent = 'Get Started →';
   }
 
@@ -2904,8 +2907,23 @@ function cineNext() {
   if (cineStep === 0 || cineStep === 'showcase') return;  // non-interactive via this button
   const btn = document.getElementById('cine-next');
   if (btn?.disabled) return;
-  if (cineStep === 3) requestNotifPermission();       // "Allow & continue" fires the real prompt
-  if (cineStep === 4) requestTrackingPermission();    // "Allow & continue" fires the tracking API
+
+  // Screens 3 (notifications) and 4 (tracking): "Allow" fires the real native
+  // permission prompt and waits for it to actually be answered (granted or
+  // denied) before "Continue" appears — no advancing on the first tap.
+  if ((cineStep === 3 || cineStep === 4) && btn && btn.dataset.answered !== '1') {
+    btn.disabled = true;
+    btn.classList.add('cine-next--disabled');
+    const req = cineStep === 3 ? requestNotifPermission() : requestTrackingPermission();
+    Promise.resolve(req).finally(() => {
+      btn.dataset.answered = '1';
+      btn.textContent = 'Continue';
+      btn.disabled = false;
+      btn.classList.remove('cine-next--disabled');
+    });
+    return;
+  }
+
   if (cineStep >= CINE_LAST) { cineFinishPhase2(); return; }
   cineGoTo(cineStep + 1);
 }
@@ -3040,25 +3058,25 @@ function cineRunSwipeEntrance() {
 function requestNotifPermission() {
   const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
   if (LocalNotifications) {
-    LocalNotifications.requestPermissions()
+    return LocalNotifications.requestPermissions()
       .then(r => localStorage.setItem('zelo_notif_permission', r?.display || ''))
       .catch(() => {});
-    return;
   }
   // Plain web (Netlify) fallback — no native runtime, use the browser API.
   try {
     if (window.Notification && typeof Notification.requestPermission === 'function') {
       const r = Notification.requestPermission();
-      if (r && typeof r.catch === 'function') r.catch(() => {});
+      return Promise.resolve(r).catch(() => {});
     }
   } catch (_) {}
+  return Promise.resolve();
 }
 
 // ---- Screen 4 — tracking permission ----
 function requestTrackingPermission() {
   const ATT = window.Capacitor?.Plugins?.AppTrackingTransparency;
-  if (!ATT) return;  // no ATT equivalent on plain web
-  ATT.requestPermission()
+  if (!ATT) return Promise.resolve();  // no ATT equivalent on plain web
+  return ATT.requestPermission()
     .then(r => localStorage.setItem('zelo_att_status', r?.status || ''))
     .catch(() => {});
 }
@@ -3069,6 +3087,13 @@ function cineSelectAge(range, el) {
   document.querySelectorAll('.cine-age-pill').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
   cineSetNextEnabled(true);
+  navigator.vibrate?.(4);
+}
+
+function cineSelectGender(gender, el) {
+  localStorage.setItem('zelo_gender', gender);
+  document.querySelectorAll('.cine-gender-pill').forEach(c => c.classList.remove('selected'));
+  if (el) el.classList.add('selected');
   navigator.vibrate?.(4);
 }
 
@@ -4323,12 +4348,20 @@ let _paywallAnimationTimers = [];
 
 function showPaywallNow() {
   _replaceActiveScreen('paywall');
+  const declineBtn = document.getElementById('paywall-decline');
   if (!_paywallAnimated) {
     _paywallAnimated = true;
+    if (declineBtn) declineBtn.setAttribute('hidden', '');
     const timelineTotalMs = playPaywallTimelineIntro();
     // Yearly bounce must not overlap the timeline reveal — it only starts
     // once the reveal sequence has fully finished.
     _paywallAnimationTimers.push(setTimeout(playPaywallYearlyBouncePattern, timelineTotalMs));
+    // "No thanks" only appears once the entrance animation has fully played.
+    _paywallAnimationTimers.push(setTimeout(() => {
+      if (declineBtn) declineBtn.removeAttribute('hidden');
+    }, timelineTotalMs));
+  } else if (declineBtn) {
+    declineBtn.removeAttribute('hidden'); // already played once this session — no replay, show right away
   }
 }
 

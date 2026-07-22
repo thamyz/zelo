@@ -5255,21 +5255,6 @@ textarea { font-family: inherit; }
   flex-shrink: 0;
   margin-bottom: clamp(2px, 0.6dvh, 6px);
 }
-.paywall-close-btn {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid #E8DDD2;
-  background: #fff;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
 .paywall-brand.scan-page-brand {
   font-size: 1.5rem;
 }
@@ -5302,7 +5287,8 @@ textarea { font-family: inherit; }
   letter-spacing: -0.5px;
   color: var(--text);
   text-align: center;
-  margin-bottom: clamp(4px, 1dvh, 8px);
+  /* More breathing room above "Complete Sign-up" — was clamp(4px,1dvh,8px). */
+  margin-bottom: clamp(12px, 2.4dvh, 22px);
   flex-shrink: 0;
 }
 .paywall-headline-accent { color: #EC4899; }
@@ -5571,6 +5557,22 @@ textarea { font-family: inherit; }
   box-shadow: 0 6px 18px rgba(236, 72, 153, 0.35);
 }
 .paywall-cta:active { transform: scale(0.98); }
+
+/* Relocated from the top-left X — now a text decline next to the CTA it's
+   declining, and only revealed once the entrance animation (checkmark +
+   timeline reveal) has fully finished playing (see showPaywallNow()). */
+.paywall-decline {
+  margin-top: 14px;
+  align-self: center;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #9a8f86;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.paywall-decline[hidden] { display: none; }
 
 
 /* ================================================================
@@ -6128,12 +6130,12 @@ textarea { font-family: inherit; }
 
 .cine-hidden { display: none !important; }
 
-/* Brief black hold before Phase 1 starts — see startCineOnboarding(). */
+/* Brief white hold before Phase 1 starts — see startCineOnboarding(). */
 .cine-preblack {
   position: absolute;
   inset: 0;
   z-index: 2000;
-  background: #000;
+  background: #fff;
   opacity: 1;
   transition: opacity 0.25s ease;
   pointer-events: none;
@@ -6408,7 +6410,7 @@ textarea { font-family: inherit; }
 /* ================================================================
    Screen 2 — swipe demo -> match (shared decorations + stage)
    ================================================================ */
-.cine-screen--swipe { justify-content: flex-start; padding: 60px 26px 118px; }
+.cine-screen--swipe { justify-content: flex-start; padding: 100px 26px 118px; }
 
 /* Decorative sparkles/swirl — plain wrapper (no position set) so the
    absolutely-positioned spans inside still resolve their top/bottom
@@ -6423,7 +6425,10 @@ textarea { font-family: inherit; }
    between states. */
 .cine-swipe-deck {
   position: absolute;
-  top: 168px;
+  /* Was 168px — with the heading pushed down for breathing room (see
+     .cine-screen--swipe), the subtext's second line now ends around
+     y=212, so the deck needs to start below that instead of overlapping it. */
+  top: 222px;
   left: 50%;
   transform: translateX(-50%);
   width: 250px;
@@ -6444,7 +6449,8 @@ textarea { font-family: inherit; }
   overflow: hidden;
   background: linear-gradient(155deg, #f7a8d0 0%, #ec4899 55%, #db2777 100%);
   box-shadow: 0 22px 50px rgba(236,72,153,0.30);
-  transition: transform 0.5s ease-in, opacity 0.5s ease-in;
+  transition: transform 0.5s ease-in;
+  will-change: transform;
 }
 .cine-swipe-card--back {
   transform: translate(-50%, -50%) scale(0.96) translate(-16px, 10px) rotate(-5deg);
@@ -6468,9 +6474,12 @@ textarea { font-family: inherit; }
    onto the existing centering transform so it stays vertically centered
    while it slides out. Driven by the .transition above; JS listens for
    transitionend to trigger the instant state swap. */
+/* No opacity fade here on purpose — fading while it's still mostly over the
+   deck made the flying card and the back card both read as translucent at
+   once ("ghosted overlapping layers"). Staying fully opaque while it slides
+   + rotates off-screen means there's never a moment it looks see-through. */
 .cine-swipe-card--fly {
   transform: translate(calc(-50% + 120%), -50%) rotate(20deg);
-  opacity: 0;
 }
 .cine-swipe-controls {
   position: absolute;
@@ -6713,6 +6722,56 @@ textarea { font-family: inherit; }
   box-shadow: 0 3px 8px rgba(236,72,153,0.4);
 }
 .cine-age-pill.selected .cine-age-check { display: flex; }
+
+/* Gender selection — below the age pills. Same visual pattern as the
+   Home tab's mode-selection popup (.home-mode-*): orb icon on top, label
+   below. Icons reused as-is: king (crown + cross) / queen (crown + 3 orbs) /
+   both overlaid, matching that screen's icon language exactly. */
+.cine-gender-label {
+  margin-top: 22px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #9a8f86;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  align-self: flex-start;
+}
+.cine-gender-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+}
+.cine-gender-pill {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 6px 12px;
+  border-radius: 16px;
+  border: 1.5px solid #efe6df;
+  background: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+.cine-gender-pill:active { transform: scale(0.98); }
+.cine-gender-pill.selected { border-color: var(--accent); background: var(--accent-soft); }
+.cine-gender-pill.selected .cine-age-check { display: flex; }
+.cine-gender-orb {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: #1c1917;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cine-gender-pill.selected .cine-gender-orb { background: #fff; color: var(--accent); }
+.cine-gender-orb--both svg + svg { margin-left: -5px; }
+.cine-gender-main { font-size: 0.85rem; font-weight: 700; color: #1c1917; }
 
 /* ================================================================
    Shared bottom CTA
