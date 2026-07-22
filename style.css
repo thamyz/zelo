@@ -6420,66 +6420,58 @@ textarea { font-family: inherit; }
 /* Locked-position card deck — absolutely positioned with a fixed offset
    from the top of the screen, independent of the headline/subtext above
    it or whichever content (like cards vs. match cards) is showing inside.
-   Both card stacks fill this same box and center via the same
-   left:50%/top:50%/translate(-50%,-50%) point, so the card never shifts
+   Both card stacks fill this same box and top-anchor via the same
+   left:50%/top:0/translate(-50%,0) point, so the card never shifts
    between states. */
 .cine-swipe-deck {
   position: absolute;
-  /* Was 168px — with the heading pushed down for breathing room (see
-     .cine-screen--swipe), the subtext's second line now ends around
-     y=212, so the deck needs to start below that instead of overlapping it. */
+  /* With the heading pushed down for breathing room (see .cine-screen--swipe),
+     the subtext's second line ends around y=212, so the deck needs to start
+     below that instead of overlapping it. */
   top: 222px;
   left: 50%;
   transform: translateX(-50%);
-  width: 250px;
-  height: 320px;
+  width: 280px;
+  height: 380px;
 }
 .cine-swipe-stage {
   position: absolute;
   inset: 0;
 }
+/* Real .swipe-card component (see buildCardElement() in script.js), reused
+   as-is via innerHTML — not a redesigned mockup. Top-anchored (not centered)
+   so growing the card to fit real content never pushes its top edge back up
+   into the subtext above it. */
 .cine-swipe-card {
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 224px;
-  height: 312px;
-  transform: translate(-50%, -50%) rotate(4deg);
-  border-radius: 26px;
+  top: 0;
+  width: 280px;
+  height: 380px;
+  transform: translate(-50%, 0) rotate(4deg);
+  border-radius: 24px;
   overflow: hidden;
-  background: linear-gradient(155deg, #f7a8d0 0%, #ec4899 55%, #db2777 100%);
-  box-shadow: 0 22px 50px rgba(236,72,153,0.30);
+  background: var(--s1);
+  border: 1px solid var(--border);
+  box-shadow: 0 22px 50px rgba(28,25,23,0.16);
   transition: transform 0.5s ease-in;
   will-change: transform;
 }
 .cine-swipe-card--back {
-  transform: translate(-50%, -50%) scale(0.96) translate(-16px, 10px) rotate(-5deg);
+  transform: translate(-50%, 0) scale(0.96) translate(-16px, 10px) rotate(-5deg);
   opacity: 0.5;
   filter: saturate(0.9);
 }
-.cine-swipe-like {
-  position: absolute;
-  top: 22px; left: 20px;
-  background: #fff;
-  color: var(--accent-deep);
-  border-radius: 99px;
-  padding: 7px 18px;
-  font-weight: 800;
-  font-size: 0.9rem;
-  letter-spacing: 1.5px;
-  box-shadow: 0 6px 16px rgba(28,25,23,0.18);
-  transform: rotate(-10deg);
-}
 /* translateX(120%) of the card's own width, rotate 20deg clockwise — composed
-   onto the existing centering transform so it stays vertically centered
-   while it slides out. Driven by the .transition above; JS listens for
+   onto the existing top-anchored transform so it stays put vertically while
+   it slides out. Driven by the .transition above; JS listens for
    transitionend to trigger the instant state swap. */
 /* No opacity fade here on purpose — fading while it's still mostly over the
    deck made the flying card and the back card both read as translucent at
    once ("ghosted overlapping layers"). Staying fully opaque while it slides
    + rotates off-screen means there's never a moment it looks see-through. */
 .cine-swipe-card--fly {
-  transform: translate(calc(-50% + 120%), -50%) rotate(20deg);
+  transform: translate(calc(-50% + 130%), 0) rotate(20deg);
 }
 .cine-swipe-controls {
   position: absolute;

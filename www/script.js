@@ -2878,18 +2878,18 @@ function cineGoTo(n) {
   if (nextBtn) {
     // Screen 2 (swipe -> match) drives its own transition — no shared CTA.
     nextBtn.classList.toggle('cine-hidden', n === 2);
-    // Screens 3/4 gate on the real permission answer (see cineNext) — reset
-    // that gate every time the screen is (re)entered.
-    delete nextBtn.dataset.answered;
+    nextBtn.disabled = false;
+    nextBtn.classList.remove('cine-next--disabled');
     if (n === 1)      nextBtn.textContent = 'Next';
-    else if (n === 3) nextBtn.textContent = 'Allow';
-    else if (n === 4) nextBtn.textContent = 'Allow';
+    else if (n === 3) nextBtn.textContent = 'Allow & continue';
+    else if (n === 4) nextBtn.textContent = 'Allow & continue';
     else if (n === 5) nextBtn.textContent = 'Get Started →';
   }
 
-  // Screens 1 (name) and 5 (age) require a valid answer before Next unlocks.
+  // Screen 1 (name) requires a valid name; screen 5 (age+gender) requires
+  // both an age range AND a gender selected before Next unlocks.
   if (n === 1) cineSetNextEnabled(cineNameValid(cineCurrentNameValue()));
-  else if (n === 5) cineSetNextEnabled(!!localStorage.getItem('zelo_age_range'));
+  else if (n === 5) cineSetNextEnabled(!!localStorage.getItem('zelo_age_range') && !!localStorage.getItem('zelo_gender'));
   else cineSetNextEnabled(true);
 
   if (n === 1) cineRunNameEntrance();
@@ -2908,18 +2908,20 @@ function cineNext() {
   const btn = document.getElementById('cine-next');
   if (btn?.disabled) return;
 
-  // Screens 3 (notifications) and 4 (tracking): "Allow" fires the real native
-  // permission prompt and waits for it to actually be answered (granted or
-  // denied) before "Continue" appears — no advancing on the first tap.
-  if ((cineStep === 3 || cineStep === 4) && btn && btn.dataset.answered !== '1') {
-    btn.disabled = true;
-    btn.classList.add('cine-next--disabled');
-    const req = cineStep === 3 ? requestNotifPermission() : requestTrackingPermission();
+  // Screens 3 (notifications) and 4 (tracking): "Allow & continue" fires the
+  // real native permission prompt, then advances automatically the instant
+  // it's answered (granted OR denied) — no separate Continue tap needed.
+  // Button stays disabled for that brief async gap only, to prevent a
+  // double-tap while the native dialog is up.
+  if (cineStep === 3 || cineStep === 4) {
+    const stepWhenTapped = cineStep;
+    if (btn) { btn.disabled = true; btn.classList.add('cine-next--disabled'); }
+    const req = stepWhenTapped === 3 ? requestNotifPermission() : requestTrackingPermission();
     Promise.resolve(req).finally(() => {
-      btn.dataset.answered = '1';
-      btn.textContent = 'Continue';
-      btn.disabled = false;
-      btn.classList.remove('cine-next--disabled');
+      if (btn) { btn.disabled = false; btn.classList.remove('cine-next--disabled'); }
+      if (cineStep !== stepWhenTapped) return; // already navigated away (e.g. Skip) while waiting
+      if (stepWhenTapped >= CINE_LAST) { cineFinishPhase2(); return; }
+      cineGoTo(stepWhenTapped + 1);
     });
     return;
   }
@@ -3010,7 +3012,25 @@ function cineRunSwipeEntrance() {
   const matchCards    = document.getElementById('cine-match-cards');
   const matchCta       = document.getElementById('cine-match-cta');
   const card         = document.getElementById('cine-swipe-card');
+  const backCard      = document.getElementById('cine-swipe-card-back');
   if (!likeStage || !matchCards || !card) return;
+
+  // Real swipe-card content — reuses buildCardElement() (same component as
+  // the Home tab deck) instead of a mocked-up card, so this is a real
+  // character name/bio/tags, not placeholder text. No photo wiring exists
+  // anywhere yet (character images aren't made), so .swipe-card-photo just
+  // renders its default empty block, same as it would on the real deck.
+  if (card && !card.dataset.filled && typeof PROFILES !== 'undefined' && PROFILES.length) {
+    const frontProfile = PROFILES[Math.floor(Math.random() * PROFILES.length)];
+    card.innerHTML = buildCardElement(frontProfile, 1).innerHTML;
+    card.dataset.filled = '1';
+    if (backCard) {
+      const rest = PROFILES.filter(p => p !== frontProfile);
+      const backProfile = (rest.length ? rest : PROFILES)[Math.floor(Math.random() * (rest.length || PROFILES.length))];
+      backCard.innerHTML = buildCardElement(backProfile, 1).innerHTML;
+      backCard.dataset.filled = '1';
+    }
+  }
 
   const burstEl = matchCards.querySelector('.cine-match-burst');
 
@@ -3082,11 +3102,17 @@ function requestTrackingPermission() {
 }
 
 // ---- Screen 5 — age range ----
+// Screen 5 requires both an age range and a gender before Next unlocks —
+// each selector re-checks the combined state after its own pick.
+function cineCheckAgeGenderReady() {
+  cineSetNextEnabled(!!localStorage.getItem('zelo_age_range') && !!localStorage.getItem('zelo_gender'));
+}
+
 function cineSelectAge(range, el) {
   localStorage.setItem('zelo_age_range', range);
   document.querySelectorAll('.cine-age-pill').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
-  cineSetNextEnabled(true);
+  cineCheckAgeGenderReady();
   navigator.vibrate?.(4);
 }
 
@@ -3094,6 +3120,7 @@ function cineSelectGender(gender, el) {
   localStorage.setItem('zelo_gender', gender);
   document.querySelectorAll('.cine-gender-pill').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
+  cineCheckAgeGenderReady();
   navigator.vibrate?.(4);
 }
 
@@ -4355,10 +4382,14 @@ function showPaywallNow() {
     const timelineTotalMs = playPaywallTimelineIntro();
     // Yearly bounce must not overlap the timeline reveal — it only starts
     // once the reveal sequence has fully finished.
-    _paywallAnimationTimers.push(setTimeout(playPaywallYearlyBouncePattern, timelineTotalMs));
-    // "No thanks" only appears once the entrance animation has fully played.
     _paywallAnimationTimers.push(setTimeout(() => {
-      if (declineBtn) declineBtn.removeAttribute('hidden');
+      const bounceTotalMs = playPaywallYearlyBouncePattern();
+      // "No thanks" only appears once the ENTIRE sequence — timeline reveal
+      // + the full yearly-card bounce pattern (1-pause-2-pause-1) — has
+      // finished, not right after the timeline/checkmark reveal alone.
+      _paywallAnimationTimers.push(setTimeout(() => {
+        if (declineBtn) declineBtn.removeAttribute('hidden');
+      }, bounceTotalMs));
     }, timelineTotalMs));
   } else if (declineBtn) {
     declineBtn.removeAttribute('hidden'); // already played once this session — no replay, show right away
@@ -4499,7 +4530,8 @@ function triggerPaywallYearlyBounce() {
 
 // Pattern: 1 bounce -> pause 1s -> 2 bounces back-to-back -> pause 1s ->
 // 1 more bounce (4 total), then stop. Only called after the timeline reveal
-// has fully finished (see showPaywallNow()).
+// has fully finished (see showPaywallNow()). Returns the total duration in
+// ms, so callers know exactly when the last bounce finishes.
 function playPaywallYearlyBouncePattern() {
   let t = 0;
   _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 1
@@ -4509,6 +4541,7 @@ function playPaywallYearlyBouncePattern() {
   _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 3
   t += PAYWALL_BOUNCE_MS + PAYWALL_BOUNCE_PAUSE_MS;
   _paywallAnimationTimers.push(setTimeout(triggerPaywallYearlyBounce, t)); // bounce 4
+  return t + PAYWALL_BOUNCE_MS;
 }
 
 let paywallSelectedPlan = 'yearly';
