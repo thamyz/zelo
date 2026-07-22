@@ -2941,8 +2941,8 @@ function cineScreenTap(e) {
   const overlay = document.getElementById('cine-onboarding');
   if (!overlay || overlay.hasAttribute('hidden')) return;
   if (cineStep !== 2) return;
-  const matchCards = document.getElementById('cine-match-cards');
-  if (matchCards && matchCards.style.display !== 'none') cineGoTo(3);
+  const matchReveal = document.getElementById('cine-match-reveal');
+  if (matchReveal && matchReveal.classList.contains('cine-match-reveal--in')) cineGoTo(3);
 }
 
 // ---- Screen 1 — name input (profanity-filtered, no bad/empty/space-only) ----
@@ -3005,15 +3005,17 @@ function cineNameInput() {
 // override regardless of specificity).
 let _cineSwipeTransitionHandler = null;
 
+let _cineSwipeFrontProfile = null;
+
 function cineRunSwipeEntrance() {
   const deco        = document.getElementById('cine-swipe-deco');
   const likeStage    = document.getElementById('cine-swipe-stage');
   const likeControls = document.getElementById('cine-swipe-controls');
-  const matchCards    = document.getElementById('cine-match-cards');
+  const matchReveal    = document.getElementById('cine-match-reveal');
   const matchCta       = document.getElementById('cine-match-cta');
   const card         = document.getElementById('cine-swipe-card');
   const backCard      = document.getElementById('cine-swipe-card-back');
-  if (!likeStage || !matchCards || !card) return;
+  if (!likeStage || !matchReveal || !card) return;
 
   // Real swipe-card content — reuses buildCardElement() (same component as
   // the Home tab deck) instead of a mocked-up card, so this is a real
@@ -3021,18 +3023,28 @@ function cineRunSwipeEntrance() {
   // anywhere yet (character images aren't made), so .swipe-card-photo just
   // renders its default empty block, same as it would on the real deck.
   if (card && !card.dataset.filled && typeof PROFILES !== 'undefined' && PROFILES.length) {
-    const frontProfile = PROFILES[Math.floor(Math.random() * PROFILES.length)];
-    card.innerHTML = buildCardElement(frontProfile, 1).innerHTML;
+    _cineSwipeFrontProfile = PROFILES[Math.floor(Math.random() * PROFILES.length)];
+    card.innerHTML = buildCardElement(_cineSwipeFrontProfile, 1).innerHTML;
     card.dataset.filled = '1';
     if (backCard) {
-      const rest = PROFILES.filter(p => p !== frontProfile);
+      const rest = PROFILES.filter(p => p !== _cineSwipeFrontProfile);
       const backProfile = (rest.length ? rest : PROFILES)[Math.floor(Math.random() * (rest.length || PROFILES.length))];
       backCard.innerHTML = buildCardElement(backProfile, 1).innerHTML;
       backCard.dataset.filled = '1';
     }
   }
 
-  const burstEl = matchCards.querySelector('.cine-match-burst');
+  // Match reveal shows the same profile the card just showed — reuses the
+  // real match screen's own fields (see showMatchOverlay()).
+  if (_cineSwipeFrontProfile) {
+    const nameEl = document.getElementById('cine-match-name');
+    const avatarEl = document.getElementById('cine-match-avatar-them');
+    if (nameEl) nameEl.textContent = _cineSwipeFrontProfile.name;
+    if (avatarEl) {
+      avatarEl.style.background = `linear-gradient(145deg, ${_cineSwipeFrontProfile.gradientColors[0]}, ${_cineSwipeFrontProfile.gradientColors[1]})`;
+      avatarEl.textContent = _cineSwipeFrontProfile.initial;
+    }
+  }
 
   if (_cineSwipeTransitionHandler) {
     card.removeEventListener('transitionend', _cineSwipeTransitionHandler);
@@ -3043,10 +3055,9 @@ function cineRunSwipeEntrance() {
   if (deco)         deco.style.display        = '';
   likeStage.style.display    = 'block';
   if (likeControls) likeControls.style.display = 'flex';
-  matchCards.style.display  = 'none';
+  matchReveal.classList.remove('cine-match-reveal--in');
   if (matchCta) matchCta.style.display = 'none';
   card.classList.remove('cine-swipe-card--fly');
-  if (burstEl)  burstEl.classList.remove('cine-match-burst--in');
   if (matchCta) matchCta.classList.remove('cine-match-cta--in');
   void card.offsetWidth;   // force reflow so the removed class registers
 
@@ -3055,16 +3066,17 @@ function cineRunSwipeEntrance() {
       card.removeEventListener('transitionend', _cineSwipeTransitionHandler);
       _cineSwipeTransitionHandler = null;
 
-      // Instant swap — no transition. Deck container itself never moves;
-      // only the like/match content inside it (and the bottom row) toggles.
+      // The card has now actually finished flying off-screen — only now
+      // does the match reveal fade in (same opacity-fade the real
+      // #screen-match transition uses), so it reads as the direct result
+      // of the swipe instead of an unrelated cut.
       if (deco)         deco.style.display        = 'none';
       likeStage.style.display    = 'none';
       if (likeControls) likeControls.style.display = 'none';
-      matchCards.style.display  = 'block';
+      matchReveal.classList.add('cine-match-reveal--in');
       if (matchCta) matchCta.style.display = 'block';
       navigator.vibrate?.(16);
       _cineNextFrame(() => {
-        if (burstEl)  burstEl.classList.add('cine-match-burst--in');
         if (matchCta) matchCta.classList.add('cine-match-cta--in');
       });
     };

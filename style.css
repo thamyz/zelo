@@ -6509,43 +6509,33 @@ textarea { font-family: inherit; }
   justify-content: center;
   gap: 22px;
 }
-.cine-match-cards { position: absolute; inset: 0; }
-.cine-match-card {
+/* Reveal wrapper — reuses the real match screen's own component
+   (.match-content etc., see #screen-match) and its transition style: a
+   plain opacity fade, matching .screen's own not-active/active fade
+   (see style.css ~line 6188), not a custom cine-only animation. Only
+   toggled on once the swipe card has actually finished flying off-screen
+   (see cineRunSwipeEntrance() in script.js) — swipe, then match, in that
+   order, not a jump-cut. */
+.cine-match-reveal {
   position: absolute;
-  left: 50%; top: 50%;
-  width: 210px; height: 300px;
-  transform: translate(-50%, -50%) rotate(6deg);
-  border-radius: 26px;
-  overflow: hidden;
-  background: linear-gradient(155deg, #f7a8d0 0%, #ec4899 55%, #db2777 100%);
-  box-shadow: 0 20px 50px rgba(236,72,153,0.30);
+  inset: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  color: #fff;
-  opacity: 1;
-}
-.cine-match-card--back {
-  transform: translate(-50%, -50%) scale(0.94) translateX(-24px) rotate(-6deg);
-  opacity: 0.5;
-}
-.cine-match-spark { font-size: 2.2rem; line-height: 1; margin-bottom: 6px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.18)); }
-.cine-match-title { font-size: 2.3rem; font-weight: 800; letter-spacing: -0.5px; line-height: 1.05; text-align: center; }
-.cine-match-burst {
-  position: absolute;
-  top: -6px; right: -2px;
-  color: var(--accent);
-  z-index: 2;
   opacity: 0;
-  transform: scale(0.5);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
 }
-@keyframes cineMatchBurstIn {
-  0%   { opacity: 0; transform: scale(0.5); }
-  100% { opacity: 1; transform: scale(1); }
+.cine-match-reveal.cine-match-reveal--in {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
-.cine-match-burst--in { animation: cineMatchBurstIn 0.3s ease-out forwards; }
+/* Same .match-content/.match-heading/.match-avatars classes as the real
+   match screen — only the outer padding/gap are scoped down here to fit
+   the demo's card-sized box instead of a full screen. */
+.cine-match-reveal .match-content { padding: 0 16px; gap: 14px; }
 .cine-match-cta {
   position: absolute;
   left: 30px; right: 30px;
@@ -6568,7 +6558,18 @@ textarea { font-family: inherit; }
 .cine-deco { position: absolute; pointer-events: none; z-index: 1; }
 .cine-spark-deco { color: var(--accent); opacity: 0.9; }
 .cine-spark-deco.sm { opacity: 0.6; }
-.cine-swirl { color: var(--accent); }
+/* Nudges toward the swipe direction while the card sits in its "like"
+   resting state — a visual cue for the motion the card is about to make,
+   so the fly-away (same rightward direction) reads as a continuation of
+   this gesture rather than an unrelated cut. */
+.cine-swirl {
+  color: var(--accent);
+  animation: cineSwirlNudge 1.1s ease-in-out infinite;
+}
+@keyframes cineSwirlNudge {
+  0%, 100% { transform: translateX(0);   opacity: 0.7; }
+  50%      { transform: translateX(7px); opacity: 1;   }
+}
 .cine-annot {
   position: absolute;
   z-index: 2;

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260722b" />
+    <link rel="stylesheet" href="style.css?v=20260722c" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -995,15 +995,26 @@
               <div class="cine-swipe-card" id="cine-swipe-card"></div>
             </div>
 
-            <div class="cine-match-cards" id="cine-match-cards" style="display:none">
-              <div class="cine-match-card cine-match-card--back"></div>
-              <div class="cine-match-card" id="cine-match-card">
-                <span class="cine-match-spark">✦</span>
-                <span class="cine-match-title">It's a<br>Match!</span>
+            <!-- Reuses the real match screen's component (.match-content /
+                 .match-heading / .match-avatars — see #screen-match and
+                 showMatchOverlay() in script.js), not a separate mockup.
+                 Revealed via the same opacity-fade the real screen
+                 transition uses (see .cine-match-reveal--in), triggered
+                 only once the card has actually flown off-screen. -->
+            <div class="cine-match-reveal" id="cine-match-reveal">
+              <div class="match-content">
+                <h1 class="match-heading">It's a Match</h1>
+                <p class="match-sub">You and <strong id="cine-match-name"></strong> liked each other</p>
+                <div class="match-avatars">
+                  <div class="match-avatar match-avatar--you">YOU</div>
+                  <div class="match-heart-medallion">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </div>
+                  <div class="match-avatar" id="cine-match-avatar-them"></div>
+                </div>
               </div>
-              <span class="cine-match-burst" aria-hidden="true">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="30" y1="6" x2="24" y2="12"/><line x1="32" y1="16" x2="24" y2="18"/><line x1="24" y1="4" x2="21" y2="11"/></svg>
-              </span>
             </div>
           </div>
 
@@ -1744,6 +1755,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260722b"></script>
+    <script src="script.js?v=20260722c"></script>
   </body>
 </html>
