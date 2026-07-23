@@ -3142,11 +3142,34 @@ function cineAdvanceSwipeQueue() {
 
   oldBack.id = 'cine-swipe-card';
   oldBack.classList.remove('cine-swipe-card--back');
-  oldBack.style.transform = '';
-  oldBack.style.opacity   = '';
-  oldBack.style.filter    = '';
+
+  // Animate the promotion instead of an instant snap: pin it at its old
+  // scaled/offset/dimmed "back" look via inline style (removing the class
+  // above would otherwise jump straight to the resting look with nothing
+  // to transition from), force a reflow so the browser actually commits
+  // that as a starting point, then transition to the resting front look.
+  oldBack.style.transition = 'none';
+  oldBack.style.transform  = 'scale(0.96) translate(-16px, 10px) rotate(-5deg)';
+  oldBack.style.opacity    = '0.5';
+  oldBack.style.filter     = 'saturate(0.9)';
+  void oldBack.offsetWidth;
+  oldBack.style.transition = 'transform 0.32s cubic-bezier(0.22,0.61,0.36,1), opacity 0.32s ease, filter 0.32s ease';
+  oldBack.style.transform  = '';
+  oldBack.style.opacity    = '';
+  oldBack.style.filter     = '';
   attachDragListeners(oldBack);
-  cineArmSwipeHint(oldBack);
+
+  // The hint-nudge is a CSS *animation*, which takes priority over a
+  // running *transition* on the same property — arming it immediately
+  // would hijack the promotion transition above. Wait for it to finish
+  // (or for the user to just start dragging, which cancels the hint
+  // itself via cineArmSwipeHint's own listeners regardless).
+  oldBack.addEventListener('transitionend', () => {
+    oldBack.style.transition = '';
+    // Skip if the user already grabbed the card mid-transition — they've
+    // engaged, so the hint would just fight the live drag transform.
+    if (!(drag.active && drag.card === oldBack)) cineArmSwipeHint(oldBack);
+  }, { once: true });
 
   const nextProfile = PROFILES[(cineSwipeQueueIndex + 1) % PROFILES.length];
   const newBack = document.createElement('div');
