@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260722e" />
+    <link rel="stylesheet" href="style.css?v=20260722f" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -898,7 +898,7 @@
            (legacy 3-slide onboarding + spotlight tour archived in
             archive/legacy-onboarding.js — disabled, kept for rollback)
            ============================================================ -->
-      <div class="cine" id="cine-onboarding" hidden onclick="cineScreenTap(event)">
+      <div class="cine" id="cine-onboarding" hidden>
 
         <!-- Brief black hold before the intro animation starts (see
              startCineOnboarding() in script.js) -->
@@ -979,55 +979,32 @@
           <h2 class="cine-head">Find someone to<br><span class="hl">practice</span> with</h2>
           <p class="cine-sub">Match and practice with AI girls that actually feel real.</p>
 
-          <!-- Decorative sparkles/swirl — only shown during the like state -->
+          <!-- Decorative sparkles -->
           <div class="cine-swipe-deco" id="cine-swipe-deco">
             <span class="cine-deco cine-spark-deco" style="bottom:27%;left:12%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
             <span class="cine-deco cine-spark-deco sm" style="bottom:27%;right:14%"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
-            <span class="cine-deco cine-swirl" style="top:39%;right:6%"><svg width="72" height="40" viewBox="0 0 72 40" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 24 C 22 16, 34 20, 48 15"/><path d="M42 7 L54 14 L45 25"/></svg></span>
           </div>
 
-          <!-- Locked-position card deck — absolutely positioned so the card
-               sits at the exact same spot on screen in both states. Only
-               the internal content (like cards vs. match cards) swaps. -->
+          <!-- Card stack — vertically centered in the remaining space below
+               the headline/subtitle (see .cine-swipe-deck's flex:1). Real
+               drag gesture wired in cineRunSwipeEntrance()/attachDragListeners
+               (script.js) — no scripted animation, the card only moves in
+               response to actual touch input. Right swipe past threshold
+               hands off to the real #screen-match via showMatchOverlay(). -->
           <div class="cine-swipe-deck">
             <div class="cine-swipe-stage" id="cine-swipe-stage">
               <div class="cine-swipe-card cine-swipe-card--back" id="cine-swipe-card-back"></div>
               <div class="cine-swipe-card" id="cine-swipe-card"></div>
             </div>
-
-            <!-- Reuses the real match screen's component (.match-content /
-                 .match-heading / .match-avatars — see #screen-match and
-                 showMatchOverlay() in script.js), not a separate mockup.
-                 Revealed via the same opacity-fade the real screen
-                 transition uses (see .cine-match-reveal--in), triggered
-                 only once the card has actually flown off-screen. -->
-            <div class="cine-match-reveal" id="cine-match-reveal">
-              <div class="match-content">
-                <h1 class="match-heading">It's a Match</h1>
-                <p class="match-sub">You and <strong id="cine-match-name"></strong> liked each other</p>
-                <div class="match-avatars">
-                  <div class="match-avatar match-avatar--you">YOU</div>
-                  <div class="match-heart-medallion">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                    </svg>
-                  </div>
-                  <div class="match-avatar" id="cine-match-avatar-them"></div>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <!-- Bottom row — swipe controls (like state) / CTA text (match state) -->
+          <!-- Bottom row — X mirrors the same skip/decline the top-right X
+               uses everywhere else in onboarding (cineSkip()); heart is a
+               visual hint only (swipe right on the card itself to like). -->
           <div class="cine-swipe-controls" id="cine-swipe-controls">
-            <span class="cine-swipe-btn pass"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+            <span class="cine-swipe-btn pass" onclick="cineSkip(event)" role="button" aria-label="Skip"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
             <span class="cine-swipe-hint"><b>Swipe right</b><span>to like</span></span>
             <span class="cine-swipe-btn like"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.4-8.6C.9 9.3 2.4 6 5.6 6c2 0 3.3 1.2 4.4 2.6C11 7.2 12.4 6 14.4 6c3.2 0 4.7 3.3 3 6.4C19 16.4 12 21 12 21z"/></svg></span>
-          </div>
-
-          <div class="cine-match-cta" id="cine-match-cta" style="display:none">
-            <b>Start practicing</b>
-            <span>and improve your replies</span>
           </div>
         </section>
 
@@ -1755,6 +1732,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260722e"></script>
+    <script src="script.js?v=20260722f"></script>
   </body>
 </html>
