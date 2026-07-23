@@ -3007,6 +3007,7 @@ function cineNameInput() {
 function cineRunSwipeEntrance() {
   const card = document.getElementById('cine-swipe-card');
   const backCard = document.getElementById('cine-swipe-card-back');
+  const tryHint = document.getElementById('cine-swipe-tryhint');
   if (!card || card.dataset.filled) return;
 
   // Real swipe-card content — reuses buildCardElement() (same component as
@@ -3027,6 +3028,22 @@ function cineRunSwipeEntrance() {
   }
 
   attachDragListeners(card);
+
+  // Gentle "try it" hint — nudges the card ~20% toward the like threshold
+  // and back a few times (see .cine-swipe-hint-nudge), not a full auto-
+  // play demo. Cancelled the instant the user actually starts dragging so
+  // it never fights with the real drag transform.
+  card.classList.add('cine-swipe-hint-nudge');
+  if (tryHint) tryHint.classList.add('cine-swipe-tryhint--in');
+  const cancelHint = () => {
+    card.classList.remove('cine-swipe-hint-nudge');
+    if (tryHint) tryHint.classList.remove('cine-swipe-tryhint--in');
+  };
+  card.addEventListener('mousedown', cancelHint, { once: true });
+  card.addEventListener('touchstart', cancelHint, { once: true, passive: true });
+  card.addEventListener('animationend', () => {
+    if (tryHint) tryHint.classList.remove('cine-swipe-tryhint--in');
+  }, { once: true });
 }
 
 // commitSwipe()'s completion handler special-cases this card's id (see
@@ -3034,7 +3051,8 @@ function cineRunSwipeEntrance() {
 // state.swipeProfiles/renderDeck() — this is a standalone two-card demo,
 // not the real deck. Right swipe hands off to the real match screen
 // (showMatchOverlay() / #screen-match, not a rebuilt one) with Sophia as
-// the match; left swipe declines the same way the X button already does.
+// the match, then auto-continues onboarding to the next step; left swipe
+// declines the same way the X button already does.
 function cineCommitDemoSwipe(direction) {
   const card = document.getElementById('cine-swipe-card');
   if (card) card.remove();
@@ -3044,6 +3062,24 @@ function cineCommitDemoSwipe(direction) {
     const overlay = document.getElementById('cine-onboarding');
     if (overlay) overlay.setAttribute('hidden', '');
     showMatchOverlay(sophia);
+
+    // This reveal is a demo step inside onboarding, not a real match —
+    // hide the live-app action buttons so a tap can't fall through into
+    // Start Chatting/the swipe deck, and auto-continue onboarding after a
+    // beat instead of stranding the user on the real match screen.
+    const matchScreen = document.getElementById('screen-match');
+    const startBtn = matchScreen?.querySelector('.match-start-btn');
+    const skipBtn  = matchScreen?.querySelector('.match-skip-btn');
+    if (startBtn) startBtn.style.visibility = 'hidden';
+    if (skipBtn)  skipBtn.style.visibility  = 'hidden';
+
+    setTimeout(() => {
+      if (startBtn) startBtn.style.visibility = '';
+      if (skipBtn)  skipBtn.style.visibility  = '';
+      popScreen();
+      if (overlay) overlay.removeAttribute('hidden');
+      cineGoTo(3);
+    }, 2200);
   } else {
     cineSkip();
   }
