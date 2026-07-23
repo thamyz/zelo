@@ -95,6 +95,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (getLinkedThreadId() && !getLinkedThread()) setLinkedThreadId(null);
   refreshAiCoachCard();       // Fix 5: sync the AI Coach card dropdown label
   attachProfileDetailDragToClose(); // Fix 4: swipe-down to dismiss profile detail
+  attachScanPageRubberBand();       // rubber-band overscroll feel on the Scan tab
 });
 
 
@@ -1208,6 +1209,66 @@ function openProfileDetail() {
 function closeProfileDetail() {
   const modal = document.getElementById('profile-detail-modal');
   if (modal) modal.setAttribute('hidden', '');
+}
+
+// Rubber-band overscroll feel for the Scan tab — the page otherwise sits
+// perfectly rigid (content fits the viewport exactly, so plain
+// overflow-y:auto never has anything to scroll). Drags near the top/bottom
+// nudge the whole tab a few px with resistance and spring back on release,
+// purely a touch-feel addition — no scrollbar, no layout/behavior change.
+function attachScanPageRubberBand() {
+  const el = document.getElementById('tab-assistant');
+  if (!el || el._rubberBandAttached) return;
+  el._rubberBandAttached = true;
+
+  const MAX_PULL = 46;   // px cap — never moves more than this regardless of drag distance
+  const RESISTANCE = 90; // higher = stiffer band
+
+  let startY = 0, dragging = false, pulling = false;
+
+  // Include the tab's own opacity transition (see .tab in style.css) in
+  // every inline transition string set here — otherwise setting
+  // el.style.transition would silently replace it and break the tab
+  // switch fade the next time this tab is shown/hidden.
+  function applyPull(px) {
+    el.style.transition = 'transform 0s linear, opacity 0.18s ease';
+    el.style.transform = `translateY(${px}px)`;
+  }
+  function release() {
+    el.style.transition = 'transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.18s ease';
+    el.style.transform = '';
+    pulling = false;
+  }
+
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    startY = e.touches[0].clientY;
+    dragging = true;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dy = e.touches[0].clientY - startY;
+    const atTop    = el.scrollTop <= 0;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+
+    if ((dy > 0 && atTop) || (dy < 0 && atBottom)) {
+      pulling = true;
+      const resisted = Math.sign(dy) * MAX_PULL * (1 - 1 / (Math.abs(dy) / RESISTANCE + 1));
+      applyPull(resisted);
+    } else if (pulling) {
+      release();
+    }
+  }, { passive: true });
+
+  el.addEventListener('touchend', () => {
+    dragging = false;
+    if (pulling) release();
+  });
+  el.addEventListener('touchcancel', () => {
+    dragging = false;
+    if (pulling) release();
+  });
 }
 
 // Fix 2: Swipe-down-to-dismiss on the profile detail sheet.
@@ -3004,10 +3065,19 @@ function cineNameInput() {
 // cineCommitDemoSwipe() below for what a completed swipe resolves to on
 // this screen). Nothing here schedules or plays a scripted animation —
 // the card only moves in response to actual touch/mouse input.
+// Sequential index into PROFILES for the onboarding swipe demo — starts on
+// Sophia, loops through the same 10 girls indefinitely on decline (see
+// cineAdvanceSwipeQueue()) instead of ever running out.
+let cineSwipeQueueIndex = null;
+function cineSwipeQueueInit() {
+  if (cineSwipeQueueIndex !== null) return;
+  cineSwipeQueueIndex = PROFILES.findIndex(p => p.name === 'Sophia');
+  if (cineSwipeQueueIndex < 0) cineSwipeQueueIndex = 0;
+}
+
 function cineRunSwipeEntrance() {
   const card = document.getElementById('cine-swipe-card');
   const backCard = document.getElementById('cine-swipe-card-back');
-  const tryHint = document.getElementById('cine-swipe-tryhint');
   if (!card || card.dataset.filled) return;
 
   // Real swipe-card content — reuses buildCardElement() (same component as
@@ -3016,23 +3086,28 @@ function cineRunSwipeEntrance() {
   // .swipe-card-photo just renders its default solid block, same as it
   // would on the real deck.
   if (typeof PROFILES !== 'undefined' && PROFILES.length) {
-    const sophia = PROFILES.find(p => p.name === 'Sophia') || PROFILES[0];
-    card.innerHTML = buildCardElement(sophia, 1).innerHTML;
+    cineSwipeQueueInit();
+    const front = PROFILES[cineSwipeQueueIndex];
+    card.innerHTML = buildCardElement(front, 1).innerHTML;
     card.dataset.filled = '1';
     if (backCard) {
-      const rest = PROFILES.filter(p => p !== sophia);
-      const backProfile = (rest.length ? rest : PROFILES)[Math.floor(Math.random() * (rest.length || PROFILES.length))];
-      backCard.innerHTML = buildCardElement(backProfile, 1).innerHTML;
+      const nextProfile = PROFILES[(cineSwipeQueueIndex + 1) % PROFILES.length];
+      backCard.innerHTML = buildCardElement(nextProfile, 1).innerHTML;
       backCard.dataset.filled = '1';
     }
   }
 
   attachDragListeners(card);
+  cineArmSwipeHint(card);
+}
 
-  // Gentle "try it" hint — nudges the card ~20% toward the like threshold
-  // and back a few times (see .cine-swipe-hint-nudge), not a full auto-
-  // play demo. Cancelled the instant the user actually starts dragging so
-  // it never fights with the real drag transform.
+// Gentle "try it" hint — nudges the card ~20% toward the like threshold and
+// back, on loop (see .cine-swipe-hint-nudge), not a full auto-play demo.
+// Stays on until the user actually engages, then is cancelled for good so
+// it never fights with the real drag transform. Re-armed on the promoted
+// card after a decline (see cineAdvanceSwipeQueue()).
+function cineArmSwipeHint(card) {
+  const tryHint = document.getElementById('cine-swipe-tryhint');
   card.classList.add('cine-swipe-hint-nudge');
   if (tryHint) tryHint.classList.add('cine-swipe-tryhint--in');
   const cancelHint = () => {
@@ -3041,9 +3116,45 @@ function cineRunSwipeEntrance() {
   };
   card.addEventListener('mousedown', cancelHint, { once: true });
   card.addEventListener('touchstart', cancelHint, { once: true, passive: true });
-  card.addEventListener('animationend', () => {
-    if (tryHint) tryHint.classList.remove('cine-swipe-tryhint--in');
-  }, { once: true });
+}
+
+// X button — routes through the same fly-away + commit pipeline a real
+// left-drag uses (commitSwipe -> transitionend -> cineCommitDemoSwipe),
+// instead of a separate instant path, so tap and drag behave identically.
+function cineSwipeDeclineTap(e) {
+  if (e) e.stopPropagation();
+  const card = document.getElementById('cine-swipe-card');
+  if (!card) return;
+  commitSwipe(card, 'left');
+}
+
+// Left swipe / X on the onboarding demo — instead of exiting onboarding,
+// loop to the next of the same 10 girls (wrapping back to the start) and
+// keep practicing the gesture. Promotes the existing back card to front
+// (it's already built/positioned) rather than rebuilding from scratch.
+function cineAdvanceSwipeQueue() {
+  const stage = document.getElementById('cine-swipe-stage');
+  const oldBack = document.getElementById('cine-swipe-card-back');
+  if (!stage || !oldBack || typeof PROFILES === 'undefined' || !PROFILES.length) return;
+
+  cineSwipeQueueInit();
+  cineSwipeQueueIndex = (cineSwipeQueueIndex + 1) % PROFILES.length;
+
+  oldBack.id = 'cine-swipe-card';
+  oldBack.classList.remove('cine-swipe-card--back');
+  oldBack.style.transform = '';
+  oldBack.style.opacity   = '';
+  oldBack.style.filter    = '';
+  attachDragListeners(oldBack);
+  cineArmSwipeHint(oldBack);
+
+  const nextProfile = PROFILES[(cineSwipeQueueIndex + 1) % PROFILES.length];
+  const newBack = document.createElement('div');
+  newBack.className = 'cine-swipe-card cine-swipe-card--back';
+  newBack.id = 'cine-swipe-card-back';
+  newBack.innerHTML = buildCardElement(nextProfile, 1).innerHTML;
+  newBack.dataset.filled = '1';
+  stage.insertBefore(newBack, oldBack);
 }
 
 // commitSwipe()'s completion handler special-cases this card's id (see
@@ -3051,8 +3162,9 @@ function cineRunSwipeEntrance() {
 // state.swipeProfiles/renderDeck() — this is a standalone two-card demo,
 // not the real deck. Right swipe hands off to the real match screen
 // (showMatchOverlay() / #screen-match, not a rebuilt one) with Sophia as
-// the match, then auto-continues onboarding to the next step; left swipe
-// declines the same way the X button already does.
+// the match, requiring a tap to continue onboarding (see
+// cineShowMatchContinuePrompt()); left swipe loops to the next girl
+// instead of exiting onboarding.
 function cineCommitDemoSwipe(direction) {
   const card = document.getElementById('cine-swipe-card');
   if (card) card.remove();
@@ -3062,27 +3174,48 @@ function cineCommitDemoSwipe(direction) {
     const overlay = document.getElementById('cine-onboarding');
     if (overlay) overlay.setAttribute('hidden', '');
     showMatchOverlay(sophia);
-
-    // This reveal is a demo step inside onboarding, not a real match —
-    // hide the live-app action buttons so a tap can't fall through into
-    // Start Chatting/the swipe deck, and auto-continue onboarding after a
-    // beat instead of stranding the user on the real match screen.
-    const matchScreen = document.getElementById('screen-match');
-    const startBtn = matchScreen?.querySelector('.match-start-btn');
-    const skipBtn  = matchScreen?.querySelector('.match-skip-btn');
-    if (startBtn) startBtn.style.visibility = 'hidden';
-    if (skipBtn)  skipBtn.style.visibility  = 'hidden';
-
-    setTimeout(() => {
-      if (startBtn) startBtn.style.visibility = '';
-      if (skipBtn)  skipBtn.style.visibility  = '';
-      popScreen();
-      if (overlay) overlay.removeAttribute('hidden');
-      cineGoTo(3);
-    }, 2200);
+    cineShowMatchContinuePrompt();
   } else {
-    cineSkip();
+    cineAdvanceSwipeQueue();
   }
+}
+
+// Onboarding-only step layered onto the real match screen — not a real
+// match (Start Chatting/Keep swiping are hidden), so the user taps
+// anywhere on the screen to continue onboarding, same "tap the screen to
+// advance" pattern the earlier match reveal used, instead of a timed
+// auto-advance.
+function cineShowMatchContinuePrompt() {
+  const matchScreen = document.getElementById('screen-match');
+  const content = matchScreen ? matchScreen.querySelector('.match-content') : null;
+  if (!matchScreen || !content) return;
+
+  const startBtn = matchScreen.querySelector('.match-start-btn');
+  const skipBtn  = matchScreen.querySelector('.match-skip-btn');
+  if (startBtn) startBtn.style.visibility = 'hidden';
+  if (skipBtn)  skipBtn.style.visibility  = 'hidden';
+
+  let caption = document.getElementById('cine-match-continue');
+  if (!caption) {
+    caption = document.createElement('div');
+    caption.id = 'cine-match-continue';
+    caption.className = 'cine-match-continue';
+    caption.innerHTML = '<b>Swipe to match, then practice your replies in a real chat</b><span>Tap to continue</span>';
+    content.appendChild(caption);
+  }
+  caption.style.display = '';
+
+  const advance = () => {
+    matchScreen.removeEventListener('click', advance);
+    caption.style.display = 'none';
+    if (startBtn) startBtn.style.visibility = '';
+    if (skipBtn)  skipBtn.style.visibility  = '';
+    popScreen();
+    const overlay = document.getElementById('cine-onboarding');
+    if (overlay) overlay.removeAttribute('hidden');
+    cineGoTo(3);
+  };
+  matchScreen.addEventListener('click', advance);
 }
 
 // ---- Screen 3 — notifications ----
