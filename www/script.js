@@ -993,8 +993,15 @@ function onDragMove(e) {
   const ratio   = Math.max(-1, Math.min(1, drag.currentX / SWIPE_THRESHOLD));
   const rotate  = ratio * MAX_ROTATION;
 
-  drag.card.style.transform =
-    `translate(${drag.currentX}px, ${drag.currentY * 0.4}px) rotate(${rotate}deg)`;
+  // The onboarding demo card owns its own eased rAF follow instead (see
+  // cineArmDragSmoothing()), so its visible speed stays constant no matter
+  // how fast the input is — a raw 1:1 snap here would let a fast flick
+  // teleport it most of the way in a single jump before any transition
+  // even starts.
+  if (drag.card.id !== 'cine-swipe-card') {
+    drag.card.style.transform =
+      `translate(${drag.currentX}px, ${drag.currentY * 0.4}px) rotate(${rotate}deg)`;
+  }
 
   // Fade stamps proportionally to drag distance
   const absRatio = Math.abs(ratio);
@@ -3098,7 +3105,36 @@ function cineRunSwipeEntrance() {
   }
 
   attachDragListeners(card);
+  cineArmDragSmoothing(card);
   cineArmSwipeHint(card);
+}
+
+// Fixed-feel drag speed for the onboarding demo card — instead of the
+// shared onDragMove's raw 1:1 snap-to-finger (see the id guard there), this
+// eases the card's rendered position toward the live drag target every
+// frame at a constant damping rate. A fast flick and a slow drag end up
+// looking the same speed, since the card is always "catching up" to the
+// finger rather than teleporting straight to it. Only the real-time follow
+// is smoothed — release still hands off to the shared commitSwipe()/
+// springBack() transitions untouched.
+let _cineSmoothRAF = null;
+function cineArmDragSmoothing(card) {
+  const start = () => {
+    if (_cineSmoothRAF) cancelAnimationFrame(_cineSmoothRAF);
+    let visX = 0, visY = 0;
+    const step = () => {
+      if (!drag.active || drag.card !== card) { _cineSmoothRAF = null; return; }
+      visX += (drag.currentX - visX) * 0.3;
+      visY += (drag.currentY - visY) * 0.3;
+      const ratio  = Math.max(-1, Math.min(1, visX / SWIPE_THRESHOLD));
+      const rotate = ratio * MAX_ROTATION;
+      card.style.transform = `translate(${visX}px, ${visY * 0.4}px) rotate(${rotate}deg)`;
+      _cineSmoothRAF = requestAnimationFrame(step);
+    };
+    _cineSmoothRAF = requestAnimationFrame(step);
+  };
+  card.addEventListener('mousedown', start);
+  card.addEventListener('touchstart', start, { passive: true });
 }
 
 // Gentle "try it" hint — nudges the card ~20% toward the like threshold and
@@ -3147,17 +3183,20 @@ function cineAdvanceSwipeQueue() {
   // scaled/offset/dimmed "back" look via inline style (removing the class
   // above would otherwise jump straight to the resting look with nothing
   // to transition from), force a reflow so the browser actually commits
-  // that as a starting point, then transition to the resting front look.
+  // that as a starting point, then transition to the resting front look —
+  // slow and clearly visible (0.5s), not a quick blend, so it genuinely
+  // reads as the next card slowly arriving rather than a swap.
   oldBack.style.transition = 'none';
-  oldBack.style.transform  = 'scale(0.96) translate(-16px, 10px) rotate(-5deg)';
-  oldBack.style.opacity    = '0.5';
-  oldBack.style.filter     = 'saturate(0.9)';
+  oldBack.style.transform  = 'scale(0.94) translate(-16px, 14px) rotate(-6deg)';
+  oldBack.style.opacity    = '0.35';
+  oldBack.style.filter     = 'saturate(0.85)';
   void oldBack.offsetWidth;
-  oldBack.style.transition = 'transform 0.32s cubic-bezier(0.22,0.61,0.36,1), opacity 0.32s ease, filter 0.32s ease';
+  oldBack.style.transition = 'transform 0.5s cubic-bezier(0.22,0.61,0.36,1), opacity 0.5s ease, filter 0.5s ease';
   oldBack.style.transform  = '';
   oldBack.style.opacity    = '';
   oldBack.style.filter     = '';
   attachDragListeners(oldBack);
+  cineArmDragSmoothing(oldBack);
 
   // The hint-nudge is a CSS *animation*, which takes priority over a
   // running *transition* on the same property — arming it immediately
@@ -3196,8 +3235,17 @@ function cineCommitDemoSwipe(direction) {
     const sophia = PROFILES.find(p => p.name === 'Sophia') || PROFILES[0];
     const overlay = document.getElementById('cine-onboarding');
     if (overlay) overlay.setAttribute('hidden', '');
+
+    // showMatchOverlay() mutates real app state (creates a chatStore entry,
+    // sets state.character/activeChatId) — save what was there before so
+    // this scripted demo match can be fully undone once onboarding
+    // continues, instead of leaving a "Sophia" thread in the real Chats tab.
+    const prevState = {
+      character: state.character, difficulty: state.difficulty,
+      replyIndex: state.replyIndex, activeChatId: state.activeChatId,
+    };
     showMatchOverlay(sophia);
-    cineShowMatchContinuePrompt();
+    cineShowMatchContinuePrompt(state.activeChatId, prevState);
   } else {
     cineAdvanceSwipeQueue();
   }
@@ -3208,7 +3256,7 @@ function cineCommitDemoSwipe(direction) {
 // anywhere on the screen to continue onboarding, same "tap the screen to
 // advance" pattern the earlier match reveal used, instead of a timed
 // auto-advance.
-function cineShowMatchContinuePrompt() {
+function cineShowMatchContinuePrompt(demoChatId, prevState) {
   const matchScreen = document.getElementById('screen-match');
   const content = matchScreen ? matchScreen.querySelector('.match-content') : null;
   if (!matchScreen || !content) return;
@@ -3233,6 +3281,16 @@ function cineShowMatchContinuePrompt() {
     caption.style.display = 'none';
     if (startBtn) startBtn.style.visibility = '';
     if (skipBtn)  skipBtn.style.visibility  = '';
+
+    // Undo the demo match — it only existed for this reveal, and should
+    // never surface as a real thread in the Chats tab.
+    const idx = chatStore.findIndex(c => c.id === demoChatId);
+    if (idx !== -1) chatStore.splice(idx, 1);
+    state.character    = prevState.character;
+    state.difficulty   = prevState.difficulty;
+    state.replyIndex   = prevState.replyIndex;
+    state.activeChatId = prevState.activeChatId;
+
     popScreen();
     const overlay = document.getElementById('cine-onboarding');
     if (overlay) overlay.removeAttribute('hidden');
@@ -3680,7 +3738,7 @@ function openDashboard() {
   // Settings dropdown always starts collapsed
   const settingsDropdown = document.getElementById('dash-settings-dropdown');
   const settingsBtn      = document.getElementById('dash-settings-btn');
-  if (settingsDropdown) settingsDropdown.hidden = true;
+  if (settingsDropdown) settingsDropdown.classList.remove('open');
   if (settingsBtn) settingsBtn.classList.remove('dash-settings-btn--open');
 
   pushScreen('dashboard');
@@ -5703,8 +5761,9 @@ function toggleSettingsDropdown() {
   const dropdown = document.getElementById('dash-settings-dropdown');
   const btn      = document.getElementById('dash-settings-btn');
   if (!dropdown) return;
-  dropdown.hidden = !dropdown.hidden;
-  if (btn) btn.classList.toggle('dash-settings-btn--open', !dropdown.hidden);
+  const open = !dropdown.classList.contains('open');
+  dropdown.classList.toggle('open', open);
+  if (btn) btn.classList.toggle('dash-settings-btn--open', open);
 }
 
 function openSettingsSubpage(name) {

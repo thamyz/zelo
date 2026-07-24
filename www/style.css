@@ -2882,7 +2882,12 @@ textarea { font-family: inherit; }
 }
 
 .dash-menu-row:last-child { border-bottom: none; }
-.dash-menu-row:hover      { background: var(--s2); }
+/* hover:hover — WKWebView/mobile Safari apply :hover on tap and it sticks
+   until the next tap elsewhere, showing as a stray grey box; scope it to
+   devices that actually have a pointer capable of hovering. */
+@media (hover: hover) {
+  .dash-menu-row:hover { background: var(--s2); }
+}
 
 .dash-menu-row span {
   color: var(--text-3);
@@ -2900,13 +2905,21 @@ textarea { font-family: inherit; }
   transform: rotate(90deg);
 }
 
+/* Collapsed by default; expanding animates max-height instead of an
+   instant hidden-attribute swap, for a slow dropdown slide (same pattern
+   as .aicoach-suggest-body). */
 .dash-settings-dropdown {
-  margin-top: 8px;
+  max-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: max-height 0.4s ease, margin-top 0.4s ease;
 }
 
-.dash-settings-dropdown[hidden] { display: none; }
+.dash-settings-dropdown.open {
+  max-height: 60vh;
+  margin-top: 8px;
+}
 
 
 /* ================================================================
