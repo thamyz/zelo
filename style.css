@@ -1912,6 +1912,32 @@ textarea { font-family: inherit; }
 
 .tab-bar.hidden { display: none; }
 
+/* Swipe-to-navigate edge hints (Scan tab only) — a curved low-opacity
+   blob peeks in from the edge as the user drags toward Home/Chats,
+   growing more visible with drag progress, macOS trackpad-page-swipe
+   style. Driven entirely by inline opacity/transform from
+   attachScanTabGestures() in script.js; the class only sets the resting
+   (invisible, off-canvas) look and the release transition. */
+.scan-nav-hint {
+  position: fixed;
+  top: 50%;
+  width: 108px;
+  height: 108px;
+  margin-top: -54px;
+  border-radius: 50%;
+  background: rgba(28, 25, 23, 0.82);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 400;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.scan-nav-hint--left  { left: -64px; justify-content: flex-end; padding-right: 18px; }
+.scan-nav-hint--right { right: -64px; justify-content: flex-start; padding-left: 18px; }
+
 .tab-btn {
   flex: 1;
   display: flex;

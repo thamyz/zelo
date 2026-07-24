@@ -95,7 +95,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (getLinkedThreadId() && !getLinkedThread()) setLinkedThreadId(null);
   refreshAiCoachCard();       // Fix 5: sync the AI Coach card dropdown label
   attachProfileDetailDragToClose(); // Fix 4: swipe-down to dismiss profile detail
-  attachScanPageRubberBand();       // rubber-band overscroll feel on the Scan tab
+  attachScanTabGestures();          // rubber-band overscroll + swipe-to-navigate on the Scan tab
 });
 
 
@@ -1218,20 +1218,35 @@ function closeProfileDetail() {
   if (modal) modal.setAttribute('hidden', '');
 }
 
-// Rubber-band overscroll feel for the Scan tab — the page otherwise sits
-// perfectly rigid (content fits the viewport exactly, so plain
-// overflow-y:auto never has anything to scroll). Drags near the top/bottom
-// nudge the whole tab a few px with resistance and spring back on release,
-// purely a touch-feel addition — no scrollbar, no layout/behavior change.
-function attachScanPageRubberBand() {
+// Combined touch-gesture handler for the Scan tab: vertical rubber-band
+// overscroll feel (existing) + horizontal swipe-to-navigate to Home/Chats
+// (new). Both listen on the same element, so a single handler decides the
+// gesture's axis once (on the first move past a small deadzone) and locks
+// into either vertical-rubber-band or horizontal-nav for the rest of that
+// touch — they never run simultaneously or fight each other.
+function attachScanTabGestures() {
   const el = document.getElementById('tab-assistant');
-  if (!el || el._rubberBandAttached) return;
-  el._rubberBandAttached = true;
+  if (!el || el._scanGesturesAttached) return;
+  el._scanGesturesAttached = true;
 
+  // ---- Vertical rubber-band tuning (unchanged from before) ----
   const MAX_PULL = 46;   // px cap — never moves more than this regardless of drag distance
   const RESISTANCE = 90; // higher = stiffer band
 
-  let startY = 0, dragging = false, pulling = false;
+  // ---- Horizontal nav-swipe tuning ----
+  // Threshold is a real, deliberate distance (not a light nudge) — tuned
+  // against screen width so it feels consistent across device sizes,
+  // similar in spirit to iOS's own edge-swipe-back gesture.
+  const NAV_THRESHOLD = Math.max(100, window.innerWidth * 0.28);
+  const AXIS_DEADZONE = 10; // px of ambiguous movement before committing to an axis
+
+  let active = false;      // a single touch is in progress
+  let axis = null;         // null (undecided) | 'x' (nav-swipe) | 'y' (rubber-band)
+  let startX = 0, startY = 0;
+  let pulling = false;     // vertical rubber-band currently engaged
+
+  const homeHint  = document.getElementById('scan-nav-hint-home');
+  const chatsHint = document.getElementById('scan-nav-hint-chats');
 
   // Include the tab's own opacity transition (see .tab in style.css) in
   // every inline transition string set here — otherwise setting
@@ -1241,40 +1256,97 @@ function attachScanPageRubberBand() {
     el.style.transition = 'transform 0s linear, opacity 0.18s ease';
     el.style.transform = `translateY(${px}px)`;
   }
-  function release() {
+  function releasePull() {
     el.style.transition = 'transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.18s ease';
     el.style.transform = '';
     pulling = false;
   }
 
+  // dx > 0 (dragging right, toward Home) shows/grows the left-edge hint;
+  // dx < 0 (dragging left, toward Chats) shows/grows the right-edge hint.
+  // Progress is clamped to the threshold so the hint reaches "fully in"
+  // exactly as the drag crosses the commit distance.
+  function updateNavHint(dx, instant) {
+    const progress = Math.max(0, Math.min(1, Math.abs(dx) / NAV_THRESHOLD));
+    const shown  = dx > 0 ? homeHint : chatsHint;
+    const hidden = dx > 0 ? chatsHint : homeHint;
+    if (shown) {
+      shown.style.transition = instant ? 'none' : 'opacity 0.25s ease, transform 0.25s ease';
+      shown.style.opacity = progress;
+      shown.style.transform = `translateX(${(dx > 0 ? 1 : -1) * progress * 24}px)`;
+    }
+    if (hidden) {
+      hidden.style.transition = instant ? 'none' : 'opacity 0.25s ease, transform 0.25s ease';
+      hidden.style.opacity = 0;
+      hidden.style.transform = '';
+    }
+  }
+  function hideNavHints() {
+    [homeHint, chatsHint].forEach(hint => {
+      if (!hint) return;
+      hint.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+      hint.style.opacity = 0;
+      hint.style.transform = '';
+    });
+  }
+
   el.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
+    active = true;
+    axis = null;
+    pulling = false;
+    startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
-    dragging = true;
   }, { passive: true });
 
   el.addEventListener('touchmove', e => {
-    if (!dragging) return;
-    const dy = e.touches[0].clientY - startY;
-    const atTop    = el.scrollTop <= 0;
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    if (!active) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
 
-    if ((dy > 0 && atTop) || (dy < 0 && atBottom)) {
-      pulling = true;
-      const resisted = Math.sign(dy) * MAX_PULL * (1 - 1 / (Math.abs(dy) / RESISTANCE + 1));
-      applyPull(resisted);
-    } else if (pulling) {
-      release();
+    if (axis === null) {
+      if (Math.abs(dx) < AXIS_DEADZONE && Math.abs(dy) < AXIS_DEADZONE) return;
+      axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
     }
+
+    if (axis === 'y') {
+      const atTop    = el.scrollTop <= 0;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+      if ((dy > 0 && atTop) || (dy < 0 && atBottom)) {
+        pulling = true;
+        const resisted = Math.sign(dy) * MAX_PULL * (1 - 1 / (Math.abs(dy) / RESISTANCE + 1));
+        applyPull(resisted);
+      } else if (pulling) {
+        releasePull();
+      }
+      return;
+    }
+
+    // axis === 'x'
+    updateNavHint(dx, true);
   }, { passive: true });
 
-  el.addEventListener('touchend', () => {
-    dragging = false;
-    if (pulling) release();
+  function finishTouch(dx) {
+    active = false;
+    if (axis === 'y') {
+      if (pulling) releasePull();
+    } else if (axis === 'x') {
+      if (dx >= NAV_THRESHOLD)       { hideNavHints(); showTab('practice'); }
+      else if (dx <= -NAV_THRESHOLD) { hideNavHints(); showTab('chats'); }
+      else                            hideNavHints();
+    }
+    axis = null;
+  }
+
+  el.addEventListener('touchend', e => {
+    if (!active) return;
+    const t = e.changedTouches[0];
+    finishTouch(t ? t.clientX - startX : 0);
   });
   el.addEventListener('touchcancel', () => {
-    dragging = false;
-    if (pulling) release();
+    if (!active) return;
+    finishTouch(0);
   });
 }
 
