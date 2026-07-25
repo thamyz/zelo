@@ -1252,13 +1252,12 @@ function attachTabSwipeGestures(tabName) {
   // similar in spirit to iOS's own edge-swipe-back gesture.
   const NAV_THRESHOLD = Math.max(90, el.clientWidth * 0.24);
   const AXIS_DEADZONE = 10; // px of ambiguous movement before committing to an axis
-  const SPRING = 'transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)'; // ease-out with a slight overshoot/settle
-
   let active = false;      // a single touch is in progress
   let axis = null;         // null (undecided) | 'x' (nav-swipe) | 'y' (rubber-band)
   let startX = 0, startY = 0;
   let pulling = false;     // vertical rubber-band currently engaged
   let destTab = null, destName = null, dir = 0; // the adjacent tab being dragged into view, and which side it's entering from (+1 left, -1 right)
+  let gestureToken = 0;    // bumped on every touchstart; lets a stale in-flight finishSlide() loop from a quickly-superseded gesture detect it's obsolete and bail instead of fighting the new one
 
   // Include the tab's own opacity transition (see .tab in style.css) in
   // every inline transition string set here — otherwise setting
@@ -1298,40 +1297,75 @@ function attachTabSwipeGestures(tabName) {
     el.style.pointerEvents = 'none';
   }
 
+  let lastClampedDx = 0; // last live-drag offset, used as the spring's start point
+
   function updateSlide(dx) {
     if (!destTab) return;
     const W = el.clientWidth;
-    const clamped = Math.max(-W, Math.min(W, dx));
-    el.style.transform = `translateX(${clamped}px)`;
-    destTab.style.transform = `translateX(${clamped - dir * W}px)`;
+    lastClampedDx = Math.max(-W, Math.min(W, dx));
+    el.style.transform = `translateX(${lastClampedDx}px)`;
+    destTab.style.transform = `translateX(${lastClampedDx - dir * W}px)`;
+  }
+
+  // easeOutBack — a manual overshoot-then-settle curve (the JS equivalent
+  // of the cubic-bezier this used to run as two separate CSS transitions).
+  function springEase(t) {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
   }
 
   // Springs both tabs the rest of the way — either completing the page
   // turn (commit) or returning home (cancel) — with an ease-out + slight
-  // overshoot, not a linear snap.
+  // overshoot, not a linear snap. Driven as a single requestAnimationFrame
+  // loop that sets BOTH elements' transforms from one shared progress
+  // value each frame, rather than two independent CSS transitions on two
+  // separate elements. Two same-duration/same-easing CSS transitions on
+  // different elements are not guaranteed to stay pixel-perfectly in sync
+  // frame-by-frame — any sub-frame drift between them shows up as a thin
+  // sliver of whatever's behind peeking through, worst during the fast
+  // part of an overshoot curve. Computing both positions from one shared
+  // `t` each frame makes that drift structurally impossible.
   function finishSlide(commit) {
     if (!destTab) return;
     const W = el.clientWidth;
-    const finishedDestTab = destTab, finishedDestName = destName;
-    el.style.transition = SPRING;
-    finishedDestTab.style.transition = SPRING;
-    if (commit) {
-      el.style.transform = `translateX(${dir * W}px)`;
-      finishedDestTab.style.transform = 'translateX(0px)';
-    } else {
-      el.style.transform = 'translateX(0px)';
-      finishedDestTab.style.transform = `translateX(${-dir * W}px)`;
-    }
+    const finishedDestTab = destTab, finishedDestName = destName, finishDir = dir;
+    const myToken = gestureToken; // if a new touch supersedes this one before the loop finishes, bail without touching showTab or fighting the new gesture's own transform writes
+    destTab = null; destName = null;
 
-    const cleanup = () => {
+    const startElX = lastClampedDx;
+    const startDestX = lastClampedDx - finishDir * W;
+    const endElX = commit ? finishDir * W : 0;
+    const endDestX = commit ? 0 : -finishDir * W;
+
+    el.style.transition = 'none';
+    finishedDestTab.style.transition = 'none';
+
+    const DURATION = 380;
+    const t0 = performance.now();
+
+    function frame(now) {
+      if (myToken !== gestureToken) {
+        // Superseded mid-flight — just drop this tab back out of the
+        // visible set instantly rather than leaving it stuck mid-slide.
+        finishedDestTab.style.transition = '';
+        finishedDestTab.style.transform = '';
+        finishedDestTab.style.opacity = '';
+        finishedDestTab.style.pointerEvents = '';
+        finishedDestTab.style.zIndex = '';
+        finishedDestTab.style.boxShadow = '';
+        return;
+      }
+      const t = Math.min(1, (now - t0) / DURATION);
+      const e = springEase(t);
+      el.style.transform = `translateX(${startElX + (endElX - startElX) * e}px)`;
+      finishedDestTab.style.transform = `translateX(${startDestX + (endDestX - startDestX) * e}px)`;
+      if (t < 1) { requestAnimationFrame(frame); return; }
+
       // On commit, swap which tab has .active BEFORE clearing the inline
-      // overrides below. El only stays visible right now because of its
+      // overrides below — el only stays visible right now because of its
       // inline transform (it's still .active); clearing that transform
       // first would snap it back to full-screen for a moment before
-      // showTab() gets to it — a visible flash of the old screen
-      // overlapping the new one. Flipping .active first means el is
-      // already governed by "not .active -> opacity 0" the instant its
-      // inline transform goes away, so there's nothing to flash.
+      // showTab() gets to it.
       if (commit) showTab(finishedDestName);
       el.style.transition = '';
       el.style.transform = '';
@@ -1342,9 +1376,8 @@ function attachTabSwipeGestures(tabName) {
       finishedDestTab.style.pointerEvents = '';
       finishedDestTab.style.zIndex = '';
       finishedDestTab.style.boxShadow = '';
-    };
-    finishedDestTab.addEventListener('transitionend', cleanup, { once: true });
-    destTab = null; destName = null;
+    }
+    requestAnimationFrame(frame);
   }
 
   el.addEventListener('touchstart', e => {
@@ -1353,6 +1386,7 @@ function attachTabSwipeGestures(tabName) {
     axis = null;
     pulling = false;
     destTab = null; destName = null;
+    gestureToken++;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
   }, { passive: true });
