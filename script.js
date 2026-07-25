@@ -95,7 +95,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (getLinkedThreadId() && !getLinkedThread()) setLinkedThreadId(null);
   refreshAiCoachCard();       // Fix 5: sync the AI Coach card dropdown label
   attachProfileDetailDragToClose(); // Fix 4: swipe-down to dismiss profile detail
-  attachScanTabGestures();          // rubber-band overscroll + swipe-to-navigate on the Scan tab
+  TAB_SWIPE_ORDER.forEach(attachTabSwipeGestures); // rubber-band overscroll + swipe-to-navigate on Home/Scan/Chats
 });
 
 
@@ -1218,35 +1218,47 @@ function closeProfileDetail() {
   if (modal) modal.setAttribute('hidden', '');
 }
 
-// Combined touch-gesture handler for the Scan tab: vertical rubber-band
-// overscroll feel (existing) + horizontal swipe-to-navigate to Home/Chats
-// (new). Both listen on the same element, so a single handler decides the
-// gesture's axis once (on the first move past a small deadzone) and locks
-// into either vertical-rubber-band or horizontal-nav for the rest of that
-// touch — they never run simultaneously or fight each other.
-function attachScanTabGestures() {
-  const el = document.getElementById('tab-assistant');
-  if (!el || el._scanGesturesAttached) return;
-  el._scanGesturesAttached = true;
+// Combined touch-gesture handler, attached to each of the three tabs
+// (Home / Scan / Chats): vertical rubber-band overscroll feel (existing) +
+// horizontal swipe-to-navigate between adjacent tabs (Home <-> Scan <->
+// Chats), rendered as a full-screen page-slide — both the current and
+// destination .tab elements are visible and move together 1:1 with the
+// finger, like paging between photos in iOS Photos/Instagram Stories, not
+// a small edge peek. One handler per tab decides the gesture's axis once
+// (on the first move past a small deadzone) and locks into either
+// vertical-rubber-band or horizontal-nav for the rest of that touch — they
+// never run simultaneously or fight each other.
+const TAB_SWIPE_ORDER = ['practice', 'assistant', 'chats'];
+
+function attachTabSwipeGestures(tabName) {
+  const el = document.getElementById('tab-' + tabName);
+  if (!el || el._tabGesturesAttached) return;
+  el._tabGesturesAttached = true;
+
+  // dx > 0 (dragging right) reveals whichever tab sits to this one's left
+  // in the nav order; dx < 0 reveals the one to its right. Either can be
+  // null (Home has nothing to its left, Chats nothing to its right).
+  const idx = TAB_SWIPE_ORDER.indexOf(tabName);
+  const leftTarget  = idx > 0 ? TAB_SWIPE_ORDER[idx - 1] : null;
+  const rightTarget = idx < TAB_SWIPE_ORDER.length - 1 ? TAB_SWIPE_ORDER[idx + 1] : null;
 
   // ---- Vertical rubber-band tuning (unchanged from before) ----
   const MAX_PULL = 46;   // px cap — never moves more than this regardless of drag distance
   const RESISTANCE = 90; // higher = stiffer band
 
-  // ---- Horizontal nav-swipe tuning ----
+  // ---- Horizontal nav-swipe tuning (unchanged) ----
   // Threshold is a real, deliberate distance (not a light nudge) — tuned
   // against screen width so it feels consistent across device sizes,
   // similar in spirit to iOS's own edge-swipe-back gesture.
-  const NAV_THRESHOLD = Math.max(100, window.innerWidth * 0.28);
+  const NAV_THRESHOLD = Math.max(100, el.clientWidth * 0.28);
   const AXIS_DEADZONE = 10; // px of ambiguous movement before committing to an axis
+  const SPRING = 'transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)'; // ease-out with a slight overshoot/settle
 
   let active = false;      // a single touch is in progress
   let axis = null;         // null (undecided) | 'x' (nav-swipe) | 'y' (rubber-band)
   let startX = 0, startY = 0;
   let pulling = false;     // vertical rubber-band currently engaged
-
-  const homeHint  = document.getElementById('scan-nav-hint-home');
-  const chatsHint = document.getElementById('scan-nav-hint-chats');
+  let destTab = null, destName = null, dir = 0; // the adjacent tab being dragged into view, and which side it's entering from (+1 left, -1 right)
 
   // Include the tab's own opacity transition (see .tab in style.css) in
   // every inline transition string set here — otherwise setting
@@ -1262,32 +1274,69 @@ function attachScanTabGestures() {
     pulling = false;
   }
 
-  // dx > 0 (dragging right, toward Home) shows/grows the left-edge hint;
-  // dx < 0 (dragging left, toward Chats) shows/grows the right-edge hint.
-  // Progress is clamped to the threshold so the hint reaches "fully in"
-  // exactly as the drag crosses the commit distance.
-  function updateNavHint(dx, instant) {
-    const progress = Math.max(0, Math.min(1, Math.abs(dx) / NAV_THRESHOLD));
-    const shown  = dx > 0 ? homeHint : chatsHint;
-    const hidden = dx > 0 ? chatsHint : homeHint;
-    if (shown) {
-      shown.style.transition = instant ? 'none' : 'opacity 0.25s ease, transform 0.25s ease';
-      shown.style.opacity = progress;
-      shown.style.transform = `translateX(${(dx > 0 ? 1 : -1) * progress * 24}px)`;
-    }
-    if (hidden) {
-      hidden.style.transition = instant ? 'none' : 'opacity 0.25s ease, transform 0.25s ease';
-      hidden.style.opacity = 0;
-      hidden.style.transform = '';
-    }
+  // Bring the adjacent tab into the DOM's visible set for the duration of
+  // the drag (normally only .tab.active has opacity 1) and park it fully
+  // off the edge it's entering from, so both tabs tile edge-to-edge with
+  // no gap/flash as soon as the finger starts moving.
+  function armSlide(name, direction) {
+    destName = name;
+    dir = direction;
+    destTab = document.getElementById('tab-' + name);
+    if (!destTab) { destTab = null; return; }
+    const W = el.clientWidth;
+    destTab.style.transition = 'none';
+    destTab.style.opacity = '1';
+    destTab.style.pointerEvents = 'none';
+    destTab.style.zIndex = '50';
+    // Depth cue on the incoming page's leading edge — the edge that will
+    // meet the outgoing page in the middle of the drag.
+    destTab.style.boxShadow = dir > 0
+      ? '8px 0 28px rgba(0,0,0,0.16)'
+      : '-8px 0 28px rgba(0,0,0,0.16)';
+    destTab.style.transform = `translateX(${-dir * W}px)`;
+    el.style.transition = 'none';
+    el.style.pointerEvents = 'none';
   }
-  function hideNavHints() {
-    [homeHint, chatsHint].forEach(hint => {
-      if (!hint) return;
-      hint.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
-      hint.style.opacity = 0;
-      hint.style.transform = '';
-    });
+
+  function updateSlide(dx) {
+    if (!destTab) return;
+    const W = el.clientWidth;
+    const clamped = Math.max(-W, Math.min(W, dx));
+    el.style.transform = `translateX(${clamped}px)`;
+    destTab.style.transform = `translateX(${clamped - dir * W}px)`;
+  }
+
+  // Springs both tabs the rest of the way — either completing the page
+  // turn (commit) or returning home (cancel) — with an ease-out + slight
+  // overshoot, not a linear snap.
+  function finishSlide(commit) {
+    if (!destTab) return;
+    const W = el.clientWidth;
+    const finishedDestTab = destTab, finishedDestName = destName;
+    el.style.transition = SPRING;
+    finishedDestTab.style.transition = SPRING;
+    if (commit) {
+      el.style.transform = `translateX(${dir * W}px)`;
+      finishedDestTab.style.transform = 'translateX(0px)';
+    } else {
+      el.style.transform = 'translateX(0px)';
+      finishedDestTab.style.transform = `translateX(${-dir * W}px)`;
+    }
+
+    const cleanup = () => {
+      el.style.transition = '';
+      el.style.transform = '';
+      el.style.pointerEvents = '';
+      finishedDestTab.style.transition = '';
+      finishedDestTab.style.transform = '';
+      finishedDestTab.style.opacity = '';
+      finishedDestTab.style.pointerEvents = '';
+      finishedDestTab.style.zIndex = '';
+      finishedDestTab.style.boxShadow = '';
+      if (commit) showTab(finishedDestName);
+    };
+    finishedDestTab.addEventListener('transitionend', cleanup, { once: true });
+    destTab = null; destName = null;
   }
 
   el.addEventListener('touchstart', e => {
@@ -1295,6 +1344,7 @@ function attachScanTabGestures() {
     active = true;
     axis = null;
     pulling = false;
+    destTab = null; destName = null;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
   }, { passive: true });
@@ -1308,6 +1358,10 @@ function attachScanTabGestures() {
     if (axis === null) {
       if (Math.abs(dx) < AXIS_DEADZONE && Math.abs(dy) < AXIS_DEADZONE) return;
       axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (axis === 'x') {
+        const target = dx > 0 ? leftTarget : rightTarget;
+        if (target) armSlide(target, dx > 0 ? 1 : -1);
+      }
     }
 
     if (axis === 'y') {
@@ -1324,17 +1378,15 @@ function attachScanTabGestures() {
     }
 
     // axis === 'x'
-    updateNavHint(dx, true);
+    if (destTab) updateSlide(dx);
   }, { passive: true });
 
   function finishTouch(dx) {
     active = false;
     if (axis === 'y') {
       if (pulling) releasePull();
-    } else if (axis === 'x') {
-      if (dx >= NAV_THRESHOLD)       { hideNavHints(); showTab('practice'); }
-      else if (dx <= -NAV_THRESHOLD) { hideNavHints(); showTab('chats'); }
-      else                            hideNavHints();
+    } else if (axis === 'x' && destTab) {
+      finishSlide(Math.abs(dx) >= NAV_THRESHOLD);
     }
     axis = null;
   }
