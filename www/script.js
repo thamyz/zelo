@@ -1250,7 +1250,7 @@ function attachTabSwipeGestures(tabName) {
   // Threshold is a real, deliberate distance (not a light nudge) — tuned
   // against screen width so it feels consistent across device sizes,
   // similar in spirit to iOS's own edge-swipe-back gesture.
-  const NAV_THRESHOLD = Math.max(100, el.clientWidth * 0.28);
+  const NAV_THRESHOLD = Math.max(90, el.clientWidth * 0.24);
   const AXIS_DEADZONE = 10; // px of ambiguous movement before committing to an axis
   const SPRING = 'transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)'; // ease-out with a slight overshoot/settle
 
@@ -1324,6 +1324,15 @@ function attachTabSwipeGestures(tabName) {
     }
 
     const cleanup = () => {
+      // On commit, swap which tab has .active BEFORE clearing the inline
+      // overrides below. El only stays visible right now because of its
+      // inline transform (it's still .active); clearing that transform
+      // first would snap it back to full-screen for a moment before
+      // showTab() gets to it — a visible flash of the old screen
+      // overlapping the new one. Flipping .active first means el is
+      // already governed by "not .active -> opacity 0" the instant its
+      // inline transform goes away, so there's nothing to flash.
+      if (commit) showTab(finishedDestName);
       el.style.transition = '';
       el.style.transform = '';
       el.style.pointerEvents = '';
@@ -1333,7 +1342,6 @@ function attachTabSwipeGestures(tabName) {
       finishedDestTab.style.pointerEvents = '';
       finishedDestTab.style.zIndex = '';
       finishedDestTab.style.boxShadow = '';
-      if (commit) showTab(finishedDestName);
     };
     finishedDestTab.addEventListener('transitionend', cleanup, { once: true });
     destTab = null; destName = null;
