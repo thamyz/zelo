@@ -1273,132 +1273,170 @@ function attachTabSwipeGestures(tabName) {
     pulling = false;
   }
 
-  // Bring the adjacent tab into the DOM's visible set for the duration of
-  // the drag (normally only .tab.active has opacity 1) and park it fully
-  // off the edge it's entering from, so both tabs tile edge-to-edge with
-  // no gap/flash as soon as the finger starts moving.
+  // Single-container carousel: the current tab and the destination tab are
+  // moved (not cloned — same live DOM nodes) into one shared flex track as
+  // side-by-side children, and ONLY the track's own transform is ever
+  // animated. Two independently-transformed siblings — even driven from a
+  // single shared JS value, even algebraically guaranteed to stay W apart —
+  // can still be composited on separate layers that don't necessarily
+  // paint in perfect lockstep on real hardware. One element moving as one
+  // unit has no such failure mode: there is nothing left to synchronize.
+  // This is the standard technique iOS Photos/Instagram-style pagers use.
+  function _getSlideTrack() {
+    let track = document.getElementById('tab-slide-track');
+    if (!track) {
+      track = document.createElement('div');
+      track.id = 'tab-slide-track';
+      track.style.cssText = 'position:absolute; top:0; left:0; height:100%; display:flex; z-index:60; pointer-events:none;';
+      document.getElementById('app').appendChild(track);
+    }
+    return track;
+  }
+
+  // Reparents a live .tab element into the track for the duration of the
+  // gesture — same node, same scroll/component state, just temporarily
+  // laid out as a flex child instead of position:absolute over #app.
+  function _mountInTrack(tabEl, track, widthPx) {
+    tabEl.style.position = 'relative';
+    // .tab's base CSS is position:absolute with inset:0 then bottom
+    // overridden to calc(var(--tab-h) + 34px) — under position:relative
+    // those same top/right/bottom/left values would apply as offsets from
+    // the normal flow position instead of box edges, visually shifting the
+    // content. Reset all four explicitly (inset shorthand + each longhand,
+    // belt-and-suspenders) so position:relative has no offset at all.
+    tabEl.style.inset = 'auto';
+    tabEl.style.top = 'auto';
+    tabEl.style.right = 'auto';
+    tabEl.style.bottom = 'auto';
+    tabEl.style.left = 'auto';
+    tabEl.style.width = widthPx + 'px';
+    tabEl.style.flex = '0 0 ' + widthPx + 'px';
+    tabEl.style.opacity = '1';
+    tabEl.style.transform = 'none';
+    tabEl.style.pointerEvents = 'none';
+    track.appendChild(tabEl);
+  }
+
+  // Moves a tab back out of the track to its normal position:absolute
+  // spot in #app and clears every inline override _mountInTrack set, so
+  // it's fully back under normal .active-class-driven CSS control.
+  function _unmountFromTrack(tabEl) {
+    tabEl.style.position = '';
+    tabEl.style.inset = '';
+    tabEl.style.top = '';
+    tabEl.style.right = '';
+    tabEl.style.bottom = '';
+    tabEl.style.left = '';
+    tabEl.style.width = '';
+    tabEl.style.flex = '';
+    tabEl.style.opacity = '';
+    tabEl.style.transform = '';
+    tabEl.style.pointerEvents = '';
+    tabEl.style.boxShadow = '';
+    document.getElementById('app').appendChild(tabEl);
+  }
+
+  let track = null; // the shared track element while a gesture owns it
+  let base = 0;      // track translateX that shows only `el` at rest (depends on dir)
+
+  // Build the track with `el` and the adjacent tab side by side, ordered
+  // so dragging in `direction` reveals the adjacent tab from the correct
+  // edge, and park the track at the resting position that shows only `el`.
   function armSlide(name, direction) {
     destName = name;
     dir = direction;
     destTab = document.getElementById('tab-' + name);
     if (!destTab) { destTab = null; return; }
     const W = el.clientWidth;
-    destTab.style.transition = 'none';
-    destTab.style.opacity = '1';
-    destTab.style.pointerEvents = 'none';
-    destTab.style.zIndex = '50';
+
+    track = _getSlideTrack();
+    track.style.transition = 'none';
+    track.style.width = (W * 2) + 'px';
+    track.innerHTML = '';
+
+    const leftChild  = dir > 0 ? destTab : el;
+    const rightChild = dir > 0 ? el : destTab;
+    _mountInTrack(leftChild, track, W);
+    _mountInTrack(rightChild, track, W);
+
     // Depth cue on the incoming page's leading edge — the edge that will
     // meet the outgoing page in the middle of the drag.
     destTab.style.boxShadow = dir > 0
       ? '8px 0 28px rgba(0,0,0,0.16)'
       : '-8px 0 28px rgba(0,0,0,0.16)';
-    destTab.style.transform = `translateX(${-dir * W}px)`;
-    el.style.transition = 'none';
-    el.style.pointerEvents = 'none';
+
+    base = dir > 0 ? -W : 0; // el is the right child when dir>0 (needs -W to sit at viewport x=0), the left child otherwise (needs 0)
+    track.style.transform = `translateX(${base}px)`;
   }
 
   let lastClampedDx = 0; // last live-drag offset, used as the spring's start point
 
   function updateSlide(dx) {
-    if (!destTab) return;
+    if (!destTab || !track) return;
     const W = el.clientWidth;
     lastClampedDx = Math.max(-W, Math.min(W, dx));
-    el.style.transform = `translateX(${lastClampedDx}px)`;
-    destTab.style.transform = `translateX(${lastClampedDx - dir * W}px)`;
+    track.style.transform = `translateX(${base + lastClampedDx}px)`;
   }
 
   // easeOutBack — a manual overshoot-then-settle curve (the JS equivalent
-  // of the cubic-bezier this used to run as two separate CSS transitions).
+  // of the cubic-bezier this used to run as a CSS transition).
   function springEase(t) {
     const c1 = 1.70158, c3 = c1 + 1;
     return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
   }
 
-  // Springs both tabs the rest of the way — either completing the page
-  // turn (commit) or returning home (cancel) — with an ease-out + slight
-  // overshoot, not a linear snap. Driven as a single requestAnimationFrame
-  // loop that sets BOTH elements' transforms from one shared progress
-  // value each frame, rather than two independent CSS transitions on two
-  // separate elements. Two same-duration/same-easing CSS transitions on
-  // different elements are not guaranteed to stay pixel-perfectly in sync
-  // frame-by-frame — any sub-frame drift between them shows up as a thin
-  // sliver of whatever's behind peeking through, worst during the fast
-  // part of an overshoot curve. Computing both positions from one shared
-  // `t` each frame makes that drift structurally impossible.
+  // Springs the track's transform the rest of the way — either completing
+  // the page turn (commit) or returning home (cancel) — with an ease-out +
+  // slight overshoot, not a linear snap. Only one element's transform is
+  // ever touched here.
   function finishSlide(commit) {
-    if (!destTab) return;
+    if (!destTab || !track) return;
     const W = el.clientWidth;
-    const finishedDestTab = destTab, finishedDestName = destName, finishDir = dir;
+    const finishedTrack = track, finishedDestTab = destTab, finishedDestName = destName, finishDir = dir;
     const myToken = gestureToken; // if a new touch supersedes this one before the loop finishes, bail without touching showTab or fighting the new gesture's own transform writes
-    destTab = null; destName = null;
+    destTab = null; destName = null; track = null;
 
-    const startElX = lastClampedDx;
-    const startDestX = lastClampedDx - finishDir * W;
-    const endElX = commit ? finishDir * W : 0;
-    const endDestX = commit ? 0 : -finishDir * W;
+    const startX = base + lastClampedDx;
+    // Commit shows only the destination tab; cancel returns to `base`
+    // (shows only `el`) — in both cases that's "shift by dir*W from base".
+    const endX = commit ? base + finishDir * W : base;
 
-    el.style.transition = 'none';
-    finishedDestTab.style.transition = 'none';
-
+    finishedTrack.style.transition = 'none';
     const DURATION = 380;
     const t0 = performance.now();
 
+    function cleanupTrack() {
+      _unmountFromTrack(el);
+      _unmountFromTrack(finishedDestTab);
+      finishedTrack.remove();
+    }
+
     function frame(now) {
       if (myToken !== gestureToken) {
-        // Superseded mid-flight — just drop this tab back out of the
-        // visible set instantly rather than leaving it stuck mid-slide.
-        finishedDestTab.style.transition = '';
-        finishedDestTab.style.transform = '';
-        finishedDestTab.style.opacity = '';
-        finishedDestTab.style.pointerEvents = '';
-        finishedDestTab.style.zIndex = '';
-        finishedDestTab.style.boxShadow = '';
+        // Superseded mid-flight — just drop both tabs back to normal
+        // instantly rather than leaving them stuck mid-slide inside a
+        // track a newer gesture doesn't know about.
+        cleanupTrack();
         return;
       }
       const t = Math.min(1, (now - t0) / DURATION);
       const e = springEase(t);
-      el.style.transform = `translateX(${startElX + (endElX - startElX) * e}px)`;
-      finishedDestTab.style.transform = `translateX(${startDestX + (endDestX - startDestX) * e}px)`;
+      finishedTrack.style.transform = `translateX(${startX + (endX - startX) * e}px)`;
       if (t < 1) { requestAnimationFrame(frame); return; }
 
-      // Both tabs are now visually settled in their final resting
-      // position/opacity — nothing left to animate. showTab() below does
-      // real work beyond a class swap (initSwipeDeck(), renderChatsList(),
-      // etc. — see its own comments), which on real hardware can take long
-      // enough to still be running when the next frame is due, blocking
-      // that paint. If it ran in this same callback, the settled position
-      // set just above would never get its own paint — the browser would
-      // go straight from "mid-slide" to "slide finished AND deck
-      // rebuilt/popup shown/etc." in one jump, which is what reads as a
-      // flash on real hardware even though the slide itself was clean
-      // (Simulator's faster host hardware finishes showTab() fast enough
-      // that this gap isn't visible there, which is why it only showed up
-      // on-device). Deferring by one more rAF tick guarantees the browser
+      // The track is now visually settled in its final resting position —
+      // nothing left to animate. showTab() below does real work beyond a
+      // class swap (initSwipeDeck(), renderChatsList(), etc.), which on
+      // real hardware can take long enough to still be running when the
+      // next frame is due, blocking that paint. If it ran in this same
+      // callback, the settled position set just above would never get its
+      // own paint. Deferring by one more rAF tick guarantees the browser
       // actually paints this settled frame first, so showTab()'s work
       // always starts from a screen that already looks correct.
       requestAnimationFrame(() => {
-        // Re-check: a new touch could have started during this extra frame.
-        // Same rule as above — if superseded, just drop the tab out of the
-        // visible set instead of calling showTab() with stale data.
-        if (myToken !== gestureToken) {
-          finishedDestTab.style.transition = '';
-          finishedDestTab.style.transform = '';
-          finishedDestTab.style.opacity = '';
-          finishedDestTab.style.pointerEvents = '';
-          finishedDestTab.style.zIndex = '';
-          finishedDestTab.style.boxShadow = '';
-          return;
-        }
+        if (myToken !== gestureToken) { cleanupTrack(); return; }
+        cleanupTrack();
         if (commit) showTab(finishedDestName);
-        el.style.transition = '';
-        el.style.transform = '';
-        el.style.pointerEvents = '';
-        finishedDestTab.style.transition = '';
-        finishedDestTab.style.transform = '';
-        finishedDestTab.style.opacity = '';
-        finishedDestTab.style.pointerEvents = '';
-        finishedDestTab.style.zIndex = '';
-        finishedDestTab.style.boxShadow = '';
       });
     }
     requestAnimationFrame(frame);
