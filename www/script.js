@@ -96,6 +96,18 @@ window.addEventListener('DOMContentLoaded', () => {
   refreshAiCoachCard();       // Fix 5: sync the AI Coach card dropdown label
   attachProfileDetailDragToClose(); // Fix 4: swipe-down to dismiss profile detail
   TAB_SWIPE_ORDER.forEach(attachTabSwipeGestures); // rubber-band overscroll + swipe-to-navigate on Home/Scan/Chats
+
+  // Edge-swipe-back — explicit allowlist only, everything else in the app
+  // is untouched. Each entry reuses that screen's own existing back/close
+  // function (see attachEdgeSwipeBack's own comment for why nothing else
+  // is shared/created).
+  attachEdgeSwipeBack('screen-dashboard',   popScreen);         // Account page
+  attachEdgeSwipeBack('screen-settings',    settingsBack);      // Login & Security / Notifications / Privacy / Help & Support
+  attachEdgeSwipeBack('screen-history',     closeHistory);      // History overlay
+  attachEdgeSwipeBack('screen-tellzelo',    tellZeloBack);      // "Other" wizard (all 4 steps — steps back one at a time)
+  attachEdgeSwipeBack('screen-ai-coach',    closeAiCoach);      // AI Coach
+  attachEdgeSwipeBack('screen-scan-result', goBackFromResult);  // Scan Result / reply suggestions
+  attachEdgeSwipeBack('screen-scan-upload', popScreen);         // Upload Screenshot page
 });
 
 
@@ -1503,6 +1515,113 @@ function attachTabSwipeGestures(tabName) {
   el.addEventListener('touchcancel', () => {
     if (!active) return;
     finishTouch(0);
+  });
+}
+
+// iOS/Samsung-style edge-swipe-back: drag from within a narrow hitbox at
+// the left screen edge, left->right, to trigger whatever "back" function
+// this screen already uses. Applied to a fixed, explicit allowlist of
+// screens only (wired up below) — every other screen is untouched.
+// Only one element ever gets a transform here (the screen sliding away),
+// so unlike the tab-carousel gesture there's no "two things to keep in
+// sync" — the destination content (whatever's under this screen) isn't
+// pre-rendered/revealed live, since what's under a given screen varies
+// per entry point and several of these back functions do more than a
+// plain pop (tellZeloBack() may step back within a wizard instead of
+// exiting, goBackFromResult() may show a save-prompt instead of
+// navigating, closeHistory() isn't even part of the normal screen stack).
+// A depth shadow on the sliding screen's trailing edge sells the "peeling
+// back" feel without needing to fake content that may not exist yet.
+function attachEdgeSwipeBack(screenId, backFn) {
+  const el = document.getElementById(screenId);
+  if (!el || el._edgeSwipeAttached) return;
+  el._edgeSwipeAttached = true;
+
+  const EDGE_HITBOX = 24; // px — standard edge-swipe-back hitbox width
+  let active = false, armed = false, startX = 0, startY = 0, lastDx = 0;
+  let gestureToken = 0;
+
+  function threshold() { return Math.max(90, el.clientWidth * 0.28); }
+
+  function springEase(t) {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  }
+
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    active = true;
+    armed = t.clientX <= EDGE_HITBOX;
+    startX = t.clientX;
+    startY = t.clientY;
+    lastDx = 0;
+    gestureToken++;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', e => {
+    if (!active || !armed) return;
+    const t = e.touches[0];
+    const dx = Math.max(0, Math.min(el.clientWidth, t.clientX - startX));
+    const dy = Math.abs(t.clientY - startY);
+    // Bails (without navigating) if the drag turns out to be a vertical
+    // scroll that merely started near the edge — normal scrolling on
+    // these screens must never be hijacked.
+    if (dy > dx && dy > 10) { armed = false; el.style.transition = ''; el.style.transform = ''; el.style.boxShadow = ''; return; }
+    lastDx = dx;
+    el.style.transition = 'none';
+    el.style.transform = `translateX(${dx}px)`;
+    el.style.boxShadow = `-8px 0 24px rgba(0,0,0,${0.18 * (dx / el.clientWidth)})`;
+  }, { passive: true });
+
+  function finish(commit) {
+    const W = el.clientWidth;
+    const myToken = gestureToken;
+    const startPx = lastDx;
+    const endPx = commit ? W : 0;
+    el.style.transition = 'none';
+    const DURATION = 380;
+    const t0 = performance.now();
+
+    function frame(now) {
+      if (myToken !== gestureToken) return; // superseded by a new touch — leave it to that gesture
+      const t = Math.min(1, (now - t0) / DURATION);
+      const e = springEase(t);
+      const px = startPx + (endPx - startPx) * e;
+      el.style.transform = `translateX(${px}px)`;
+      el.style.boxShadow = `-8px 0 24px rgba(0,0,0,${0.18 * Math.max(0, Math.min(1, px / W))})`;
+      if (t < 1) { requestAnimationFrame(frame); return; }
+
+      // Settle one extra frame before calling the (possibly heavy) back
+      // function — same reasoning as the tab-carousel fix: let the browser
+      // actually paint the fully-off-screen position before any
+      // synchronous work from backFn() can block the next paint.
+      requestAnimationFrame(() => {
+        if (myToken !== gestureToken) return;
+        el.style.transition = '';
+        el.style.transform = '';
+        el.style.boxShadow = '';
+        if (commit) backFn();
+      });
+    }
+    requestAnimationFrame(frame);
+  }
+
+  el.addEventListener('touchend', e => {
+    if (!active) return;
+    active = false;
+    if (!armed) return;
+    armed = false;
+    const t = e.changedTouches[0];
+    const dx = t ? Math.max(0, Math.min(el.clientWidth, t.clientX - startX)) : 0;
+    finish(dx >= threshold());
+  });
+  el.addEventListener('touchcancel', () => {
+    if (!active) return;
+    active = false;
+    if (!armed) return;
+    armed = false;
+    finish(false);
   });
 }
 
