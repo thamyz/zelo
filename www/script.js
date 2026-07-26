@@ -3381,6 +3381,7 @@ function cineGoToShowcase() {
   document.querySelectorAll('.cine-screen').forEach(s => {
     s.classList.toggle('active', s.dataset.screen === 'showcase');
   });
+  document.getElementById('cine-phone-reply')?.classList.add('cine-phone-reply--pending');
 }
 
 function cineShowcaseStart(e) {
@@ -3391,6 +3392,14 @@ function cineShowcaseStart(e) {
 function cineShowcaseSignIn(e) {
   if (e) e.stopPropagation();
   AUTH.showEmailScreen('signin');
+}
+
+// The showcase's "Zelo suggests" reply is a demo of the real Analyze
+// flow — it shouldn't just appear on its own when the screen loads, so it
+// stays hidden until the user taps Analyze themselves, same as it would
+// with a real message.
+function cineRevealShowcaseReply() {
+  document.getElementById('cine-phone-reply')?.classList.remove('cine-phone-reply--pending');
 }
 
 // ---- PHASE 2 navigation ----
@@ -4197,6 +4206,16 @@ function openDashboard() {
   if (settingsBtn) settingsBtn.classList.remove('dash-settings-btn--open');
 
   pushScreen('dashboard');
+}
+
+// Home tab's top-right icon — used to be a redundant second way to open
+// the exact same dashboard the top-left profile button already opens.
+// Now jumps straight to the "Who You Practice With" settings panel
+// instead (still lands on Account first, same as any other settings row,
+// so the back button behaves exactly like it does everywhere else).
+function openPracticePreference() {
+  openDashboard();
+  openSettingsSubpage('practice');
 }
 
 
@@ -6200,7 +6219,8 @@ const SETTINGS_PANEL_IDS = {
   'security':        'settings-panel-security',
   'notifications':   'settings-panel-notifications',
   'privacy':         'settings-panel-privacy',
-  'help':            'settings-panel-help'
+  'help':            'settings-panel-help',
+  'practice':        'settings-panel-practice'
 };
 
 const SETTINGS_PANEL_TITLES = {
@@ -6208,7 +6228,8 @@ const SETTINGS_PANEL_TITLES = {
   'security':        'Security',
   'notifications':   'Notifications',
   'privacy':         'Privacy',
-  'help':            'Help & Support'
+  'help':            'Help & Support',
+  'practice':        'Who You Practice With'
 };
 
 // Settings section on the Account page — expands/collapses in place.
@@ -6238,6 +6259,7 @@ function showSettingsPanel(name) {
   if (name === 'login')          _populateLoginPanel();
   if (name === 'notifications')  _populateNotificationsPanel();
   if (name === 'privacy')        _populatePrivacyPanel();
+  if (name === 'practice')       _populatePracticePanel();
 }
 
 // No intermediate list page anymore — back always returns to Account.
@@ -6272,6 +6294,55 @@ function _populatePrivacyPanel() {
 
 function onSettingsToggle(key, value) {
   localStorage.setItem(key, String(value));
+}
+
+// "Who You Practice With" settings panel — same three options as the
+// first-visit popup (homeModeSelect()), just reachable any time afterward
+// and showing which one is currently active.
+function _populatePracticePanel() {
+  const current = localStorage.getItem('zelo_practice_mode') || 'women';
+  document.querySelectorAll('#settings-practice-grid .home-mode-card-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.mode === current);
+  });
+}
+
+function settingsPracticeSelect(mode, el) {
+  localStorage.setItem('zelo_practice_mode', mode);
+  localStorage.setItem('zelo_mode_selected', '1');
+  document.querySelectorAll('#settings-practice-grid .home-mode-card-btn').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  if (el) el.classList.add('selected');
+  navigator.vibrate?.(4);
+  // Force the deck to rebuild its pool next time Home is viewed, so a
+  // changed preference takes effect immediately rather than only once
+  // the current pool runs out.
+  state.swipeIndex = state.swipeProfiles.length;
+}
+
+// Internal-only: 10 blank/placeholder cards (no real names or bios yet)
+// loaded straight into the real swipe deck, so layout/spacing can be
+// reviewed using the exact same card component, stack, and swipe gesture
+// as the live app — not a separate mocked-up preview.
+const TEST_LAYOUT_PROFILES = Array.from({ length: 10 }, (_, i) => ({
+  id:             'test-layout-' + (i + 1),
+  name:           'Layout ' + (i + 1),
+  age:            '—',
+  occupation:     '—',
+  bio:            '',
+  interests:      [],
+  initial:        String(i + 1),
+  gradientColors: ['#f0559f', '#db2777'],
+  color:          '#f0559f',
+  difficulty:     'easy',
+  age_pool:       '21-29',
+}));
+
+function previewTestCardLayouts() {
+  state.swipeProfiles = [...TEST_LAYOUT_PROFILES];
+  state.swipeIndex = 0;
+  renderDeck();
+  showTab('practice');
 }
 
 function onRetentionChange(value) {
