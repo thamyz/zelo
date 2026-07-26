@@ -95,18 +95,31 @@ window.addEventListener('DOMContentLoaded', () => {
   if (getLinkedThreadId() && !getLinkedThread()) setLinkedThreadId(null);
   refreshAiCoachCard();       // Fix 5: sync the AI Coach card dropdown label
   attachProfileDetailDragToClose(); // Fix 4: swipe-down to dismiss profile detail
-  TAB_SWIPE_ORDER.forEach(attachTabSwipeGestures); // rubber-band overscroll + swipe-to-navigate on Home/Scan/Chats
+  // rubber-band overscroll + swipe-to-navigate on Home/Scan/Chats. Home
+  // excludes the swipe-card deck (#card-deck) — a drag started on a card
+  // belongs to that card's own like/nope swipe, not the tab-nav gesture.
+  attachTabSwipeGestures('practice', '#card-deck');
+  attachTabSwipeGestures('assistant');
+  attachTabSwipeGestures('chats');
 
-  // Edge-swipe-back — explicit allowlist only, everything else in the app
-  // is untouched. Each entry reuses that screen's own existing back/close
-  // function (see attachEdgeSwipeBack's own comment for why nothing else
-  // is shared/created).
+  // Trackpad-style swipe-back — explicit allowlist only, everything else
+  // in the app is untouched. Each entry reuses that screen's own existing
+  // back/close function (see attachEdgeSwipeBack's own comment for why
+  // nothing else is shared/created).
   attachEdgeSwipeBack('screen-dashboard',   popScreen);         // Account page
   attachEdgeSwipeBack('screen-settings',    settingsBack);      // Login & Security / Notifications / Privacy / Help & Support
   attachEdgeSwipeBack('screen-history',     closeHistory);      // History overlay
-  attachEdgeSwipeBack('screen-tellzelo',    tellZeloBack);      // "Other" wizard (all 4 steps — steps back one at a time)
+  attachEdgeSwipeBack('screen-tellzelo',    tellZeloBack, {     // "Other" wizard — mid-wizard steps back within the same screen (no sibling to reveal), so only fall back to a live reveal once back would actually exit
+    resolveTarget: () => state.tzStep > 0 ? null : _defaultBackRevealTarget(),
+  });
   attachEdgeSwipeBack('screen-ai-coach',    closeAiCoach);      // AI Coach
-  attachEdgeSwipeBack('screen-scan-result', goBackFromResult);  // Scan Result / reply suggestions
+  attachEdgeSwipeBack('screen-scan-result', goBackFromResult, { // Scan Result / reply suggestions
+    // goBackFromResult() shows a save-prompt instead of navigating unless
+    // the scan was already saved/explicitly skipped — only reveal live
+    // content when it would actually navigate.
+    resolveTarget: () => (state.scanSavedToThread || state.scanSkippedSave) ? _defaultBackRevealTarget() : null,
+    excludeSelector: '#reply-carousel',
+  });
   attachEdgeSwipeBack('screen-scan-upload', popScreen);         // Upload Screenshot page
 });
 
@@ -1242,7 +1255,62 @@ function closeProfileDetail() {
 // never run simultaneously or fight each other.
 const TAB_SWIPE_ORDER = ['practice', 'assistant', 'chats'];
 
-function attachTabSwipeGestures(tabName) {
+// Shared single-container slide-track helpers — used by both the tab
+// carousel and the screen-back gesture below. A live element (never a
+// clone) is temporarily reparented into a shared flex track as a sibling
+// of whatever it should slide alongside, and only the TRACK's own
+// transform is ever animated. Two independently-transformed elements —
+// even algebraically kept in sync — can still live on separate compositor
+// layers that don't necessarily paint in lockstep on real hardware; one
+// element moving as a single unit has no such failure mode.
+function _getOrCreateSlideTrack(trackId, zIndex) {
+  let track = document.getElementById(trackId);
+  if (!track) {
+    track = document.createElement('div');
+    track.id = trackId;
+    track.style.cssText = `position:absolute; top:0; left:0; height:100%; display:flex; z-index:${zIndex}; pointer-events:none;`;
+    document.getElementById('app').appendChild(track);
+  }
+  return track;
+}
+
+function _slideMountEl(el, track, widthPx) {
+  el.style.position = 'relative';
+  // Base CSS for both .tab and .screen is position:absolute with inset:0,
+  // several also override bottom/top individually — under position:relative
+  // those same values apply as flow offsets instead of box edges, visually
+  // shifting the content. Reset all four explicitly (inset shorthand +
+  // each longhand, belt-and-suspenders) so position:relative has no offset.
+  el.style.inset = 'auto';
+  el.style.top = 'auto';
+  el.style.right = 'auto';
+  el.style.bottom = 'auto';
+  el.style.left = 'auto';
+  el.style.width = widthPx + 'px';
+  el.style.flex = '0 0 ' + widthPx + 'px';
+  el.style.opacity = '1';
+  el.style.transform = 'none';
+  el.style.pointerEvents = 'none';
+  track.appendChild(el);
+}
+
+function _slideUnmountEl(el) {
+  el.style.position = '';
+  el.style.inset = '';
+  el.style.top = '';
+  el.style.right = '';
+  el.style.bottom = '';
+  el.style.left = '';
+  el.style.width = '';
+  el.style.flex = '';
+  el.style.opacity = '';
+  el.style.transform = '';
+  el.style.pointerEvents = '';
+  el.style.boxShadow = '';
+  document.getElementById('app').appendChild(el);
+}
+
+function attachTabSwipeGestures(tabName, excludeSelector) {
   const el = document.getElementById('tab-' + tabName);
   if (!el || el._tabGesturesAttached) return;
   el._tabGesturesAttached = true;
@@ -1285,69 +1353,6 @@ function attachTabSwipeGestures(tabName) {
     pulling = false;
   }
 
-  // Single-container carousel: the current tab and the destination tab are
-  // moved (not cloned — same live DOM nodes) into one shared flex track as
-  // side-by-side children, and ONLY the track's own transform is ever
-  // animated. Two independently-transformed siblings — even driven from a
-  // single shared JS value, even algebraically guaranteed to stay W apart —
-  // can still be composited on separate layers that don't necessarily
-  // paint in perfect lockstep on real hardware. One element moving as one
-  // unit has no such failure mode: there is nothing left to synchronize.
-  // This is the standard technique iOS Photos/Instagram-style pagers use.
-  function _getSlideTrack() {
-    let track = document.getElementById('tab-slide-track');
-    if (!track) {
-      track = document.createElement('div');
-      track.id = 'tab-slide-track';
-      track.style.cssText = 'position:absolute; top:0; left:0; height:100%; display:flex; z-index:60; pointer-events:none;';
-      document.getElementById('app').appendChild(track);
-    }
-    return track;
-  }
-
-  // Reparents a live .tab element into the track for the duration of the
-  // gesture — same node, same scroll/component state, just temporarily
-  // laid out as a flex child instead of position:absolute over #app.
-  function _mountInTrack(tabEl, track, widthPx) {
-    tabEl.style.position = 'relative';
-    // .tab's base CSS is position:absolute with inset:0 then bottom
-    // overridden to calc(var(--tab-h) + 34px) — under position:relative
-    // those same top/right/bottom/left values would apply as offsets from
-    // the normal flow position instead of box edges, visually shifting the
-    // content. Reset all four explicitly (inset shorthand + each longhand,
-    // belt-and-suspenders) so position:relative has no offset at all.
-    tabEl.style.inset = 'auto';
-    tabEl.style.top = 'auto';
-    tabEl.style.right = 'auto';
-    tabEl.style.bottom = 'auto';
-    tabEl.style.left = 'auto';
-    tabEl.style.width = widthPx + 'px';
-    tabEl.style.flex = '0 0 ' + widthPx + 'px';
-    tabEl.style.opacity = '1';
-    tabEl.style.transform = 'none';
-    tabEl.style.pointerEvents = 'none';
-    track.appendChild(tabEl);
-  }
-
-  // Moves a tab back out of the track to its normal position:absolute
-  // spot in #app and clears every inline override _mountInTrack set, so
-  // it's fully back under normal .active-class-driven CSS control.
-  function _unmountFromTrack(tabEl) {
-    tabEl.style.position = '';
-    tabEl.style.inset = '';
-    tabEl.style.top = '';
-    tabEl.style.right = '';
-    tabEl.style.bottom = '';
-    tabEl.style.left = '';
-    tabEl.style.width = '';
-    tabEl.style.flex = '';
-    tabEl.style.opacity = '';
-    tabEl.style.transform = '';
-    tabEl.style.pointerEvents = '';
-    tabEl.style.boxShadow = '';
-    document.getElementById('app').appendChild(tabEl);
-  }
-
   let track = null; // the shared track element while a gesture owns it
   let base = 0;      // track translateX that shows only `el` at rest (depends on dir)
 
@@ -1361,15 +1366,15 @@ function attachTabSwipeGestures(tabName) {
     if (!destTab) { destTab = null; return; }
     const W = el.clientWidth;
 
-    track = _getSlideTrack();
+    track = _getOrCreateSlideTrack('tab-slide-track', 60);
     track.style.transition = 'none';
     track.style.width = (W * 2) + 'px';
     track.innerHTML = '';
 
     const leftChild  = dir > 0 ? destTab : el;
     const rightChild = dir > 0 ? el : destTab;
-    _mountInTrack(leftChild, track, W);
-    _mountInTrack(rightChild, track, W);
+    _slideMountEl(leftChild, track, W);
+    _slideMountEl(rightChild, track, W);
 
     // Depth cue on the incoming page's leading edge — the edge that will
     // meet the outgoing page in the middle of the drag.
@@ -1418,8 +1423,8 @@ function attachTabSwipeGestures(tabName) {
     const t0 = performance.now();
 
     function cleanupTrack() {
-      _unmountFromTrack(el);
-      _unmountFromTrack(finishedDestTab);
+      _slideUnmountEl(el);
+      _slideUnmountEl(finishedDestTab);
       finishedTrack.remove();
     }
 
@@ -1456,6 +1461,11 @@ function attachTabSwipeGestures(tabName) {
 
   el.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
+    // A touch starting inside e.g. the Home tab's swipe-card deck must
+    // belong entirely to that control's own drag handling — arming this
+    // gesture too would mean one finger driving two independent swipes at
+    // once (the card AND the tab underneath it).
+    if (excludeSelector && e.target.closest(excludeSelector)) { active = false; return; }
     active = true;
     axis = null;
     pulling = false;
@@ -1518,28 +1528,41 @@ function attachTabSwipeGestures(tabName) {
   });
 }
 
-// iOS/Samsung-style edge-swipe-back: drag from within a narrow hitbox at
-// the left screen edge, left->right, to trigger whatever "back" function
-// this screen already uses. Applied to a fixed, explicit allowlist of
-// screens only (wired up below) — every other screen is untouched.
-// Only one element ever gets a transform here (the screen sliding away),
-// so unlike the tab-carousel gesture there's no "two things to keep in
-// sync" — the destination content (whatever's under this screen) isn't
-// pre-rendered/revealed live, since what's under a given screen varies
-// per entry point and several of these back functions do more than a
-// plain pop (tellZeloBack() may step back within a wizard instead of
-// exiting, goBackFromResult() may show a save-prompt instead of
-// navigating, closeHistory() isn't even part of the normal screen stack).
-// A depth shadow on the sliding screen's trailing edge sells the "peeling
-// back" feel without needing to fake content that may not exist yet.
-function attachEdgeSwipeBack(screenId, backFn) {
+// Trackpad-style swipe-back: drag left->right starting ANYWHERE on the
+// screen (no edge hitbox) to trigger whatever "back" function this screen
+// already uses. Applied to a fixed, explicit allowlist of screens only
+// (wired up below) — every other screen is untouched.
+//
+// Where the destination is knowable ahead of time, this uses the same
+// single-container reveal technique as the tab carousel: the real
+// destination element (a .tab or another .screen) is reparented into a
+// shared track alongside this screen and both slide together as the
+// finger moves, so the actual content underneath is what's revealed —
+// not a fake stand-in. Where it genuinely isn't knowable in advance
+// (tellZeloBack() may step back within a wizard instead of exiting;
+// goBackFromResult() may show a save-prompt instead of navigating), this
+// falls back to a plain slide-away with a depth shadow, since there's no
+// real content to reveal for those cases.
+function _defaultBackRevealTarget() {
+  // Mirrors popScreen()'s own resolution: the top of the screen stack if
+  // there is one, otherwise whatever tab is currently active.
+  if (state.screenStack.length) {
+    const el = document.getElementById('screen-' + state.screenStack[state.screenStack.length - 1]);
+    if (el) return el;
+  }
+  return document.getElementById('tab-' + state.activeTab);
+}
+
+function attachEdgeSwipeBack(screenId, backFn, opts) {
+  opts = opts || {};
   const el = document.getElementById(screenId);
   if (!el || el._edgeSwipeAttached) return;
   el._edgeSwipeAttached = true;
 
-  const EDGE_HITBOX = 24; // px — standard edge-swipe-back hitbox width
-  let active = false, armed = false, startX = 0, startY = 0, lastDx = 0;
+  const AXIS_DEADZONE = 10;
+  let active = false, axis = null, startX = 0, startY = 0, lastDx = 0;
   let gestureToken = 0;
+  let track = null, targetEl = null, usingReveal = false;
 
   function threshold() { return Math.max(90, el.clientWidth * 0.28); }
 
@@ -1548,70 +1571,154 @@ function attachEdgeSwipeBack(screenId, backFn) {
     return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
   }
 
+  function resolveTarget() {
+    return opts.resolveTarget ? opts.resolveTarget() : _defaultBackRevealTarget();
+  }
+
+  // Decides — once, at the moment a drag commits to the horizontal axis —
+  // whether a live destination can be revealed this time, and if so
+  // builds the shared track for it. Re-evaluated on every new touch since
+  // e.g. tellzelo's step or scan-result's saved state can change between
+  // gestures.
+  let unhidTabBar = false; // whether this drag temporarily un-hid the tab-bar (pushScreen() hides it while any screen is active)
+
+  function armReveal() {
+    targetEl = resolveTarget();
+    if (!targetEl || targetEl === el) { usingReveal = false; return; }
+    usingReveal = true;
+    const W = el.clientWidth;
+    track = _getOrCreateSlideTrack('back-slide-track', 90); // above normal .tab/.screen stacking, below .tab-bar's z-index:100
+    track.style.transition = 'none';
+    track.style.width = (W * 2) + 'px';
+    track.innerHTML = '';
+    _slideMountEl(targetEl, track, W); // left child — revealed as the user drags right
+    _slideMountEl(el, track, W);       // right child — this screen, dragged away
+    track.style.transform = `translateX(${-W}px)`; // resting: el alone fills the viewport
+
+    // Revealing a tab means the real destination (once this actually
+    // completes) will have the tab-bar visible — but pushScreen() hid it
+    // for as long as this screen has been active, so without this the
+    // preview would show a blank strip at the bottom during the drag.
+    const tabBar = document.getElementById('tab-bar');
+    if (targetEl.classList.contains('tab') && tabBar && tabBar.classList.contains('hidden')) {
+      tabBar.classList.remove('hidden');
+      unhidTabBar = true;
+    }
+  }
+
   el.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
-    const t = e.touches[0];
+    // A touch starting inside e.g. the Scan Result reply carousel must
+    // belong entirely to that control's own horizontal swipe.
+    if (opts.excludeSelector && e.target.closest(opts.excludeSelector)) { active = false; return; }
     active = true;
-    armed = t.clientX <= EDGE_HITBOX;
-    startX = t.clientX;
-    startY = t.clientY;
+    axis = null;
     lastDx = 0;
+    usingReveal = false;
     gestureToken++;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
   }, { passive: true });
 
   el.addEventListener('touchmove', e => {
-    if (!active || !armed) return;
+    if (!active) return;
     const t = e.touches[0];
-    const dx = Math.max(0, Math.min(el.clientWidth, t.clientX - startX));
+    const dx = t.clientX - startX;
     const dy = Math.abs(t.clientY - startY);
-    // Bails (without navigating) if the drag turns out to be a vertical
-    // scroll that merely started near the edge — normal scrolling on
-    // these screens must never be hijacked.
-    if (dy > dx && dy > 10) { armed = false; el.style.transition = ''; el.style.transform = ''; el.style.boxShadow = ''; return; }
-    lastDx = dx;
-    el.style.transition = 'none';
-    el.style.transform = `translateX(${dx}px)`;
-    el.style.boxShadow = `-8px 0 24px rgba(0,0,0,${0.18 * (dx / el.clientWidth)})`;
+
+    if (axis === null) {
+      if (Math.abs(dx) < AXIS_DEADZONE && dy < AXIS_DEADZONE) return;
+      // Only a rightward, horizontally-dominant drag means "back" — a
+      // leftward drag has no defined gesture here, and a vertical one is
+      // normal scrolling; both are left alone entirely.
+      axis = (Math.abs(dx) > dy && dx > 0) ? 'x' : 'dead';
+      if (axis === 'x') armReveal();
+    }
+    if (axis !== 'x') return;
+
+    const clamped = Math.max(0, Math.min(el.clientWidth, dx));
+    lastDx = clamped;
+    if (usingReveal) {
+      track.style.transform = `translateX(${clamped - el.clientWidth}px)`;
+    } else {
+      el.style.transition = 'none';
+      el.style.transform = `translateX(${clamped}px)`;
+      el.style.boxShadow = `-8px 0 24px rgba(0,0,0,${0.18 * (clamped / el.clientWidth)})`;
+    }
   }, { passive: true });
 
   function finish(commit) {
     const W = el.clientWidth;
     const myToken = gestureToken;
-    const startPx = lastDx;
-    const endPx = commit ? W : 0;
-    el.style.transition = 'none';
     const DURATION = 380;
     const t0 = performance.now();
 
-    function frame(now) {
-      if (myToken !== gestureToken) return; // superseded by a new touch — leave it to that gesture
-      const t = Math.min(1, (now - t0) / DURATION);
-      const e = springEase(t);
-      const px = startPx + (endPx - startPx) * e;
-      el.style.transform = `translateX(${px}px)`;
-      el.style.boxShadow = `-8px 0 24px rgba(0,0,0,${0.18 * Math.max(0, Math.min(1, px / W))})`;
-      if (t < 1) { requestAnimationFrame(frame); return; }
+    if (usingReveal) {
+      const finishedTrack = track, finishedTarget = targetEl;
+      track = null; targetEl = null;
+      const startPx = lastDx - W;
+      const endPx = commit ? 0 : -W;
+      finishedTrack.style.transition = 'none';
 
-      // Settle one extra frame before calling the (possibly heavy) back
-      // function — same reasoning as the tab-carousel fix: let the browser
-      // actually paint the fully-off-screen position before any
-      // synchronous work from backFn() can block the next paint.
-      requestAnimationFrame(() => {
+      const cleanupTrack = () => {
+        _slideUnmountEl(el);
+        _slideUnmountEl(finishedTarget);
+        finishedTrack.remove();
+        // Cancelled — staying on this screen, which expects the tab-bar
+        // hidden. On commit, leave it as-is: backFn() (popScreen/showTab)
+        // already re-derives the correct state on its own.
+        if (!commit && unhidTabBar) {
+          document.getElementById('tab-bar')?.classList.add('hidden');
+        }
+        unhidTabBar = false;
+      };
+      const frame = now => {
+        if (myToken !== gestureToken) { cleanupTrack(); return; }
+        const t = Math.min(1, (now - t0) / DURATION);
+        const e = springEase(t);
+        finishedTrack.style.transform = `translateX(${startPx + (endPx - startPx) * e}px)`;
+        if (t < 1) { requestAnimationFrame(frame); return; }
+        // Settle one extra frame before calling the (possibly heavy) back
+        // function — same reasoning as the tab-carousel fix — so the
+        // browser actually paints the fully-settled position first.
+        requestAnimationFrame(() => {
+          if (myToken !== gestureToken) { cleanupTrack(); return; }
+          cleanupTrack();
+          if (commit) backFn();
+        });
+      };
+      requestAnimationFrame(frame);
+    } else {
+      const startPx = lastDx;
+      const endPx = commit ? W : 0;
+      el.style.transition = 'none';
+
+      const frame = now => {
         if (myToken !== gestureToken) return;
-        el.style.transition = '';
-        el.style.transform = '';
-        el.style.boxShadow = '';
-        if (commit) backFn();
-      });
+        const t = Math.min(1, (now - t0) / DURATION);
+        const e = springEase(t);
+        const px = startPx + (endPx - startPx) * e;
+        el.style.transform = `translateX(${px}px)`;
+        el.style.boxShadow = `-8px 0 24px rgba(0,0,0,${0.18 * Math.max(0, Math.min(1, px / W))})`;
+        if (t < 1) { requestAnimationFrame(frame); return; }
+        requestAnimationFrame(() => {
+          if (myToken !== gestureToken) return;
+          el.style.transition = '';
+          el.style.transform = '';
+          el.style.boxShadow = '';
+          if (commit) backFn();
+        });
+      };
+      requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
   }
 
   el.addEventListener('touchend', e => {
     if (!active) return;
     active = false;
-    if (!armed) return;
-    armed = false;
+    const wasX = axis === 'x';
+    axis = null;
+    if (!wasX) return;
     const t = e.changedTouches[0];
     const dx = t ? Math.max(0, Math.min(el.clientWidth, t.clientX - startX)) : 0;
     finish(dx >= threshold());
@@ -1619,8 +1726,9 @@ function attachEdgeSwipeBack(screenId, backFn) {
   el.addEventListener('touchcancel', () => {
     if (!active) return;
     active = false;
-    if (!armed) return;
-    armed = false;
+    const wasX = axis === 'x';
+    axis = null;
+    if (!wasX) return;
     finish(false);
   });
 }
