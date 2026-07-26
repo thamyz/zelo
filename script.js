@@ -1361,21 +1361,45 @@ function attachTabSwipeGestures(tabName) {
       finishedDestTab.style.transform = `translateX(${startDestX + (endDestX - startDestX) * e}px)`;
       if (t < 1) { requestAnimationFrame(frame); return; }
 
-      // On commit, swap which tab has .active BEFORE clearing the inline
-      // overrides below — el only stays visible right now because of its
-      // inline transform (it's still .active); clearing that transform
-      // first would snap it back to full-screen for a moment before
-      // showTab() gets to it.
-      if (commit) showTab(finishedDestName);
-      el.style.transition = '';
-      el.style.transform = '';
-      el.style.pointerEvents = '';
-      finishedDestTab.style.transition = '';
-      finishedDestTab.style.transform = '';
-      finishedDestTab.style.opacity = '';
-      finishedDestTab.style.pointerEvents = '';
-      finishedDestTab.style.zIndex = '';
-      finishedDestTab.style.boxShadow = '';
+      // Both tabs are now visually settled in their final resting
+      // position/opacity — nothing left to animate. showTab() below does
+      // real work beyond a class swap (initSwipeDeck(), renderChatsList(),
+      // etc. — see its own comments), which on real hardware can take long
+      // enough to still be running when the next frame is due, blocking
+      // that paint. If it ran in this same callback, the settled position
+      // set just above would never get its own paint — the browser would
+      // go straight from "mid-slide" to "slide finished AND deck
+      // rebuilt/popup shown/etc." in one jump, which is what reads as a
+      // flash on real hardware even though the slide itself was clean
+      // (Simulator's faster host hardware finishes showTab() fast enough
+      // that this gap isn't visible there, which is why it only showed up
+      // on-device). Deferring by one more rAF tick guarantees the browser
+      // actually paints this settled frame first, so showTab()'s work
+      // always starts from a screen that already looks correct.
+      requestAnimationFrame(() => {
+        // Re-check: a new touch could have started during this extra frame.
+        // Same rule as above — if superseded, just drop the tab out of the
+        // visible set instead of calling showTab() with stale data.
+        if (myToken !== gestureToken) {
+          finishedDestTab.style.transition = '';
+          finishedDestTab.style.transform = '';
+          finishedDestTab.style.opacity = '';
+          finishedDestTab.style.pointerEvents = '';
+          finishedDestTab.style.zIndex = '';
+          finishedDestTab.style.boxShadow = '';
+          return;
+        }
+        if (commit) showTab(finishedDestName);
+        el.style.transition = '';
+        el.style.transform = '';
+        el.style.pointerEvents = '';
+        finishedDestTab.style.transition = '';
+        finishedDestTab.style.transform = '';
+        finishedDestTab.style.opacity = '';
+        finishedDestTab.style.pointerEvents = '';
+        finishedDestTab.style.zIndex = '';
+        finishedDestTab.style.boxShadow = '';
+      });
     }
     requestAnimationFrame(frame);
   }
