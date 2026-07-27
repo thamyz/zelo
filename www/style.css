@@ -6976,6 +6976,22 @@ textarea { font-family: inherit; }
 .settings-skipped-name { color: var(--text); }
 .settings-skipped-occ { color: var(--text-2); font-weight: 500; font-size: 0.82rem; }
 
+/* Home Settings — all sections shown inline on one page (no dropdown/
+   sub-panel navigation), just stacked with a divider between them. */
+.settings-section {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.settings-section > .settings-field-label {
+  display: block;
+  margin-bottom: 6px;
+}
+.settings-section > .settings-select { width: 100%; }
+
 /* ================================================================
    WELCOME BACK — typewriter overlay for returning users
    ================================================================ */

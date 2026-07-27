@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260727b" />
+    <link rel="stylesheet" href="style.css?v=20260727c" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -218,7 +218,7 @@
               </svg>
             </span>
           </h1>
-          <button class="settings-btn" onclick="openPracticePreference()" aria-label="Who you practice with">
+          <button class="settings-btn" onclick="openHomeSettings()" aria-label="Home settings">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="1.8"
                  stroke-linecap="round" stroke-linejoin="round">
@@ -391,15 +391,6 @@
             </button>
             <div class="dash-settings-dropdown" id="dash-settings-dropdown">
               <div class="dash-menu">
-                <button class="dash-menu-row" onclick="openSettingsSubpage('practice')">
-                  Who You Practice With <span>›</span>
-                </button>
-                <button class="dash-menu-row" onclick="openSettingsSubpage('age')">
-                  Age Range <span>›</span>
-                </button>
-                <button class="dash-menu-row" onclick="openSettingsSubpage('skipped')">
-                  Skipped Profiles <span>›</span>
-                </button>
                 <button class="dash-menu-row" onclick="openSettingsSubpage('security')">
                   Security <span>›</span>
                 </button>
@@ -482,63 +473,6 @@
             </button>
           </div>
 
-          <!-- WHO YOU PRACTICE WITH -->
-          <div id="settings-panel-practice" hidden>
-            <p class="settings-info-text settings-practice-intro">
-              Choose who shows up in your practice deck. You can change this any time.
-            </p>
-            <div class="home-mode-grid settings-practice-grid" id="settings-practice-grid">
-              <button type="button" class="home-mode-card-btn" data-mode="women" onclick="settingsPracticeSelect('women', this)">
-                <span class="home-mode-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-                <span class="home-mode-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg></span>
-                <span class="home-mode-main">Women</span>
-                <span class="home-mode-tag">Zelo</span>
-              </button>
-              <button type="button" class="home-mode-card-btn" data-mode="men" onclick="settingsPracticeSelect('men', this)">
-                <span class="home-mode-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-                <span class="home-mode-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg></span>
-                <span class="home-mode-main">Men</span>
-                <span class="home-mode-tag">Zole</span>
-              </button>
-              <button type="button" class="home-mode-card-btn" data-mode="both" onclick="settingsPracticeSelect('both', this)">
-                <span class="home-mode-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-                <span class="home-mode-orb both">
-                  <svg width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg>
-                  <svg width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg>
-                </span>
-                <span class="home-mode-main">Both</span>
-                <span class="home-mode-tag">Everyone, incl. LGBTQ+</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- AGE RANGE -->
-          <div id="settings-panel-age" hidden>
-            <p class="settings-info-text settings-practice-intro">
-              Choose the age range you'd like to practice with. You can change this any time.
-            </p>
-            <div class="settings-field">
-              <label class="settings-field-label">Age range</label>
-              <select class="settings-select" id="settings-age-select" onchange="onAgeRangeChange(this.value)">
-                <option value="18-24">18–24</option>
-                <option value="25-30">25–30</option>
-                <option value="31-39">31–39</option>
-                <option value="40+">40+</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- SKIPPED PROFILES -->
-          <div id="settings-panel-skipped" hidden>
-            <div class="settings-info-block" id="settings-skipped-locked" hidden>
-              <p class="settings-info-title">See who you skipped</p>
-              <p class="settings-info-text">Upgrade to view and revisit profiles you've passed on.</p>
-              <button class="generate-btn settings-skipped-upgrade-btn" onclick="upgradeNow()">Upgrade</button>
-            </div>
-            <p class="settings-info-text" id="settings-skipped-empty" hidden>No skipped profiles yet.</p>
-            <div id="settings-skipped-list"></div>
-          </div>
-
           <!-- NOTIFICATIONS -->
           <div id="settings-panel-notifications" hidden>
             <label class="settings-toggle-row">
@@ -616,6 +550,81 @@
             <a class="dash-menu-row" href="mailto:support@zelo.app?subject=Report%20a%20problem">
               Report a problem <span>›</span>
             </a>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SCREEN: HOME SETTINGS (Home tab's top-right icon)
+           Fully separate from Account/User settings above — no shared
+           items. Everything laid out inline on one page directly, no
+           dropdown/expand sub-panel navigation.
+           ============================================================ -->
+      <div class="screen" id="screen-home-settings">
+
+        <div class="screen-header screen-header--closeright">
+          <span class="screen-title">Home Settings</span>
+          <button class="back-btn" onclick="popScreen()" aria-label="Close">✕</button>
+        </div>
+
+        <div class="settings-layout">
+
+          <!-- WHO YOU PRACTICE WITH -->
+          <div class="settings-section">
+            <label class="settings-field-label">Who you practice with</label>
+            <p class="settings-info-text settings-practice-intro">
+              Choose who shows up in your practice deck. You can change this any time.
+            </p>
+            <div class="home-mode-grid settings-practice-grid" id="settings-practice-grid">
+              <button type="button" class="home-mode-card-btn" data-mode="women" onclick="settingsPracticeSelect('women', this)">
+                <span class="home-mode-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="home-mode-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg></span>
+                <span class="home-mode-main">Women</span>
+                <span class="home-mode-tag">Zelo</span>
+              </button>
+              <button type="button" class="home-mode-card-btn" data-mode="men" onclick="settingsPracticeSelect('men', this)">
+                <span class="home-mode-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="home-mode-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg></span>
+                <span class="home-mode-main">Men</span>
+                <span class="home-mode-tag">Zole</span>
+              </button>
+              <button type="button" class="home-mode-card-btn" data-mode="both" onclick="settingsPracticeSelect('both', this)">
+                <span class="home-mode-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="home-mode-orb both">
+                  <svg width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/></svg>
+                  <svg width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg>
+                </span>
+                <span class="home-mode-main">Both</span>
+                <span class="home-mode-tag">Everyone, incl. LGBTQ+</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- AGE RANGE -->
+          <div class="settings-section">
+            <label class="settings-field-label">Age range</label>
+            <p class="settings-info-text settings-practice-intro">
+              Choose the age range you'd like to practice with. You can change this any time.
+            </p>
+            <select class="settings-select" id="settings-age-select" onchange="onAgeRangeChange(this.value)">
+              <option value="18-24">18–24</option>
+              <option value="25-30">25–30</option>
+              <option value="31-39">31–39</option>
+              <option value="40+">40+</option>
+            </select>
+          </div>
+
+          <!-- SKIPPED PROFILES -->
+          <div class="settings-section">
+            <label class="settings-field-label">Skipped profiles</label>
+            <div class="settings-info-block" id="settings-skipped-locked" hidden>
+              <p class="settings-info-title">See who you skipped</p>
+              <p class="settings-info-text">Upgrade to view and revisit profiles you've passed on.</p>
+              <button class="generate-btn settings-skipped-upgrade-btn" onclick="upgradeNow()">Upgrade</button>
+            </div>
+            <p class="settings-info-text" id="settings-skipped-empty" hidden>No skipped profiles yet.</p>
+            <div id="settings-skipped-list"></div>
           </div>
 
         </div>
@@ -1806,6 +1815,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260727b"></script>
+    <script src="script.js?v=20260727c"></script>
   </body>
 </html>

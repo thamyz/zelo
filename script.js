@@ -1137,7 +1137,7 @@ function commitSwipe(cardEl, direction) {
     : -window.innerWidth  * 1.6;
   const flyR = direction === 'right' ? 30 : -30;
 
-  cardEl.style.transition = 'transform 0.36s ease-in';
+  cardEl.style.transition = 'transform 0.55s ease-in';
   cardEl.style.transform  = `translate(${flyX}px, 0px) rotate(${flyR}deg)`;
 
   cardEl.addEventListener('transitionend', () => {
@@ -4231,14 +4231,21 @@ function openDashboard() {
 
 // Home tab's top-right icon — used to be a redundant second way to open
 // the exact same dashboard the top-left profile button already opens.
-// Now jumps straight to the "Who You Practice With" settings panel
-// instead. Deliberately does NOT call openDashboard() first — pushScreen()
-// only records a stack entry to return to if state.activeScreen was
-// already set when it's called, so entering "settings" straight from the
-// Home tab (activeScreen === null) means back unwinds directly to Home,
-// not through an intermediate Account screen the user never asked to see.
-function openPracticePreference() {
-  openSettingsSubpage('practice');
+// Now opens a Home-scoped settings screen (screen-home-settings) instead,
+// entirely separate from Account/User settings (screen-settings) — no
+// shared items between the two. Everything on it is laid out inline on
+// one page (no dropdown/sub-panel navigation like screen-settings uses),
+// so all three sections are populated up front here rather than lazily
+// per-panel. Deliberately does NOT call openDashboard() first —
+// pushScreen() only records a stack entry to return to if
+// state.activeScreen was already set when it's called, so entering
+// straight from the Home tab (activeScreen === null) means back unwinds
+// directly to Home, not through an intermediate Account screen.
+function openHomeSettings() {
+  _populatePracticePanel();
+  _populateAgePanel();
+  _populateSkippedPanel();
+  pushScreen('home-settings');
 }
 
 
@@ -6242,10 +6249,7 @@ const SETTINGS_PANEL_IDS = {
   'security':        'settings-panel-security',
   'notifications':   'settings-panel-notifications',
   'privacy':         'settings-panel-privacy',
-  'help':            'settings-panel-help',
-  'practice':        'settings-panel-practice',
-  'age':             'settings-panel-age',
-  'skipped':         'settings-panel-skipped'
+  'help':            'settings-panel-help'
 };
 
 const SETTINGS_PANEL_TITLES = {
@@ -6253,10 +6257,7 @@ const SETTINGS_PANEL_TITLES = {
   'security':        'Security',
   'notifications':   'Notifications',
   'privacy':         'Privacy',
-  'help':            'Help & Support',
-  'practice':        'Who You Practice With',
-  'age':             'Age Range',
-  'skipped':         'Skipped Profiles'
+  'help':            'Help & Support'
 };
 
 // Settings section on the Account page — expands/collapses in place.
@@ -6286,9 +6287,6 @@ function showSettingsPanel(name) {
   if (name === 'login')          _populateLoginPanel();
   if (name === 'notifications')  _populateNotificationsPanel();
   if (name === 'privacy')        _populatePrivacyPanel();
-  if (name === 'practice')       _populatePracticePanel();
-  if (name === 'age')            _populateAgePanel();
-  if (name === 'skipped')        _populateSkippedPanel();
 }
 
 // No intermediate list page anymore — back always returns to Account.
