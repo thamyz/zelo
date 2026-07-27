@@ -493,6 +493,13 @@ textarea { font-family: inherit; }
   min-height: 84px;
   padding: 16px 18px 14px;
   border-bottom: 1px solid var(--border);
+  /* iOS Safari/WKWebView auto-zooms the whole page on focus when a
+     focused field's computed font-size is under 16px — .msg-textarea's
+     base 0.92rem (14.72px) triggers it. Override to exactly 16px here
+     (scoped to this field only, not the shared .msg-textarea class used
+     elsewhere) and trim line-height slightly so the box doesn't grow. */
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .scan-inline-textarea:focus { outline: none; }
@@ -1120,6 +1127,17 @@ textarea { font-family: inherit; }
   background: var(--bg);
   z-index: 10;
 }
+
+/* Close/back button on the right instead of the left — used only for
+   Settings and History (both entered via a top-right tap on their
+   respective screens), scoped so no other .screen-header/.app-header
+   is affected. .screen-header is flex (title first, button pushes to
+   the far side via space-between); .app-header (History) is a fixed
+   3-column grid (38px/1fr/38px) instead, so its button is placed via
+   explicit grid-column rather than relying on source order. */
+.screen-header--closeright.screen-header { justify-content: space-between; }
+#screen-history .app-header .home-brand { grid-column: 2; }
+#screen-history .app-header .back-btn   { grid-column: 3; justify-self: end; }
 
 .screen-title {
   font-size: 0.9rem;
@@ -6952,7 +6970,11 @@ textarea { font-family: inherit; }
 
 .settings-practice-intro { margin-bottom: 4px; }
 .settings-practice-grid { margin-bottom: 8px; }
-.settings-practice-testfield { margin-top: 10px; }
+
+.settings-skipped-upgrade-btn { margin-top: 12px; width: 100%; }
+.settings-skipped-row { cursor: default; }
+.settings-skipped-name { color: var(--text); }
+.settings-skipped-occ { color: var(--text-2); font-weight: 500; font-size: 0.82rem; }
 
 /* ================================================================
    WELCOME BACK — typewriter overlay for returning users

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260727a" />
+    <link rel="stylesheet" href="style.css?v=20260727b" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -394,6 +394,12 @@
                 <button class="dash-menu-row" onclick="openSettingsSubpage('practice')">
                   Who You Practice With <span>›</span>
                 </button>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('age')">
+                  Age Range <span>›</span>
+                </button>
+                <button class="dash-menu-row" onclick="openSettingsSubpage('skipped')">
+                  Skipped Profiles <span>›</span>
+                </button>
                 <button class="dash-menu-row" onclick="openSettingsSubpage('security')">
                   Security <span>›</span>
                 </button>
@@ -427,9 +433,9 @@
            ============================================================ -->
       <div class="screen" id="screen-settings">
 
-        <div class="screen-header">
-          <button class="back-btn" onclick="settingsBack()">‹</button>
+        <div class="screen-header screen-header--closeright">
           <span class="screen-title" id="settings-screen-title">Settings</span>
+          <button class="back-btn" onclick="settingsBack()" aria-label="Close">✕</button>
         </div>
 
         <div class="settings-layout">
@@ -504,13 +510,33 @@
                 <span class="home-mode-tag">Everyone, incl. LGBTQ+</span>
               </button>
             </div>
+          </div>
 
-            <div class="settings-field settings-practice-testfield">
-              <label class="settings-field-label">Internal testing</label>
-              <button class="dash-menu-row" onclick="previewTestCardLayouts()">
-                Preview 10 test card layouts <span>›</span>
-              </button>
+          <!-- AGE RANGE -->
+          <div id="settings-panel-age" hidden>
+            <p class="settings-info-text settings-practice-intro">
+              Choose the age range you'd like to practice with. You can change this any time.
+            </p>
+            <div class="settings-field">
+              <label class="settings-field-label">Age range</label>
+              <select class="settings-select" id="settings-age-select" onchange="onAgeRangeChange(this.value)">
+                <option value="18-24">18–24</option>
+                <option value="25-30">25–30</option>
+                <option value="31-39">31–39</option>
+                <option value="40+">40+</option>
+              </select>
             </div>
+          </div>
+
+          <!-- SKIPPED PROFILES -->
+          <div id="settings-panel-skipped" hidden>
+            <div class="settings-info-block" id="settings-skipped-locked" hidden>
+              <p class="settings-info-title">See who you skipped</p>
+              <p class="settings-info-text">Upgrade to view and revisit profiles you've passed on.</p>
+              <button class="generate-btn settings-skipped-upgrade-btn" onclick="upgradeNow()">Upgrade</button>
+            </div>
+            <p class="settings-info-text" id="settings-skipped-empty" hidden>No skipped profiles yet.</p>
+            <div id="settings-skipped-list"></div>
           </div>
 
           <!-- NOTIFICATIONS -->
@@ -1244,7 +1270,6 @@
            ============================================================ -->
       <div class="screen screen--history" id="screen-history">
         <header class="app-header app-header--pad">
-          <button class="back-btn" onclick="closeHistory()" aria-label="Back">‹</button>
           <h1 class="home-brand">
             Zelo<span class="scan-spark" aria-hidden="true">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -1252,6 +1277,7 @@
               </svg>
             </span>
           </h1>
+          <button class="back-btn" onclick="closeHistory()" aria-label="Close">✕</button>
         </header>
 
         <div class="history-layout">
@@ -1780,6 +1806,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260727a"></script>
+    <script src="script.js?v=20260727b"></script>
   </body>
 </html>

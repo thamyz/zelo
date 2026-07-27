@@ -737,14 +737,34 @@ const TAP_MAX_MOVEMENT = 6;   // px — below this, a release counts as a tap, n
 // when the deck is exhausted; otherwise resumes where it left off.
 // ================================================================
 
+// Onboarding's age pills (18-24/25-30/31-39/40+) don't line up 1:1 with
+// PROFILES' own age_pool buckets (18-20/21-29/30+) — this is a
+// best-effort mapping between the two rather than an exact one.
+const AGE_RANGE_TO_POOLS = {
+  '18-24': ['18-20', '21-29'],
+  '25-30': ['21-29'],
+  '31-39': ['30+'],
+  '40+':   ['30+'],
+};
+
 function initSwipeDeck() {
   if (state.swipeIndex >= state.swipeProfiles.length) {
-    const age = parseInt(localStorage.getItem('zelo_user_age') || '0', 10);
-    let pool;
-    if      (age >= 18 && age <= 20) pool = PROFILES.filter(p => p.age_pool === '18-20');
-    else if (age >= 21 && age <= 29) pool = PROFILES.filter(p => p.age_pool === '21-29');
-    else if (age >= 30)              pool = PROFILES.filter(p => p.age_pool === '30+');
-    if (!pool || pool.length === 0)  pool = PROFILES; // fallback: no age set or pool empty
+    const practiceMode = localStorage.getItem('zelo_practice_mode') || 'women';
+
+    // No real male personas exist yet — until they're written, Men/Both
+    // fall back to the same 10 placeholder layout cards used for design
+    // review, rather than silently showing the women's deck with no
+    // indication the preference did anything.
+    if (practiceMode === 'men' || practiceMode === 'both') {
+      state.swipeProfiles = shuffleArray([...TEST_LAYOUT_PROFILES]);
+      state.swipeIndex    = 0;
+      renderDeck();
+      return;
+    }
+
+    const pools = AGE_RANGE_TO_POOLS[localStorage.getItem('zelo_age_range')];
+    let pool = pools ? PROFILES.filter(p => pools.includes(p.age_pool)) : null;
+    if (!pool || pool.length === 0) pool = PROFILES; // fallback: no age set or pool empty
     state.swipeProfiles = shuffleArray([...pool]);
     state.swipeIndex    = 0;
   }
@@ -1153,6 +1173,7 @@ function commitSwipe(cardEl, direction) {
       // starting a chat (see onStartChatting()), not matching itself.
       showMatchOverlay(profile);
     } else {
+      _recordSkippedProfile(profile);
       renderDeck();  // simple re-render — picks up new swipeIndex
     }
   }, { once: true });
@@ -4211,10 +4232,12 @@ function openDashboard() {
 // Home tab's top-right icon — used to be a redundant second way to open
 // the exact same dashboard the top-left profile button already opens.
 // Now jumps straight to the "Who You Practice With" settings panel
-// instead (still lands on Account first, same as any other settings row,
-// so the back button behaves exactly like it does everywhere else).
+// instead. Deliberately does NOT call openDashboard() first — pushScreen()
+// only records a stack entry to return to if state.activeScreen was
+// already set when it's called, so entering "settings" straight from the
+// Home tab (activeScreen === null) means back unwinds directly to Home,
+// not through an intermediate Account screen the user never asked to see.
 function openPracticePreference() {
-  openDashboard();
   openSettingsSubpage('practice');
 }
 
@@ -6220,7 +6243,9 @@ const SETTINGS_PANEL_IDS = {
   'notifications':   'settings-panel-notifications',
   'privacy':         'settings-panel-privacy',
   'help':            'settings-panel-help',
-  'practice':        'settings-panel-practice'
+  'practice':        'settings-panel-practice',
+  'age':             'settings-panel-age',
+  'skipped':         'settings-panel-skipped'
 };
 
 const SETTINGS_PANEL_TITLES = {
@@ -6229,7 +6254,9 @@ const SETTINGS_PANEL_TITLES = {
   'notifications':   'Notifications',
   'privacy':         'Privacy',
   'help':            'Help & Support',
-  'practice':        'Who You Practice With'
+  'practice':        'Who You Practice With',
+  'age':             'Age Range',
+  'skipped':         'Skipped Profiles'
 };
 
 // Settings section on the Account page — expands/collapses in place.
@@ -6260,6 +6287,8 @@ function showSettingsPanel(name) {
   if (name === 'notifications')  _populateNotificationsPanel();
   if (name === 'privacy')        _populatePrivacyPanel();
   if (name === 'practice')       _populatePracticePanel();
+  if (name === 'age')            _populateAgePanel();
+  if (name === 'skipped')        _populateSkippedPanel();
 }
 
 // No intermediate list page anymore — back always returns to Account.
@@ -6320,10 +6349,77 @@ function settingsPracticeSelect(mode, el) {
   state.swipeIndex = state.swipeProfiles.length;
 }
 
-// Internal-only: 10 blank/placeholder cards (no real names or bios yet)
-// loaded straight into the real swipe deck, so layout/spacing can be
-// reviewed using the exact same card component, stack, and swipe gesture
-// as the live app — not a separate mocked-up preview.
+// "Age Range" settings panel — same zelo_age_range value the onboarding
+// age pills write, just editable afterward too.
+function _populateAgePanel() {
+  const sel = document.getElementById('settings-age-select');
+  if (sel) sel.value = localStorage.getItem('zelo_age_range') || '18-24';
+}
+
+function onAgeRangeChange(value) {
+  localStorage.setItem('zelo_age_range', value);
+  // Same as changing practice mode — make it take effect on the next
+  // deck view instead of only once the current pool is exhausted.
+  state.swipeIndex = state.swipeProfiles.length;
+}
+
+// "Skipped Profiles" — a lightweight snapshot (not a live PROFILES
+// lookup) is stored per decline so the list still makes sense even if
+// PROFILES data changes later. Most-recent first, capped so this can't
+// grow unbounded in localStorage.
+const SKIPPED_PROFILES_KEY = 'zelo_skipped_profiles';
+const SKIPPED_PROFILES_MAX = 50;
+
+function _recordSkippedProfile(profile) {
+  if (!profile) return;
+  let list;
+  try { list = JSON.parse(localStorage.getItem(SKIPPED_PROFILES_KEY) || '[]'); }
+  catch { list = []; }
+  list = list.filter(p => p.id !== profile.id); // de-dupe — most recent decline wins the position
+  list.unshift({
+    id:         profile.id,
+    name:       profile.name,
+    age:        profile.age,
+    occupation: profile.occupation,
+  });
+  if (list.length > SKIPPED_PROFILES_MAX) list.length = SKIPPED_PROFILES_MAX;
+  localStorage.setItem(SKIPPED_PROFILES_KEY, JSON.stringify(list));
+}
+
+// Gated behind isPaidUser() per the product ask ("needs to be upgraded to
+// see the profiles you skipped") — isPaidUser() is currently a stub that
+// always returns true (see its own comment), so this reads as unlocked
+// for everyone until real payment logic replaces that stub; the gate
+// itself is already wired correctly for when it does.
+function _populateSkippedPanel() {
+  const locked = document.getElementById('settings-skipped-locked');
+  const listEl = document.getElementById('settings-skipped-list');
+  const emptyEl = document.getElementById('settings-skipped-empty');
+  const paid = isPaidUser();
+  if (locked) locked.hidden = paid;
+  if (!paid) {
+    if (listEl) listEl.innerHTML = '';
+    if (emptyEl) emptyEl.hidden = true;
+    return;
+  }
+  let list;
+  try { list = JSON.parse(localStorage.getItem(SKIPPED_PROFILES_KEY) || '[]'); }
+  catch { list = []; }
+  if (emptyEl) emptyEl.hidden = list.length > 0;
+  if (listEl) {
+    listEl.innerHTML = list.map(p => `
+      <div class="dash-menu-row settings-skipped-row">
+        <span class="settings-skipped-name">${p.name}${p.age ? ', ' + p.age : ''}</span>
+        <span class="settings-skipped-occ">${p.occupation || ''}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// 10 blank/placeholder cards (no real names or bios yet) — served as the
+// actual Men/Both deck content in initSwipeDeck() until real male
+// personas exist, so those preferences show *something* distinct from
+// the women's deck instead of silently reusing it.
 const TEST_LAYOUT_PROFILES = Array.from({ length: 10 }, (_, i) => ({
   id:             'test-layout-' + (i + 1),
   name:           'Layout ' + (i + 1),
@@ -6337,13 +6433,6 @@ const TEST_LAYOUT_PROFILES = Array.from({ length: 10 }, (_, i) => ({
   difficulty:     'easy',
   age_pool:       '21-29',
 }));
-
-function previewTestCardLayouts() {
-  state.swipeProfiles = [...TEST_LAYOUT_PROFILES];
-  state.swipeIndex = 0;
-  renderDeck();
-  showTab('practice');
-}
 
 function onRetentionChange(value) {
   localStorage.setItem('zelo_history_retention_days', value);
