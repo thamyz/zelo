@@ -121,6 +121,7 @@ window.addEventListener('DOMContentLoaded', () => {
     excludeSelector: '#reply-carousel',
   });
   attachEdgeSwipeBack('screen-scan-upload', popScreen);         // Upload Screenshot page
+  attachEdgeSwipeBack('screen-home-settings', popScreen);       // Home Settings (top-right icon on Home)
 });
 
 
@@ -726,8 +727,9 @@ let drag = {
   currentY: 0,
 };
 
-const SWIPE_THRESHOLD = 88;   // px from center to commit a swipe
+const SWIPE_THRESHOLD = 130;  // px from center to commit a swipe — Tinder-like: a deliberate distance, not a light nudge
 const MAX_ROTATION    = 15;   // max degrees of tilt while dragging
+const DRAG_FOLLOW_RESISTANCE = 0.8; // card visually translates at 80% of the raw finger delta — gives the drag some "weight" instead of a raw 1:1 snap; rotation/stamps/back-card feedback stay tied to the true (undamped) distance so progress-toward-threshold still reads accurately
 const TAP_MAX_MOVEMENT = 6;   // px — below this, a release counts as a tap, not a drag
 
 
@@ -1045,7 +1047,7 @@ function onDragMove(e) {
   // even starts.
   if (drag.card.id !== 'cine-swipe-card') {
     drag.card.style.transform =
-      `translate(${drag.currentX}px, ${drag.currentY * 0.4}px) rotate(${rotate}deg)`;
+      `translate(${drag.currentX * DRAG_FOLLOW_RESISTANCE}px, ${drag.currentY * 0.4 * DRAG_FOLLOW_RESISTANCE}px) rotate(${rotate}deg)`;
   }
 
   // Fade stamps proportionally to drag distance
@@ -1137,7 +1139,11 @@ function commitSwipe(cardEl, direction) {
     : -window.innerWidth  * 1.6;
   const flyR = direction === 'right' ? 30 : -30;
 
-  cardEl.style.transition = 'transform 0.55s ease-in';
+  // Weightier, more deliberate fly-off than a plain accelerate-and-vanish —
+  // material's "standard" curve (fast-ish start, controlled deceleration
+  // toward the end) reads as the card being thrown with some real mass
+  // behind it rather than snapping off-screen.
+  cardEl.style.transition = 'transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1)';
   cardEl.style.transform  = `translate(${flyX}px, 0px) rotate(${flyR}deg)`;
 
   cardEl.addEventListener('transitionend', () => {
