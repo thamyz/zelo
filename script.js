@@ -4626,7 +4626,7 @@ function openAddThread() {
   row.className = 'thread-new-input-row';
   row.innerHTML = `
     <input class="thread-save-input thread-new-name-input"
-           type="text" placeholder="Thread name…" autocomplete="off" maxlength="50" />
+           type="text" placeholder="Thread name…" autocomplete="off" maxlength="50" enterkeyhint="done" />
     <button class="thread-save-btn" type="button">Add</button>
   `;
 
@@ -5414,7 +5414,7 @@ function showSaveBeforeLeave() {
     card.innerHTML = `
       <p class="save-reminder-q">Create a thread</p>
       <div class="save-reminder-row">
-        <input class="thread-save-input" id="reminder-new-name" type="text" placeholder="Name…" />
+        <input class="thread-save-input" id="reminder-new-name" type="text" placeholder="Name…" enterkeyhint="done" />
         <button class="thread-save-btn" id="reminder-add-btn">Add</button>
       </div>
       <button class="save-reminder-leave-btn" style="margin-top:8px">Cancel</button>`;
@@ -5515,6 +5515,7 @@ function showNewThreadInputInPicker(picker) {
     <p class="thread-save-q">Create a thread</p>
     <div class="thread-save-row">
       <input class="thread-save-input" id="thread-new-name" type="text" placeholder="Name…"
+             enterkeyhint="done"
              onkeydown="if(event.key==='Enter')confirmSaveToNewThread()" />
       <button class="thread-save-btn" onclick="confirmSaveToNewThread()">Add</button>
     </div>

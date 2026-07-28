@@ -437,7 +437,7 @@
             <div class="settings-field">
               <label class="settings-field-label">Display name</label>
               <div class="settings-field-row">
-                <input type="text" id="settings-display-name-input" class="settings-input" maxlength="30" />
+                <input type="text" id="settings-display-name-input" class="settings-input" maxlength="30" enterkeyhint="done" />
                 <button class="settings-save-btn" onclick="saveAccountDisplayName()">Save</button>
               </div>
             </div>
@@ -445,7 +445,7 @@
             <div class="settings-field">
               <label class="settings-field-label">Email</label>
               <div class="settings-field-row">
-                <input type="email" id="settings-email-input" class="settings-input" placeholder="you@example.com" />
+                <input type="email" id="settings-email-input" class="settings-input" placeholder="you@example.com" enterkeyhint="done" />
                 <button class="settings-save-btn" onclick="changeAccountEmail()">Save</button>
               </div>
               <p class="settings-field-msg" id="settings-email-msg"></p>
@@ -454,7 +454,7 @@
             <div class="settings-field">
               <label class="settings-field-label">New password</label>
               <div class="settings-field-row">
-                <input type="password" id="settings-password-input" class="settings-input" placeholder="New password" />
+                <input type="password" id="settings-password-input" class="settings-input" placeholder="New password" enterkeyhint="done" />
                 <button class="settings-save-btn" onclick="changeAccountPassword()">Save</button>
               </div>
               <p class="settings-field-msg" id="settings-password-msg"></p>
@@ -736,6 +736,7 @@
             id="message-input"
             class="message-input"
             placeholder="Message…"
+            enterkeyhint="send"
             onkeydown="handleKeyDown(event)"
           />
           <button class="send-btn" id="send-btn" onclick="sendMessage()">
@@ -1043,7 +1044,7 @@
           <h2 class="cine-head">Pick your name</h2>
           <p class="cine-sub">This is how you'll appear on the leaderboard.</p>
           <input type="text" class="cine-name-input" id="cine-name-input" placeholder="Choose any name"
-                 maxlength="30" autocomplete="off" oninput="cineNameInput()"
+                 maxlength="30" autocomplete="off" enterkeyhint="next" oninput="cineNameInput()"
                  onkeydown="if(event.key==='Enter'){event.preventDefault(); cineNext();}" />
           <p class="cine-name-error" id="cine-name-error"></p>
         </section>
@@ -1497,6 +1498,7 @@
         <div class="aicoach-input-bar">
           <input class="aicoach-input" id="aicoach-input" type="text"
                  placeholder="Ask a follow-up question…"
+                 enterkeyhint="send"
                  onkeydown="handleAiCoachKeyDown(event)" />
           <button class="aicoach-send-btn" onclick="sendAiCoachMessage()" aria-label="Send">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1703,12 +1705,12 @@
           <h1 class="auth-email-title">Create your account</h1>
           <div class="auth-form">
             <input id="auth-email-input" class="auth-input" type="email"
-                   placeholder="Email" autocomplete="email" />
+                   placeholder="Email" autocomplete="email" enterkeyhint="next" />
             <input id="auth-password-input" class="auth-input" type="password"
-                   placeholder="Password" autocomplete="current-password" />
+                   placeholder="Password" autocomplete="current-password" enterkeyhint="done" />
             <div id="auth-confirm-wrap">
               <input id="auth-confirm-input" class="auth-input" type="password"
-                     placeholder="Confirm password" autocomplete="new-password" />
+                     placeholder="Confirm password" autocomplete="new-password" enterkeyhint="done" />
             </div>
             <p class="auth-error-msg" id="auth-email-error"></p>
             <button class="auth-submit-btn" id="auth-submit-btn"
@@ -1739,7 +1741,7 @@
             <div class="setup-field">
               <label class="setup-label" for="setup-username-input">Username</label>
               <input id="setup-username-input" class="auth-input" type="text"
-                     placeholder="Pick a name for the leaderboard" maxlength="30" />
+                     placeholder="Pick a name for the leaderboard" maxlength="30" enterkeyhint="done" />
             </div>
             <div class="setup-field">
               <label class="setup-label">Age</label>
@@ -1815,6 +1817,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260729a"></script>
+    <script src="script.js?v=20260729b"></script>
   </body>
 </html>
