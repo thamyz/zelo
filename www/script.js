@@ -6506,3 +6506,118 @@ function confirmDeleteAccount() {
     () => { AUTH.deleteAccount(); }
   );
 }
+
+// ============================================================
+// KEYBOARD: no zoom-on-focus, no up/down "other fields" bar
+// ============================================================
+//
+// 1) Zoom-on-focus — a STATIC "maximum-scale=1.0, user-scalable=no" in the
+//    viewport meta tag didn't stop it (tried and confirmed not enough on
+//    real hardware). WebKit is more reliable about respecting the zoom cap
+//    when the meta tag's content is actively re-written at the moment of
+//    focus, rather than left static since page load. Toggle it on
+//    focus/blur via one delegated listener instead of a per-field one.
+(function () {
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  const NORMAL  = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+  const NO_ZOOM = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+
+  function isTextField(el) {
+    if (!el) return false;
+    if (el.tagName === 'TEXTAREA') return true;
+    if (el.tagName !== 'INPUT') return false;
+    return !['checkbox', 'radio', 'file', 'button', 'submit'].includes(el.type);
+  }
+  document.addEventListener('focusin', (e) => {
+    if (isTextField(e.target)) meta.setAttribute('content', NO_ZOOM);
+  }, true);
+  document.addEventListener('focusout', (e) => {
+    if (isTextField(e.target)) meta.setAttribute('content', NORMAL);
+  }, true);
+})();
+
+// 2) The up/down "jump to other field" bar above the keyboard — WebKit adds
+//    this whenever it thinks there's more than one reachable field on the
+//    page. This app keeps every screen's fields in the DOM at once (just
+//    hidden), so WebKit was seeing dozens of "other fields" across every
+//    screen and offering to jump between them. Fix: keep fields outside the
+//    currently-visible screen out of the tab order (tabindex="-1") so
+//    they're not "reachable" — WebKit then has nothing to offer navigation
+//    to and drops the bar down to just the field's own return key.
+//    Recomputed on a MutationObserver watching class changes, so it covers
+//    every screen transition (tabs, pushScreen, onboarding, etc.) through
+//    one shared hook instead of needing to be wired into each one by hand.
+(function () {
+  function isVisible(el) {
+    // Screens/tabs in this app hide via opacity:0 + pointer-events:none, not
+    // display:none, so offsetParent alone doesn't detect a hidden screen —
+    // walk the ancestor chain checking the actual computed visibility.
+    let node = el;
+    while (node && node !== document.body) {
+      const cs = getComputedStyle(node);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return false;
+      node = node.parentElement;
+    }
+    return true;
+  }
+  function refresh() {
+    document.querySelectorAll('input, textarea').forEach((el) => {
+      if (isVisible(el)) el.removeAttribute('tabindex');
+      else el.setAttribute('tabindex', '-1');
+    });
+  }
+  let scheduled = false;
+  function scheduleRefresh() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => { scheduled = false; refresh(); });
+  }
+  const observer = new MutationObserver(scheduleRefresh);
+  observer.observe(document.body, {
+    subtree: true, attributes: true, attributeFilter: ['class', 'hidden'],
+  });
+  // Synchronous (not debounced) on focusin itself — WebKit decides what's
+  // "reachable" for the accessory bar as part of handling this exact event,
+  // so the tabindex fix-up needs to land before that, not next frame.
+  document.addEventListener('focusin', refresh, true);
+  refresh();
+})();
+
+// ============================================================
+// TEMP DIAGNOSTIC — remove once confirmed fixed on a real device.
+// Shows real numbers on focus AND blur, so we can see whether the
+// focus/blur viewport toggle actually keeps scale at 1.00 through a
+// full open-keyboard-then-close-it cycle, not just at the first moment.
+// ============================================================
+(function () {
+  let badge;
+  function ensureBadge() {
+    if (badge) return badge;
+    badge = document.createElement('div');
+    badge.id = 'zoom-debug-badge';
+    badge.style.cssText =
+      'position:fixed;left:4px;right:4px;top:4px;z-index:999999;' +
+      'background:rgba(0,0,0,0.85);color:#0f0;font:10px/1.5 monospace;' +
+      'padding:6px 8px;border-radius:6px;pointer-events:none;' +
+      'white-space:pre-wrap;max-height:40vh;overflow:hidden;';
+    document.body.appendChild(badge);
+    return badge;
+  }
+  function render(label) {
+    const b = ensureBadge();
+    const vv = window.visualViewport;
+    const el = document.activeElement;
+    const tag = el && el.id ? '#' + el.id : (el ? el.tagName : 'none');
+    const line = document.createElement('div');
+    const meta = document.querySelector('meta[name="viewport"]');
+    line.textContent =
+      label + ' focus=' + tag +
+      ' vvScale=' + (vv ? vv.scale.toFixed(2) : '?') +
+      ' meta=' + (meta ? (meta.getAttribute('content').includes('maximum-scale') ? 'LOCKED' : 'normal') : '?');
+    b.insertBefore(line, b.firstChild);
+    while (b.childNodes.length > 6) b.removeChild(b.lastChild);
+  }
+  document.addEventListener('focusin', () => render('IN '), true);
+  document.addEventListener('focusout', () => render('OUT'), true);
+})();
