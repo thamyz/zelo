@@ -3535,7 +3535,9 @@ function cineRunNameEntrance() {
   if (input) {
     const saved = localStorage.getItem('zelo_display_name');
     if (saved && !input.value) input.value = saved;
-    setTimeout(() => input.focus(), 60);
+    // Deliberately NOT auto-focusing here — popping the keyboard open before
+    // the user has tapped anything shoves the whole screen up to make room
+    // for it, hiding the title/subtitle. Let them tap the field themselves.
   }
 }
 
@@ -6503,46 +6505,3 @@ function confirmDeleteAccount() {
     () => { AUTH.deleteAccount(); }
   );
 }
-
-// ============================================================
-// TEMP DIAGNOSTIC — remove once the zoom-on-focus bug is found.
-// Shows real numbers at the moment a text field is focused, so we can
-// see what's actually happening on-device instead of guessing.
-// ============================================================
-(function () {
-  let badge;
-  function ensureBadge() {
-    if (badge) return badge;
-    badge = document.createElement('div');
-    badge.id = 'zoom-debug-badge';
-    badge.style.cssText =
-      'position:fixed;left:4px;right:4px;top:4px;z-index:999999;' +
-      'background:rgba(0,0,0,0.85);color:#0f0;font:10px/1.5 monospace;' +
-      'padding:6px 8px;border-radius:6px;pointer-events:none;' +
-      'white-space:pre-wrap;';
-    document.body.appendChild(badge);
-    return badge;
-  }
-  function render(label) {
-    const b = ensureBadge();
-    const vv = window.visualViewport;
-    const el = document.activeElement;
-    const tag = el && el.id ? '#' + el.id : (el ? el.tagName : 'none');
-    const cs = el ? getComputedStyle(el) : null;
-    const docW = document.documentElement.scrollWidth;
-    const winW = window.innerWidth;
-    b.textContent =
-      label +
-      '\nfocus=' + tag +
-      '\nfont=' + (cs ? cs.fontSize : '-') +
-      ' tsAdjust=' + (cs ? cs.webkitTextSizeAdjust || cs.textSizeAdjust || '-' : '-') +
-      '\nvvScale=' + (vv ? vv.scale.toFixed(2) : '?') +
-      ' vvW=' + (vv ? Math.round(vv.width) : '?') +
-      ' innerW=' + winW +
-      '\ndocScrollW=' + docW + (docW > winW ? ' OVERFLOW!' : ' ok');
-  }
-  document.addEventListener('focusin', () => render('focusin'), true);
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', () => render('vv-resize'));
-  }
-})();
