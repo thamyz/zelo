@@ -6,22 +6,28 @@ import Capacitor
 // CSS-side fixes (16px inputs, no user-scalable=no) don't reliably stop
 // WKWebView from bumping its scrollView zoomScale when the keyboard opens —
 // that auto-zoom is driven by the scroll view itself, not by the page.
+//
+// A ONE-TIME assignment in viewDidLoad isn't enough: WKWebView re-derives
+// minimumZoomScale/maximumZoomScale from the page's viewport meta tag once
+// the page actually finishes loading (which happens after viewDidLoad
+// returns), silently clobbering whatever we set here first. So instead of
+// setting it once, keep re-asserting it for the life of the view — cheap,
+// and it wins every time something tries to widen the zoom bounds back out.
 class MainViewController: CAPBridgeViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
-        webView?.scrollView.minimumZoomScale = 1.0
-        webView?.scrollView.maximumZoomScale = 1.0
-        webView?.scrollView.bouncesZoom = false
-        webView?.scrollView.pinchGestureRecognizer?.isEnabled = false
 
-        // WKContentView (the thing that supplies the accessory bar) is created
-        // lazily once web content actually loads, so it doesn't exist yet at
-        // this point — retry for a couple seconds until it shows up.
-        var attempts = 0
-        Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] timer in
-            attempts += 1
-            let found = self?.removeKeyboardAccessoryBar() ?? false
-            if found || attempts > 15 { timer.invalidate() }
+        var accessoryBarPatched = false
+        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] timer in
+            guard let self = self, let scrollView = self.webView?.scrollView else { return }
+            scrollView.minimumZoomScale = 1.0
+            scrollView.maximumZoomScale = 1.0
+            scrollView.bouncesZoom = false
+            scrollView.pinchGestureRecognizer?.isEnabled = false
+            if scrollView.zoomScale != 1.0 { scrollView.setZoomScale(1.0, animated: false) }
+            if !accessoryBarPatched {
+                accessoryBarPatched = self.removeKeyboardAccessoryBar()
+            }
         }
     }
 
