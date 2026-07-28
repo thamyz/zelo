@@ -2,32 +2,24 @@ import UIKit
 import WebKit
 import Capacitor
 
-// Locks the WKWebView's own pinch-zoom out at the native/UIScrollView level.
-// CSS-side fixes (16px inputs, no user-scalable=no) don't reliably stop
-// WKWebView from bumping its scrollView zoomScale when the keyboard opens —
-// that auto-zoom is driven by the scroll view itself, not by the page.
-//
-// A ONE-TIME assignment in viewDidLoad isn't enough: WKWebView re-derives
-// minimumZoomScale/maximumZoomScale from the page's viewport meta tag once
-// the page actually finishes loading (which happens after viewDidLoad
-// returns), silently clobbering whatever we set here first. So instead of
-// setting it once, keep re-asserting it for the life of the view — cheap,
-// and it wins every time something tries to widen the zoom bounds back out.
+// NOTE: an earlier version of this file also locked the WKWebView's native
+// UIScrollView pinch-zoom (minimumZoomScale/maximumZoomScale/pinchGesture).
+// Turned out to be the wrong lever — it didn't stop the auto-zoom-on-focus
+// bug at all (that's driven by WebKit's private focused-input handling, not
+// the public pinch-zoom gesture system) and it broke tap-to-dismiss-keyboard
+// and introduced an unwanted scrollbar as a side effect. Removed.
 class MainViewController: CAPBridgeViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        var accessoryBarPatched = false
-        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] timer in
-            guard let self = self, let scrollView = self.webView?.scrollView else { return }
-            scrollView.minimumZoomScale = 1.0
-            scrollView.maximumZoomScale = 1.0
-            scrollView.bouncesZoom = false
-            scrollView.pinchGestureRecognizer?.isEnabled = false
-            if scrollView.zoomScale != 1.0 { scrollView.setZoomScale(1.0, animated: false) }
-            if !accessoryBarPatched {
-                accessoryBarPatched = self.removeKeyboardAccessoryBar()
-            }
+        // WKContentView (the thing that supplies the accessory bar) is created
+        // lazily once web content actually loads, so it doesn't exist yet at
+        // this point — retry for a couple seconds until it shows up.
+        var attempts = 0
+        Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] timer in
+            attempts += 1
+            let found = self?.removeKeyboardAccessoryBar() ?? false
+            if found || attempts > 15 { timer.invalidate() }
         }
     }
 
