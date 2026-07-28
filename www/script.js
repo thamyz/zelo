@@ -6503,3 +6503,44 @@ function confirmDeleteAccount() {
     () => { AUTH.deleteAccount(); }
   );
 }
+
+// ============================================================
+// TEMP DIAGNOSTIC — on-screen zoom readout, remove once the
+// iOS auto-zoom-on-focus bug is confirmed fixed on a real device.
+// Shows live visualViewport scale/width whenever any text field is
+// focused, so zoom state can be confirmed with a screenshot instead
+// of a code-level claim.
+// ============================================================
+(function () {
+  let badge;
+  function ensureBadge() {
+    if (badge) return badge;
+    badge = document.createElement('div');
+    badge.id = 'zoom-debug-badge';
+    badge.style.cssText =
+      'position:fixed;right:6px;bottom:6px;z-index:999999;' +
+      'background:rgba(0,0,0,0.75);color:#0f0;font:10px/1.4 monospace;' +
+      'padding:4px 7px;border-radius:6px;pointer-events:none;' +
+      'white-space:pre;max-width:70vw;';
+    document.body.appendChild(badge);
+    return badge;
+  }
+  function render(label) {
+    const b = ensureBadge();
+    const vv = window.visualViewport;
+    const el = document.activeElement;
+    const tag = el && el.id ? '#' + el.id : (el ? el.tagName : 'none');
+    const fs = el ? getComputedStyle(el).fontSize : '-';
+    b.textContent =
+      label + ' scale=' + (vv ? vv.scale.toFixed(2) : '?') +
+      ' vvW=' + (vv ? Math.round(vv.width) : '?') +
+      ' innerW=' + window.innerWidth +
+      ' focus=' + tag + ' font=' + fs;
+  }
+  document.addEventListener('focusin', () => render('focusin'), true);
+  document.addEventListener('focusout', () => render('focusout'), true);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => render('vv-resize'));
+  }
+  window.addEventListener('load', () => render('load'));
+})();
