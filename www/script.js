@@ -6583,3 +6583,17 @@ function confirmDeleteAccount() {
   document.addEventListener('focusin', refresh, true);
   refresh();
 })();
+
+// Explicit, JS-only keyboard dismiss — deliberately not relying on WKWebView's
+// own native tap-outside-to-dismiss behavior, which has not proven reliable
+// across several rounds of native-code attempts. If a text field is
+// currently focused and the tap lands outside any input/textarea, blur it
+// directly. touchstart (not click) so this fires at the start of the tap,
+// same moment native dismiss would — not a delayed second tap.
+document.addEventListener('touchstart', (e) => {
+  const active = document.activeElement;
+  if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
+  const target = e.target;
+  if (target && target.closest && target.closest('input, textarea')) return;
+  active.blur();
+}, { capture: true, passive: true });
