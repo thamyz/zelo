@@ -6488,6 +6488,9 @@ textarea { font-family: inherit; }
   background: none;
 }
 .cine-name-input::placeholder { color: #cfc4b6; font-weight: 600; }
+/* Hidden outright (not faded) the instant the field is focused — no
+   transition property here, so there's nothing to animate through. */
+.cine-name-input:focus::placeholder { opacity: 0; }
 .cine-name-error {
   min-height: 20px;
   margin: 10px 0 0;

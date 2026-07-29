@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-07-29 19:15";
+const BUILD_STAMP = "2026-07-29 19:32";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6688,7 +6688,7 @@ document.addEventListener('touchstart', (e) => {
     // (previously: the whole block) is what overcorrected before — the card
     // itself was already correct, this only widens which elements share
     // its same transform value.
-    'asst-input':    { move: ['.scan-headline-row', '.scan-message', '.scan-who-section'], measureBy: '.scan-message' },
+    'asst-input':    { move: ['.scan-headline-row', '.scan-message', '.scan-who-section', '#aicoach-card'], measureBy: '.scan-message' },
     'aicoach-input': { move: ['.aicoach-suggest-panel', '.aicoach-input-bar'] }, // suggestions panel travels with the input bar, staying anchored above it
   };
 
@@ -6723,20 +6723,37 @@ document.addEventListener('touchstart', (e) => {
     if (clippedEl) { clippedEl.style.height = ''; clippedEl.style.overflow = ''; clippedEl = null; }
   }
 
-  function nudgeFocusedIntoView() {
+  // `instant`: skip the transition and apply synchronously, no delay. Used
+  // on the very first nudge for a given focus — waiting for the real
+  // keyboardWillShow height (or even just a setTimeout) meant the caret
+  // first painted at the input's un-shifted resting spot, then the nudge
+  // landed a beat later and visibly yanked it (and the whole field) to the
+  // shifted position — the reported "cursor teleports" glitch. Applying at
+  // least MIN_VISIBLE_SHIFT immediately, synchronously, in the same tick as
+  // focus, means the caret's very first paint is already in the right
+  // place. The later keyboardWillShow call (animated) only has to do
+  // anything if the real keyboard height needs MORE than that minimum.
+  function nudgeFocusedIntoView(instant) {
     const active = document.activeElement;
     if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
-    if (!keyboardHeight) { clearNudge(); return; }
     const { els, clip, measureEl } = movableElsAndClip(active);
-    clearNudge();
+    if (!(nudgedEls.length && nudgedEls[0] === els[0])) clearNudge();
     if (clip) applyClip(clip, els);
-    els.forEach((el) => { el.style.transform = ''; });
+    // Clear transform first and read the rect off that — a translateY
+    // already applied would shift getBoundingClientRect() along with it,
+    // so measuring while still shifted (on a second/correcting call) would
+    // silently under-count how much more shift is actually needed.
+    // getBoundingClientRect() forces a layout pass but not a paint, so this
+    // reset is never visible on screen — safe to do every time, and it's
+    // also what lets the `instant:false` branch below genuinely animate
+    // from the true resting position instead of wherever it already was.
+    els.forEach((el) => { el.style.transition = 'none'; el.style.transform = ''; });
     const rect = measureEl.getBoundingClientRect();
     const visibleBottom = window.innerHeight - keyboardHeight;
     const overlap = rect.bottom - visibleBottom;
     const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);
     els.forEach((el) => {
-      el.style.transition = 'transform 0.25s ease';
+      el.style.transition = instant ? 'none' : 'transform 0.25s ease';
       el.style.transform = `translateY(${-shift}px)`;
     });
     nudgedEls = els;
@@ -6750,18 +6767,19 @@ document.addEventListener('touchstart', (e) => {
   if (Keyboard) {
     Keyboard.addListener('keyboardWillShow', (info) => {
       keyboardHeight = (info && info.keyboardHeight) || 0;
-      setTimeout(nudgeFocusedIntoView, 30);
+      nudgeFocusedIntoView(false); // animated correction if the real height needs more than the instant minimum already applied
     });
     Keyboard.addListener('keyboardWillHide', () => {
       keyboardHeight = 0;
       clearNudge();
     });
   }
-  // Switching focus to a different field while the keyboard is already open
-  // doesn't fire another keyboardWillShow — re-nudge on every focus change.
+  // Synchronous, not delayed — see the `instant` note above. Also covers
+  // switching focus to a different field while the keyboard is already
+  // open, which doesn't fire another keyboardWillShow.
   document.addEventListener('focusin', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-      setTimeout(nudgeFocusedIntoView, 80);
+      nudgeFocusedIntoView(true);
     }
   }, true);
   document.addEventListener('focusout', (e) => {
