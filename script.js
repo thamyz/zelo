@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-07-29 17:46";
+const BUILD_STAMP = "2026-07-29 19:15";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6681,12 +6681,14 @@ document.addEventListener('touchstart', (e) => {
   // see .scan-scroll-clip) instead of visually overlapping whatever sits
   // above/outside it (the pinned header).
   const MOVABLE_OVERRIDE = {
-    // Reverted to just the input card — moving the whole content block
-    // (previous round) overcorrected: shift amount was measured off the
-    // WHOLE block's bottom edge (all the way down past "Who's this
-    // about?"), so it moved way more than needed, pushing the input off
-    // the top and dragging the trust line out of its resting spot.
-    'asst-input':    { move: ['.scan-message'] },
+    // Headline+subtitle and "Who's this about?" now ride along with the
+    // input card so all three move together in proportion — but the shift
+    // AMOUNT is still measured off just the input card (`measureBy`), not
+    // whichever of these three sits lowest. Measuring off the lowest one
+    // (previously: the whole block) is what overcorrected before — the card
+    // itself was already correct, this only widens which elements share
+    // its same transform value.
+    'asst-input':    { move: ['.scan-headline-row', '.scan-message', '.scan-who-section'], measureBy: '.scan-message' },
     'aicoach-input': { move: ['.aicoach-suggest-panel', '.aicoach-input-bar'] }, // suggestions panel travels with the input bar, staying anchored above it
   };
 
@@ -6698,9 +6700,12 @@ document.addEventListener('touchstart', (e) => {
   // explicit entry.
   function movableElsAndClip(input) {
     const config = MOVABLE_OVERRIDE[input.id];
-    if (!config) return { els: [input], clip: null };
+    if (!config) return { els: [input], clip: null, measureEl: input };
     const els = config.move.map((sel) => input.closest(sel) || document.querySelector(sel)).filter(Boolean);
-    return { els: els.length ? els : [input], clip: config.clip || null };
+    const resolvedEls = els.length ? els : [input];
+    const measureEl = (config.measureBy && (input.closest(config.measureBy) || document.querySelector(config.measureBy)))
+      || resolvedEls[resolvedEls.length - 1];
+    return { els: resolvedEls, clip: config.clip || null, measureEl };
   }
 
   let clippedEl = null;
@@ -6722,12 +6727,11 @@ document.addEventListener('touchstart', (e) => {
     const active = document.activeElement;
     if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
     if (!keyboardHeight) { clearNudge(); return; }
-    const { els, clip } = movableElsAndClip(active);
+    const { els, clip, measureEl } = movableElsAndClip(active);
     clearNudge();
     if (clip) applyClip(clip, els);
     els.forEach((el) => { el.style.transform = ''; });
-    const lowest = els[els.length - 1];
-    const rect = lowest.getBoundingClientRect();
+    const rect = measureEl.getBoundingClientRect();
     const visibleBottom = window.innerHeight - keyboardHeight;
     const overlap = rect.bottom - visibleBottom;
     const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);

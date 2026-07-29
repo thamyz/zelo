@@ -6474,10 +6474,19 @@ textarea { font-family: inherit; }
   font-size: 1.5rem;
   font-weight: 700;
   color: #1c1917;
+  caret-color: #1c1917; /* was defaulting to the system blue tint */
   outline: none;
+  /* Without this, iOS draws its own native focus chrome behind the field
+     (a background box) that isn't reachable through outline/background —
+     appearance:none hands all of that rendering over to our own CSS. */
+  -webkit-appearance: none;
+  appearance: none;
   transition: border-color 0.2s ease;
 }
-.cine-name-input:focus { border-color: var(--accent); }
+.cine-name-input:focus {
+  border-color: var(--accent);
+  background: none;
+}
 .cine-name-input::placeholder { color: #cfc4b6; font-weight: 600; }
 .cine-name-error {
   min-height: 20px;
