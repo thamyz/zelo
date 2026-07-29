@@ -5853,9 +5853,15 @@ function _aiCoachActionPills() {
 // fully-formed question.
 let _aiCoachSuggestOpen = false;
 
+// Suggestions panel and keyboard are mutually exclusive — opening one
+// closes the other, they never stack/overlap.
 function toggleAiCoachSuggestPanel() {
   _aiCoachSuggestOpen = !_aiCoachSuggestOpen;
   _updateAiCoachSuggestToggle();
+  if (_aiCoachSuggestOpen) {
+    const input = document.getElementById('aicoach-input');
+    if (input && document.activeElement === input) input.blur();
+  }
 }
 
 function _updateAiCoachSuggestToggle() {
@@ -5864,6 +5870,15 @@ function _updateAiCoachSuggestToggle() {
   if (panel)   panel.classList.toggle('open', _aiCoachSuggestOpen);
   if (chevron) chevron.classList.toggle('aicoach-suggest-toggle-chevron--open', _aiCoachSuggestOpen);
 }
+
+// Focusing the input (keyboard opening) closes the suggestions panel if
+// it's open — same mutual-exclusivity in the other direction.
+document.addEventListener('focusin', (e) => {
+  if (e.target.id === 'aicoach-input' && _aiCoachSuggestOpen) {
+    _aiCoachSuggestOpen = false;
+    _updateAiCoachSuggestToggle();
+  }
+}, true);
 
 function renderAiCoachSuggestPanel() {
   const body = document.getElementById('aicoach-suggest-body');
@@ -6599,7 +6614,7 @@ document.addEventListener('touchstart', (e) => {
 }, { capture: true, passive: true });
 
 // ============================================================
-// KEYBOARD-OPEN: nudge only the focused input, nothing else
+// KEYBOARD-OPEN: nudge a designated "movable" area, pin everything else
 // ============================================================
 // Native keyboard-triggered page resize is fully disabled (see
 // capacitor.config.json — Keyboard.resize: "none"), replacing the earlier
@@ -6610,20 +6625,39 @@ document.addEventListener('touchstart', (e) => {
 // With native resize off, NOTHING moves automatically when the keyboard
 // opens — the keyboard just overlays on top of whatever's already there. So
 // if the focused field would end up covered, we're now fully responsible
-// for keeping it visible ourselves. Rather than finding/using each screen's
-// own scroll container (every screen's structure is different — flex-
-// centered onboarding screens, message lists, plain settings forms), this
-// applies a translateY directly to the focused element itself: one
-// mechanism that works identically everywhere, since it never depends on
-// the surrounding layout being scrollable at all. Header/footer/everything
-// else is untouched — only the input's own position moves.
+// for keeping it visible ourselves.
+//
+// Per-screen, only a designated "movable" element shifts (a translateY on
+// that element only) — everything else (headers, logos, buttons outside
+// it) is simply never touched, so it can't move. Most inputs move just
+// themselves; a couple move a small containing group instead so related
+// controls (e.g. the Scan textarea's footer buttons) travel with them
+// rather than getting visually orphaned.
 (function () {
   const Keyboard = window.Capacitor?.Plugins?.Keyboard;
   let keyboardHeight = 0;
+  let nudgedEl = null;
+
+  // input id -> selector for the element that should actually move.
+  // Falls back to the input itself when not listed here.
+  const MOVABLE_OVERRIDE = {
+    'asst-input': '.scan-message', // textarea + its Upload/Get Suggestions footer move as one unit
+  };
+
+  function movableElementFor(input) {
+    const selector = MOVABLE_OVERRIDE[input.id];
+    if (selector) {
+      const container = input.closest(selector);
+      if (container) return container;
+    }
+    return input;
+  }
 
   function nudgeFocusedIntoView() {
-    const el = document.activeElement;
-    if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+    const active = document.activeElement;
+    if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
+    const el = movableElementFor(active);
+    if (nudgedEl && nudgedEl !== el) nudgedEl.style.transform = '';
     el.style.transform = '';
     const rect = el.getBoundingClientRect();
     const visibleBottom = window.innerHeight - keyboardHeight;
@@ -6631,12 +6665,13 @@ document.addEventListener('touchstart', (e) => {
     if (overlap > 0) {
       el.style.transition = 'transform 0.2s ease';
       el.style.transform = `translateY(${-(overlap + 16)}px)`;
+      nudgedEl = el;
+    } else {
+      nudgedEl = null;
     }
   }
-  function clearNudge(el) {
-    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-      el.style.transform = '';
-    }
+  function clearNudge() {
+    if (nudgedEl) { nudgedEl.style.transform = ''; nudgedEl = null; }
   }
 
   if (Keyboard) {
@@ -6646,7 +6681,7 @@ document.addEventListener('touchstart', (e) => {
     });
     Keyboard.addListener('keyboardWillHide', () => {
       keyboardHeight = 0;
-      clearNudge(document.activeElement);
+      clearNudge();
     });
   }
   // Switching focus to a different field while the keyboard is already open
@@ -6656,5 +6691,7 @@ document.addEventListener('touchstart', (e) => {
       setTimeout(nudgeFocusedIntoView, 80);
     }
   }, true);
-  document.addEventListener('focusout', (e) => { clearNudge(e.target); }, true);
+  document.addEventListener('focusout', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') clearNudge();
+  }, true);
 })();
