@@ -151,6 +151,13 @@ textarea { font-family: inherit; }
   padding: 16px 0 14px;
   flex-shrink: 0;
   width: 100%;
+  /* .tab (this header's scrolling ancestor) is the thing WebKit scrolls to
+     reveal a focused input above the keyboard — without this, the header
+     just rides along with that scroll like everything else. */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
 }
 
 /* Practice tab header sits outside .tab-scroll, needs its own side padding */
@@ -5615,7 +5622,12 @@ textarea { font-family: inherit; }
    same as every other screen in the app. */
 /* .aicoach-header has 16px own top padding, so 34px + 16px = 50px total,
    matching the other screens' header offset. */
-#screen-ai-coach { padding-top: 34px; }
+/* overflow:hidden so .aicoach-messages (its own overflow-y:auto) is the
+   only scrollable area — same reasoning as #screen-chat above. Without
+   this, the outer .screen's own overflow-y:auto competes with it, and the
+   header/input-bar can get dragged along when the keyboard opens instead
+   of staying put. */
+#screen-ai-coach { padding-top: 34px; overflow: hidden; }
 
 .aicoach-header {
   display: flex;
@@ -6177,7 +6189,11 @@ textarea { font-family: inherit; }
 
 /* ---- Skip (X) — top right, present on every Phase 2 screen ---- */
 .cine-skip {
-  position: absolute;
+  /* position:fixed (not absolute) so this stays pinned to the real screen
+     when the keyboard opens — mobile WebKit keeps fixed-position elements
+     glued to the visual viewport during the native keyboard-avoidance
+     scroll, where absolute-positioned ones get dragged along with it. */
+  position: fixed;
   /* .cine (id="cine-onboarding") is a top-level sibling of .screen/.tab under
      #app, not a descendant — it has no safe-area padding of its own, so this
      button (and .cine-dots below) need it applied directly or they render
@@ -6195,7 +6211,7 @@ textarea { font-family: inherit; }
 .cine-skip:active { transform: scale(0.92); }
 
 .cine-dots {
-  position: absolute;
+  position: fixed; /* stays pinned during keyboard-open shift — see .cine-skip */
   top: calc(20px + 34px); left: 50%;
   transform: translateX(-50%);
   z-index: 30;
@@ -6424,6 +6440,16 @@ textarea { font-family: inherit; }
    Screen 1 — Name input
    ================================================================ */
 .cine-screen--name { gap: 4px; }
+/* Pinned to the real screen (see .cine-skip) so it stays put when the
+   keyboard opens — only .cine-name-input below is left in normal flow to
+   shift/clear the keyboard. */
+.cine-name-header {
+  position: fixed;
+  top: calc(120px + 34px);
+  left: 26px; right: 26px;
+}
+.cine-name-header .cine-head,
+.cine-name-header .cine-sub { margin-left: auto; margin-right: auto; }
 .cine-name-input {
   width: 100%;
   max-width: 300px;
@@ -6799,7 +6825,7 @@ textarea { font-family: inherit; }
    Shared bottom CTA
    ================================================================ */
 .cine-next {
-  position: absolute;
+  position: fixed; /* stays pinned during keyboard-open shift — see .cine-skip */
   left: 24px; right: 24px;
   bottom: 26px;
   z-index: 30;

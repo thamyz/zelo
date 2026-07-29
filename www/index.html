@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260727d" />
+    <link rel="stylesheet" href="style.css?v=20260729a" />
     <link rel="icon" type="image/svg+xml" href="assets/icons/wink-icon.svg" />
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   </head>
@@ -1041,8 +1041,12 @@
 
         <!-- ============ PHASE 2 · Screen 1 — Name input ============ -->
         <section class="cine-screen cine-screen--name" data-screen="1">
-          <h2 class="cine-head">Pick your name</h2>
-          <p class="cine-sub">This is how you'll appear on the leaderboard.</p>
+          <!-- Pinned as one block so it stays put when the keyboard opens —
+               only the input below should shift to clear the keyboard. -->
+          <div class="cine-name-header">
+            <h2 class="cine-head">Pick your name</h2>
+            <p class="cine-sub">This is how you'll appear on the leaderboard.</p>
+          </div>
           <input type="text" class="cine-name-input" id="cine-name-input" placeholder="Choose any name"
                  maxlength="30" autocomplete="off" enterkeyhint="next" oninput="cineNameInput()"
                  onkeydown="if(event.key==='Enter'){event.preventDefault(); cineNext();}" />
@@ -1817,6 +1821,6 @@
     <script src="services/supabase.js"></script>
     <script src="services/auth.js"></script>
     <script src="archive/legacy-onboarding.js"></script>
-    <script src="script.js?v=20260729c"></script>
+    <script src="script.js?v=20260729d"></script>
   </body>
 </html>
