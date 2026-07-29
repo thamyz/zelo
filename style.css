@@ -126,6 +126,18 @@ textarea { font-family: inherit; }
 .screen::-webkit-scrollbar,
 .chat-messages::-webkit-scrollbar { width: 0; }
 
+/* Wraps .tab-scroll on the Scan tab only — a plain pass-through box in
+   normal use (mirrors .tab-scroll's own min-height:100% so the percentage-
+   height chain down to .tab is unchanged), but gets overflow:hidden + a
+   locked height added via JS while the keyboard-open shift is active, so
+   content sliding up clips cleanly at the header's bottom edge instead of
+   overlapping it. See the keyboard-nudge code in script.js. */
+.scan-scroll-clip {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .tab-scroll {
   padding: 0 22px;
   min-height: 100%;

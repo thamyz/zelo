@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-07-29 17:07";
+const BUILD_STAMP = "2026-07-29 17:32";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -5870,22 +5870,15 @@ function _aiCoachActionPills() {
 let _aiCoachSuggestOpen = false;
 
 // Suggestions panel and keyboard are mutually exclusive — opening one
-// closes the other, they never stack/overlap. Opening the panel while the
-// keyboard is up dismisses the keyboard FIRST, then opens the panel once
-// that's done — not both at once.
+// closes the other, they never stack/overlap. One tap on the toggle does
+// both together (dismiss keyboard + open panel) — no sequential delay.
 function toggleAiCoachSuggestPanel() {
-  const input = document.getElementById('aicoach-input');
-  const willOpen = !_aiCoachSuggestOpen;
-  if (willOpen && input && document.activeElement === input) {
-    input.blur();
-    setTimeout(() => {
-      _aiCoachSuggestOpen = true;
-      _updateAiCoachSuggestToggle();
-    }, 280); // keyboard-dismiss animation duration, roughly
-    return;
-  }
   _aiCoachSuggestOpen = !_aiCoachSuggestOpen;
   _updateAiCoachSuggestToggle();
+  if (_aiCoachSuggestOpen) {
+    const input = document.getElementById('aicoach-input');
+    if (input && document.activeElement === input) input.blur();
+  }
 }
 
 function _updateAiCoachSuggestToggle() {
@@ -6665,27 +6658,48 @@ document.addEventListener('touchstart', (e) => {
 
   // input id -> selectors for the element(s) that should move with it,
   // bottom-most last (used to measure keyboard clearance). Falls back to
-  // just the input itself when not listed here.
+  // just the input itself when not listed here. An optional `clip` selector
+  // names an ancestor that should get overflow:hidden + its current height
+  // locked while shifting, so the moving content clips cleanly at that
+  // ancestor's boundary (its bottom, in practice its resting top edge —
+  // see .scan-scroll-clip) instead of visually overlapping whatever sits
+  // above/outside it (the pinned header).
   const MOVABLE_OVERRIDE = {
-    'asst-input':    ['.scan-message'],                                   // textarea + its Upload/Get Suggestions footer move as one unit
-    'aicoach-input': ['.aicoach-suggest-panel', '.aicoach-input-bar'],    // suggestions panel travels with the input bar, staying anchored above it
+    'asst-input':    { move: ['.tab-scroll'], clip: '.scan-scroll-clip' }, // whole content block below the header — headline, input card, "Who's this about?" — moves as one unit
+    'aicoach-input': { move: ['.aicoach-suggest-panel', '.aicoach-input-bar'] }, // suggestions panel travels with the input bar, staying anchored above it
   };
 
-  function movableElementsFor(input) {
-    const selectors = MOVABLE_OVERRIDE[input.id];
-    if (selectors) {
-      const els = selectors.map((sel) => input.closest(sel) || document.querySelector(sel)).filter(Boolean);
-      if (els.length) return els;
-    }
-    return [input];
+  function configFor(input) {
+    return MOVABLE_OVERRIDE[input.id] || { move: [input] };
+  }
+  function resolveEls(input, selectors) {
+    const els = selectors.map((sel) => input.closest(sel) || document.querySelector(sel)).filter(Boolean);
+    return els.length ? els : [input];
+  }
+
+  let clippedEl = null;
+  function applyClip(selector, moveEls) {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    // Lock to the height it has right now (before any shift), so the box
+    // stays put while its content (moveEls) slides up inside it and gets
+    // cut off at its top edge.
+    el.style.height = el.getBoundingClientRect().height + 'px';
+    el.style.overflow = 'hidden';
+    clippedEl = el;
+  }
+  function clearClip() {
+    if (clippedEl) { clippedEl.style.height = ''; clippedEl.style.overflow = ''; clippedEl = null; }
   }
 
   function nudgeFocusedIntoView() {
     const active = document.activeElement;
     if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
     if (!keyboardHeight) { clearNudge(); return; }
-    const els = movableElementsFor(active);
+    const config = configFor(active);
+    const els = resolveEls(active, config.move);
     clearNudge();
+    if (config.clip) applyClip(config.clip, els);
     els.forEach((el) => { el.style.transform = ''; });
     const lowest = els[els.length - 1];
     const rect = lowest.getBoundingClientRect();
@@ -6701,6 +6715,7 @@ document.addEventListener('touchstart', (e) => {
   function clearNudge() {
     nudgedEls.forEach((el) => { el.style.transform = ''; });
     nudgedEls = [];
+    clearClip();
   }
 
   if (Keyboard) {
