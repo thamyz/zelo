@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-07-29 17:32";
+const BUILD_STAMP = "2026-07-29 17:46";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -5870,15 +5870,24 @@ function _aiCoachActionPills() {
 let _aiCoachSuggestOpen = false;
 
 // Suggestions panel and keyboard are mutually exclusive — opening one
-// closes the other, they never stack/overlap. One tap on the toggle does
-// both together (dismiss keyboard + open panel) — no sequential delay.
+// closes the other, they never stack/overlap. One tap on the toggle: keyboard
+// dismisses first, panel opens automatically right after — sequential, but
+// a single tap does both with no second tap needed. (This only reaches this
+// function at all now because of the touchstart exception above — without
+// it, the tap's own blur-and-reflow could dodge the click event entirely.)
 function toggleAiCoachSuggestPanel() {
+  const input = document.getElementById('aicoach-input');
+  const willOpen = !_aiCoachSuggestOpen;
+  if (willOpen && input && document.activeElement === input) {
+    input.blur();
+    setTimeout(() => {
+      _aiCoachSuggestOpen = true;
+      _updateAiCoachSuggestToggle();
+    }, 280); // keyboard-dismiss animation duration, roughly
+    return;
+  }
   _aiCoachSuggestOpen = !_aiCoachSuggestOpen;
   _updateAiCoachSuggestToggle();
-  if (_aiCoachSuggestOpen) {
-    const input = document.getElementById('aicoach-input');
-    if (input && document.activeElement === input) input.blur();
-  }
 }
 
 function _updateAiCoachSuggestToggle() {
@@ -6627,6 +6636,13 @@ document.addEventListener('touchstart', (e) => {
   if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
   const target = e.target;
   if (target && target.closest && target.closest('input, textarea')) return;
+  // Exception: the AI Coach suggestions toggle handles its own blur+open
+  // sequencing (see toggleAiCoachSuggestPanel). Blurring here first would
+  // shift the panel/input-bar out from under the tap (nudge clears on
+  // blur) before the toggle's own click event fires — the touchend then
+  // lands outside the now-moved button and the click gets silently
+  // swallowed, which is exactly why the toggle needed two taps before.
+  if (target && target.closest && target.closest('#aicoach-suggest-toggle')) return;
   active.blur();
 }, { capture: true, passive: true });
 
@@ -6665,16 +6681,26 @@ document.addEventListener('touchstart', (e) => {
   // see .scan-scroll-clip) instead of visually overlapping whatever sits
   // above/outside it (the pinned header).
   const MOVABLE_OVERRIDE = {
-    'asst-input':    { move: ['.tab-scroll'], clip: '.scan-scroll-clip' }, // whole content block below the header — headline, input card, "Who's this about?" — moves as one unit
+    // Reverted to just the input card — moving the whole content block
+    // (previous round) overcorrected: shift amount was measured off the
+    // WHOLE block's bottom edge (all the way down past "Who's this
+    // about?"), so it moved way more than needed, pushing the input off
+    // the top and dragging the trust line out of its resting spot.
+    'asst-input':    { move: ['.scan-message'] },
     'aicoach-input': { move: ['.aicoach-suggest-panel', '.aicoach-input-bar'] }, // suggestions panel travels with the input bar, staying anchored above it
   };
 
-  function configFor(input) {
-    return MOVABLE_OVERRIDE[input.id] || { move: [input] };
-  }
-  function resolveEls(input, selectors) {
-    const els = selectors.map((sel) => input.closest(sel) || document.querySelector(sel)).filter(Boolean);
-    return els.length ? els : [input];
+  // Bug fixed here: previously fell back to `{ move: [input] }` — an actual
+  // DOM element, not a selector — and resolveEls always tried to use it as
+  // a CSS selector string (input.closest(sel)), which throws for any input
+  // with no MOVABLE_OVERRIDE entry (e.g. the onboarding name field),
+  // silently breaking the nudge for every screen that didn't have an
+  // explicit entry.
+  function movableElsAndClip(input) {
+    const config = MOVABLE_OVERRIDE[input.id];
+    if (!config) return { els: [input], clip: null };
+    const els = config.move.map((sel) => input.closest(sel) || document.querySelector(sel)).filter(Boolean);
+    return { els: els.length ? els : [input], clip: config.clip || null };
   }
 
   let clippedEl = null;
@@ -6696,10 +6722,9 @@ document.addEventListener('touchstart', (e) => {
     const active = document.activeElement;
     if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
     if (!keyboardHeight) { clearNudge(); return; }
-    const config = configFor(active);
-    const els = resolveEls(active, config.move);
+    const { els, clip } = movableElsAndClip(active);
     clearNudge();
-    if (config.clip) applyClip(config.clip, els);
+    if (clip) applyClip(clip, els);
     els.forEach((el) => { el.style.transform = ''; });
     const lowest = els[els.length - 1];
     const rect = lowest.getBoundingClientRect();
