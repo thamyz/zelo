@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-07-29 16:51";
+const BUILD_STAMP = "2026-07-29 17:07";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -5870,14 +5870,22 @@ function _aiCoachActionPills() {
 let _aiCoachSuggestOpen = false;
 
 // Suggestions panel and keyboard are mutually exclusive — opening one
-// closes the other, they never stack/overlap.
+// closes the other, they never stack/overlap. Opening the panel while the
+// keyboard is up dismisses the keyboard FIRST, then opens the panel once
+// that's done — not both at once.
 function toggleAiCoachSuggestPanel() {
+  const input = document.getElementById('aicoach-input');
+  const willOpen = !_aiCoachSuggestOpen;
+  if (willOpen && input && document.activeElement === input) {
+    input.blur();
+    setTimeout(() => {
+      _aiCoachSuggestOpen = true;
+      _updateAiCoachSuggestToggle();
+    }, 280); // keyboard-dismiss animation duration, roughly
+    return;
+  }
   _aiCoachSuggestOpen = !_aiCoachSuggestOpen;
   _updateAiCoachSuggestToggle();
-  if (_aiCoachSuggestOpen) {
-    const input = document.getElementById('aicoach-input');
-    if (input && document.activeElement === input) input.blur();
-  }
 }
 
 function _updateAiCoachSuggestToggle() {
@@ -6639,55 +6647,60 @@ document.addEventListener('touchstart', (e) => {
 // off there's nothing left to push them around in the first place.
 //
 // With native resize off, NOTHING moves automatically when the keyboard
-// opens — the keyboard just overlays on top of whatever's already there. So
-// if the focused field would end up covered, we're now fully responsible
-// for keeping it visible ourselves.
-//
-// Per-screen, only a designated "movable" element shifts (a translateY on
-// that element only) — everything else (headers, logos, buttons outside
-// it) is simply never touched, so it can't move. Most inputs move just
-// themselves; a couple move a small containing group instead so related
-// controls (e.g. the Scan textarea's footer buttons) travel with them
-// rather than getting visually orphaned.
+// opens. First version of this only nudged when the input was strictly
+// about to be covered — but every one of these inputs sits high enough on
+// its screen that the strict check was almost always false, so in practice
+// nothing ever visibly moved (looked "dead" when the keyboard opened).
+// Changed to always shift the movable group up by a real, visible amount
+// once the keyboard opens (still only the designated group — header/logo/
+// nav are never in that group, so they can't move), using whichever is
+// bigger: the minimum felt-movement amount, or however much is actually
+// needed to clear the keyboard for inputs that really do sit low (e.g. the
+// AI Coach input bar).
 (function () {
   const Keyboard = window.Capacitor?.Plugins?.Keyboard;
   let keyboardHeight = 0;
-  let nudgedEl = null;
+  let nudgedEls = [];
+  const MIN_VISIBLE_SHIFT = 56; // always at least this much, so opening the keyboard is never a no-op
 
-  // input id -> selector for the element that should actually move.
-  // Falls back to the input itself when not listed here.
+  // input id -> selectors for the element(s) that should move with it,
+  // bottom-most last (used to measure keyboard clearance). Falls back to
+  // just the input itself when not listed here.
   const MOVABLE_OVERRIDE = {
-    'asst-input': '.scan-message', // textarea + its Upload/Get Suggestions footer move as one unit
+    'asst-input':    ['.scan-message'],                                   // textarea + its Upload/Get Suggestions footer move as one unit
+    'aicoach-input': ['.aicoach-suggest-panel', '.aicoach-input-bar'],    // suggestions panel travels with the input bar, staying anchored above it
   };
 
-  function movableElementFor(input) {
-    const selector = MOVABLE_OVERRIDE[input.id];
-    if (selector) {
-      const container = input.closest(selector);
-      if (container) return container;
+  function movableElementsFor(input) {
+    const selectors = MOVABLE_OVERRIDE[input.id];
+    if (selectors) {
+      const els = selectors.map((sel) => input.closest(sel) || document.querySelector(sel)).filter(Boolean);
+      if (els.length) return els;
     }
-    return input;
+    return [input];
   }
 
   function nudgeFocusedIntoView() {
     const active = document.activeElement;
     if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
-    const el = movableElementFor(active);
-    if (nudgedEl && nudgedEl !== el) nudgedEl.style.transform = '';
-    el.style.transform = '';
-    const rect = el.getBoundingClientRect();
+    if (!keyboardHeight) { clearNudge(); return; }
+    const els = movableElementsFor(active);
+    clearNudge();
+    els.forEach((el) => { el.style.transform = ''; });
+    const lowest = els[els.length - 1];
+    const rect = lowest.getBoundingClientRect();
     const visibleBottom = window.innerHeight - keyboardHeight;
     const overlap = rect.bottom - visibleBottom;
-    if (overlap > 0) {
-      el.style.transition = 'transform 0.2s ease';
-      el.style.transform = `translateY(${-(overlap + 16)}px)`;
-      nudgedEl = el;
-    } else {
-      nudgedEl = null;
-    }
+    const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);
+    els.forEach((el) => {
+      el.style.transition = 'transform 0.25s ease';
+      el.style.transform = `translateY(${-shift}px)`;
+    });
+    nudgedEls = els;
   }
   function clearNudge() {
-    if (nudgedEl) { nudgedEl.style.transform = ''; nudgedEl = null; }
+    nudgedEls.forEach((el) => { el.style.transform = ''; });
+    nudgedEls = [];
   }
 
   if (Keyboard) {
