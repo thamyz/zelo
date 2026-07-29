@@ -4,6 +4,22 @@
 
 const DEV_MODE = false; // DEV — set to false before release
 
+// Bumped by hand right before every autopush.sh — an on-screen, unambiguous
+// way to confirm which build is actually running on a device (see the
+// small badge this drives, added after a round where a real build gap
+// between "pushed" and "what Xcode actually installed" wasted several
+// rounds of back-and-forth). Compare what's on screen to what was just
+// pushed before trusting any "still broken" or "still not showing" report.
+const BUILD_STAMP = "2026-07-29 16:51";
+window.addEventListener('DOMContentLoaded', () => {
+  const b = document.createElement('div');
+  b.textContent = 'build ' + BUILD_STAMP;
+  b.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:999999;' +
+    'font:9px monospace;color:rgba(0,0,0,0.35);pointer-events:none;' +
+    'background:rgba(255,255,255,0.6);padding:1px 4px;border-radius:3px;';
+  document.body.appendChild(b);
+});
+
 
 // ================================================================
 // APP STATE
