@@ -6597,3 +6597,64 @@ document.addEventListener('touchstart', (e) => {
   if (target && target.closest && target.closest('input, textarea')) return;
   active.blur();
 }, { capture: true, passive: true });
+
+// ============================================================
+// KEYBOARD-OPEN: nudge only the focused input, nothing else
+// ============================================================
+// Native keyboard-triggered page resize is fully disabled (see
+// capacitor.config.json — Keyboard.resize: "none"), replacing the earlier
+// per-screen position:fixed/sticky workarounds as the primary fix — those
+// are left in place as a harmless extra safety net, but with native resize
+// off there's nothing left to push them around in the first place.
+//
+// With native resize off, NOTHING moves automatically when the keyboard
+// opens — the keyboard just overlays on top of whatever's already there. So
+// if the focused field would end up covered, we're now fully responsible
+// for keeping it visible ourselves. Rather than finding/using each screen's
+// own scroll container (every screen's structure is different — flex-
+// centered onboarding screens, message lists, plain settings forms), this
+// applies a translateY directly to the focused element itself: one
+// mechanism that works identically everywhere, since it never depends on
+// the surrounding layout being scrollable at all. Header/footer/everything
+// else is untouched — only the input's own position moves.
+(function () {
+  const Keyboard = window.Capacitor?.Plugins?.Keyboard;
+  let keyboardHeight = 0;
+
+  function nudgeFocusedIntoView() {
+    const el = document.activeElement;
+    if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+    el.style.transform = '';
+    const rect = el.getBoundingClientRect();
+    const visibleBottom = window.innerHeight - keyboardHeight;
+    const overlap = rect.bottom - visibleBottom;
+    if (overlap > 0) {
+      el.style.transition = 'transform 0.2s ease';
+      el.style.transform = `translateY(${-(overlap + 16)}px)`;
+    }
+  }
+  function clearNudge(el) {
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+      el.style.transform = '';
+    }
+  }
+
+  if (Keyboard) {
+    Keyboard.addListener('keyboardWillShow', (info) => {
+      keyboardHeight = (info && info.keyboardHeight) || 0;
+      setTimeout(nudgeFocusedIntoView, 30);
+    });
+    Keyboard.addListener('keyboardWillHide', () => {
+      keyboardHeight = 0;
+      clearNudge(document.activeElement);
+    });
+  }
+  // Switching focus to a different field while the keyboard is already open
+  // doesn't fire another keyboardWillShow — re-nudge on every focus change.
+  document.addEventListener('focusin', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      setTimeout(nudgeFocusedIntoView, 80);
+    }
+  }, true);
+  document.addEventListener('focusout', (e) => { clearNudge(e.target); }, true);
+})();
