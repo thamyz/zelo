@@ -3139,6 +3139,18 @@ textarea { font-family: inherit; }
   line-height: 1.5;
 }
 
+/* Small "view the full policy" links attached to a toggle row or info
+   block — opens the matching page on zelofficial.com via the Browser
+   plugin (in-app Safari view), not a full app-switch. */
+.settings-info-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+.settings-info-link:active { opacity: 0.6; }
+
 .settings-faq-content {
   padding: 4px 4px 6px;
 }

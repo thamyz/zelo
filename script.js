@@ -6373,6 +6373,23 @@ function onSettingsToggle(key, value) {
   localStorage.setItem(key, String(value));
 }
 
+// Legal/support pages live on the marketing site, not in the app — opened
+// via the Browser plugin's in-app Safari view (user taps "Done" to return,
+// no full app-switch) rather than a native screen for each one. Falls back
+// to a plain new-tab window.open when Capacitor isn't present (e.g. this
+// file opened directly in a desktop browser during development), so this
+// never silently no-ops outside the native shell.
+const ZELO_WEB_BASE = 'https://zelofficial.com/';
+function openLegalPage(path) {
+  const url = ZELO_WEB_BASE + path;
+  const Browser = window.Capacitor?.Plugins?.Browser;
+  if (Browser) {
+    Browser.open({ url }).catch(() => {});
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 // "Who You Practice With" settings panel — same three options as the
 // first-visit popup (homeModeSelect()), just reachable any time afterward
 // and showing which one is currently active.

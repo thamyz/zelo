@@ -499,8 +499,14 @@
 
           <!-- PRIVACY -->
           <div id="settings-panel-privacy" hidden>
-            <a class="dash-menu-row" href="#" onclick="return false;">
+            <!-- Legal pages open in an in-app Safari view (Browser plugin),
+                 pointing at the matching page on zelofficial.com — see
+                 openLegalPage() in script.js. -->
+            <a class="dash-menu-row" href="#" onclick="openLegalPage('privacy.html'); return false;">
               Privacy Policy <span>›</span>
+            </a>
+            <a class="dash-menu-row" href="#" onclick="openLegalPage('terms.html'); return false;">
+              Terms of Service <span>›</span>
             </a>
             <label class="settings-toggle-row">
               <span class="settings-toggle-label">Do Not Sell My Data (CCPA)</span>
@@ -510,6 +516,7 @@
                 <span class="settings-toggle-slider"></span>
               </span>
             </label>
+            <a class="settings-info-link" href="#" onclick="openLegalPage('do-not-sell.html'); return false;">View full policy ›</a>
             <div class="settings-info-block">
               <p class="settings-info-title">AI Disclosure</p>
               <p class="settings-info-text">
@@ -517,6 +524,7 @@
                 Scan and AI Coach analyze real conversations you paste in or upload — Zelo
                 itself never pretends to be a real match.
               </p>
+              <a class="settings-info-link" href="#" onclick="openLegalPage('ai-disclosure.html'); return false;">Read full disclosure ›</a>
             </div>
             <div class="settings-field">
               <label class="settings-field-label">Scan history retention</label>
@@ -531,7 +539,10 @@
 
           <!-- HELP & SUPPORT -->
           <div id="settings-panel-help" hidden>
-            <a class="dash-menu-row" href="mailto:support@zelo.app">
+            <!-- Opens the real Contact/Support page on zelofficial.com (its
+                 own mailto CTA there points at the actual working support
+                 address) instead of a raw mailto: straight from this row. -->
+            <a class="dash-menu-row" href="#" onclick="openLegalPage('contact.html'); return false;">
               Contact us <span>›</span>
             </a>
             <button class="dash-menu-row" onclick="toggleHelpFaq()">
