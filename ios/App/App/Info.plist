@@ -26,6 +26,20 @@
 	<true/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Zelo uses this to improve your experience and measure how well our ads perform. Your data is never sold.</string>
+	<!-- Google Sign-In — REPLACE with the real iOS OAuth Client ID and its
+	     reversed form from Google Cloud Console before shipping. See
+	     services/auth.js GOOGLE_IOS_CLIENT_ID for the matching JS-side value. -->
+	<key>GIDClientID</key>
+	<string>REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.REPLACE_WITH_IOS_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

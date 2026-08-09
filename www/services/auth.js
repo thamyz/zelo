@@ -158,16 +158,59 @@ const AUTH = (() => {
     _renderEmailScreen();
   }
 
-  // ── OAuth ──────────────────────────────────────────────────────
+  // ── OAuth (native Google / Apple via @capgo/capacitor-social-login) ──
+  // REPLACE these before shipping — see ios/App/App/Info.plist (GIDClientID /
+  // CFBundleURLTypes) for the matching native-side Google config, and the
+  // Supabase dashboard (Auth → Providers → Google/Apple) which must list the
+  // same client IDs as authorized audiences.
+  const GOOGLE_IOS_CLIENT_ID = 'REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com';
+  const APPLE_SERVICE_ID     = 'com.ozlilbrother.zelo'; // bundle id — fine for native iOS
+
+  let _socialInitDone = null;
+
+  // Native plugin only exists inside the compiled iOS app, not plain web —
+  // mirrors the window.Capacitor?.Plugins?.X guard used for ATT elsewhere.
+  function _initSocialLogin() {
+    const SocialLogin = window.Capacitor?.Plugins?.SocialLogin;
+    if (!SocialLogin) return Promise.resolve(null);
+    if (!_socialInitDone) {
+      _socialInitDone = SocialLogin.initialize({
+        google: { iOSClientId: GOOGLE_IOS_CLIENT_ID, mode: 'online' },
+        apple:  { clientId: APPLE_SERVICE_ID }
+      }).then(() => SocialLogin);
+    }
+    return _socialInitDone;
+  }
+
+  function _isUserCancelled(e) {
+    const msg = String(e?.message || e?.errorMessage || '').toLowerCase();
+    return msg.includes('cancel');
+  }
 
   async function signInWithApple() {
-    const { error } = await zeloSupabase.auth.signInWithOAuth({ provider: 'apple' });
-    if (error) _setProviderError(error.message);
+    const SocialLogin = await _initSocialLogin();
+    if (!SocialLogin) { _setProviderError('Apple sign-in is only available in the app.'); return; }
+    try {
+      const { result } = await SocialLogin.login({ provider: 'apple', options: { scopes: ['email', 'name'] } });
+      if (!result?.idToken) { _setProviderError('Apple sign-in did not return a token.'); return; }
+      const { error } = await zeloSupabase.auth.signInWithIdToken({ provider: 'apple', token: result.idToken });
+      if (error) _setProviderError(error.message);
+    } catch (e) {
+      if (!_isUserCancelled(e)) _setProviderError('Apple sign-in failed. Please try again.');
+    }
   }
 
   async function signInWithGoogle() {
-    const { error } = await zeloSupabase.auth.signInWithOAuth({ provider: 'google' });
-    if (error) _setProviderError(error.message);
+    const SocialLogin = await _initSocialLogin();
+    if (!SocialLogin) { _setProviderError('Google sign-in is only available in the app.'); return; }
+    try {
+      const { result } = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+      if (!result?.idToken) { _setProviderError('Google sign-in did not return a token.'); return; }
+      const { error } = await zeloSupabase.auth.signInWithIdToken({ provider: 'google', token: result.idToken });
+      if (error) _setProviderError(error.message);
+    } catch (e) {
+      if (!_isUserCancelled(e)) _setProviderError('Google sign-in failed. Please try again.');
+    }
   }
 
   function _setProviderError(msg) {
