@@ -4395,8 +4395,45 @@ textarea { font-family: inherit; }
   text-align: center;
   letter-spacing: -0.4px;
   line-height: 1.2;
-  margin-bottom: 36px;
   width: 100%;
+}
+
+.auth-heading     { margin-bottom: 36px; }
+.auth-email-title { margin-bottom: 6px; }
+
+.auth-subtext {
+  font-size: 0.86rem;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0 0 28px;
+  width: 100%;
+}
+
+.auth-subtext strong { color: var(--text); font-weight: 700; }
+
+/* ── "or" divider between form and social providers ── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 20px 0;
+  color: var(--text-3);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auth-divider[hidden] { display: none; }
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
 /* ── Provider buttons ── */
@@ -4501,7 +4538,38 @@ textarea { font-family: inherit; }
 .auth-input:focus         { border-color: var(--accent); background: var(--s1); }
 .auth-input::placeholder  { color: var(--text-3); }
 
-#auth-confirm-wrap[hidden] { display: none; }
+#auth-name-wrap[hidden],
+#auth-confirm-wrap[hidden],
+#auth-terms-wrap[hidden] { display: none; }
+
+/* ── Terms & Conditions agreement (sign-up only) ── */
+.auth-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 2px 2px 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.auth-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.auth-terms-row a {
+  color: var(--accent-deep);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-terms-row a:hover { text-decoration: underline; }
 
 .auth-error-msg {
   font-size: 0.8rem;
@@ -4510,6 +4578,32 @@ textarea { font-family: inherit; }
   text-align: center;
   margin: 0;
 }
+
+/* ── Verification code entry (6 digit boxes) ── */
+.auth-code-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.auth-code-input {
+  width: 100%;
+  aspect-ratio: 1;
+  text-align: center;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+
+.auth-code-input:focus { border-color: var(--accent); background: var(--s1); }
 
 /* ── Primary action button ── */
 .auth-submit-btn {

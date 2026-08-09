@@ -11,8 +11,9 @@ const AUTH = (() => {
   let _initialized = false;
   let _pending     = null;   // { destination: string, cb: fn }
   let _emailMode   = 'signup';
+  let _verifyEmail = '';     // email currently being confirmed on the verify screen
 
-  const OVERLAY_IDS = ['auth-overlay', 'auth-email-overlay', 'auth-setup-overlay'];
+  const OVERLAY_IDS = ['auth-overlay', 'auth-verify-overlay', 'auth-setup-overlay'];
 
   // ── Overlay helpers ────────────────────────────────────────────
 
@@ -71,49 +72,59 @@ const AUTH = (() => {
     if (signedIn()) { cb(); return; }
     _pending = { destination, cb };
     sessionStorage.setItem('zelo_auth_dest', destination); // survive OAuth redirect
-    _showProviderScreen();
+    showEmailScreen('signup');
   }
 
-  // ── Provider screen ────────────────────────────────────────────
-
-  function _showProviderScreen() {
-    _showOverlay('auth-overlay');
-  }
-
-  function goBackToProviders() {
-    _showProviderScreen();
-  }
-
-  // ── Email screen ───────────────────────────────────────────────
+  // ── Sign in / create account screen ─────────────────────────────
 
   function showEmailScreen(mode) {
     _emailMode = mode || 'signup';
     _renderEmailScreen();
-    _showOverlay('auth-email-overlay');
+    _showOverlay('auth-overlay');
   }
 
   function _renderEmailScreen() {
-    const el = document.getElementById('auth-email-overlay');
+    const el = document.getElementById('auth-overlay');
     if (!el) return;
     const isSignup = _emailMode === 'signup';
-    el.querySelector('.auth-email-title').textContent = isSignup ? 'Create your account' : 'Welcome back';
+
+    el.querySelector('#auth-heading').textContent = isSignup ? 'Create your account' : 'Welcome back';
+    el.querySelector('#auth-subtext').textContent  = isSignup
+      ? 'Start practicing real conversations in seconds.'
+      : 'Sign in to pick up where you left off.';
+
+    const nameWrap    = el.querySelector('#auth-name-wrap');
     const confirmWrap = el.querySelector('#auth-confirm-wrap');
+    const termsWrap   = el.querySelector('#auth-terms-wrap');
+    if (nameWrap)    nameWrap.hidden    = !isSignup;
     if (confirmWrap) confirmWrap.hidden = !isSignup;
-    el.querySelector('#auth-submit-btn').textContent  = isSignup ? 'Create account' : 'Sign in';
-    el.querySelector('#auth-toggle-btn').textContent  = isSignup
+    if (termsWrap)   termsWrap.hidden   = !isSignup;
+
+    el.querySelector('#auth-submit-btn').textContent = isSignup ? 'Create account' : 'Sign in';
+    el.querySelector('#auth-toggle-btn').textContent = isSignup
       ? 'Already have an account? Sign in'
       : "Don't have an account? Sign up";
+    el.querySelector('#auth-divider span').textContent = isSignup ? 'or sign up with' : 'or';
+
     const errEl = el.querySelector('#auth-email-error');
     if (errEl) { errEl.textContent = ''; errEl.style.color = ''; }
+    const provErrEl = el.querySelector('#auth-provider-error');
+    if (provErrEl) provErrEl.textContent = '';
+
+    const nameInput  = el.querySelector('#auth-name-input');
     const emailInput = el.querySelector('#auth-email-input');
     const passInput  = el.querySelector('#auth-password-input');
     const confInput  = el.querySelector('#auth-confirm-input');
+    const termsCheck = el.querySelector('#auth-terms-checkbox');
+    if (nameInput)  nameInput.value  = '';
     if (emailInput) emailInput.value = '';
     if (passInput)  passInput.value  = '';
     if (confInput)  confInput.value  = '';
+    if (termsCheck) termsCheck.checked = false;
   }
 
   async function handleEmailSubmit() {
+    const name     = (document.getElementById('auth-name-input')?.value     || '').trim();
     const email    = (document.getElementById('auth-email-input')?.value    || '').trim();
     const password =  document.getElementById('auth-password-input')?.value || '';
     const errEl    =  document.getElementById('auth-email-error');
@@ -125,18 +136,56 @@ const AUTH = (() => {
     }
 
     if (_emailMode === 'signup') {
+      if (!name) {
+        if (errEl) errEl.textContent = 'Please enter your name.';
+        return;
+      }
       const confirm = document.getElementById('auth-confirm-input')?.value || '';
       if (password !== confirm) {
         if (errEl) errEl.textContent = 'Passwords do not match.';
         return;
       }
-      const { error } = await zeloSupabase.auth.signUp({ email, password });
-      if (error && errEl) { errEl.textContent = error.message; return; }
+      if (!document.getElementById('auth-terms-checkbox')?.checked) {
+        if (errEl) errEl.textContent = 'Please agree to the Terms & Conditions to continue.';
+        return;
+      }
+      // Written before the network call, not after: when confirmation is
+      // disabled, signUp() can fire the SIGNED_IN listener (which reads this
+      // key to prefill the setup screen) before an await-after write would
+      // land — same "localStorage first" ordering handleSetupContinue() uses.
+      localStorage.setItem('zelo_display_name', name);
+
+      const { data, error } = await zeloSupabase.auth.signUp({
+        email, password,
+        options: { data: { display_name: name } }
+      });
+      if (error) { if (errEl) errEl.textContent = error.message; return; }
+
+      if (!data?.session) {
+        // Email confirmation is required before a session is issued —
+        // send the user to the verification-code screen.
+        _showVerifyScreen(email);
+      }
+      // else: confirmation is disabled on this project, session issued
+      // immediately, onAuthStateChange fires SIGNED_IN → _onSignedIn()
     } else {
       const { error } = await zeloSupabase.auth.signInWithPassword({ email, password });
-      if (error && errEl) { errEl.textContent = error.message; return; }
+      if (error) {
+        if (_isUnconfirmedEmailError(error)) {
+          await zeloSupabase.auth.resend({ type: 'signup', email }).catch(() => {});
+          _showVerifyScreen(email);
+          return;
+        }
+        if (errEl) errEl.textContent = error.message;
+        return;
+      }
     }
     // onAuthStateChange fires SIGNED_IN → _onSignedIn()
+  }
+
+  function _isUnconfirmedEmailError(error) {
+    if (error?.code === 'email_not_confirmed') return true;
+    return /not confirmed/i.test(error?.message || '');
   }
 
   async function handleForgotPassword() {
@@ -156,6 +205,81 @@ const AUTH = (() => {
   function toggleEmailMode() {
     _emailMode = _emailMode === 'signup' ? 'signin' : 'signup';
     _renderEmailScreen();
+  }
+
+  // ── Email verification (6-digit code) ───────────────────────────
+
+  function _showVerifyScreen(email) {
+    _verifyEmail = email;
+    const el = document.getElementById('auth-verify-overlay');
+    if (el) {
+      const emailEl = el.querySelector('#auth-verify-email');
+      if (emailEl) emailEl.textContent = email;
+      const errEl = el.querySelector('#auth-verify-error');
+      if (errEl) { errEl.textContent = ''; errEl.style.color = ''; }
+      el.querySelectorAll('.auth-code-input').forEach(inp => { inp.value = ''; });
+    }
+    _initCodeInputs();
+    _showOverlay('auth-verify-overlay');
+    el?.querySelector('.auth-code-input')?.focus();
+  }
+
+  function backFromVerify() {
+    _showOverlay('auth-overlay');
+  }
+
+  function _codeInputs() {
+    return Array.from(document.querySelectorAll('#auth-code-row .auth-code-input'));
+  }
+
+  let _codeInputsBound = false;
+  function _initCodeInputs() {
+    if (_codeInputsBound) return;
+    _codeInputsBound = true;
+    const inputs = _codeInputs();
+    inputs.forEach((inp, i) => {
+      inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/[^0-9]/g, '').slice(-1);
+        if (inp.value && i < inputs.length - 1) inputs[i + 1].focus();
+      });
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
+      });
+      inp.addEventListener('paste', (e) => {
+        const text = (e.clipboardData?.getData('text') || '').replace(/[^0-9]/g, '');
+        if (!text) return;
+        e.preventDefault();
+        text.slice(0, inputs.length).split('').forEach((ch, idx) => { if (inputs[idx]) inputs[idx].value = ch; });
+        inputs[Math.min(text.length, inputs.length) - 1]?.focus();
+      });
+    });
+  }
+
+  function _readCode() {
+    return _codeInputs().map(inp => inp.value).join('');
+  }
+
+  async function handleVerifySubmit() {
+    const errEl = document.getElementById('auth-verify-error');
+    if (errEl) { errEl.textContent = ''; errEl.style.color = ''; }
+    const code = _readCode();
+    if (code.length !== 6) {
+      if (errEl) errEl.textContent = 'Enter the 6-digit code.';
+      return;
+    }
+    const { error } = await zeloSupabase.auth.verifyOtp({ email: _verifyEmail, token: code, type: 'signup' });
+    if (error) { if (errEl) errEl.textContent = error.message; return; }
+    // onAuthStateChange fires SIGNED_IN → _onSignedIn()
+  }
+
+  async function handleResendCode() {
+    const errEl = document.getElementById('auth-verify-error');
+    if (!_verifyEmail) return;
+    const { error } = await zeloSupabase.auth.resend({ type: 'signup', email: _verifyEmail });
+    if (errEl) {
+      errEl.textContent = error ? error.message : 'Code resent — check your email.';
+      errEl.style.color = error ? '' : '#22c55e';
+    }
   }
 
   // ── OAuth (native Google / Apple via @capgo/capacitor-social-login) ──
@@ -187,6 +311,17 @@ const AUTH = (() => {
     return msg.includes('cancel');
   }
 
+  // A literal 'REPLACE_WITH_...' client ID means Google Cloud Console
+  // credentials were never provisioned. Sending that to GIDSignIn still
+  // opens a real Google OAuth request with a nonexistent client_id, which
+  // Google's server correctly rejects with a 400 "invalid_request" page —
+  // that's the root cause of the "cannot process for google" error. Catch
+  // it client-side first so the failure is an actionable message instead
+  // of a confusing native OAuth error page.
+  function _isUnconfigured(id) {
+    return !id || id.indexOf('REPLACE_WITH') === 0;
+  }
+
   async function signInWithApple() {
     const SocialLogin = await _initSocialLogin();
     if (!SocialLogin) { _setProviderError('Apple sign-in is only available in the app.'); return; }
@@ -201,6 +336,10 @@ const AUTH = (() => {
   }
 
   async function signInWithGoogle() {
+    if (_isUnconfigured(GOOGLE_IOS_CLIENT_ID)) {
+      _setProviderError('Google sign-in isn’t configured yet (missing OAuth Client ID).');
+      return;
+    }
     const SocialLogin = await _initSocialLogin();
     if (!SocialLogin) { _setProviderError('Google sign-in is only available in the app.'); return; }
     try {
@@ -408,11 +547,13 @@ const AUTH = (() => {
     init,
     signedIn,
     requireAuth,
-    goBackToProviders,
     showEmailScreen,
     handleEmailSubmit,
     handleForgotPassword,
     toggleEmailMode,
+    backFromVerify,
+    handleVerifySubmit,
+    handleResendCode,
     signInWithApple,
     signInWithGoogle,
     handleSetupContinue,
