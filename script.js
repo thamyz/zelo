@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-07-29 19:32";
+const BUILD_STAMP = "2026-08-10 15:14";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6816,7 +6816,7 @@ document.addEventListener('touchstart', (e) => {
 })();
 
 // ============================================================
-// AUTH SCREEN: cancel WebKit's native scroll-to-focused-input
+// AUTH SCREEN: remove WebKit's native scroll-to-focused-input entirely
 // ============================================================
 // #auth-overlay opted out of the nudge system above, but fields there kept
 // visibly jumping on focus anyway — because that movement was never coming
@@ -6825,31 +6825,29 @@ document.addEventListener('touchstart', (e) => {
 // form element into view" behavior for any scrollable ancestor when the
 // keyboard opens. That's separate from, and not covered by, Capacitor's
 // Keyboard.resize:"none" setting (which only controls whether the
-// webview's own frame/viewport shrinks) — it's WebKit itself deciding to
-// scroll the container, independent of any app-level keyboard handling.
+// webview's own frame/viewport shrinks).
 //
-// Fix: freeze the container's scroll position for a short window right
-// after a field inside it gets focus — long enough to absorb WebKit's
-// auto-scroll-into-view animation (fires as part of the keyboard-show
-// sequence) — then release the lock so the user can still scroll manually
-// afterward if the keyboard covers something they need to reach.
+// First attempt reactively snapped the container's scrollTop back after
+// the fact — too late in practice: WKWebView's reveal-focused-element
+// scroll can happen through native UIScrollView/compositor machinery that
+// doesn't reliably show up as JS 'scroll' events in time to cancel. Fixed
+// properly instead: pull the container's scrollability out from under it
+// while a field is focused (overflow-y: hidden), so there is nothing left
+// for WebKit to scroll — #app above it is overflow:hidden too, so there's
+// no scrollable ancestor anywhere in the chain to fall back to. Restored
+// on blur so normal scrolling still works the rest of the time.
 (function () {
   const overlay = document.getElementById('auth-overlay');
   if (!overlay) return;
-  let lockedTop    = null;
-  let releaseTimer = null;
-
+  let focusedFields = 0;
   overlay.addEventListener('focusin', (e) => {
     if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') return;
-    lockedTop = overlay.scrollTop;
-    clearTimeout(releaseTimer);
-    releaseTimer = setTimeout(() => { lockedTop = null; }, 400);
+    focusedFields++;
+    overlay.style.overflowY = 'hidden';
   });
-  overlay.addEventListener('scroll', () => {
-    if (lockedTop !== null && overlay.scrollTop !== lockedTop) overlay.scrollTop = lockedTop;
-  });
-  overlay.addEventListener('focusout', () => {
-    lockedTop = null;
-    clearTimeout(releaseTimer);
+  overlay.addEventListener('focusout', (e) => {
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') return;
+    focusedFields = Math.max(0, focusedFields - 1);
+    if (focusedFields === 0) overlay.style.overflowY = '';
   });
 })();
