@@ -4538,8 +4538,6 @@ textarea { font-family: inherit; }
 .auth-input:focus         { border-color: var(--accent); background: var(--s1); }
 .auth-input::placeholder  { color: var(--text-3); }
 
-#auth-name-wrap[hidden],
-#auth-confirm-wrap[hidden],
 #auth-terms-wrap[hidden] { display: none; }
 
 /* ── Terms & Conditions agreement (sign-up only) ── */

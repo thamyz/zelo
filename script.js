@@ -6383,6 +6383,9 @@ const ZELO_WEB_BASE = 'https://zelofficial.com/';
 function openLegalPage(path) {
   const url = ZELO_WEB_BASE + path;
   const Browser = window.Capacitor?.Plugins?.Browser;
+  // Snapshot the sign-in/create-account screen (if it's the thing open behind
+  // this) so it can be restored exactly as left — see AUTH.rememberAuthState.
+  if (typeof AUTH !== 'undefined') AUTH.rememberAuthState();
   if (Browser) {
     Browser.open({ url }).catch(() => {});
   } else {
@@ -6794,12 +6797,20 @@ document.addEventListener('touchstart', (e) => {
   // Synchronous, not delayed — see the `instant` note above. Also covers
   // switching focus to a different field while the keyboard is already
   // open, which doesn't fire another keyboardWillShow.
+  //
+  // Sign-in/create-account (#auth-overlay) opts out entirely — no
+  // MOVABLE_OVERRIDE entry, no fallback shift, nothing. With native resize
+  // already off, skipping the nudge here means those fields never move on
+  // focus at all, rather than moving "correctly" — the two screens don't
+  // have anything low enough to need clearing anyway.
   document.addEventListener('focusin', (e) => {
+    if (e.target.closest && e.target.closest('#auth-overlay')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
       nudgeFocusedIntoView(true);
     }
   }, true);
   document.addEventListener('focusout', (e) => {
+    if (e.target.closest && e.target.closest('#auth-overlay')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') clearNudge();
   }, true);
 })();

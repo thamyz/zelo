@@ -31,6 +31,46 @@ const AUTH = (() => {
     });
   }
 
+  // ── Restore across the in-app Terms browser ─────────────────────
+  // SFSafariViewController (opened for the Terms link) sits directly on top
+  // of the WKWebView and is memory-heavy; iOS can reclaim the webview's
+  // content process while it's not visible, which reloads the app fresh —
+  // wiping in-memory state including whatever was typed here. Snapshotting
+  // just before opening it, and replaying on the next boot, makes the
+  // sign-up screen come back exactly as the user left it either way: a
+  // no-op if nothing reloaded, a restore if it did. One-shot (consumed on
+  // read) and time-boxed so a leftover key can't resurrect a stale form on
+  // an unrelated future launch.
+  const RESTORE_KEY     = 'zelo_auth_restore';
+  const RESTORE_TTL_MS  = 2 * 60 * 1000;
+
+  function rememberAuthState() {
+    const overlay = document.getElementById('auth-overlay');
+    if (!overlay || overlay.hidden) return;
+    localStorage.setItem(RESTORE_KEY, JSON.stringify({
+      t: Date.now(),
+      mode: _emailMode,
+      email: document.getElementById('auth-email-input')?.value || '',
+      terms: !!document.getElementById('auth-terms-checkbox')?.checked
+    }));
+    // Password is deliberately not persisted — not worth writing a plaintext
+    // password to disk, even briefly, just to save a retype.
+  }
+
+  function _restoreAuthStateIfAny() {
+    const raw = localStorage.getItem(RESTORE_KEY);
+    if (!raw) return;
+    localStorage.removeItem(RESTORE_KEY);
+    let state;
+    try { state = JSON.parse(raw); } catch (_) { return; }
+    if (!state || (Date.now() - state.t) > RESTORE_TTL_MS) return;
+    showEmailScreen(state.mode);
+    const emailInput = document.getElementById('auth-email-input');
+    const termsCheck = document.getElementById('auth-terms-checkbox');
+    if (emailInput) emailInput.value = state.email || '';
+    if (termsCheck && state.mode === 'signup') termsCheck.checked = state.terms;
+  }
+
   // ── Init ───────────────────────────────────────────────────────
 
   async function init() {
@@ -52,6 +92,8 @@ const AUTH = (() => {
         return;
       }
     }
+
+    if (!_session) _restoreAuthStateIfAny();
 
     zeloSupabase.auth.onAuthStateChange((event, session) => {
       _session = session;
@@ -93,12 +135,8 @@ const AUTH = (() => {
       ? 'Start practicing real conversations in seconds.'
       : 'Sign in to pick up where you left off.';
 
-    const nameWrap    = el.querySelector('#auth-name-wrap');
-    const confirmWrap = el.querySelector('#auth-confirm-wrap');
-    const termsWrap   = el.querySelector('#auth-terms-wrap');
-    if (nameWrap)    nameWrap.hidden    = !isSignup;
-    if (confirmWrap) confirmWrap.hidden = !isSignup;
-    if (termsWrap)   termsWrap.hidden   = !isSignup;
+    const termsWrap = el.querySelector('#auth-terms-wrap');
+    if (termsWrap) termsWrap.hidden = !isSignup;
 
     el.querySelector('#auth-submit-btn').textContent = isSignup ? 'Create account' : 'Sign in';
     el.querySelector('#auth-toggle-btn').textContent = isSignup
@@ -111,20 +149,26 @@ const AUTH = (() => {
     const provErrEl = el.querySelector('#auth-provider-error');
     if (provErrEl) provErrEl.textContent = '';
 
-    const nameInput  = el.querySelector('#auth-name-input');
     const emailInput = el.querySelector('#auth-email-input');
     const passInput  = el.querySelector('#auth-password-input');
-    const confInput  = el.querySelector('#auth-confirm-input');
     const termsCheck = el.querySelector('#auth-terms-checkbox');
-    if (nameInput)  nameInput.value  = '';
     if (emailInput) emailInput.value = '';
     if (passInput)  passInput.value  = '';
-    if (confInput)  confInput.value  = '';
     if (termsCheck) termsCheck.checked = false;
   }
 
+  // Puts the caret in the email field and scrolls it into view — the
+  // target for the "Continue with Email" option in the provider row,
+  // since the email field already sits inline in this unified screen
+  // rather than behind a separate "pick a method" step.
+  function focusEmailField() {
+    const input = document.getElementById('auth-email-input');
+    if (!input) return;
+    input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    input.focus();
+  }
+
   async function handleEmailSubmit() {
-    const name     = (document.getElementById('auth-name-input')?.value     || '').trim();
     const email    = (document.getElementById('auth-email-input')?.value    || '').trim();
     const password =  document.getElementById('auth-password-input')?.value || '';
     const errEl    =  document.getElementById('auth-email-error');
@@ -136,29 +180,11 @@ const AUTH = (() => {
     }
 
     if (_emailMode === 'signup') {
-      if (!name) {
-        if (errEl) errEl.textContent = 'Please enter your name.';
-        return;
-      }
-      const confirm = document.getElementById('auth-confirm-input')?.value || '';
-      if (password !== confirm) {
-        if (errEl) errEl.textContent = 'Passwords do not match.';
-        return;
-      }
       if (!document.getElementById('auth-terms-checkbox')?.checked) {
         if (errEl) errEl.textContent = 'Please agree to the Terms & Conditions to continue.';
         return;
       }
-      // Written before the network call, not after: when confirmation is
-      // disabled, signUp() can fire the SIGNED_IN listener (which reads this
-      // key to prefill the setup screen) before an await-after write would
-      // land — same "localStorage first" ordering handleSetupContinue() uses.
-      localStorage.setItem('zelo_display_name', name);
-
-      const { data, error } = await zeloSupabase.auth.signUp({
-        email, password,
-        options: { data: { display_name: name } }
-      });
+      const { data, error } = await zeloSupabase.auth.signUp({ email, password });
       if (error) { if (errEl) errEl.textContent = error.message; return; }
 
       if (!data?.session) {
@@ -548,9 +574,11 @@ const AUTH = (() => {
     signedIn,
     requireAuth,
     showEmailScreen,
+    focusEmailField,
     handleEmailSubmit,
     handleForgotPassword,
     toggleEmailMode,
+    rememberAuthState,
     backFromVerify,
     handleVerifySubmit,
     handleResendCode,
