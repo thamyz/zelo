@@ -76,6 +76,7 @@ html, body {
 
 button  { cursor: pointer; font-family: inherit; border: none; background: none; color: inherit; }
 textarea { font-family: inherit; }
+a { text-decoration: none; color: inherit; }
 
 /* ----------------------------------------------------------------
    TAB / SCREEN SYSTEM
@@ -188,8 +189,8 @@ textarea { font-family: inherit; }
 }
 
 .profile-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--s1);
   border: 1px solid var(--border);
@@ -216,12 +217,12 @@ textarea { font-family: inherit; }
   border: 2px solid var(--bg);
 }
 
-.header-spacer { width: 36px; }
+.header-spacer { width: 44px; }
 
 /* Settings gear (Scan header, right) */
 .settings-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--s1);
   border: 1px solid var(--border);
@@ -635,13 +636,7 @@ textarea { font-family: inherit; }
   padding: 12px 24px;
   border-bottom-color: #EFE5DA;
 }
-#screen-scan-result .back-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 22px;
-  border-color: #E8DDD2;
-}
-#screen-scan-result .back-btn svg { width: 22px; height: 22px; }
+#screen-scan-result .back-btn { border-color: #E8DDD2; }
 #screen-scan-result .screen-title {
   flex: 1;
   text-align: center;
@@ -1166,14 +1161,19 @@ textarea { font-family: inherit; }
   color: var(--text);
 }
 
+/* Standard header icon-button size app-wide — back/close chevrons and
+   X's, plus the other circular header icons that sit alongside them
+   (history, profile, settings) — one consistent tap target everywhere,
+   not just on this class. See .auth-back-btn, .auth-dismiss-btn,
+   .aicoach-back-btn/.aicoach-menu-btn, .history-btn, .profile-btn,
+   .settings-btn, .header-spacer, .aicoach-hiw-close. */
 .back-btn {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--s1);
   border: 1px solid var(--border);
   color: var(--text);
-  font-size: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2702,7 +2702,7 @@ textarea { font-family: inherit; }
 .dash-profile-chevron {
   margin-left: auto;
   color: var(--text-3);
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -2909,6 +2909,7 @@ textarea { font-family: inherit; }
 
 .dash-menu-row {
   display: flex;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
@@ -4476,8 +4477,8 @@ textarea { font-family: inherit; }
   position: absolute;
   top: 20px;
   left: 20px;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--s2);
   border: 1px solid var(--border);
@@ -4495,8 +4496,8 @@ textarea { font-family: inherit; }
   position: absolute;
   top: 20px;
   right: 20px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--s2);
   border: 1px solid var(--border);
@@ -4505,8 +4506,6 @@ textarea { font-family: inherit; }
   justify-content: center;
   cursor: pointer;
   color: var(--text-3);
-  font-size: 14px;
-  line-height: 1;
   transition: background 0.12s, color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
@@ -4928,8 +4927,8 @@ textarea { font-family: inherit; }
    HISTORY ICON  (Scan header, right) — replaces the old gear
    ================================================================ */
 .history-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--s1);
   border: 1px solid var(--border);
@@ -5755,8 +5754,8 @@ textarea { font-family: inherit; }
 .aicoach-back-btn,
 .aicoach-menu-btn {
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(236, 72, 153, 0.10);
   color: var(--accent);
@@ -6119,11 +6118,20 @@ textarea { font-family: inherit; }
 }
 .aicoach-hiw-close {
   position: absolute;
-  top: 14px;
-  right: 16px;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s2);
+  border: 1px solid var(--border);
   color: var(--text-3);
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
 }
+.aicoach-hiw-close:hover { background: var(--border); color: var(--text); }
 .aicoach-hiw-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 8px; }
 .aicoach-hiw-text { color: var(--text-2); font-size: 0.92rem; }
 
