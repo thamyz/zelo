@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-10 15:56";
+const BUILD_STAMP = "2026-08-10 17:04";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6756,6 +6756,14 @@ document.addEventListener('touchstart', (e) => {
   function nudgeFocusedIntoView(instant) {
     const active = document.activeElement;
     if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
+    // Sign-in/create-account must never be nudged. Checked here — not just
+    // at the focusin call site below — because that's exactly what let the
+    // real bug through: keyboardWillShow (fires only with a real device
+    // keyboard, never in headless testing) calls this function on its own,
+    // unconditionally, with no exclusion check of its own. Guarding inside
+    // the function itself, off document.activeElement, covers every call
+    // site at once instead of relying on each one to remember to check.
+    if (active.closest && active.closest('#auth-overlay')) return;
     const { els, clip, measureEl } = movableElsAndClip(active);
     if (!(nudgedEls.length && nudgedEls[0] === els[0])) clearNudge();
     if (clip) applyClip(clip, els);
@@ -6815,131 +6823,3 @@ document.addEventListener('touchstart', (e) => {
   }, true);
 })();
 
-// ============================================================
-// AUTH SCREEN: remove WebKit's native scroll-to-focused-input entirely
-// ============================================================
-// #auth-overlay opted out of the nudge system above, but fields there kept
-// visibly jumping on focus anyway — because that movement was never coming
-// from this app's own JS. #auth-overlay is its own scrollable container
-// (overflow-y: auto), and WKWebView has a built-in "scroll the focused
-// form element into view" behavior for any scrollable ancestor when the
-// keyboard opens. That's separate from, and not covered by, Capacitor's
-// Keyboard.resize:"none" setting (which only controls whether the
-// webview's own frame/viewport shrinks).
-//
-// First attempt reactively snapped the container's scrollTop back after
-// the fact — too late in practice: WKWebView's reveal-focused-element
-// scroll can happen through native UIScrollView/compositor machinery that
-// doesn't reliably show up as JS 'scroll' events in time to cancel. Fixed
-// properly instead: pull the container's scrollability out from under it
-// while a field is focused (overflow-y: hidden), so there is nothing left
-// for WebKit to scroll — #app above it is overflow:hidden too, so there's
-// no scrollable ancestor anywhere in the chain to fall back to. Restored
-// on blur so normal scrolling still works the rest of the time.
-(function () {
-  const overlay = document.getElementById('auth-overlay');
-  if (!overlay) return;
-  let focusedFields = 0;
-  overlay.addEventListener('focusin', (e) => {
-    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') return;
-    focusedFields++;
-    overlay.style.overflowY = 'hidden';
-  });
-  overlay.addEventListener('focusout', (e) => {
-    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') return;
-    focusedFields = Math.max(0, focusedFields - 1);
-    if (focusedFields === 0) overlay.style.overflowY = '';
-  });
-})();
-
-// ============================================================
-// TEMPORARY DIAGNOSTIC — auth-screen keyboard-shift investigation
-// ============================================================
-// Three fixes (JS scroll-lock, CSS overflow:hidden on #auth-overlay,
-// disabling the native WKWebView scroll view) have each shipped and each
-// failed to stop the shift on a real device — meaning the actual element
-// doing the moving has never been directly observed, only guessed at.
-// This renders a live, on-screen readout — not console.log, needs to be
-// screenshotted from the real device — of the focused field's REAL
-// rendered position (getBoundingClientRect, not just the CSS `top`
-// property, which a transform or ancestor scroll won't necessarily touch)
-// plus its parent and grandparent, updated every frame while a field
-// inside #auth-overlay is focused. Remove once a screenshot of this
-// identifies the actual cause.
-(function () {
-  const overlay = document.getElementById('auth-overlay');
-  if (!overlay) return;
-
-  const panel = document.createElement('div');
-  panel.id = 'kb-diag-panel';
-  panel.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;' +
-    'background:rgba(0,0,0,0.9);color:#5f5;font:9px/1.4 ui-monospace,Menlo,monospace;' +
-    'padding:6px 8px;white-space:pre-wrap;pointer-events:none;display:none;';
-  document.body.appendChild(panel);
-
-  function shortLabel(el) {
-    if (!el) return '(none)';
-    if (el.id) return '#' + el.id;
-    if (el.className) return '.' + String(el.className).trim().split(/\s+/).join('.');
-    return el.tagName.toLowerCase();
-  }
-
-  function chain(el) {
-    const parts = [];
-    let node = el;
-    while (node && node !== document.body) {
-      parts.push(shortLabel(node));
-      node = node.parentElement;
-    }
-    return parts.join(' < ');
-  }
-
-  function describe(el, label) {
-    if (!el) return label + ': (none)\n';
-    const r  = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
-    return label + ' ' + shortLabel(el) +
-      '\n    rectTop=' + r.top.toFixed(1) +
-      ' pos=' + cs.position +
-      ' top=' + cs.top +
-      '\n    transform=' + cs.transform + '\n';
-  }
-
-  let raf = null;
-  let focusedEl = null;
-
-  function tick() {
-    if (!focusedEl) return;
-    const p1 = focusedEl.parentElement;
-    const p2 = p1 ? p1.parentElement : null;
-    const vv = window.visualViewport;
-    const appEl = document.getElementById('app');
-    let text = 'KEYBOARD-SHIFT DIAGNOSTIC (temporary — screenshot this)\n';
-    text += 'chain: ' + chain(focusedEl) + '\n';
-    text += 'innerH=' + window.innerHeight +
-      ' vvH=' + (vv ? vv.height.toFixed(0) : 'n/a') +
-      ' vvOffsetTop=' + (vv ? vv.offsetTop.toFixed(0) : 'n/a') + '\n';
-    text += 'overlay.scrollTop=' + overlay.scrollTop +
-      ' app.scrollTop=' + (appEl ? appEl.scrollTop : 'n/a') + '\n\n';
-    text += describe(focusedEl, 'EL');
-    text += describe(p1, 'P1');
-    text += describe(p2, 'P2');
-    panel.textContent = text;
-    raf = requestAnimationFrame(tick);
-  }
-
-  overlay.addEventListener('focusin', (e) => {
-    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') return;
-    focusedEl = e.target;
-    panel.style.display = 'block';
-    if (!raf) raf = requestAnimationFrame(tick);
-  });
-  overlay.addEventListener('focusout', (e) => {
-    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') return;
-    focusedEl = null;
-    if (raf) { cancelAnimationFrame(raf); raf = null; }
-    // Freeze on the last captured frame instead of clearing — the jump
-    // might coincide with blur/keyboard-dismiss itself, so the last
-    // reading is more useful than a blank panel.
-  });
-})();

@@ -6,26 +6,6 @@ class MainViewController: CAPBridgeViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         MainViewController.removeKeyboardAccessoryBarOnce()
-        disableNativeScrollView()
-    }
-
-    // The app manages 100% of its own scrolling via CSS (overflow-y: auto
-    // on individual screens/overlays inside #app, which is itself
-    // overflow:hidden and sized to exactly fill the viewport) — nothing
-    // here ever relies on WKWebView's own top-level scroll view actually
-    // scrolling. That scroll view still exists underneath the page
-    // regardless of any CSS, though, and it's what iOS's built-in "scroll
-    // the focused form field into view" behavior acts on when the keyboard
-    // opens — independent of CSS overflow set on elements inside the page.
-    // Confirmed: setting overflow-y:hidden on the sign-in/create-account
-    // screen's own container did not stop it from shifting on focus,
-    // because the thing doing the scrolling was never inside the DOM to
-    // begin with. Disabling the native scroll view removes it at the
-    // actual source instead of continuing to fight it from the web layer.
-    private func disableNativeScrollView() {
-        guard let scrollView = self.bridge?.webView?.scrollView else { return }
-        scrollView.isScrollEnabled = false
-        scrollView.bounces = false
     }
 
     // Strips the up/down/checkmark "form navigation" bar WKWebView shows
