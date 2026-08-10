@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-10 20:53";
+const BUILD_STAMP = "2026-08-10 21:18";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -261,16 +261,14 @@ function _renderChatProfileHeader(character) {
     : character.color;
   photo.textContent = character.initial;
 
+  // Name + age on one line, one font — same "Name, Age" pattern already
+  // used for swipe cards and chat list rows elsewhere in the app.
   const name = document.createElement("h2");
   name.className = "chat-profile-name";
   name.id = "chat-profile-name";
-  name.textContent = character.name;
+  name.textContent = character.age != null ? `${character.name}, ${character.age}` : character.name;
 
-  const age = document.createElement("p");
-  age.className = "chat-profile-age";
-  age.textContent = character.age != null ? character.age : "";
-
-  block.append(photo, name, age);
+  block.append(photo, name);
   messagesEl.appendChild(block);
 }
 

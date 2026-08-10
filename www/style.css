@@ -1619,6 +1619,7 @@ a { text-decoration: none; color: inherit; }
    The name/photo/status content that used to fill the middle now lives in
    .chat-profile-block instead, inside the scrollable thread. */
 .chat-back-bar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1627,6 +1628,25 @@ a { text-decoration: none; color: inherit; }
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+/* Centered independently of the two unequal-width side groups (back
+   button vs. mode-pill + settings button), same absolute-center-over-a
+   -relative-header technique already used by #screen-leaderboard's title. */
+.chat-back-bar-brand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 1px;
+  pointer-events: none;
 }
 
 .chat-back-bar-right {
@@ -1686,7 +1706,6 @@ a { text-decoration: none; color: inherit; }
 }
 
 .chat-profile-name { font-size: 1.25rem; font-weight: 800; color: var(--text); }
-.chat-profile-age  { font-size: 0.88rem; color: var(--text-2); }
 
 .msg-row {
   display: flex;
