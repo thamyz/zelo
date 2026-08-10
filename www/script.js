@@ -6814,3 +6814,42 @@ document.addEventListener('touchstart', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') clearNudge();
   }, true);
 })();
+
+// ============================================================
+// AUTH SCREEN: cancel WebKit's native scroll-to-focused-input
+// ============================================================
+// #auth-overlay opted out of the nudge system above, but fields there kept
+// visibly jumping on focus anyway — because that movement was never coming
+// from this app's own JS. #auth-overlay is its own scrollable container
+// (overflow-y: auto), and WKWebView has a built-in "scroll the focused
+// form element into view" behavior for any scrollable ancestor when the
+// keyboard opens. That's separate from, and not covered by, Capacitor's
+// Keyboard.resize:"none" setting (which only controls whether the
+// webview's own frame/viewport shrinks) — it's WebKit itself deciding to
+// scroll the container, independent of any app-level keyboard handling.
+//
+// Fix: freeze the container's scroll position for a short window right
+// after a field inside it gets focus — long enough to absorb WebKit's
+// auto-scroll-into-view animation (fires as part of the keyboard-show
+// sequence) — then release the lock so the user can still scroll manually
+// afterward if the keyboard covers something they need to reach.
+(function () {
+  const overlay = document.getElementById('auth-overlay');
+  if (!overlay) return;
+  let lockedTop    = null;
+  let releaseTimer = null;
+
+  overlay.addEventListener('focusin', (e) => {
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') return;
+    lockedTop = overlay.scrollTop;
+    clearTimeout(releaseTimer);
+    releaseTimer = setTimeout(() => { lockedTop = null; }, 400);
+  });
+  overlay.addEventListener('scroll', () => {
+    if (lockedTop !== null && overlay.scrollTop !== lockedTop) overlay.scrollTop = lockedTop;
+  });
+  overlay.addEventListener('focusout', () => {
+    lockedTop = null;
+    clearTimeout(releaseTimer);
+  });
+})();
