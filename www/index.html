@@ -664,7 +664,7 @@
           <div class="match-avatars">
             <div class="match-avatar match-avatar--you">YOU</div>
             <div class="match-heart-medallion">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
               </svg>
             </div>
@@ -672,11 +672,10 @@
           </div>
 
           <button class="start-btn match-start-btn" onclick="onStartChatting()">
-            Start Chatting
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            Send a Message
           </button>
           <button class="match-skip-btn" onclick="showTab('practice')">
-            Keep swiping
+            Keep Swiping
           </button>
 
         </div>
@@ -688,25 +687,28 @@
            ============================================================ -->
       <div class="screen" id="screen-chat">
 
-        <div class="chat-header">
+        <!-- Minimal, non-scrolling bar — the only always-visible chrome now
+             that the full profile header lives inside the scrollable
+             thread (see .chat-profile-block, rendered by JS as the first
+             item in #chat-messages). Same "outside the scroll region"
+             structural pattern every other screen already uses to keep
+             its back button reachable — no position:fixed/sticky needed. -->
+        <div class="chat-back-bar">
           <button class="back-btn" onclick="exitChat()" aria-label="Back">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <div class="chat-avatar"      id="chat-header-avatar"></div>
-          <div class="chat-header-info">
-            <span class="chat-hname"   id="chat-header-name"></span>
-            <span class="chat-hstatus" id="chat-header-status">online</span>
+          <div class="chat-back-bar-right">
+            <div class="mode-pill" id="chat-mode-pill"></div>
+            <button class="chat-settings-btn" onclick="openChatSettings()" aria-label="Chat settings">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/>
+                <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
+                <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/>
+              </svg>
+            </button>
           </div>
-          <div class="mode-pill" id="chat-mode-pill"></div>
-          <button class="chat-settings-btn" onclick="openChatSettings()" aria-label="Chat settings">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="1.8"
-                 stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/>
-              <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
-              <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/>
-            </svg>
-          </button>
         </div>
 
         <!-- Chat settings sheet -->

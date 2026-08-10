@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-10 17:36";
+const BUILD_STAMP = "2026-08-10 20:53";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -243,18 +243,44 @@ function popScreen() {
 // PRACTICE: START / EXIT CHAT
 // ================================================================
 
+// Builds the large Instagram-DM-style profile block (photo/name/age) and
+// inserts it as the first item in the scrollable thread — not a fixed
+// header, so it scrolls away naturally like any other list item, with no
+// animation or scroll-position tracking involved. Called right after
+// #chat-messages is cleared, from both startChat() (new match) and
+// openChatFromStore() (reopening a saved chat).
+function _renderChatProfileHeader(character) {
+  const messagesEl = document.getElementById("chat-messages");
+  const block = document.createElement("div");
+  block.className = "chat-profile-block";
+
+  const photo = document.createElement("div");
+  photo.className = "chat-profile-photo";
+  photo.style.background = character.gradientColors
+    ? `linear-gradient(145deg, ${character.gradientColors[0]}, ${character.gradientColors[1]})`
+    : character.color;
+  photo.textContent = character.initial;
+
+  const name = document.createElement("h2");
+  name.className = "chat-profile-name";
+  name.id = "chat-profile-name";
+  name.textContent = character.name;
+
+  const age = document.createElement("p");
+  age.className = "chat-profile-age";
+  age.textContent = character.age != null ? character.age : "";
+
+  block.append(photo, name, age);
+  messagesEl.appendChild(block);
+}
+
 function startChat() {
   const c = state.character;
 
-  const headerAvatar = document.getElementById("chat-header-avatar");
-  headerAvatar.style.background = c.color;
-  headerAvatar.textContent      = c.initial;
-
-  document.getElementById("chat-header-name").textContent = c.name;
-  setHeaderStatus("online");
   document.getElementById("chat-mode-pill").textContent = "";
 
   document.getElementById("chat-messages").innerHTML = "";
+  _renderChatProfileHeader(c);
   setSendEnabled(false);
 
   pushScreen("chat");
@@ -4096,17 +4122,12 @@ function openChatFromStore(chat) {
   state.replyIndex = chat.messages.filter(m => m.sender === 'ai').length % REPLIES[chat.difficulty].length;
   state.activeChatId = chat.id;
 
-  // Build header
-  const headerAvatar = document.getElementById('chat-header-avatar');
-  headerAvatar.style.background = `linear-gradient(145deg, ${chat.profile.gradientColors[0]}, ${chat.profile.gradientColors[1]})`;
-  headerAvatar.textContent = chat.profile.initial;
-  document.getElementById('chat-header-name').textContent = chat.profile.name;
-  setHeaderStatus('online');
   document.getElementById('chat-mode-pill').textContent = chat.mode === 'realistic' ? 'Realistic' : 'Instant';
 
   // Replay messages
   const messagesEl = document.getElementById('chat-messages');
   messagesEl.innerHTML = '';
+  _renderChatProfileHeader(chat.profile);
   chat.messages.forEach(m => {
     if (m.sender === 'user') appendUserBubbleStatic(m.text, m.time);
     else appendAIBubble(m.text, m.time);
@@ -4439,14 +4460,17 @@ function formatTime(atTime) {
 // ================================================================
 // SET THE PACE — HIDDEN DEV TOGGLE
 // Safety net only: lets the timing choice be reverted mid-chat without a
-// real settings screen. Buried behind a long-press on the chat header
-// status text so it's never a visible, prominent control.
+// real settings screen. Buried behind a long-press on the chat profile
+// block's name text so it's never a visible, prominent control.
 // ================================================================
 
 let devPaceLongPressTimer = null;
 
 function bindDevPaceToggle() {
-  const statusEl = document.getElementById('chat-header-status');
+  // Re-anchored to the profile block's name text — the status pill it used
+  // to hang off no longer exists (see .chat-profile-block); same "buried
+  // behind a long-press on unobtrusive header text" spirit as before.
+  const statusEl = document.getElementById('chat-profile-name');
   if (!statusEl || statusEl.dataset.devBound) return;
   statusEl.dataset.devBound = '1';
 
