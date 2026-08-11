@@ -6619,7 +6619,7 @@ a { text-decoration: none; color: inherit; }
   border: none;
   border-bottom: 2px solid #ece5da;
   background: none;
-  text-align: left;
+  text-align: center;
   font-size: 1.5rem;
   font-weight: 700;
   color: #1c1917;
@@ -6636,10 +6636,7 @@ a { text-decoration: none; color: inherit; }
   border-color: var(--accent);
   background: none;
 }
-/* Placeholder stays centered (the field reads nicely that way at rest);
-   only actual typed text is left-aligned (see .cine-name-input above) so
-   typing starts where you tap instead of growing outward from the middle. */
-.cine-name-input::placeholder { color: #cfc4b6; font-weight: 600; text-align: center; }
+.cine-name-input::placeholder { color: #cfc4b6; font-weight: 600; }
 /* Hidden outright (not faded) the instant the field is focused — no
    transition property here, so there's nothing to animate through. */
 .cine-name-input:focus::placeholder { opacity: 0; }
