@@ -1809,6 +1809,13 @@ a { text-decoration: none; color: inherit; }
   z-index: 1;
 }
 
+/* #message-input itself (not this bar) is what the keyboard-nudge system
+   shifts on focus — the bar stays put while the input moves inside it, so
+   the input visibly crosses this stationary border during the shift.
+   Hiding it exactly while focused (same trigger as the shift, no JS
+   needed) removes that seam without touching the shift/animation at all. */
+.chat-input-bar:focus-within { border-top-color: transparent; }
+
 .message-input {
   flex: 1;
   background: var(--s1);
