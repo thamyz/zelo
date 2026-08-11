@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-11 09:05";
+const BUILD_STAMP = "2026-08-11 09:29";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6728,7 +6728,6 @@ document.addEventListener('touchstart', (e) => {
   const Keyboard = window.Capacitor?.Plugins?.Keyboard;
   let keyboardHeight = 0;
   let nudgedEls = [];
-  let nudgedShift = 0; // shift currently applied to nudgedEls — lets a later correcting call compute the true resting position without visually un-shifting first (see nudgeFocusedIntoView)
   const MIN_VISIBLE_SHIFT = 56; // always at least this much, so opening the keyboard is never a no-op
 
   // input id -> selectors for the element(s) that should move with it,
@@ -6812,38 +6811,30 @@ document.addEventListener('touchstart', (e) => {
     // site at once instead of relying on each one to remember to check.
     if (active.closest && active.closest('#auth-overlay')) return;
     const { els, clip, measureEl } = movableElsAndClip(active);
-    const sameTarget = nudgedEls.length && nudgedEls[0] === els[0];
-    if (!sameTarget) clearNudge();
+    if (!(nudgedEls.length && nudgedEls[0] === els[0])) clearNudge();
     if (clip) applyClip(clip, els);
-    // Measure the true resting position by adding the currently-applied
-    // shift back onto the measured rect, instead of clearing the transform
-    // and re-measuring first. The reset-then-remeasure approach assumed a
-    // layout-only read never paints — true within one call, but this
-    // function also gets a second, later "correcting" call once the real
-    // keyboard height is known (see keyboardWillShow below), spaced far
-    // enough apart in real time that the reset DOES paint: visible as
-    // already-shifted content (the chat input bar, the onboarding name
-    // field, anything nudged) snapping back down to its unshifted position
-    // for a frame before jumping back up to the corrected shift. Same
-    // "structural, not timing" fix as the chat input bar/border merge —
-    // this removes the bad intermediate state instead of trying to time
-    // around it, without changing the transition/easing at all.
+    // Clear transform first and read the rect off that — a translateY
+    // already applied would shift getBoundingClientRect() along with it,
+    // so measuring while still shifted (on a second/correcting call) would
+    // silently under-count how much more shift is actually needed.
+    // getBoundingClientRect() forces a layout pass but not a paint, so this
+    // reset is never visible on screen — safe to do every time, and it's
+    // also what lets the `instant:false` branch below genuinely animate
+    // from the true resting position instead of wherever it already was.
+    els.forEach((el) => { el.style.transition = 'none'; el.style.transform = ''; });
     const rect = measureEl.getBoundingClientRect();
-    const restingBottom = rect.bottom + (sameTarget ? nudgedShift : 0);
     const visibleBottom = window.innerHeight - keyboardHeight;
-    const overlap = restingBottom - visibleBottom;
+    const overlap = rect.bottom - visibleBottom;
     const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);
     els.forEach((el) => {
       el.style.transition = instant ? 'none' : 'transform 0.25s ease';
       el.style.transform = `translateY(${-shift}px)`;
     });
-    nudgedEls   = els;
-    nudgedShift = shift;
+    nudgedEls = els;
   }
   function clearNudge() {
     nudgedEls.forEach((el) => { el.style.transform = ''; });
-    nudgedEls   = [];
-    nudgedShift = 0;
+    nudgedEls = [];
     clearClip();
   }
 
