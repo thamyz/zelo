@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-11 08:47";
+const BUILD_STAMP = "2026-08-11 08:54";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6748,6 +6748,14 @@ document.addEventListener('touchstart', (e) => {
     // its same transform value.
     'asst-input':    { move: ['.scan-headline-row', '.scan-message', '.scan-who-section', '#aicoach-card'], measureBy: '.scan-message' },
     'aicoach-input': { move: ['.aicoach-suggest-panel', '.aicoach-input-bar'] }, // suggestions panel travels with the input bar, staying anchored above it
+    // The whole bar moves as one piece — border included — instead of just
+    // the input escaping a stationary bar. That stationary-bar setup was
+    // the actual cause of the border-line glitch a border-color fade kept
+    // needing to re-patch: the border lived on an element that never
+    // moved, so the input could still visibly cross it mid-shift no matter
+    // how the color transition was tuned. Moving them together removes the
+    // seam structurally — there's no stationary line left to cross.
+    'message-input': { move: ['.chat-input-bar'] },
   };
 
   // Bug fixed here: previously fell back to `{ move: [input] }` — an actual
