@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-11 23:03";
+const BUILD_STAMP = "2026-08-11 23:20";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6730,6 +6730,7 @@ document.addEventListener('touchstart', (e) => {
   let nudgedEls = [];
   let nudgedShift = 0; // shift amount currently applied via transform, so re-measuring never needs a zero-out step
   const MIN_VISIBLE_SHIFT = 56; // always at least this much, so opening the keyboard is never a no-op
+  let caretHiddenOn = null; // the input whose blinking caret is currently masked mid-slide, if any
 
   // input id -> selectors for the element(s) that should move with it,
   // bottom-most last (used to measure keyboard clearance). Falls back to
@@ -6827,6 +6828,23 @@ document.addEventListener('touchstart', (e) => {
     const visibleBottom = window.innerHeight - keyboardHeight;
     const overlap = trueBottom - visibleBottom;
     const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);
+    // Mask the focused input's own blinking text caret for exactly the
+    // duration of the slide below — not the whole app, and not the 80ms/30ms
+    // delay before it (that pre-slide flash is the separate, accepted
+    // tradeoff described above). The caret twitching/teleporting mid-slide
+    // is WebKit's own text-cursor overlay re-resolving its on-screen
+    // position against the transform each time it repaints, independently
+    // of the compositor actually moving the box — a rendering-pipeline
+    // mismatch, not something a different easing/duration changes. Hiding
+    // it for this one transition and revealing it once the transition
+    // actually lands removes the visible glitch without touching how the
+    // slide itself moves or how long it takes.
+    if (caretHiddenOn && caretHiddenOn !== active) { caretHiddenOn.style.caretColor = ''; caretHiddenOn = null; }
+    active.style.caretColor = 'transparent';
+    caretHiddenOn = active;
+    const revealCaret = () => { if (caretHiddenOn === active) { active.style.caretColor = ''; caretHiddenOn = null; } };
+    (measureEl || els[0]).addEventListener('transitionend', revealCaret, { once: true });
+    setTimeout(revealCaret, 500); // safety net only, in case transitionend never fires (e.g. shift value unchanged) — not a timing tweak of the slide itself
     els.forEach((el) => {
       el.style.transition = 'transform 0.2s ease';
       el.style.transform = `translateY(${-shift}px)`;
