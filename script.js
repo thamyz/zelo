@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-11 20:30";
+const BUILD_STAMP = "2026-08-11 23:03";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6790,17 +6790,17 @@ document.addEventListener('touchstart', (e) => {
     if (clippedEl) { clippedEl.style.height = ''; clippedEl.style.overflow = ''; clippedEl = null; }
   }
 
-  // `instant`: skip the transition and apply synchronously, no delay. Used
-  // on the very first nudge for a given focus — waiting for the real
-  // keyboardWillShow height (or even just a setTimeout) meant the caret
-  // first painted at the input's un-shifted resting spot, then the nudge
-  // landed a beat later and visibly yanked it (and the whole field) to the
-  // shifted position — the reported "cursor teleports" glitch. Applying at
-  // least MIN_VISIBLE_SHIFT immediately, synchronously, in the same tick as
-  // focus, means the caret's very first paint is already in the right
-  // place. The later keyboardWillShow call (animated) only has to do
-  // anything if the real keyboard height needs MORE than that minimum.
-  function nudgeFocusedIntoView(instant) {
+  // Every nudge — first tap included — goes through a real 0.2s eased
+  // transition, on a short delay (see the setTimeout calls at the
+  // focusin/keyboardWillShow call sites below) rather than applying
+  // instantly and synchronously. This is the original design, restored:
+  // an earlier version made the first application instant/synchronous to
+  // stop the caret flashing at its unshifted spot before catching up —
+  // but that traded a real, visible slide for a teleport-feeling snap,
+  // which is the opposite of what this is meant to feel like. The brief
+  // flash before the delayed shift kicks in is a known, accepted tradeoff
+  // of this version, not a bug to re-"fix" by going back to instant.
+  function nudgeFocusedIntoView() {
     const active = document.activeElement;
     if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) return;
     // Sign-in/create-account must never be nudged. Checked here — not just
@@ -6828,7 +6828,7 @@ document.addEventListener('touchstart', (e) => {
     const overlap = trueBottom - visibleBottom;
     const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);
     els.forEach((el) => {
-      el.style.transition = instant ? 'none' : 'transform 0.25s ease';
+      el.style.transition = 'transform 0.2s ease';
       el.style.transform = `translateY(${-shift}px)`;
     });
     // Release the previous target's group only now, after the read/write
@@ -6858,16 +6858,16 @@ document.addEventListener('touchstart', (e) => {
   if (Keyboard) {
     Keyboard.addListener('keyboardWillShow', (info) => {
       keyboardHeight = (info && info.keyboardHeight) || 0;
-      nudgeFocusedIntoView(false); // animated correction if the real height needs more than the instant minimum already applied
+      setTimeout(nudgeFocusedIntoView, 30);
     });
     Keyboard.addListener('keyboardWillHide', () => {
       keyboardHeight = 0;
       clearNudge();
     });
   }
-  // Synchronous, not delayed — see the `instant` note above. Also covers
-  // switching focus to a different field while the keyboard is already
-  // open, which doesn't fire another keyboardWillShow.
+  // Delayed (80ms), not synchronous — see the note on nudgeFocusedIntoView
+  // above. Also covers switching focus to a different field while the
+  // keyboard is already open, which doesn't fire another keyboardWillShow.
   //
   // Sign-in/create-account (#auth-overlay) opts out entirely — no
   // MOVABLE_OVERRIDE entry, no fallback shift, nothing. With native resize
@@ -6877,7 +6877,7 @@ document.addEventListener('touchstart', (e) => {
   document.addEventListener('focusin', (e) => {
     if (e.target.closest && e.target.closest('#auth-overlay')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-      nudgeFocusedIntoView(true);
+      setTimeout(nudgeFocusedIntoView, 80);
     }
   }, true);
   document.addEventListener('focusout', (e) => {
