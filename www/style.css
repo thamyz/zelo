@@ -6612,14 +6612,25 @@ a { text-decoration: none; color: inherit; }
 .cine-name-header .cine-head,
 .cine-name-header .cine-sub { margin-left: auto; margin-right: auto; }
 .cine-name-input {
-  width: 100%;
+  /* Width is set inline, once, by sizeCineNameInput() in script.js — snug
+     to the placeholder text ("Choose any name"), and then left alone, so
+     text-align:left below reads as "starts exactly where the placeholder
+     starts" instead of the true left edge of a full-width box. .cine-screen
+     (the parent) already has align-items:center, so this narrow box is
+     centered as a unit. Because the width is fixed after that one
+     measurement, typing never resizes or repositions the box — same edge,
+     same alignment, before and after the first keystroke, no split and no
+     jump. Most real names fit inside this width; a longer one just scrolls
+     like any fixed-width text input. */
+  width: auto;
+  min-width: 40px;
   max-width: 300px;
   margin-top: 30px;
   padding: 16px 4px;
   border: none;
   border-bottom: 2px solid #ece5da;
   background: none;
-  text-align: center;
+  text-align: left;
   font-size: 1.5rem;
   font-weight: 700;
   color: #1c1917;

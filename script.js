@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-11 09:39";
+const BUILD_STAMP = "2026-08-11 10:06";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6728,6 +6728,7 @@ document.addEventListener('touchstart', (e) => {
   const Keyboard = window.Capacitor?.Plugins?.Keyboard;
   let keyboardHeight = 0;
   let nudgedEls = [];
+  let nudgedShift = 0; // shift amount currently applied via transform, so re-measuring never needs a zero-out step
   const MIN_VISIBLE_SHIFT = 56; // always at least this much, so opening the keyboard is never a no-op
 
   // input id -> selectors for the element(s) that should move with it,
@@ -6811,30 +6812,32 @@ document.addEventListener('touchstart', (e) => {
     // site at once instead of relying on each one to remember to check.
     if (active.closest && active.closest('#auth-overlay')) return;
     const { els, clip, measureEl } = movableElsAndClip(active);
-    if (!(nudgedEls.length && nudgedEls[0] === els[0])) clearNudge();
+    if (!(nudgedEls.length && nudgedEls[0] === els[0])) { clearNudge(); }
     if (clip) applyClip(clip, els);
-    // Clear transform first and read the rect off that — a translateY
-    // already applied would shift getBoundingClientRect() along with it,
-    // so measuring while still shifted (on a second/correcting call) would
-    // silently under-count how much more shift is actually needed.
-    // getBoundingClientRect() forces a layout pass but not a paint, so this
-    // reset is never visible on screen — safe to do every time, and it's
-    // also what lets the `instant:false` branch below genuinely animate
-    // from the true resting position instead of wherever it already was.
-    els.forEach((el) => { el.style.transition = 'none'; el.style.transform = ''; });
+    // Measure with whatever shift is currently applied left in place, then
+    // add that shift back onto the rect to recover the true unshifted
+    // position — instead of clearing transform to measure and reapplying.
+    // That clear-then-remeasure step was the actual "cursor teleports"
+    // glitch: it forces a layout pass with the element back at rest, and on
+    // a second/correcting call (real keyboardWillShow height arriving after
+    // the instant nudge) that reset is a real, visible snap back to zero,
+    // not the invisible no-op it looks like on paper.
     const rect = measureEl.getBoundingClientRect();
+    const trueBottom = rect.bottom + nudgedShift;
     const visibleBottom = window.innerHeight - keyboardHeight;
-    const overlap = rect.bottom - visibleBottom;
+    const overlap = trueBottom - visibleBottom;
     const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);
     els.forEach((el) => {
       el.style.transition = instant ? 'none' : 'transform 0.25s ease';
       el.style.transform = `translateY(${-shift}px)`;
     });
     nudgedEls = els;
+    nudgedShift = shift;
   }
   function clearNudge() {
     nudgedEls.forEach((el) => { el.style.transform = ''; });
     nudgedEls = [];
+    nudgedShift = 0;
     clearClip();
   }
 
@@ -6867,5 +6870,48 @@ document.addEventListener('touchstart', (e) => {
     if (e.target.closest && e.target.closest('#auth-overlay')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') clearNudge();
   }, true);
+})();
+
+// ============================================================
+// ONBOARDING NAME FIELD — one-time width sizing (not per-keystroke)
+// ============================================================
+// .cine-name-input is text-align:left with its box sized to fit the
+// placeholder ("Choose any name") exactly — .cine-screen (its parent)
+// already centers children via align-items:center, so this snug box is
+// centered as a unit and left-align inside it reads as "starts where the
+// visible text starts," lining up with the placeholder's first letter
+// instead of the true left edge of a full-width box. Measured once here,
+// not on every keystroke — the box's width never changes after this runs,
+// so there's nothing to jump when typing starts (same box, same edge,
+// before and after). Most real names render narrower than the 16-char
+// placeholder and fit inside this width with room to spare; a longer name
+// just scrolls within the field like any fixed-width text input.
+(function () {
+  const input = document.getElementById('cine-name-input');
+  if (!input) return;
+  function sizeCineNameInput() {
+    const cs = getComputedStyle(input);
+    const mirror = document.createElement('span');
+    mirror.style.position = 'absolute';
+    mirror.style.visibility = 'hidden';
+    mirror.style.whiteSpace = 'pre';
+    mirror.style.left = '-9999px';
+    mirror.style.fontSize = cs.fontSize;
+    mirror.style.fontWeight = cs.fontWeight;
+    mirror.style.fontFamily = cs.fontFamily;
+    mirror.style.letterSpacing = cs.letterSpacing;
+    mirror.textContent = input.placeholder;
+    document.body.appendChild(mirror);
+    const textWidth = mirror.getBoundingClientRect().width;
+    document.body.removeChild(mirror);
+    const paddingLeft = parseFloat(cs.paddingLeft) || 0;
+    const paddingRight = parseFloat(cs.paddingRight) || 0;
+    input.style.width = Math.min(300, textWidth + paddingLeft + paddingRight + 10) + 'px';
+  }
+  sizeCineNameInput();
+  // Inter loads async (Google Fonts, display:swap) — if it swaps in after
+  // the measurement above, re-measure once against the real metrics so the
+  // box isn't left sized to a temporary fallback font's width.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(sizeCineNameInput);
 })();
 
