@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-11 10:06";
+const BUILD_STAMP = "2026-08-11 20:30";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6812,18 +6812,18 @@ document.addEventListener('touchstart', (e) => {
     // site at once instead of relying on each one to remember to check.
     if (active.closest && active.closest('#auth-overlay')) return;
     const { els, clip, measureEl } = movableElsAndClip(active);
-    if (!(nudgedEls.length && nudgedEls[0] === els[0])) { clearNudge(); }
+    const sameTarget = nudgedEls.length && nudgedEls[0] === els[0];
+    const prevEls = sameTarget ? null : nudgedEls;
+    const prevClippedEl = sameTarget ? null : clippedEl;
     if (clip) applyClip(clip, els);
-    // Measure with whatever shift is currently applied left in place, then
-    // add that shift back onto the rect to recover the true unshifted
-    // position — instead of clearing transform to measure and reapplying.
-    // That clear-then-remeasure step was the actual "cursor teleports"
-    // glitch: it forces a layout pass with the element back at rest, and on
-    // a second/correcting call (real keyboardWillShow height arriving after
-    // the instant nudge) that reset is a real, visible snap back to zero,
-    // not the invisible no-op it looks like on paper.
+    // Measure with whatever shift is currently applied to THIS SAME group
+    // left in place (0 when switching to a different input's group, since a
+    // group that wasn't already nudged has nothing on it to subtract), then
+    // add that back onto the rect to recover the true unshifted position —
+    // this call's own transform write happens only once, below, and never
+    // before this read.
     const rect = measureEl.getBoundingClientRect();
-    const trueBottom = rect.bottom + nudgedShift;
+    const trueBottom = rect.bottom + (sameTarget ? nudgedShift : 0);
     const visibleBottom = window.innerHeight - keyboardHeight;
     const overlap = trueBottom - visibleBottom;
     const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);
@@ -6831,6 +6831,20 @@ document.addEventListener('touchstart', (e) => {
       el.style.transition = instant ? 'none' : 'transform 0.25s ease';
       el.style.transform = `translateY(${-shift}px)`;
     });
+    // Release the previous target's group only now, after the read/write
+    // above — not before, via an unconditional clearNudge() call, as this
+    // used to do. Clearing first inserted a transform write ahead of the
+    // layout-forcing read above, in the same tick; that forces the browser
+    // to resolve style mid-script and hands the transition system that
+    // just-cleared (zero) value as its start point, so the old group would
+    // skip its 0.25s ease-out and instantly snap to rest — the same
+    // teleport this function exists to avoid, just relocated to focus
+    // switches between differently-configured inputs.
+    if (prevEls) prevEls.forEach((el) => { el.style.transform = ''; });
+    if (prevClippedEl && prevClippedEl !== clippedEl) {
+      prevClippedEl.style.height = '';
+      prevClippedEl.style.overflow = '';
+    }
     nudgedEls = els;
     nudgedShift = shift;
   }
@@ -6868,7 +6882,16 @@ document.addEventListener('touchstart', (e) => {
   }, true);
   document.addEventListener('focusout', (e) => {
     if (e.target.closest && e.target.closest('#auth-overlay')) return;
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') clearNudge();
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') return;
+    // Only clear if the blurring field's own group is still the one tracked
+    // as nudged. WKWebView doesn't guarantee focusout(old) fires before
+    // focusin(new) when focus jumps directly between two fields (keyboard
+    // "next field" toolbar, programmatic .focus()) — when it arrives late,
+    // nudgedEls has already been repointed at the newly-focused field by
+    // its own focusin, and an unconditional clearNudge() here would wipe
+    // that brand-new nudge back to unshifted instead of leaving it alone.
+    const { els } = movableElsAndClip(e.target);
+    if (nudgedEls.length && nudgedEls[0] === els[0]) clearNudge();
   }, true);
 })();
 
