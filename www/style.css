@@ -1633,14 +1633,16 @@ a { text-decoration: none; color: inherit; }
 /* Centered independently of the two unequal-width side groups (back
    button vs. mode-pill + settings button), same absolute-center-over-a
    -relative-header technique already used by #screen-leaderboard's title. */
+/* Same size/weight as .home-brand (the Chats tab's own header wordmark) —
+   matching "the normal chat header" rather than a scaled-down one-off. */
 .chat-back-bar-brand {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  font-size: 1.05rem;
+  font-size: 1.9rem;
   font-weight: 800;
-  letter-spacing: -0.4px;
+  letter-spacing: -1px;
   line-height: 1;
   color: var(--accent);
   display: inline-flex;
