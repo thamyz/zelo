@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-11 07:34";
+const BUILD_STAMP = "2026-08-11 07:58";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -767,7 +767,7 @@ let drag = {
   currentY: 0,
 };
 
-const SWIPE_THRESHOLD = 130;  // px from center to commit a swipe — Tinder-like: a deliberate distance, not a light nudge
+const SWIPE_THRESHOLD = 90;  // px from center to commit a swipe — still deliberate, not a light nudge, just reachable without a long drag
 const MAX_ROTATION    = 15;   // max degrees of tilt while dragging
 const DRAG_FOLLOW_RESISTANCE = 0.8; // card visually translates at 80% of the raw finger delta — gives the drag some "weight" instead of a raw 1:1 snap; rotation/stamps/back-card feedback stay tied to the true (undamped) distance so progress-toward-threshold still reads accurately
 const TAP_MAX_MOVEMENT = 6;   // px — below this, a release counts as a tap, not a drag
@@ -1153,6 +1153,9 @@ function animateBackCards(absRatio) {
 // Spring-back: card returns to resting position with an overshoot bounce
 function springBack(cardEl) {
   cardEl.style.transition = 'transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+  // Force a reflow before changing transform — see the matching comment in
+  // commitSwipe(); same fast-release "no animation" bug, same fix.
+  void cardEl.offsetWidth;
   cardEl.style.transform  = '';
 
   // Hide stamps
@@ -1184,6 +1187,13 @@ function commitSwipe(cardEl, direction) {
   // toward the end) reads as the card being thrown with some real mass
   // behind it rather than snapping off-screen.
   cardEl.style.transition = 'transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1)';
+  // Force a reflow before changing transform — same fix already used in
+  // cineAdvanceSwipeQueue(). Without it, a release that lands right after a
+  // fast drag can have this transition-enable and the transform change
+  // land in the same paint, which some engines then apply instantly with
+  // no animation at all instead of interpolating (the "teleports, no
+  // animation" bug on a quick flick).
+  void cardEl.offsetWidth;
   cardEl.style.transform  = `translate(${flyX}px, 0px) rotate(${flyR}deg)`;
 
   cardEl.addEventListener('transitionend', () => {
