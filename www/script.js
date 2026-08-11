@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-11 08:20";
+const BUILD_STAMP = "2026-08-11 08:28";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -6825,8 +6825,13 @@ document.addEventListener('touchstart', (e) => {
     const visibleBottom = window.innerHeight - keyboardHeight;
     const overlap = restingBottom - visibleBottom;
     const shift = Math.max(overlap + 16, MIN_VISIBLE_SHIFT);
+    // The correction call (instant:false) gets a springy overshoot-and-
+    // settle instead of a flat ease — same curve as the swipe cards'
+    // spring-back (see springBack()) — so there's always a deliberate,
+    // alive-feeling motion when it needs to move further, never a flat
+    // linear glide and never the old reset-to-zero jump.
     els.forEach((el) => {
-      el.style.transition = instant ? 'none' : 'transform 0.25s ease';
+      el.style.transition = instant ? 'none' : 'transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
       el.style.transform = `translateY(${-shift}px)`;
     });
     nudgedEls   = els;
