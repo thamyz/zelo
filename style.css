@@ -1807,12 +1807,15 @@ a { text-decoration: none; color: inherit; }
   flex-shrink: 0;
   position: relative;
   z-index: 1;
+  /* Fades once alongside the keyboard-nudge shift (also 0.25s ease)
+     instead of snapping instantly — see :focus-within below. */
+  transition: border-top-color 0.25s ease;
 }
 
 /* #message-input itself (not this bar) is what the keyboard-nudge system
    shifts on focus — the bar stays put while the input moves inside it, so
    the input visibly crosses this stationary border during the shift.
-   Hiding it exactly while focused (same trigger as the shift, no JS
+   Fading it out exactly while focused (same trigger as the shift, no JS
    needed) removes that seam without touching the shift/animation at all. */
 .chat-input-bar:focus-within { border-top-color: transparent; }
 
