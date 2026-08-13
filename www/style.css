@@ -7026,6 +7026,197 @@ a { text-decoration: none; color: inherit; }
 .cine-next:active { transform: scale(0.99); }
 .cine-next--disabled { opacity: 0.4; pointer-events: none; }
 
+/* Secondary text-link Skip, steps 4 (photo) and 5 (icebreaker) only —
+   sits just above the shared Continue pill. */
+.cine-skip-link {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 78px;
+  z-index: 30;
+  margin: 0 auto;
+  width: max-content;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9a8f86;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-skip-link:active { opacity: 0.6; }
+
+/* 15 dots is a lot wider than the original 5 — shrink + tighten so the
+   row still fits comfortably under the status bar. */
+.cine-dots--15 { gap: 4px; }
+.cine-dots--15 .cine-dot { width: 5px; height: 5px; }
+
+/* ================================================================
+   Step 2 — Gender (standalone; was part of the old combined screen)
+   ================================================================ */
+.cine-gender-grid--standalone { width: 100%; max-width: 320px; margin-top: 8px; }
+
+/* ================================================================
+   Step 3 — Birth date (shared age-roller, see AUTH.initAgeRoller())
+   ================================================================ */
+.cine-age-roller-wrap { width: 100%; max-width: 220px; margin-top: 30px; }
+.cine-age-warn { margin-top: 10px; }
+
+/* ================================================================
+   Step 4 — Profile photo
+   ================================================================ */
+.cine-photo-picker {
+  position: relative;
+  width: 132px; height: 132px;
+  margin-top: 34px;
+  border-radius: 50%;
+  border: 1.5px dashed #d9cdc0;
+  background: #faf6f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b3a595;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+.cine-photo-picker:active { transform: scale(0.98); }
+.cine-photo-preview { width: 100%; height: 100%; object-fit: cover; }
+.cine-photo-badge {
+  position: absolute;
+  right: 2px; bottom: 2px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(236,72,153,0.4);
+  border: 2.5px solid #fff;
+}
+
+/* ================================================================
+   Steps 5, 8-11 — generic single-select option list (icebreaker +
+   the 4 personalization questions)
+   ================================================================ */
+.cine-opt-list {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+.cine-opt-pill {
+  position: relative;
+  width: 100%;
+  padding: 15px 40px 15px 18px;
+  border-radius: 14px;
+  border: 1.5px solid #efe6df;
+  background: #fff;
+  text-align: left;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #1c1917;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+.cine-opt-pill:active { transform: scale(0.98); }
+.cine-opt-pill.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); }
+.cine-opt-pill .cine-age-check { top: 50%; right: 12px; transform: translateY(-50%); }
+.cine-opt-pill.selected .cine-age-check { display: flex; }
+
+/* ================================================================
+   Step 7 — Swipe demo "matched" completion state (Continue button
+   revealed instead of auto-advancing — see cineRunSwipeStepEntrance())
+   ================================================================ */
+.cine-swipe-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding-top: 60px;
+}
+.cine-swipe-done-heart {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cine-swipe-done-text { font-size: 1.1rem; font-weight: 700; color: #1c1917; margin: 0; }
+
+/* ================================================================
+   Step 15 — Zelo Plan (no extra chrome beyond the shared head/sub)
+   ================================================================ */
+.cine-screen--plan .cine-sub { max-width: 320px; }
+
+/* ================================================================
+   Onboarding tail — Splash / Trial-reminder / Decline-discount
+   (spec #18, #19, #21). Plain full-bleed screens, matching
+   signup-prompt-overlay's visual register rather than the dot-stepper.
+   ================================================================ */
+.cine-tail-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 28px;
+  text-align: center;
+  background: #fff;
+}
+.cine-tail-head {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  color: #1c1917;
+  max-width: 300px;
+  margin: 0;
+}
+.cine-tail-sub {
+  font-size: 0.95rem;
+  color: #9a8f86;
+  max-width: 300px;
+  line-height: 1.45;
+  margin: 0;
+}
+.cine-tail-video-placeholder {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 9 / 16;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.cine-tail-cta {
+  width: 100%;
+  max-width: 320px;
+  margin-top: 8px;
+  padding: 16px;
+  border: none;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(236, 72, 153, 0.35);
+}
+.cine-tail-cta:active { transform: scale(0.99); }
+
 /* ================================================================
    SIGN-UP PROMPT — full-screen overlay after onboarding Screen 5
    ================================================================ */

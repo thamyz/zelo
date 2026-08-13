@@ -386,6 +386,23 @@ const AUTH = (() => {
   // ── Post sign-in ───────────────────────────────────────────────
 
   function _onSignedIn() {
+    // Onboarding (script.js's cine flow) already collected display name +
+    // exact age before ever reaching sign-up — asking again here on the
+    // setup screen would be a redundant second ask. Only skip when both are
+    // actually present (e.g. a user who signed in directly from Showcase's
+    // "Already have an account", without running onboarding first, still
+    // gets the normal setup screen below).
+    const onboardingName = localStorage.getItem('zelo_display_name');
+    const onboardingAge  = localStorage.getItem('zelo_user_age');
+    if (!localStorage.getItem('zelo_setup_done') && onboardingName && onboardingAge) {
+      localStorage.setItem('zelo_setup_done', '1');
+      const userId = _session?.user?.id;
+      const insert = userId
+        ? zeloSupabase.from('profiles').insert({ id: userId, display_name: onboardingName, age: Number(onboardingAge) }).then(() => {}, () => {})
+        : Promise.resolve();
+      insert.finally(() => { _hideAll(); _resolvePending(); });
+      return;
+    }
     if (!localStorage.getItem('zelo_setup_done')) {
       _showSetupScreen();
     } else {
@@ -415,7 +432,7 @@ const AUTH = (() => {
 
   function _showSetupScreen() {
     _showOverlay('auth-setup-overlay');
-    _initAgeRoller();
+    initAgeRoller({ rollerId: 'age-roller', warnId: 'age-warn', minAge: 18, maxAge: 40, defaultAge: 22 });
     // Prefill with the name already chosen during onboarding, if any —
     // avoids asking twice.
     const nameInput = document.getElementById('setup-username-input');
@@ -423,52 +440,63 @@ const AUTH = (() => {
     if (nameInput && existing) nameInput.value = existing;
   }
 
-  function _initAgeRoller() {
-    const roller = document.getElementById('age-roller');
+  // Shared age-roller mechanics (build/scroll/read) — used by both the
+  // post-signup setup screen's #age-roller (18-40, default 22) and the
+  // onboarding birth-date screen's #cine-age-roller (extended range so
+  // under-18 is actually reachable to block). Same implementation, two DOM
+  // instances — not a rebuilt picker. `minAge` is captured per-instance via
+  // the roller element's own dataset so scroll/read stay correct even with
+  // two rollers using different ranges at once.
+  function initAgeRoller({ rollerId, warnId, minAge, maxAge, defaultAge }) {
+    const roller = document.getElementById(rollerId);
     if (!roller) return;
+    roller.dataset.minAge = String(minAge);
+    roller.dataset.warnId = warnId || '';
     roller.removeEventListener('scroll', _onRollerScroll);
     roller.innerHTML = '';
 
-    // 2 ghost items top → age 18 can sit at center when scrollTop=0
+    // 2 ghost items top → minAge can sit at center when scrollTop=0
     for (let i = 0; i < 2; i++) {
       const g = document.createElement('div');
       g.className = 'age-roller-item age-roller-ghost';
       roller.appendChild(g);
     }
-    for (let age = 18; age <= 40; age++) {
+    for (let age = minAge; age <= maxAge; age++) {
       const item = document.createElement('div');
       item.className = 'age-roller-item';
       item.dataset.age = age;
       item.textContent = age;
       roller.appendChild(item);
     }
-    // 2 ghost items bottom → age 40 can sit at center when scrollTop=max
+    // 2 ghost items bottom → maxAge can sit at center when scrollTop=max
     for (let i = 0; i < 2; i++) {
       const g = document.createElement('div');
       g.className = 'age-roller-item age-roller-ghost';
       roller.appendChild(g);
     }
 
-    // Default: age 22  (scrollTop = (22-18) * 44 = 176)
     requestAnimationFrame(() => {
-      roller.scrollTop = (22 - 18) * 44;
+      roller.scrollTop = ((defaultAge != null ? defaultAge : minAge) - minAge) * 44;
     });
     roller.addEventListener('scroll', _onRollerScroll, { passive: true });
+    _onRollerScroll({ target: roller }); // seed the warn text for the initial position
   }
 
-  function _onRollerScroll() {
-    const roller = document.getElementById('age-roller');
+  function _onRollerScroll(e) {
+    const roller = (e && e.target) || document.getElementById('age-roller');
     if (!roller) return;
-    const age    = _readAge(roller);
-    const warnEl = document.getElementById('age-warn');
+    const minAge = Number(roller.dataset.minAge || 18);
+    const age    = readAge(roller.id, minAge);
+    const warnEl = document.getElementById(roller.dataset.warnId || 'age-warn');
     if (warnEl) warnEl.textContent = age < 18 ? 'Zelo is for users 18 and older.' : '';
   }
 
-  function _readAge(roller) {
-    const r   = roller || document.getElementById('age-roller');
+  function readAge(rollerId, minAge) {
+    const r = document.getElementById(rollerId || 'age-roller');
     if (!r) return 22;
-    const idx = Math.round(r.scrollTop / 44);
-    return Math.max(18, 18 + idx);
+    const floor = minAge != null ? minAge : Number(r.dataset.minAge || 18);
+    const idx   = Math.round(r.scrollTop / 44);
+    return Math.max(floor, floor + idx);
   }
 
   async function handleSetupContinue() {
@@ -477,7 +505,7 @@ const AUTH = (() => {
 
     // 1. Write to localStorage first
     localStorage.setItem('zelo_display_name', displayName);
-    const age = _readAge();
+    const age = readAge('age-roller', 18);
     localStorage.setItem('zelo_user_age', String(age));
     localStorage.setItem('zelo_setup_done', '1');
 
@@ -503,9 +531,16 @@ const AUTH = (() => {
   // ── Navigate to destination ────────────────────────────────────
 
   function _navigate(dest) {
-    if      (dest === 'practice')    showTab('practice');
-    else if (dest === 'chats')       showTab('chats');
-    else if (dest === 'save-thread') openThreadPicker();
+    if      (dest === 'practice')        showTab('practice');
+    else if (dest === 'chats')           showTab('chats');
+    else if (dest === 'save-thread')     openThreadPicker();
+    // Onboarding's sign-up gate (script.js cineFinishPhase2 tail) normally
+    // passes its own callback straight into requireAuth(), but an OAuth
+    // redirect reloads the page — init()'s post-redirect path (above)
+    // rebuilds _pending from sessionStorage using only this destination
+    // string, losing that original closure. This case is what resumes the
+    // tail (splash -> trial-reminder -> paywall) correctly after a reload.
+    else if (dest === 'onboarding-tail') cineOnboardingTailResume();
   }
 
   function _resolvePending() {
@@ -585,6 +620,8 @@ const AUTH = (() => {
     signInWithApple,
     signInWithGoogle,
     handleSetupContinue,
+    initAgeRoller,
+    readAge,
     signOut,
     dismiss,
     currentEmail,
