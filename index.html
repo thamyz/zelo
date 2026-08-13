@@ -1017,29 +1017,22 @@
              startCineOnboarding() in script.js) -->
         <div class="cine-preblack" id="cine-preblack"></div>
 
-        <!-- Skip — top right on every Phase 2 screen (not on showcase) -->
-        <button class="cine-skip cine-hidden" id="cine-skip" onclick="cineSkip(event)" aria-label="Skip onboarding">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
-            <line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>
-          </svg>
-        </button>
-
-        <div class="cine-dots cine-dots--15 cine-hidden" id="cine-dots" aria-hidden="true">
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
-          <span class="cine-dot"></span>
+        <!-- Top bar — back (left) + fill-up progress bar (center) + X skip-all
+             (right), on every Phase 2 dot-stepper screen (not on showcase). -->
+        <div class="cine-topbar cine-hidden" id="cine-topbar">
+          <button class="cine-back" id="cine-back" onclick="cineBack(event)" aria-label="Back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </button>
+          <div class="cine-progress" id="cine-progress" aria-hidden="true">
+            <div class="cine-progress-fill" id="cine-progress-fill"></div>
+          </div>
+          <button class="cine-skip" id="cine-skip" onclick="cineSkip(event)" aria-label="Skip onboarding">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
+              <line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>
+            </svg>
+          </button>
         </div>
 
         <!-- ============ PHASE 1 — auto-playing intro (no interaction) — UNCHANGED ============ -->
@@ -1095,7 +1088,7 @@
             <h2 class="cine-head">What's your name?</h2>
             <p class="cine-sub">Pick something you like — you can change it later.</p>
           </div>
-          <input type="text" class="cine-name-input" id="cine-name-input" placeholder="Choose any name"
+          <input type="text" class="cine-name-input" id="cine-name-input" placeholder="Choose your name"
                  maxlength="30" autocomplete="off" enterkeyhint="next" oninput="cineNameInput()"
                  onkeydown="if(event.key==='Enter'){event.preventDefault(); cineNext();}" />
           <p class="cine-name-error" id="cine-name-error"></p>
@@ -1104,7 +1097,7 @@
         <!-- ============ Internal step 2 (spec #2) — Gender ============ -->
         <section class="cine-screen cine-screen--gender" data-screen="2">
           <h2 class="cine-head">Which best describes you?</h2>
-          <div class="cine-gender-grid cine-gender-grid--standalone">
+          <div class="cine-gender-grid cine-gender-grid--standalone cine-vcenter">
             <button type="button" class="cine-gender-pill" data-gender="man" onclick="cineSelectGender('man', this)">
               <span class="cine-gender-orb"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M3 9l3.5 3L12 6l5.5 6L21 9l-1.6 9H4.6L3 9z"/><rect x="11.2" y="1.4" width="1.6" height="4" fill="currentColor"/><rect x="10" y="2.3" width="4" height="1.6" fill="currentColor"/></svg></span>
               <span class="cine-gender-main">Man</span>
@@ -1127,18 +1120,20 @@
         </section>
 
         <!-- ============ Internal step 3 (spec #3) — Birth date ============
-             Roller mechanics (build/scroll/read) are shared with the
-             post-signup setup screen's #age-roller via AUTH.initAgeRoller()/
-             AUTH.readAge() (services/auth.js) — this is a second DOM
-             instance of the same reused picker, not a rebuilt one. Range
-             extended down to 13 (vs. setup's 18 floor) so under-18 is
-             actually reachable to block, per spec. -->
+             Month / day / year wheel columns — see cineRunBirthdateEntrance()
+             in script.js. Same scroll-snap wheel visual language as the
+             post-signup setup screen's single #age-roller (same
+             .age-roller-item/.age-roller-ghost CSS, 44px rows), a separate
+             instance built for 3 arbitrary label columns instead of one
+             integer range. -->
         <section class="cine-screen cine-screen--birthdate" data-screen="3">
           <h2 class="cine-head">When were you born?</h2>
           <p class="cine-sub">You'll be matched with people around your age.</p>
-          <div class="age-roller-wrap cine-age-roller-wrap">
-            <div class="age-roller-highlight" aria-hidden="true"></div>
-            <div class="age-roller" id="cine-age-roller"></div>
+          <div class="cine-dob-wrap cine-vcenter">
+            <div class="cine-dob-highlight" aria-hidden="true"></div>
+            <div class="age-roller cine-dob-roller cine-dob-roller--month" id="cine-month-roller"></div>
+            <div class="age-roller cine-dob-roller cine-dob-roller--day" id="cine-day-roller"></div>
+            <div class="age-roller cine-dob-roller cine-dob-roller--year" id="cine-year-roller"></div>
           </div>
           <p class="age-warn cine-age-warn" id="cine-age-warn"></p>
         </section>
@@ -1147,20 +1142,22 @@
         <section class="cine-screen cine-screen--photo" data-screen="4">
           <h2 class="cine-head">Add a photo?</h2>
           <p class="cine-sub">Totally optional — you can always add one later.</p>
-          <button type="button" class="cine-photo-picker" onclick="document.getElementById('cine-photo-input').click()" aria-label="Add photo">
-            <img class="cine-photo-preview" id="cine-photo-preview" hidden alt="" />
-            <svg class="cine-photo-placeholder-ic" id="cine-photo-placeholder-ic" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span class="cine-photo-badge" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-            </span>
-          </button>
-          <input type="file" accept="image/*" id="cine-photo-input" hidden onchange="cinePhotoSelected(event)" />
+          <div class="cine-vcenter">
+            <button type="button" class="cine-photo-picker" onclick="document.getElementById('cine-photo-input').click()" aria-label="Add photo">
+              <img class="cine-photo-preview" id="cine-photo-preview" hidden alt="" />
+              <svg class="cine-photo-placeholder-ic" id="cine-photo-placeholder-ic" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="cine-photo-badge" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              </span>
+            </button>
+            <input type="file" accept="image/*" id="cine-photo-input" hidden onchange="cinePhotoSelected(event)" />
+          </div>
         </section>
 
         <!-- ============ Internal step 5 (spec #5) — Icebreaker ============ -->
         <section class="cine-screen cine-screen--icebreaker" data-screen="5">
           <h2 class="cine-head">Be honest — how many times have you rewritten a text before sending it?</h2>
-          <div class="cine-opt-list">
+          <div class="cine-opt-list cine-vcenter">
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('icebreaker','never', this)">Never, I just send it<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('icebreaker','once-twice', this)">Once or twice<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('icebreaker','more-than-admit', this)">More than I'd like to admit<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
@@ -1229,7 +1226,7 @@
         <!-- ============ Internal step 8 (spec #9) — Biggest struggle ============ -->
         <section class="cine-screen cine-screen--struggle" data-screen="8">
           <h2 class="cine-head">What's your biggest struggle when texting?</h2>
-          <div class="cine-opt-list">
+          <div class="cine-opt-list cine-vcenter">
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('struggle','dont-know', this)">I don't know what to say<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('struggle','boring', this)">My replies feel boring or awkward<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('struggle','die-out', this)">Conversations die out fast<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
@@ -1241,7 +1238,7 @@
         <!-- ============ Internal step 9 (spec #10) — Where struggling ============ -->
         <section class="cine-screen cine-screen--where" data-screen="9">
           <h2 class="cine-head">Where are you struggling most right now?</h2>
-          <div class="cine-opt-list">
+          <div class="cine-opt-list cine-vcenter">
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('where','new-match', this)">A new match<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('where','long-crush', this)">A long-term crush<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('where','dating', this)">Someone I'm dating<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
@@ -1252,7 +1249,7 @@
         <!-- ============ Internal step 10 (spec #11) — What's stopping you ============ -->
         <section class="cine-screen cine-screen--stopping" data-screen="10">
           <h2 class="cine-head">What's stopping you from replying with confidence?</h2>
-          <div class="cine-opt-list">
+          <div class="cine-opt-list cine-vcenter">
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('stopping','reread', this)">I re-read messages too many times<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('stopping','scared-wrong', this)">I'm scared of saying the wrong thing<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('stopping','keep-going', this)">I don't know how to keep it going<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
@@ -1263,7 +1260,7 @@
         <!-- ============ Internal step 11 (spec #12) — What to accomplish ============ -->
         <section class="cine-screen cine-screen--accomplish" data-screen="11">
           <h2 class="cine-head">What would you like to get better at?</h2>
-          <div class="cine-opt-list">
+          <div class="cine-opt-list cine-vcenter">
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('accomplish','faster', this)">Replying faster<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('accomplish','natural', this)">Sounding more natural<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
             <button type="button" class="cine-opt-pill" onclick="cineSelectOpt('accomplish','funnier', this)">Being funnier<span class="cine-age-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></button>
@@ -1286,12 +1283,11 @@
           <span class="cine-deco cine-spark-deco" style="top:24%;left:13%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
           <span class="cine-deco cine-spark-deco" style="top:34%;right:13%"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
 
-          <div class="cine-track-stage">
+          <h2 class="cine-head">Know what to say, every time.</h2>
+          <div class="cine-track-stage cine-vcenter">
             <div class="cine-appicon" aria-hidden="true">
               <svg width="42" height="42" viewBox="0 0 24 24" fill="#fff"><path d="M12 1.5l2.3 6.8a3.4 3.4 0 0 0 2.1 2.1L23.5 12l-7.1 1.6a3.4 3.4 0 0 0-2.1 2.1L12 22.5l-2.3-6.8a3.4 3.4 0 0 0-2.1-2.1L0.5 12l7.1-1.6a3.4 3.4 0 0 0 2.1-2.1z"/></svg>
             </div>
-
-            <h2 class="cine-head">Know what to say, every time.</h2>
 
             <div class="cine-feat-card">
               <div class="cine-feat-row">
@@ -1318,7 +1314,9 @@
           <span class="cine-deco cine-spark-deco" style="top:17%;right:23%"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
           <span class="cine-deco cine-spark-deco sm" style="top:40%;right:22%"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span>
 
-          <div class="cine-notif-stage">
+          <h2 class="cine-head">Get notified when she replies</h2>
+          <p class="cine-sub">Turning this on helps us remind you before you lose the moment.</p>
+          <div class="cine-notif-stage cine-vcenter">
             <div class="cine-bell">
               <span class="cine-bell-glow"></span>
               <span class="cine-bell-body">
@@ -1332,9 +1330,6 @@
               </span>
               <span class="cine-bell-badge">1</span>
             </div>
-
-            <h2 class="cine-head" style="margin-bottom:6px">Get notified when she replies</h2>
-            <p class="cine-sub">Turning this on helps us remind you before you lose the moment.</p>
 
             <div class="cine-feat-card">
               <div class="cine-feat-row">
@@ -1364,7 +1359,6 @@
         </section>
 
         <button class="cine-next cine-hidden" id="cine-next" onclick="cineNext()">Next</button>
-        <button class="cine-skip-link cine-hidden" id="cine-skip-link" onclick="cineSkipField()">Skip</button>
       </div>
 
 

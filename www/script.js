@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-13 00:00";
+const BUILD_STAMP = "2026-08-13 09:30";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -98,6 +98,7 @@ window.addEventListener('DOMContentLoaded', () => {
   localStorage.removeItem('zelo_gender');
   localStorage.removeItem('zelo_user_age');
   localStorage.removeItem('zelo_age_pool');
+  localStorage.removeItem('zelo_birthdate');
   localStorage.removeItem('zelo_profile_photo');
   localStorage.removeItem('zelo_onb_icebreaker');
   localStorage.removeItem('zelo_onb_struggle');
@@ -3346,7 +3347,7 @@ let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-15 = Phase 2 screen
 let cineSwipeDemoDone = false; // step 7 (swipe demo) has finished -> shows Continue instead of the deck
 
 // Per-step config for the dot-stepper's shared chrome (#cine-next label +
-// gating, #cine-skip-link visibility, entrance hook). Head/sub copy lives
+// gating, entrance hook). Head/sub copy lives
 // in the markup itself (index.html) — this table only drives behavior that
 // has to scale across all 15 steps instead of a hardcoded if/else chain.
 // `noSharedNext`: screen drives its own transition, shared Continue stays
@@ -3356,8 +3357,8 @@ const CINE_STEPS = {
   1:  { label: 'Continue', enabledFn: () => cineNameValid(cineCurrentNameValue()), entrance: cineRunNameEntrance },
   2:  { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_gender') },
   3:  { label: 'Continue', enabledFn: () => cineBirthdateValid(), entrance: cineRunBirthdateEntrance },
-  4:  { label: 'Continue', enabledFn: () => true, skip: true },
-  5:  { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_onb_icebreaker'), skip: true },
+  4:  { label: 'Continue', enabledFn: () => true },
+  5:  { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_onb_icebreaker') },
   6:  { noSharedNext: true, entrance: cineRunPartnerEntrance },
   7:  { label: 'Continue', enabledFn: () => true, entrance: cineRunSwipeStepEntrance },
   8:  { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_onb_struggle') },
@@ -3417,11 +3418,11 @@ function startCineOnboarding() {
   }, 700);
 }
 
-// Chrome modes: 'none' (Phase 1 + showcase — no skip, no dots),
-// 'phase2' (skip + dots visible).
+// Chrome modes: 'none' (Phase 1 + showcase — no top bar, no Continue),
+// 'phase2' (back + progress bar + skip-X, and Continue per cineGoTo()).
 function cineSetChrome(mode) {
   const show = mode === 'phase2';
-  ['cine-next', 'cine-dots', 'cine-skip'].forEach(id => {
+  ['cine-next', 'cine-topbar'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('cine-hidden', !show);
   });
@@ -3540,16 +3541,18 @@ function cineGoTo(n) {
   // it behaves like any other step with a shared Continue button.
   const hideSharedNext = !!step.noSharedNext || (n === 7 && !cineSwipeDemoDone);
 
-  // X skip button follows the same rule — hidden while a screen owns its
-  // own transition, back once the shared Continue is showing again.
+  // X skip-all button follows the same rule — hidden while a screen owns
+  // its own transition, back once the shared Continue is showing again.
+  // Back + the progress bar stay visible throughout — back works from
+  // step 1 onward (to the showcase screen), not just once Continue exists.
   const skipBtn = document.getElementById('cine-skip');
   if (skipBtn) skipBtn.classList.toggle('cine-hidden', hideSharedNext);
 
+  const fill = document.getElementById('cine-progress-fill');
+  if (fill) fill.style.width = Math.max(0, Math.min(100, (n / CINE_LAST) * 100)) + '%';
+
   document.querySelectorAll('.cine-screen').forEach(s => {
     s.classList.toggle('active', Number(s.dataset.screen) === n);
-  });
-  document.querySelectorAll('.cine-dot').forEach((d, i) => {
-    d.classList.toggle('active', i === n - 1);
   });
 
   // Step 6 has no .cine-screen section of its own — #home-mode-popup
@@ -3557,15 +3560,13 @@ function cineGoTo(n) {
   const partnerPopup = document.getElementById('home-mode-popup');
   if (partnerPopup) partnerPopup.hidden = (n !== 6);
 
-  const nextBtn  = document.getElementById('cine-next');
-  const skipLink = document.getElementById('cine-skip-link');
+  const nextBtn = document.getElementById('cine-next');
   if (nextBtn) {
     nextBtn.classList.toggle('cine-hidden', hideSharedNext);
     nextBtn.disabled = false;
     nextBtn.classList.remove('cine-next--disabled');
     nextBtn.textContent = step.label || 'Continue';
   }
-  if (skipLink) skipLink.classList.toggle('cine-hidden', !step.skip);
 
   if (!hideSharedNext) cineSetNextEnabled(step.enabledFn ? step.enabledFn() : true);
 
@@ -3612,12 +3613,15 @@ function cineNext() {
   cineGoTo(cineStep + 1);
 }
 
-// Skip link — steps 4 (photo) and 5 (icebreaker) only. Leaves that field
-// unset (grey placeholder avatar / no icebreaker answer stored) and just
-// advances, same as tapping Continue with nothing selected would.
-function cineSkipField() {
-  if (cineStep >= CINE_LAST) { cineFinishPhase2(); return; }
-  cineGoTo(cineStep + 1);
+// Back — available from step 1 onward; step 1 goes back to the showcase
+// screen (there's nothing earlier within Phase 2 itself), everything else
+// just steps back one. Doesn't touch any already-saved answers, so
+// stepping forward again lands right back where the user left off.
+function cineBack(e) {
+  if (e) e.stopPropagation();
+  if (cineStep === 0 || cineStep === 'showcase') return;
+  if (cineStep <= 1) { cineGoToShowcase(); return; }
+  cineGoTo(cineStep - 1);
 }
 
 // X (top right) — skip the rest of onboarding on any Phase 2 screen.
@@ -3647,26 +3651,6 @@ function cineNameValid(trimmed) {
   return trimmed.length >= 2 && !cineNameHasProfanity(trimmed);
 }
 
-// Cycles the empty input's placeholder through a few example names instead
-// of one static string. Only runs while the field is genuinely empty —
-// stops for good the moment the user types anything (checked each tick
-// rather than cancelled on input, so a value typed then fully deleted
-// doesn't resurrect the cycle mid-edit).
-const CINE_NAME_PLACEHOLDERS = ['Alex...', 'Kai...', 'Max...', 'Jordan...', 'Sam...'];
-let _cineNamePlaceholderTimer = null;
-function _cineArmNamePlaceholderCycle() {
-  const input = document.getElementById('cine-name-input');
-  if (!input) return;
-  if (_cineNamePlaceholderTimer) clearInterval(_cineNamePlaceholderTimer);
-  let i = 0;
-  input.placeholder = CINE_NAME_PLACEHOLDERS[0];
-  _cineNamePlaceholderTimer = setInterval(() => {
-    if (cineStep !== 1 || input.value) { clearInterval(_cineNamePlaceholderTimer); _cineNamePlaceholderTimer = null; return; }
-    i = (i + 1) % CINE_NAME_PLACEHOLDERS.length;
-    input.placeholder = CINE_NAME_PLACEHOLDERS[i];
-  }, 1600);
-}
-
 function cineRunNameEntrance() {
   const input = document.getElementById('cine-name-input');
   const errEl = document.getElementById('cine-name-error');
@@ -3678,7 +3662,6 @@ function cineRunNameEntrance() {
     // the user has tapped anything shoves the whole screen up to make room
     // for it, hiding the title/subtitle. Let them tap the field themselves.
   }
-  _cineArmNamePlaceholderCycle();
 }
 
 function cineNameInput() {
@@ -3726,13 +3709,103 @@ function cinePhotoSelected(event) {
   reader.readAsDataURL(file);
 }
 
-// ---- Step 3 — birth date (real drag/scroll wheel, shared with the
-// post-signup setup screen's picker via AUTH.initAgeRoller()/readAge() —
-// see services/auth.js). Range extended down to 13 here (setup's picker
-// floors at 18) so under-18 is actually reachable to block. ----
-function cineBirthdateValid() {
-  return AUTH.readAge('cine-age-roller', 13) >= 18;
+// ---- Step 3 — birth date (real drag/scroll month/day/year wheels).
+// A dedicated 3-column version of the same scroll-snap wheel mechanic the
+// post-signup setup screen's single #age-roller uses (services/auth.js) —
+// not reused directly, since that one is purpose-built around a single
+// integer age; this one needed arbitrary per-column label sets (month
+// names, 1-31, a year range) instead. Same visual language/CSS pattern
+// (.age-roller-item, ghost-padded, 44px rows, scroll-snap), own instance. ----
+const CINE_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const CINE_DOB_ROW_H = 44;
+
+function _cineBuildWheelColumn(id, values, defaultIndex) {
+  const roller = document.getElementById(id);
+  if (!roller) return;
+  roller.innerHTML = '';
+  for (let i = 0; i < 2; i++) {
+    const g = document.createElement('div');
+    g.className = 'age-roller-item age-roller-ghost';
+    roller.appendChild(g);
+  }
+  values.forEach((v) => {
+    const item = document.createElement('div');
+    item.className = 'age-roller-item';
+    item.textContent = v;
+    roller.appendChild(item);
+  });
+  for (let i = 0; i < 2; i++) {
+    const g = document.createElement('div');
+    g.className = 'age-roller-item age-roller-ghost';
+    roller.appendChild(g);
+  }
+  requestAnimationFrame(() => { roller.scrollTop = defaultIndex * CINE_DOB_ROW_H; });
 }
+function _cineReadWheelIndex(id) {
+  const r = document.getElementById(id);
+  if (!r) return 0;
+  return Math.max(0, Math.round(r.scrollTop / CINE_DOB_ROW_H));
+}
+
+// Years ascending (oldest first, like the reference picker) spanning
+// roughly 1960-2060 around today's actual year, clamped so the range
+// always makes sense regardless of when this runs.
+let _cineDobYears = [];
+let _cineBirthdateAlerted = false;
+
+function cineRunBirthdateEntrance() {
+  _cineBirthdateAlerted = false;
+  const nowYear = new Date().getFullYear();
+  _cineDobYears = [];
+  for (let y = nowYear - 100; y <= nowYear + 40; y++) _cineDobYears.push(y);
+  const days = [];
+  for (let d = 1; d <= 31; d++) days.push(d);
+
+  const defaultAge  = 22;
+  const defaultYear = nowYear - defaultAge;
+  const yearIdx = Math.max(0, _cineDobYears.indexOf(defaultYear));
+
+  _cineBuildWheelColumn('cine-month-roller', CINE_MONTHS, 0); // January
+  _cineBuildWheelColumn('cine-day-roller', days, 0);           // 1
+  _cineBuildWheelColumn('cine-year-roller', _cineDobYears, yearIdx);
+
+  ['cine-month-roller', 'cine-day-roller', 'cine-year-roller'].forEach((id) => {
+    const roller = document.getElementById(id);
+    if (roller && !roller.dataset.cineBound) {
+      roller.dataset.cineBound = '1';
+      roller.addEventListener('scroll', () => {
+        const valid = cineBirthdateValid();
+        cineSetNextEnabled(valid);
+        if (!valid && !_cineBirthdateAlerted) {
+          _cineBirthdateAlerted = true;
+          alert("You must be 18 or older to use Zelo's matching and practice features.");
+        }
+      }, { passive: true });
+    }
+  });
+  cineSetNextEnabled(cineBirthdateValid());
+}
+
+function cineReadBirthdate() {
+  const monthIdx = Math.min(_cineReadWheelIndex('cine-month-roller'), 11);
+  const day      = Math.min(_cineReadWheelIndex('cine-day-roller') + 1, 31);
+  const yearIdx  = Math.min(_cineReadWheelIndex('cine-year-roller'), Math.max(0, _cineDobYears.length - 1));
+  const year     = _cineDobYears.length ? _cineDobYears[yearIdx] : (new Date().getFullYear() - 22);
+  return { month: monthIdx, day, year };
+}
+
+function cineAgeFromBirthdate({ month, day, year }) {
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  const hadBirthdayThisYear = (today.getMonth() > month) || (today.getMonth() === month && today.getDate() >= day);
+  if (!hadBirthdayThisYear) age--;
+  return age;
+}
+
+function cineBirthdateValid() {
+  return cineAgeFromBirthdate(cineReadBirthdate()) >= 18;
+}
+
 // Maps onto the real persona age-pool buckets (AGE_RANGE_TO_POOLS'
 // targets) — '18-20'/'21-29'/'30+', not the spec prose's exact "18-20/
 // 21-23" wording, which doesn't exist as an actual pool anywhere in the app.
@@ -3741,26 +3814,10 @@ function cineMapAgeToPool(age) {
   if (age < 30) return '21-29';
   return '30+';
 }
-let _cineBirthdateAlerted = false;
-function cineRunBirthdateEntrance() {
-  _cineBirthdateAlerted = false;
-  AUTH.initAgeRoller({ rollerId: 'cine-age-roller', warnId: 'cine-age-warn', minAge: 13, maxAge: 40, defaultAge: 22 });
-  const roller = document.getElementById('cine-age-roller');
-  if (roller && !roller.dataset.cineBound) {
-    roller.dataset.cineBound = '1';
-    roller.addEventListener('scroll', () => {
-      const valid = cineBirthdateValid();
-      cineSetNextEnabled(valid);
-      if (!valid && !_cineBirthdateAlerted) {
-        _cineBirthdateAlerted = true;
-        alert("You must be 18 or older to use Zelo's matching and practice features.");
-      }
-    }, { passive: true });
-  }
-  cineSetNextEnabled(cineBirthdateValid());
-}
+
 function cineCommitBirthdate() {
-  const age = AUTH.readAge('cine-age-roller', 13);
+  const dob = cineReadBirthdate();
+  const age = cineAgeFromBirthdate(dob);
   if (age < 18) {
     if (!_cineBirthdateAlerted) {
       _cineBirthdateAlerted = true;
@@ -3770,6 +3827,7 @@ function cineCommitBirthdate() {
   }
   localStorage.setItem('zelo_user_age', String(age));
   localStorage.setItem('zelo_age_pool', cineMapAgeToPool(age));
+  localStorage.setItem('zelo_birthdate', `${dob.year}-${String(dob.month + 1).padStart(2, '0')}-${String(dob.day).padStart(2, '0')}`);
   return true;
 }
 

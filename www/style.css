@@ -6349,19 +6349,51 @@ a { text-decoration: none; color: inherit; }
 .cine-preblack.cine-preblack-out { opacity: 0; }
 
 /* ---- Skip (X) — top right, present on every Phase 2 screen ---- */
-.cine-skip {
-  /* position:fixed (not absolute) so this stays pinned to the real screen
-     when the keyboard opens — mobile WebKit keeps fixed-position elements
-     glued to the visual viewport during the native keyboard-avoidance
-     scroll, where absolute-positioned ones get dragged along with it. */
+/* Back (left) + fill-up progress bar (center) + X skip-all (right), one
+   row. position:fixed (not absolute) so it stays pinned to the real screen
+   when the keyboard opens — mobile WebKit keeps fixed-position elements
+   glued to the visual viewport during the native keyboard-avoidance
+   scroll, where absolute-positioned ones get dragged along with it.
+   .cine (id="cine-onboarding") is a top-level sibling of .screen/.tab
+   under #app, not a descendant — it has no safe-area padding of its own,
+   so this needs it applied directly or it renders under the status
+   bar/notch. */
+.cine-topbar {
   position: fixed;
-  /* .cine (id="cine-onboarding") is a top-level sibling of .screen/.tab under
-     #app, not a descendant — it has no safe-area padding of its own, so this
-     button (and .cine-dots below) need it applied directly or they render
-     under the status bar/notch. */
-  top: calc(15px + 34px); right: 16px;
+  top: calc(15px + 34px); left: 16px; right: 16px;
   z-index: 40;
-  width: 32px; height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cine-back {
+  flex: none;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: #f4f2f7;
+  color: #1c1917;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-back:active { transform: scale(0.92); }
+.cine-progress {
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: 99px;
+  background: #e7e2db;
+  overflow: hidden;
+}
+.cine-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #1c1917;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+.cine-skip {
+  flex: none;
+  width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
   border: none; border-radius: 50%;
   background: rgba(28,25,23,0.06);
@@ -6371,28 +6403,17 @@ a { text-decoration: none; color: inherit; }
 }
 .cine-skip:active { transform: scale(0.92); }
 
-.cine-dots {
-  position: fixed; /* stays pinned during keyboard-open shift — see .cine-skip */
-  top: calc(20px + 34px); left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  display: flex; gap: 6px;
-}
-.cine-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: rgba(0,0,0,0.14);
-  transition: all 0.3s ease;
-}
-.cine-dot.active { width: 20px; border-radius: 4px; background: var(--accent); }
-
 .cine-screen {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 58px 26px 26px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  /* Extra top clearance for the fixed back+progress-bar row (see
+     .cine-topbar) — was 58px when the top chrome was just a small
+     top-right X. */
+  padding: 100px 26px 26px;
   overflow: hidden;
 }
 .cine-screen:not(.active) {
@@ -6406,21 +6427,30 @@ a { text-decoration: none; color: inherit; }
   font-weight: 800;
   letter-spacing: -0.5px;
   line-height: 1.15;
-  text-align: center;
+  text-align: left;
   color: #1c1917;
   margin: 0 0 10px;
   max-width: 320px;
+  align-self: flex-start;
 }
 .cine-head .hl { color: var(--accent); }
 .cine-sub {
   margin: 0;
   max-width: 300px;
-  text-align: center;
+  text-align: left;
   font-size: 0.95rem;
   font-weight: 400;
   line-height: 1.45;
   color: #9a8f86;
+  align-self: flex-start;
 }
+
+/* Vertically centers a screen's answer/content block in whatever space is
+   left below the top-left head/sub, instead of it sitting glued directly
+   under them — applied per-screen to the actual content element (not a
+   blanket :last-child rule, since several screens end in a hidden input or
+   an empty error/warn <p> that would wrongly become the centered element). */
+.cine-vcenter { margin-top: auto; margin-bottom: auto; align-self: flex-start; }
 
 /* ---- PHASE 1 — typewriter -> word morph -> logo (unchanged) ---- */
 .cine-p1-stage { text-align: center; margin-bottom: 50px; }
@@ -6609,19 +6639,17 @@ a { text-decoration: none; color: inherit; }
   top: calc(120px + 34px);
   left: 26px; right: 26px;
 }
-.cine-name-header .cine-head,
-.cine-name-header .cine-sub { margin-left: auto; margin-right: auto; }
 .cine-name-input {
   /* Width is set inline, once, by sizeCineNameInput() in script.js — snug
-     to the placeholder text ("Choose any name"), and then left alone, so
-     text-align:left below reads as "starts exactly where the placeholder
-     starts" instead of the true left edge of a full-width box. .cine-screen
-     (the parent) already has align-items:center, so this narrow box is
-     centered as a unit. Because the width is fixed after that one
-     measurement, typing never resizes or repositions the box — same edge,
-     same alignment, before and after the first keystroke, no split and no
-     jump. Most real names fit inside this width; a longer one just scrolls
-     like any fixed-width text input. */
+     to the placeholder text, and then left alone, so text-align:left below
+     reads as "starts exactly where the placeholder starts" instead of the
+     true left edge of a full-width box. .cine-screen (the parent) is now
+     left-aligned (align-items:flex-start), so this box sits flush with the
+     header above it rather than centered. Because the width is fixed after
+     that one measurement, typing never resizes or repositions the box —
+     same edge, same alignment, before and after the first keystroke, no
+     split and no jump. Most real names fit inside this width; a longer one
+     just scrolls like any fixed-width text input. */
   width: auto;
   min-width: 40px;
   max-width: 300px;
@@ -6664,6 +6692,11 @@ a { text-decoration: none; color: inherit; }
    Screen 2 — interactive swipe demo (real drag gesture, no auto-play)
    ================================================================ */
 .cine-screen--swipe { justify-content: flex-start; padding: 100px 26px 118px; }
+/* Pre/post-demo state wrappers — need an explicit width since flex items
+   shrink-to-fit by default (.cine-screen is align-items:flex-start), and
+   .cine-swipe-deck below relies on filling 100% of this, not its own
+   content's intrinsic width. */
+#cine-swipe-pre, #cine-swipe-post { width: 100%; display: flex; flex-direction: column; flex: 1; }
 
 /* Decorative sparkles — plain wrapper (no position set) so the
    absolutely-positioned spans inside still resolve their top/bottom
@@ -7026,39 +7059,61 @@ a { text-decoration: none; color: inherit; }
 .cine-next:active { transform: scale(0.99); }
 .cine-next--disabled { opacity: 0.4; pointer-events: none; }
 
-/* Secondary text-link Skip, steps 4 (photo) and 5 (icebreaker) only —
-   sits just above the shared Continue pill. */
-.cine-skip-link {
-  position: fixed;
-  left: 0; right: 0;
-  bottom: 78px;
-  z-index: 30;
-  margin: 0 auto;
-  width: max-content;
-  background: none;
-  border: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #9a8f86;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.cine-skip-link:active { opacity: 0.6; }
-
-/* 15 dots is a lot wider than the original 5 — shrink + tighten so the
-   row still fits comfortably under the status bar. */
-.cine-dots--15 { gap: 4px; }
-.cine-dots--15 .cine-dot { width: 5px; height: 5px; }
-
 /* ================================================================
    Step 2 — Gender (standalone; was part of the old combined screen)
    ================================================================ */
-.cine-gender-grid--standalone { width: 100%; max-width: 320px; margin-top: 8px; }
+.cine-gender-grid--standalone { width: 100%; max-width: 320px; }
 
 /* ================================================================
-   Step 3 — Birth date (shared age-roller, see AUTH.initAgeRoller())
+   Step 3 — Birth date (month/day/year wheels — see
+   cineRunBirthdateEntrance() in script.js)
    ================================================================ */
-.cine-age-roller-wrap { width: 100%; max-width: 220px; margin-top: 30px; }
+.cine-dob-wrap {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 320px;
+  height: 220px;
+  border-radius: var(--r-md);
+  background: var(--s2);
+  overflow: hidden;
+}
+.cine-dob-wrap::before,
+.cine-dob-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 88px;
+  pointer-events: none;
+  z-index: 2;
+}
+.cine-dob-wrap::before { top: 0; background: linear-gradient(to bottom, var(--s2) 0%, transparent 100%); }
+.cine-dob-wrap::after  { bottom: 0; background: linear-gradient(to top, var(--s2) 0%, transparent 100%); }
+.cine-dob-highlight {
+  position: absolute;
+  top: 88px; /* (220px - 44px) / 2 */
+  left: 0; right: 0;
+  height: 44px;
+  background: rgba(236, 72, 153, 0.07);
+  border-top: 1.5px solid var(--accent-border);
+  border-bottom: 1.5px solid var(--accent-border);
+  z-index: 1;
+  pointer-events: none;
+}
+.cine-dob-roller {
+  position: relative;
+  z-index: 0;
+  height: 220px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.cine-dob-roller::-webkit-scrollbar { display: none; }
+.cine-dob-roller .age-roller-item { font-size: 17px; padding: 0 2px; }
+.cine-dob-roller--month { flex: 1.5 1 0; }
+.cine-dob-roller--day   { flex: 0.75 1 0; }
+.cine-dob-roller--year  { flex: 1.1 1 0; }
 .cine-age-warn { margin-top: 10px; }
 
 /* ================================================================
@@ -7286,7 +7341,11 @@ a { text-decoration: none; color: inherit; }
 .home-mode-popup {
   position: fixed;
   inset: 0;
-  z-index: 900;
+  /* Must render above .cine (#cine-onboarding, z-index:1000) — this popup
+     is also shown mid-onboarding (internal step 6, still layered on top of
+     the onboarding overlay, not behind it), and .cine's own background is
+     opaque, so a lower z-index here rendered as a blank screen. */
+  z-index: 1100;
   background: rgba(28,25,23,0.45);
   display: flex;
   align-items: center;
