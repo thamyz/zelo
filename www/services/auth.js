@@ -534,13 +534,6 @@ const AUTH = (() => {
     if      (dest === 'practice')        showTab('practice');
     else if (dest === 'chats')           showTab('chats');
     else if (dest === 'save-thread')     openThreadPicker();
-    // Onboarding's sign-up gate (script.js cineFinishPhase2 tail) normally
-    // passes its own callback straight into requireAuth(), but an OAuth
-    // redirect reloads the page — init()'s post-redirect path (above)
-    // rebuilds _pending from sessionStorage using only this destination
-    // string, losing that original closure. This case is what resumes the
-    // tail (splash -> trial-reminder -> paywall) correctly after a reload.
-    else if (dest === 'onboarding-tail') cineOnboardingTailResume();
   }
 
   function _resolvePending() {

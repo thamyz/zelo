@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-13 09:30";
+const BUILD_STAMP = "2026-08-14 15:10";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -931,7 +931,7 @@ function buildCardElement(profile, stackIndex) {
 
   const interestTags = buildInterestTagsHTML(profile.interests);
 
-  const currentMode = state.cardModes[profile.name] || cineDefaultCardMode();
+  const currentMode = state.cardModes[profile.name] || CARD_MODE_DEFAULT;
   const currentModeDesc = CARD_MODES.find(m => m.key === currentMode).desc;
 
   const modePillsHTML = CARD_MODES.map(m => {
@@ -1311,7 +1311,7 @@ function openProfileDetail() {
   document.getElementById('pd-tags').innerHTML   = buildInterestTagsHTML(profile.interests);
 
   // Mode pills
-  const currentMode = state.cardModes[profile.name] || cineDefaultCardMode();
+  const currentMode = state.cardModes[profile.name] || CARD_MODE_DEFAULT;
   const currentModeDesc = CARD_MODES.find(m => m.key === currentMode).desc;
   document.getElementById('pd-mode-pills').innerHTML = CARD_MODES.map(m => {
     const locked = !m.free && !isColdAvailable();
@@ -1922,7 +1922,7 @@ function showMatchOverlay(profile) {
     profile:     profile,
     difficulty:  profile.difficulty,
     mode:        'training',
-    cardMode:    state.cardModes[profile.name] || cineDefaultCardMode(),
+    cardMode:    state.cardModes[profile.name] || CARD_MODE_DEFAULT,
     messages:    [],
     lastMessage: 'New match!',
     lastActive:  'just now',
@@ -2787,7 +2787,7 @@ function _regenerateFromResultInput(messageText) {
 
   state.eligibleStyles    = getEligibleStyles(state.scanContext.situation, state.scanContext.goal);
   state.currentStyleIndex = 0;
-  state.asstStyle         = cinePreferredDefaultTone(state.eligibleStyles);
+  state.asstStyle         = state.eligibleStyles[0];
   renderReplyCarousel();
 
   const firstStyle = state.asstStyle;
@@ -2891,7 +2891,7 @@ async function generateReplies() {
   // never all of them upfront. Cards without a fetch yet show a loading dot.
   state.eligibleStyles   = getEligibleStyles(state.scanContext.situation, state.scanContext.goal);
   state.currentStyleIndex = 0;
-  state.asstStyle         = cinePreferredDefaultTone(state.eligibleStyles);
+  state.asstStyle         = state.eligibleStyles[0];
 
   renderReplyCarousel();
 
@@ -3342,34 +3342,42 @@ function copyReplyFromCard(style, btn) {
 
 let threadEditMode = false;
 
-const CINE_LAST = 15;          // last Phase 2 dot-stepper screen
-let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-15 = Phase 2 screens
-let cineSwipeDemoDone = false; // step 7 (swipe demo) has finished -> shows Continue instead of the deck
+const CINE_LAST = 12;          // last Phase 2 step that lives in #cine-onboarding
+let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-12 = Phase 2 screens
 
-// Per-step config for the dot-stepper's shared chrome (#cine-next label +
-// gating, entrance hook). Head/sub copy lives
-// in the markup itself (index.html) — this table only drives behavior that
-// has to scale across all 15 steps instead of a hardcoded if/else chain.
-// `noSharedNext`: screen drives its own transition, shared Continue stays
-// hidden (step 7 also does this, but only pre-completion — handled as a
-// special case in cineGoTo() below since it depends on cineSwipeDemoDone).
+// Per-step config for the shared chrome (#cine-next label + gating +
+// visibility, back button, progress) and each screen's entrance hook. Head/
+// body copy lives in the markup itself (index.html) — this table only drives
+// behaviour, so adding/removing a screen is a one-line change here plus its
+// <section data-screen="n"> and never a hunt through an if/else chain.
+//   label        — text on the shared bottom CTA
+//   enabledFn    — CTA stays disabled until this returns true (default: true)
+//   entrance     — run on entering the step
+//   noChrome     — hide back + progress (used by the auto-running setup step)
+//   noCta        — screen has no shared bottom CTA at all
+// Screens 13 (paywall) and 14 (one-time offer) are NOT in this table: they're
+// standalone .screen overlays reached after step 12 — see cineFinishPhase2().
 const CINE_STEPS = {
-  1:  { label: 'Continue', enabledFn: () => cineNameValid(cineCurrentNameValue()), entrance: cineRunNameEntrance },
-  2:  { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_gender') },
-  3:  { label: 'Continue', enabledFn: () => cineBirthdateValid(), entrance: cineRunBirthdateEntrance },
-  4:  { label: 'Continue', enabledFn: () => true },
-  5:  { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_onb_icebreaker') },
-  6:  { noSharedNext: true, entrance: cineRunPartnerEntrance },
-  7:  { label: 'Continue', enabledFn: () => true, entrance: cineRunSwipeStepEntrance },
-  8:  { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_onb_struggle') },
-  9:  { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_onb_where') },
-  10: { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_onb_stopping') },
-  11: { label: 'Continue', enabledFn: () => !!localStorage.getItem('zelo_onb_accomplish') },
-  12: { label: "Let's get started!", enabledFn: () => true },
-  13: { label: 'Continue', enabledFn: () => true },                    // ATT — special-cased in cineNext()
-  14: { label: 'Continue', enabledFn: () => true },                    // Notification — special-cased in cineNext()
-  15: { label: 'Continue', enabledFn: () => true, entrance: cineRunPlanEntrance },
+  1:  { label: 'Continue', enabledFn: () => cineIntroReady(), entrance: cineRunIntroEntrance },
+  2:  { label: 'Continue', enabledFn: () => !!cineAnswers.overthink },
+  3:  { label: 'Continue', enabledFn: () => (cineAnswers.help || []).length > 0 },
+  4:  { label: 'Continue', enabledFn: () => !!cineAnswers.tone },
+  5:  { label: 'Continue' },
+  6:  { label: 'Continue' },
+  7:  { label: 'Continue' },                       // notifications — fires the real native dialog in cineNext()
+  8:  { noCta: true, noChrome: true, entrance: cineRunSetupEntrance },  // auto-advances
+  9:  { label: 'Continue' },
+  10: { label: 'Continue' },
+  11: { label: 'Try for FREE' },
+  12: { label: 'Continue for FREE' },
 };
+
+// Answers collected during onboarding. Kept in memory + mirrored to
+// localStorage so back-navigation restores the user's picks; deliberately NOT
+// wired into reply-tone/practice-mode defaults — the Zelo Plan screen is
+// decorative for now and real personalization is a separate task.
+let cineAnswers = { overthink: null, help: [], tone: null };
+
 let _cineTimers = [];
 
 function _cineClearTimers() {
@@ -3418,8 +3426,8 @@ function startCineOnboarding() {
   }, 700);
 }
 
-// Chrome modes: 'none' (Phase 1 + showcase — no top bar, no Continue),
-// 'phase2' (back + progress bar + skip-X, and Continue per cineGoTo()).
+// Chrome modes: 'none' (Phase 1 + showcase — no top bar, no CTA),
+// 'phase2' (back + progress bar, and the CTA per cineGoTo()).
 function cineSetChrome(mode) {
   const show = mode === 'phase2';
   ['cine-next', 'cine-topbar'].forEach(id => {
@@ -3529,46 +3537,72 @@ function cineRevealShowcaseReply() {
 }
 
 // ---- PHASE 2 navigation ----
+
+// Builds the segmented progress bar once, one segment per tracked step, so
+// the segment count is derived from CINE_LAST and can never fall out of sync
+// with the step table the way the reference mockups do with each other.
+function cineBuildProgress() {
+  const bar = document.getElementById('cine-progress');
+  if (!bar || bar.childElementCount === CINE_LAST) return;
+  bar.innerHTML = '';
+  for (let i = 0; i < CINE_LAST; i++) {
+    const seg = document.createElement('span');
+    seg.className = 'cine-prog-seg';
+    bar.appendChild(seg);
+  }
+}
+
 function cineGoTo(n) {
   _cineClearTimers();
   cineStep = n;
+  // Entering any Phase 2 step must guarantee the overlay is actually up.
+  // cineFinishPhase2() hides it when handing off to the paywall, so without
+  // this a route back into onboarding would set a step "active" on an
+  // overlay that is still display:none — an invisible, dead screen.
+  const overlay = document.getElementById('cine-onboarding');
+  if (overlay) { overlay.removeAttribute('hidden'); overlay.classList.remove('cine-out'); }
+  // #cine-preblack is an opaque white sheet at z-index 2000 that Phase 1
+  // fades out on a 700ms timer. _cineClearTimers() above cancels that timer,
+  // so any route into Phase 2 that runs before it fires would leave the sheet
+  // up forever — a fully white screen with a live, hit-testable UI behind it
+  // (it's pointer-events:none, so taps still work and nothing looks "broken"
+  // to code, only to the eye). Force it out here rather than relying on the
+  // timer having already run.
+  document.getElementById('cine-preblack')?.classList.add('cine-preblack-out');
   cineSetChrome('phase2');
+  cineBuildProgress();
 
   const step = CINE_STEPS[n] || {};
-  // Step 6 (practice partner) always drives its own transition (shows the
-  // #home-mode-popup overlay instead of a .cine-screen). Step 7 (swipe
-  // demo) only does before the demo completes — once cineSwipeDemoDone,
-  // it behaves like any other step with a shared Continue button.
-  const hideSharedNext = !!step.noSharedNext || (n === 7 && !cineSwipeDemoDone);
 
-  // X skip-all button follows the same rule — hidden while a screen owns
-  // its own transition, back once the shared Continue is showing again.
-  // Back + the progress bar stay visible throughout — back works from
-  // step 1 onward (to the showcase screen), not just once Continue exists.
-  const skipBtn = document.getElementById('cine-skip');
-  if (skipBtn) skipBtn.classList.toggle('cine-hidden', hideSharedNext);
+  // Steps that run themselves (the setup/loading screen) hide the whole top
+  // bar; everything else shows back + progress. Back is available from step 1
+  // onward — on step 1 it returns to the showcase screen.
+  const topbar = document.getElementById('cine-topbar');
+  if (topbar) topbar.classList.toggle('cine-hidden', !!step.noChrome);
 
-  const fill = document.getElementById('cine-progress-fill');
-  if (fill) fill.style.width = Math.max(0, Math.min(100, (n / CINE_LAST) * 100)) + '%';
+  document.querySelectorAll('.cine-prog-seg').forEach((seg, i) => {
+    seg.classList.toggle('done', i < n);
+  });
 
   document.querySelectorAll('.cine-screen').forEach(s => {
     s.classList.toggle('active', Number(s.dataset.screen) === n);
   });
 
-  // Step 6 has no .cine-screen section of its own — #home-mode-popup
-  // (reused as-is, not duplicated) is what shows/hides for this step.
-  const partnerPopup = document.getElementById('home-mode-popup');
-  if (partnerPopup) partnerPopup.hidden = (n !== 6);
-
   const nextBtn = document.getElementById('cine-next');
   if (nextBtn) {
-    nextBtn.classList.toggle('cine-hidden', hideSharedNext);
+    nextBtn.classList.toggle('cine-hidden', !!step.noCta);
     nextBtn.disabled = false;
     nextBtn.classList.remove('cine-next--disabled');
     nextBtn.textContent = step.label || 'Continue';
   }
 
-  if (!hideSharedNext) cineSetNextEnabled(step.enabledFn ? step.enabledFn() : true);
+  // Re-paint any previously-given answers before evaluating the gate, so a
+  // screen reached by Back shows its selection AND an unlocked CTA together.
+  // Without this the answer still counts (it's in cineAnswers) but the pill
+  // renders unselected, which reads as "my answer was lost".
+  cineRestoreAnswers();
+
+  if (!step.noCta) cineSetNextEnabled(step.enabledFn ? step.enabledFn() : true);
 
   if (step.entrance) step.entrance();
 }
@@ -3585,29 +3619,22 @@ function cineNext() {
   const btn = document.getElementById('cine-next');
   if (btn?.disabled) return;
 
-  // Steps 13 (ATT) and 14 (Notification): Continue fires the real native
-  // permission prompt, then advances automatically the instant it's
-  // answered (granted OR denied) — no separate tap needed. Button stays
-  // disabled for that brief async gap only, to prevent a double-tap while
-  // the native dialog is up.
-  if (cineStep === 13 || cineStep === 14) {
+  // Step 7 (notifications): the CTA fires the REAL native permission prompt,
+  // then advances automatically the instant it's answered (granted OR
+  // denied) — no separate tap needed. The button stays disabled for that
+  // brief async gap only, to prevent a double-tap while the dialog is up.
+  if (cineStep === 7) {
     const stepWhenTapped = cineStep;
     if (btn) { btn.disabled = true; btn.classList.add('cine-next--disabled'); }
-    const req = stepWhenTapped === 13 ? requestTrackingPermission() : requestNotifPermission();
-    Promise.resolve(req).finally(() => {
+    Promise.resolve(requestNotifPermission()).finally(() => {
       if (btn) { btn.disabled = false; btn.classList.remove('cine-next--disabled'); }
-      if (cineStep !== stepWhenTapped) return; // already navigated away (e.g. Skip) while waiting
-      if (stepWhenTapped >= CINE_LAST) { cineFinishPhase2(); return; }
+      if (cineStep !== stepWhenTapped) return; // navigated away while waiting
       cineGoTo(stepWhenTapped + 1);
     });
     return;
   }
 
-  // Step 3 (birth date): commit the roller's current value on the way out
-  // rather than on every scroll tick — also the final under-18 guard (the
-  // shared Continue is already disabled below 18 via CINE_STEPS[3].enabledFn,
-  // this is defense in depth, not the primary block).
-  if (cineStep === 3 && !cineCommitBirthdate()) return;
+  if (cineStep === 1) cineCommitIntro();
 
   if (cineStep >= CINE_LAST) { cineFinishPhase2(); return; }
   cineGoTo(cineStep + 1);
@@ -3624,10 +3651,198 @@ function cineBack(e) {
   cineGoTo(cineStep - 1);
 }
 
-// X (top right) — skip the rest of onboarding on any Phase 2 screen.
-function cineSkip(e) {
-  if (e) e.stopPropagation();
-  finishOnboardingNoPrompt();
+// ================================================================
+// STEP 1 — name / photo / age (all three genuinely interactive)
+// ================================================================
+
+function cineIntroReady() {
+  return cineNameValid(cineCurrentNameValue()) && !!localStorage.getItem('zelo_user_age');
+}
+
+function cineRunIntroEntrance() {
+  const input = document.getElementById('cine-name-input');
+  const errEl = document.getElementById('cine-name-error');
+  if (errEl) errEl.textContent = '';
+  if (input) {
+    const saved = localStorage.getItem('zelo_display_name');
+    if (saved && !input.value) input.value = saved;
+    // Deliberately NOT auto-focusing — popping the keyboard open before the
+    // user taps anything shoves the whole screen up and hides the heading.
+  }
+  cineRenderPhoto();
+  cineRenderAge();
+  cineRefreshIntroChecks();
+}
+
+function cineRefreshIntroChecks() {
+  const nameOk = cineNameValid(cineCurrentNameValue());
+  const ageOk  = !!localStorage.getItem('zelo_user_age');
+  const nc = document.getElementById('cine-name-check');
+  const ac = document.getElementById('cine-age-check');
+  if (nc) nc.hidden = !nameOk;
+  if (ac) ac.hidden = !ageOk;
+  cineSetNextEnabled(nameOk && ageOk);
+}
+
+function cineCommitIntro() {
+  const name = cineCurrentNameValue();
+  if (cineNameValid(name)) localStorage.setItem('zelo_display_name', name);
+}
+
+// ---- photo ----
+function cinePickPhoto() {
+  document.getElementById('cine-photo-input')?.click();
+}
+
+function cinePhotoSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    localStorage.setItem('zelo_profile_photo', reader.result);
+    cineRenderPhoto();
+  };
+  reader.readAsDataURL(file);
+  event.target.value = ''; // let the same file be re-picked after a remove
+}
+
+// stopPropagation so tapping the X never also triggers the avatar's own
+// onclick (which sits underneath it) and immediately reopens the picker.
+function cineRemovePhoto(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  localStorage.removeItem('zelo_profile_photo');
+  cineRenderPhoto();
+}
+
+function cineRenderPhoto() {
+  const data = localStorage.getItem('zelo_profile_photo');
+  const img  = document.getElementById('cine-avatar-img');
+  const ph   = document.getElementById('cine-avatar-ph');
+  const del  = document.getElementById('cine-avatar-del');
+  if (img) { if (data) { img.src = data; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; } }
+  if (ph)  ph.hidden  = !!data;
+  if (del) del.hidden = !data;
+}
+
+// ---- age (reuses the existing roller component from services/auth.js) ----
+function cineOpenAgeSheet() {
+  const sheet = document.getElementById('cine-age-sheet');
+  if (!sheet) return;
+  sheet.hidden = false;
+  const current = parseInt(localStorage.getItem('zelo_user_age') || '', 10);
+  AUTH.initAgeRoller({
+    rollerId: 'cine-age-roller', warnId: 'cine-age-warn',
+    minAge: 18, maxAge: 60, defaultAge: Number.isFinite(current) ? current : 22
+  });
+}
+
+function cineCloseAgeSheet() {
+  const sheet = document.getElementById('cine-age-sheet');
+  if (sheet) sheet.hidden = true;
+}
+
+function cineConfirmAge() {
+  const age = AUTH.readAge('cine-age-roller', 18);
+  localStorage.setItem('zelo_user_age', String(age));
+  cineCloseAgeSheet();
+  cineRenderAge();
+  cineRefreshIntroChecks();
+}
+
+function cineRenderAge() {
+  const el = document.getElementById('cine-age-value');
+  const age = localStorage.getItem('zelo_user_age');
+  if (!el) return;
+  el.textContent = age || 'Tap to choose';
+  el.classList.toggle('cine-field-value--empty', !age);
+}
+
+// ================================================================
+// STEPS 2-4 — question screens
+// ================================================================
+
+// Single-select: one answer replaces any previous one.
+function cinePickOne(field, value, el) {
+  cineAnswers[field] = value;
+  localStorage.setItem('zelo_onb_' + field, value);
+  if (el && el.parentElement) {
+    el.parentElement.querySelectorAll('.cine-opt').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  cineSetNextEnabled(true);
+  navigator.vibrate?.(4);
+}
+
+// Multi-select ("pick any that apply"): toggles, and the CTA unlocks as soon
+// as at least one is on.
+function cinePickMany(field, value, el) {
+  const list = cineAnswers[field] || [];
+  const i = list.indexOf(value);
+  if (i === -1) list.push(value); else list.splice(i, 1);
+  cineAnswers[field] = list;
+  localStorage.setItem('zelo_onb_' + field, JSON.stringify(list));
+  if (el) el.classList.toggle('selected', list.includes(value));
+  cineSetNextEnabled(list.length > 0);
+  navigator.vibrate?.(4);
+}
+
+// Re-paints the selected state from cineAnswers — needed because navigating
+// back re-enters a screen whose buttons still carry (or have lost) .selected.
+function cineRestoreAnswers() {
+  document.querySelectorAll('#cine-opts-overthink .cine-opt').forEach((b, i) => {
+    b.classList.toggle('selected', ['almost-never','sometimes','pretty-often','way-too-often'][i] === cineAnswers.overthink);
+  });
+  const help = cineAnswers.help || [];
+  document.querySelectorAll('#cine-opts-help .cine-opt').forEach((b, i) => {
+    b.classList.toggle('selected', help.includes(['what-to-say','keep-going','natural','flirting','confident'][i]));
+  });
+  document.querySelectorAll('#cine-opts-tone .cine-opt').forEach((b, i) => {
+    b.classList.toggle('selected', ['playful','chill','direct'][i] === cineAnswers.tone);
+  });
+}
+
+// ================================================================
+// STEP 8 — "setting everything up" (auto-advances, no CTA)
+// ================================================================
+
+const CINE_SETUP_MS = 5200;
+
+function cineRunSetupEntrance() {
+  const numEl  = document.getElementById('cine-pct-num');
+  const fillEl = document.getElementById('cine-setup-fill');
+  const rows   = Array.from(document.querySelectorAll('#cine-setup-list .cine-setup-row'));
+  rows.forEach(r => r.classList.remove('done'));
+  if (fillEl) fillEl.style.width = '0%';
+  if (numEl)  numEl.textContent = '1';
+
+  const startedAt = Date.now();
+  const startedOn = cineStep;
+  const tick = () => {
+    // Bail out if the user navigated away mid-animation — otherwise this
+    // keeps ticking against a screen that is no longer on-screen and then
+    // advances the flow from underneath wherever they actually are.
+    if (cineStep !== startedOn) return;
+    const t = Math.min(1, (Date.now() - startedAt) / CINE_SETUP_MS);
+    const pct = Math.max(1, Math.round(t * 100));
+    if (numEl)  numEl.textContent = String(pct);
+    if (fillEl) fillEl.style.width = pct + '%';
+    rows.forEach((r, i) => r.classList.toggle('done', t >= (i + 1) / rows.length));
+    if (t < 1) { _cineDelay(tick, 40); return; }
+    _cineDelay(() => { if (cineStep === startedOn) cineGoTo(startedOn + 1); }, 420);
+  };
+  tick();
+}
+
+// ================================================================
+// STEP 10 — provider buttons are intentionally inert for now
+// ================================================================
+
+// Apple / Google / email all advance exactly like Continue and never start a
+// real account-creation attempt. Kept as one shared stub so there is a single
+// obvious place to wire real auth in later.
+function cineAuthStub() {
+  if (cineStep >= CINE_LAST) { cineFinishPhase2(); return; }
+  cineGoTo(cineStep + 1);
 }
 
 // ---- Screen 1 — name input (profanity-filtered, no bad/empty/space-only) ----
@@ -3651,19 +3866,6 @@ function cineNameValid(trimmed) {
   return trimmed.length >= 2 && !cineNameHasProfanity(trimmed);
 }
 
-function cineRunNameEntrance() {
-  const input = document.getElementById('cine-name-input');
-  const errEl = document.getElementById('cine-name-error');
-  if (errEl) errEl.textContent = '';
-  if (input) {
-    const saved = localStorage.getItem('zelo_display_name');
-    if (saved && !input.value) input.value = saved;
-    // Deliberately NOT auto-focusing here — popping the keyboard open before
-    // the user has tapped anything shoves the whole screen up to make room
-    // for it, hiding the title/subtitle. Let them tap the field themselves.
-  }
-}
-
 function cineNameInput() {
   const raw     = document.getElementById('cine-name-input')?.value || '';
   const trimmed = raw.trim();
@@ -3677,243 +3879,10 @@ function cineNameInput() {
   if (errEl) errEl.textContent = '';
 
   const valid = cineNameValid(trimmed);
-  cineSetNextEnabled(valid);
   if (valid) localStorage.setItem('zelo_display_name', trimmed);
-}
-
-// ---- Steps 5, 8-11 — generic single-select option screens (icebreaker +
-// the 4 personalization questions). One shared handler instead of five
-// near-identical copies — each screen only differs in `field`/`value`. ----
-function cineSelectOpt(field, value, el) {
-  localStorage.setItem('zelo_onb_' + field, value);
-  if (el && el.parentElement) {
-    el.parentElement.querySelectorAll('.cine-opt-pill').forEach(b => b.classList.remove('selected'));
-    el.classList.add('selected');
-  }
-  cineSetNextEnabled(true);
-  navigator.vibrate?.(4);
-}
-
-// ---- Step 4 — profile photo (optional) ----
-function cinePhotoSelected(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    localStorage.setItem('zelo_profile_photo', reader.result);
-    const preview = document.getElementById('cine-photo-preview');
-    const placeholderIc = document.getElementById('cine-photo-placeholder-ic');
-    if (preview) { preview.src = reader.result; preview.hidden = false; }
-    if (placeholderIc) placeholderIc.hidden = true;
-  };
-  reader.readAsDataURL(file);
-}
-
-// ---- Step 3 — birth date (real drag/scroll month/day/year wheels).
-// A dedicated 3-column version of the same scroll-snap wheel mechanic the
-// post-signup setup screen's single #age-roller uses (services/auth.js) —
-// not reused directly, since that one is purpose-built around a single
-// integer age; this one needed arbitrary per-column label sets (month
-// names, 1-31, a year range) instead. Same visual language/CSS pattern
-// (.age-roller-item, ghost-padded, 44px rows, scroll-snap), own instance. ----
-const CINE_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const CINE_DOB_ROW_H = 44;
-
-function _cineBuildWheelColumn(id, values, defaultIndex) {
-  const roller = document.getElementById(id);
-  if (!roller) return;
-  roller.innerHTML = '';
-  for (let i = 0; i < 2; i++) {
-    const g = document.createElement('div');
-    g.className = 'age-roller-item age-roller-ghost';
-    roller.appendChild(g);
-  }
-  values.forEach((v) => {
-    const item = document.createElement('div');
-    item.className = 'age-roller-item';
-    item.textContent = v;
-    roller.appendChild(item);
-  });
-  for (let i = 0; i < 2; i++) {
-    const g = document.createElement('div');
-    g.className = 'age-roller-item age-roller-ghost';
-    roller.appendChild(g);
-  }
-  requestAnimationFrame(() => { roller.scrollTop = defaultIndex * CINE_DOB_ROW_H; });
-}
-function _cineReadWheelIndex(id) {
-  const r = document.getElementById(id);
-  if (!r) return 0;
-  return Math.max(0, Math.round(r.scrollTop / CINE_DOB_ROW_H));
-}
-
-// Years ascending (oldest first, like the reference picker) spanning
-// roughly 1960-2060 around today's actual year, clamped so the range
-// always makes sense regardless of when this runs.
-let _cineDobYears = [];
-let _cineBirthdateAlerted = false;
-
-function cineRunBirthdateEntrance() {
-  _cineBirthdateAlerted = false;
-  const nowYear = new Date().getFullYear();
-  _cineDobYears = [];
-  for (let y = nowYear - 100; y <= nowYear + 40; y++) _cineDobYears.push(y);
-  const days = [];
-  for (let d = 1; d <= 31; d++) days.push(d);
-
-  const defaultAge  = 22;
-  const defaultYear = nowYear - defaultAge;
-  const yearIdx = Math.max(0, _cineDobYears.indexOf(defaultYear));
-
-  _cineBuildWheelColumn('cine-month-roller', CINE_MONTHS, 0); // January
-  _cineBuildWheelColumn('cine-day-roller', days, 0);           // 1
-  _cineBuildWheelColumn('cine-year-roller', _cineDobYears, yearIdx);
-
-  ['cine-month-roller', 'cine-day-roller', 'cine-year-roller'].forEach((id) => {
-    const roller = document.getElementById(id);
-    if (roller && !roller.dataset.cineBound) {
-      roller.dataset.cineBound = '1';
-      roller.addEventListener('scroll', () => {
-        const valid = cineBirthdateValid();
-        cineSetNextEnabled(valid);
-        if (!valid && !_cineBirthdateAlerted) {
-          _cineBirthdateAlerted = true;
-          alert("You must be 18 or older to use Zelo's matching and practice features.");
-        }
-      }, { passive: true });
-    }
-  });
-  cineSetNextEnabled(cineBirthdateValid());
-}
-
-function cineReadBirthdate() {
-  const monthIdx = Math.min(_cineReadWheelIndex('cine-month-roller'), 11);
-  const day      = Math.min(_cineReadWheelIndex('cine-day-roller') + 1, 31);
-  const yearIdx  = Math.min(_cineReadWheelIndex('cine-year-roller'), Math.max(0, _cineDobYears.length - 1));
-  const year     = _cineDobYears.length ? _cineDobYears[yearIdx] : (new Date().getFullYear() - 22);
-  return { month: monthIdx, day, year };
-}
-
-function cineAgeFromBirthdate({ month, day, year }) {
-  const today = new Date();
-  let age = today.getFullYear() - year;
-  const hadBirthdayThisYear = (today.getMonth() > month) || (today.getMonth() === month && today.getDate() >= day);
-  if (!hadBirthdayThisYear) age--;
-  return age;
-}
-
-function cineBirthdateValid() {
-  return cineAgeFromBirthdate(cineReadBirthdate()) >= 18;
-}
-
-// Maps onto the real persona age-pool buckets (AGE_RANGE_TO_POOLS'
-// targets) — '18-20'/'21-29'/'30+', not the spec prose's exact "18-20/
-// 21-23" wording, which doesn't exist as an actual pool anywhere in the app.
-function cineMapAgeToPool(age) {
-  if (age < 21) return '18-20';
-  if (age < 30) return '21-29';
-  return '30+';
-}
-
-function cineCommitBirthdate() {
-  const dob = cineReadBirthdate();
-  const age = cineAgeFromBirthdate(dob);
-  if (age < 18) {
-    if (!_cineBirthdateAlerted) {
-      _cineBirthdateAlerted = true;
-      alert("You must be 18 or older to use Zelo's matching and practice features.");
-    }
-    return false;
-  }
-  localStorage.setItem('zelo_user_age', String(age));
-  localStorage.setItem('zelo_age_pool', cineMapAgeToPool(age));
-  localStorage.setItem('zelo_birthdate', `${dob.year}-${String(dob.month + 1).padStart(2, '0')}-${String(dob.day).padStart(2, '0')}`);
-  return true;
-}
-
-// ---- Step 15 — Your Zelo Plan (real computed logic, not decorative) ----
-//
-// Small scoring table over the 4 personalization answers (steps 8-11) --
-// NOT a rebuild of getEligibleStyles()/STYLE_ELIGIBILITY, which still
-// governs which styles are actually offered per scan context. This only
-// picks a starting DEFAULT tone pair + card mode, preferred wherever it's
-// valid. Keyed primarily off `stopping` (closest to emotional register),
-// with `struggle`/`accomplish` breaking ties -- and, matching the same
-// hard safety rule getEligibleStyles() enforces elsewhere, never defaults
-// into funny/bolder.
-function computeZeloPlan(struggle, where, stopping, accomplish) {
-  const anxious = stopping === 'panic' || stopping === 'scared-wrong' || struggle === 'nervous-freeze';
-  let tones, mode;
-
-  if (anxious) {
-    tones = ['warmer', 'shorter'];
-    mode  = 'open';
-  } else if (stopping === 'reread' || struggle === 'overthink') {
-    tones = ['shorter', 'direct'];
-    mode  = 'open';
-  } else if (stopping === 'keep-going' || struggle === 'die-out') {
-    tones = ['warmer', 'longer'];
-    mode  = 'neutral';
-  } else if (struggle === 'boring' || accomplish === 'natural') {
-    tones = ['smooth', 'warmer'];
-    mode  = 'neutral';
-  } else if (accomplish === 'funnier') {
-    tones = ['smooth', 'warmer']; // never default straight into 'funny' itself
-    mode  = 'open';
-  } else if (accomplish === 'direct' || struggle === 'dont-know') {
-    tones = ['direct', 'shorter'];
-    mode  = 'neutral';
-  } else {
-    tones = ['smooth', 'direct'];
-    mode  = CARD_MODE_DEFAULT;
-  }
-
-  if (accomplish === 'faster' && tones.indexOf('shorter') === -1) tones = [tones[0], 'shorter'];
-  return { tones, mode };
-}
-
-function cineRunPlanEntrance() {
-  const struggle   = localStorage.getItem('zelo_onb_struggle');
-  const where      = localStorage.getItem('zelo_onb_where');
-  const stopping   = localStorage.getItem('zelo_onb_stopping');
-  const accomplish = localStorage.getItem('zelo_onb_accomplish');
-  const plan = computeZeloPlan(struggle, where, stopping, accomplish);
-
-  // Actually set as real defaults, not just displayed -- see
-  // cinePreferredDefaultTone()/cineDefaultCardMode() below, read at every
-  // place state.asstStyle / state.cardModes fall back to a default.
-  localStorage.setItem('zelo_default_tones', JSON.stringify(plan.tones));
-  localStorage.setItem('zelo_default_card_mode', plan.mode);
-
-  const sub = document.getElementById('cine-plan-sub');
-  if (sub) {
-    const toneA = STYLE_LABELS[plan.tones[0]] || plan.tones[0];
-    const toneB = STYLE_LABELS[plan.tones[1]] || plan.tones[1];
-    const modeLabel = (CARD_MODES.find(m => m.key === plan.mode) || {}).label || plan.mode;
-    sub.textContent = `Based on your answers, we're starting you with ${toneA} and ${toneB} tones, and ${modeLabel} practice partners to help you build confidence.`;
-  }
-}
-
-// Read at every site that previously hardcoded state.eligibleStyles[0] as
-// the new-scan default tone -- prefers the Zelo Plan's first computed tone
-// when it's actually offered for the current context, otherwise falls back
-// to the original behavior unchanged.
-function cinePreferredDefaultTone(eligibleStyles) {
-  if (!eligibleStyles || !eligibleStyles.length) return eligibleStyles && eligibleStyles[0];
-  try {
-    const tones = JSON.parse(localStorage.getItem('zelo_default_tones') || 'null');
-    if (Array.isArray(tones)) {
-      const pick = tones.find(t => eligibleStyles.includes(t));
-      if (pick) return pick;
-    }
-  } catch (_) {}
-  return eligibleStyles[0];
-}
-
-// Read at every site that previously hardcoded CARD_MODE_DEFAULT.
-function cineDefaultCardMode() {
-  const saved = localStorage.getItem('zelo_default_card_mode');
-  return (saved && CARD_MODES.some(m => m.key === saved)) ? saved : CARD_MODE_DEFAULT;
+  // Gating is shared with the age field — step 1 needs both, so defer to
+  // cineRefreshIntroChecks() rather than toggling the CTA on the name alone.
+  cineRefreshIntroChecks();
 }
 
 // ---- Screen 2 — interactive swipe demo (real drag, no auto-play) ----
@@ -4145,34 +4114,14 @@ function cineShowMatchContinuePrompt(demoChatId, prevState) {
     popScreen();
     const overlay = document.getElementById('cine-onboarding');
     if (overlay) overlay.removeAttribute('hidden');
-    // Spec wants an explicit Continue tap once the demo completes, not an
-    // auto-advance — return to step 7 with cineSwipeDemoDone set, which
-    // makes cineGoTo()/cineRunSwipeStepEntrance() show the "You matched!"
-    // state + reveal the shared Continue button instead of the deck.
-    cineSwipeDemoDone = true;
-    cineGoTo(7);
+    // Swipe demo is not part of the current onboarding sequence; if it is
+    // ever re-enabled, route back to whichever step hosts it here.
+    cineGoToShowcase();
   };
   matchScreen.addEventListener('click', advance);
 }
 
-// Step 7 entrance — toggles between the pre-demo deck and the post-demo
-// "matched" state (with the shared Continue button now showing) based on
-// cineSwipeDemoDone. The demo mechanics themselves (drag, promotion,
-// isolation) are untouched — only this tail differs from before.
-function cineRunSwipeStepEntrance() {
-  const pre  = document.getElementById('cine-swipe-pre');
-  const post = document.getElementById('cine-swipe-post');
-  if (cineSwipeDemoDone) {
-    if (pre)  pre.hidden  = true;
-    if (post) post.hidden = false;
-  } else {
-    if (pre)  pre.hidden  = false;
-    if (post) post.hidden = true;
-    cineRunSwipeEntrance();
-  }
-}
-
-// ---- Screen 3 — notifications ----
+// ---- Step 7 — notification permission (the real native dialog) ----
 function requestNotifPermission() {
   const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
   if (LocalNotifications) {
@@ -4183,14 +4132,15 @@ function requestNotifPermission() {
   // Plain web (Netlify) fallback — no native runtime, use the browser API.
   try {
     if (window.Notification && typeof Notification.requestPermission === 'function') {
-      const r = Notification.requestPermission();
-      return Promise.resolve(r).catch(() => {});
+      return Promise.resolve(Notification.requestPermission()).catch(() => {});
     }
   } catch (_) {}
   return Promise.resolve();
 }
 
-// ---- Step 13 — tracking permission (ATT) ----
+// App Tracking Transparency. No screen in the current reference sequence
+// asks for it, but the plugin is installed and this is the one call site —
+// kept so re-adding an ATT screen is a markup + CINE_STEPS change only.
 function requestTrackingPermission() {
   const ATT = window.Capacitor?.Plugins?.AppTrackingTransparency;
   if (!ATT) return Promise.resolve();  // no ATT equivalent on plain web
@@ -4212,79 +4162,80 @@ function cineSelectGender(gender, el) {
 // Phase 1 / showcase are non-interactive except their own dedicated buttons.
 function cineNoop() {}
 
-// ---- End of Phase 2 (step 15) — sign-up (hard gate), then the tail:
-// splash -> trial-reminder -> paywall (X declines to a one-time discount
-// screen) -> real finish (store completion, land on Scan). ----
+// ---- End of Phase 2 (step 12) — screen 13 (paywall) then, only if the
+// user declines it, screen 14 (one-time offer). Screen 13 deliberately
+// REUSES the existing #screen-paywall via showPaywallNow() rather than
+// rebuilding the reference's paywall layout, so the History tab's
+// upgradeNow() and onboarding keep sharing exactly one paywall. ----
+
+// Reference-mockup values. Not a confirmed pricing decision — change here.
+const OFFER_PCT       = 78;
+const OFFER_WAS       = 'THB 2,999.00';
+const OFFER_NOW       = 'THB 699.00/year';
+
+// True only while the paywall was opened by onboarding. upgradeNow() (History
+// tab) shows the same screen and must keep its own close-only behaviour
+// instead of being pulled into the onboarding finish/offer routing.
+let _paywallOnboardingTail = false;
+
 function cineFinishPhase2() {
   _cineClearTimers();
-  // Already signed in (e.g. resumed mid-onboarding with a live session) —
-  // the hard-gate prompt below would be pointless, skip straight to the tail.
-  if (AUTH.signedIn()) { cineOnboardingTailResume(); return; }
-  // Exact spec copy for screen 17, shown via the existing reusable
-  // signup-prompt-overlay — "Get Started" label, "Maybe later" hidden
-  // entirely (hard gate, no bypass), routed to its own destination/
-  // callback so it resumes the tail on success instead of the overlay's
-  // normal no-op default.
-  showSignupPrompt(
-    'Save your progress.',
-    "Create an account so your plan and practice history are here when you come back.",
-    null,
-    'Get Started',
-    true,
-    'onboarding-tail',
-    () => cineOnboardingTailResume()
-  );
-}
-
-// Entry point for the post-sign-up tail. Called directly right after a
-// normal email/password signup, and also from AUTH's
-// _navigate('onboarding-tail') case (services/auth.js) for the OAuth
-// redirect-reload path, where the original closure above is lost.
-function cineOnboardingTailResume() {
-  cineShowSplash();
-}
-
-function cineShowSplash() { _replaceActiveScreen('splash'); }
-function cineSplashContinue() { cineShowTrialReminder(); }
-
-function cineShowTrialReminder() { _replaceActiveScreen('trial-reminder'); }
-function cineTrialReminderContinue() {
   ensureTrialStarted();
+  // The paywall and offer are .screen overlays inside #app, which sits BELOW
+  // #cine-onboarding (z-index 1000, opaque background). Leaving the
+  // onboarding overlay up here makes them go .active while staying
+  // completely invisible behind step 12 — so hide it before handing off.
+  cineHideOverlay();
   _paywallOnboardingTail = true;
   showPaywallNow();
 }
 
-// Only true while the paywall was reached via this onboarding tail — the
-// History tab's upgradeNow() also shows the same paywall screen, and must
-// keep its original (mock, close-only) behavior rather than being pulled
-// into onboarding's finish/discount flow.
-let _paywallOnboardingTail = false;
+// Hides the onboarding overlay outright (no fade) — used when handing off to
+// a .screen overlay that would otherwise be covered by it.
+function cineHideOverlay() {
+  const overlay = document.getElementById('cine-onboarding');
+  if (overlay) {
+    overlay.setAttribute('hidden', '');
+    overlay.classList.remove('cine-out');
+  }
+}
 
 function cinePaywallContinue() {
   if (!_paywallOnboardingTail) { closePaywall(); return; }
   _paywallOnboardingTail = false;
+  closePaywall();
   cineFinishOnboardingLanding();
 }
+
+// Declining the paywall is the ONLY route to screen 14. Shown once ever —
+// after that, declining just finishes onboarding.
 function cinePaywallDecline() {
   if (!_paywallOnboardingTail) { closePaywall(); return; }
-  if (localStorage.getItem('zelo_decline_discount_shown')) {
+  if (localStorage.getItem('zelo_offer_shown')) {
     _paywallOnboardingTail = false;
     closePaywall();
     cineFinishOnboardingLanding();
     return;
   }
-  localStorage.setItem('zelo_decline_discount_shown', '1');
+  localStorage.setItem('zelo_offer_shown', '1');
   closePaywall();
-  _replaceActiveScreen('discount');
-}
-function cineDiscountContinue() {
-  _paywallOnboardingTail = false;
-  cineFinishOnboardingLanding();
+  cineShowOffer();
 }
 
-// The real finish — only reached once sign-up + the whole splash ->
-// trial-reminder -> paywall(/discount) sequence has resolved, not right
-// after step 15 the way the old 5-screen flow used to land on Scan.
+function cineShowOffer() {
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('cine-offer-pct',  String(OFFER_PCT));
+  set('cine-offer-pct2', String(OFFER_PCT));
+  set('cine-offer-was',  OFFER_WAS);
+  set('cine-offer-now',  OFFER_NOW);
+  _replaceActiveScreen('offer');
+}
+
+function cineOfferClaim() { _paywallOnboardingTail = false; cineFinishOnboardingLanding(); }
+function cineOfferClose() { _paywallOnboardingTail = false; cineFinishOnboardingLanding(); }
+
+// The real finish — only reached once the paywall (and, if shown, the
+// one-time offer) has resolved.
 function cineFinishOnboardingLanding() {
   localStorage.setItem('zelo_onboarding_done', '1');
   const overlay = document.getElementById('cine-onboarding');
@@ -4298,21 +4249,11 @@ function cineFinishOnboardingLanding() {
   if (state.activeTab !== 'assistant') showTab('assistant');
 }
 
-// X-skip (top-right, any dot-stepper screen) bypasses the entire tail —
-// sign-up, splash, trial-reminder, paywall, all of it — lands straight on
-// Scan, same as before.
+// Kept as the single "bail out of onboarding entirely" path. No screen in the
+// current reference flow exposes it, but tour/debug entry points still call it.
 function finishOnboardingNoPrompt() {
   _cineClearTimers();
-  localStorage.setItem('zelo_onboarding_done', '1');
-  const overlay = document.getElementById('cine-onboarding');
-  if (overlay) {
-    overlay.classList.add('cine-out');
-    setTimeout(() => {
-      overlay.setAttribute('hidden', '');
-      overlay.classList.remove('cine-out');
-    }, 360);
-  }
-  if (state.activeTab !== 'assistant') showTab('assistant');
+  cineFinishOnboardingLanding();
 }
 
 
@@ -4373,29 +4314,12 @@ function showHomeModePopup() {
   if (el) el.hidden = false;
 }
 
-// Step 6 entrance — the popup's visibility itself is handled generically in
-// cineGoTo() (n === 6), this just resets any stale selection state.
-function cineRunPartnerEntrance() {
-  document.querySelectorAll('.home-mode-card-btn').forEach(c => c.classList.remove('selected'));
-}
-
-// Onboarding step 6 (King/Queen/Both) reuses this exact popup+handler
-// rather than a duplicated screen — see cineRunPartnerEntrance() and the
-// data-screen="6" gap in index.html. Mid-onboarding, selecting just
-// advances the dot-stepper instead of this function's normal standalone
-// Home-tab behavior (closing itself + touching the deck/signup prompt).
 function homeModeSelect(mode, el) {
   localStorage.setItem('zelo_practice_mode', mode);
   localStorage.setItem('zelo_mode_selected', '1');
   document.querySelectorAll('.home-mode-card-btn').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
   navigator.vibrate?.(4);
-
-  const onboardingOverlay = document.getElementById('cine-onboarding');
-  if (onboardingOverlay && !onboardingOverlay.hidden && cineStep === 6) {
-    cineGoTo(7);
-    return;
-  }
 
   const popup = document.getElementById('home-mode-popup');
   if (popup) popup.hidden = true;
