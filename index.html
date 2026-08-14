@@ -1134,8 +1134,40 @@
           </div>
         </section>
 
-        <!-- ============ Step 2 — Be honest (single-select) ============ -->
+        <!-- ============ Step 2 — Choose your sex (single-select) ============ -->
         <section class="cine-screen cine-screen--q" data-screen="2">
+          <div class="cine-scroll">
+            <img class="cine-gender-icon" src="assets/icons/onb-gender-icon.png" alt="" />
+            <h2 class="cine-title">Choose <span class="hl">your sex</span></h2>
+            <p class="cine-lede">This helps personalize your experience.</p>
+            <div class="cine-opts" id="cine-opts-gender">
+              <button type="button" class="cine-opt" onclick="cinePickOne('gender','male',this)">
+                <span class="cine-opt-tile cine-opt-tile--round">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="6.5"/><line x1="14.5" y1="9.5" x2="20.5" y2="3.5"/><polyline points="15.5 3.5 20.5 3.5 20.5 8.5"/></svg>
+                </span>
+                <span class="cine-opt-label">Male</span>
+                <span class="cine-radio"></span>
+              </button>
+              <button type="button" class="cine-opt" onclick="cinePickOne('gender','female',this)">
+                <span class="cine-opt-tile cine-opt-tile--round">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6.5"/><line x1="12" y1="15.5" x2="12" y2="21.5"/><line x1="8.8" y1="18.5" x2="15.2" y2="18.5"/></svg>
+                </span>
+                <span class="cine-opt-label">Female</span>
+                <span class="cine-radio"></span>
+              </button>
+              <button type="button" class="cine-opt" onclick="cinePickOne('gender','other',this)">
+                <span class="cine-opt-tile cine-opt-tile--round">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                </span>
+                <span class="cine-opt-label">Other</span>
+                <span class="cine-radio"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ Step 3 — Be honest (single-select) ============ -->
+        <section class="cine-screen cine-screen--q" data-screen="3">
           <div class="cine-scroll">
             <h2 class="cine-title">Be <span class="hl">honest.</span></h2>
             <p class="cine-lede">How often do you overthink a text before sending it?</p>
@@ -1152,8 +1184,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 3 — What should Zelo help with (multi-select) ============ -->
-        <section class="cine-screen cine-screen--q" data-screen="3">
+        <!-- ============ Step 4 — What should Zelo help with (multi-select) ============ -->
+        <section class="cine-screen cine-screen--q" data-screen="4">
           <div class="cine-scroll">
             <h2 class="cine-title">What would you like<br>Zelo to <span class="hl">help</span> with?</h2>
             <p class="cine-lede">Pick any that apply</p>
@@ -1167,8 +1199,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 4 — Tone (single-select, with descriptions) ============ -->
-        <section class="cine-screen cine-screen--q" data-screen="4">
+        <!-- ============ Step 5 — Tone (single-select, with descriptions) ============ -->
+        <section class="cine-screen cine-screen--q" data-screen="5">
           <div class="cine-scroll">
             <h2 class="cine-title">Let's make Zelo<br>sound like <span class="hl">you.</span></h2>
             <p class="cine-lede">Which tone fits you best?</p>
@@ -1192,8 +1224,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 5 — Thanks for trusting us ============ -->
-        <section class="cine-screen cine-screen--hero" data-screen="5">
+        <!-- ============ Step 6 — Thanks for trusting us ============ -->
+        <section class="cine-screen cine-screen--hero" data-screen="6">
           <div class="cine-scroll">
             <img class="cine-hero-img" src="assets/icons/onb-thanks.png" alt="" />
             <h2 class="cine-title">Thanks for<br><span class="hl">trusting us!</span></h2>
@@ -1208,8 +1240,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 6 — See what you can achieve ============ -->
-        <section class="cine-screen cine-screen--hero" data-screen="6">
+        <!-- ============ Step 7 — See what you can achieve ============ -->
+        <section class="cine-screen cine-screen--hero" data-screen="7">
           <div class="cine-scroll">
             <img class="cine-hero-img" src="assets/icons/onb-achieve.png" alt="" />
             <h2 class="cine-title">See what you can<br><span class="hl">achieve.</span></h2>
@@ -1231,11 +1263,11 @@
           </div>
         </section>
 
-        <!-- ============ Step 7 — Notification permission ============
+        <!-- ============ Step 8 — Notification permission ============
              The card below is an illustrative preview of the system prompt
              (matching the reference); Continue fires the REAL native dialog
              via requestNotifPermission() and auto-advances once answered. -->
-        <section class="cine-screen cine-screen--notif" data-screen="7">
+        <section class="cine-screen cine-screen--notif" data-screen="8">
           <div class="cine-scroll cine-scroll--center">
             <h2 class="cine-title cine-title--plain">Stay on track with Zelo notifications</h2>
             <!-- No shared Continue on this screen (see CINE_STEPS[7]) — the
@@ -1254,8 +1286,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 8 — Setting everything up (auto-advances) ============ -->
-        <section class="cine-screen cine-screen--setup" data-screen="8">
+        <!-- ============ Step 9 — Setting everything up (auto-advances) ============ -->
+        <section class="cine-screen cine-screen--setup" data-screen="9">
           <div class="cine-scroll">
             <p class="cine-pct"><span id="cine-pct-num">1</span><span class="cine-pct-sym">%</span></p>
             <h2 class="cine-title cine-title--plain">We're setting everything up for you</h2>
@@ -1271,10 +1303,10 @@
           </div>
         </section>
 
-        <!-- ============ Step 9 — Your Zelo Plan is ready (static/decorative) ============
+        <!-- ============ Step 10 — Your Zelo Plan is ready (static/decorative) ============
              Values here are illustrative placeholders — real personalization
              logic is deliberately NOT wired up at this stage. -->
-        <section class="cine-screen cine-screen--hero" data-screen="9">
+        <section class="cine-screen cine-screen--hero" data-screen="10">
           <div class="cine-scroll">
             <img class="cine-hero-img cine-hero-img--sm" src="assets/icons/onb-plan.png" alt="" />
             <h2 class="cine-title">Your Zelo Plan<br><span class="hl">is ready.</span></h2>
@@ -1302,11 +1334,11 @@
           </div>
         </section>
 
-        <!-- ============ Step 10 — Save your progress ============
+        <!-- ============ Step 11 — Save your progress ============
              The three provider buttons are deliberately inert for now: they
              advance the flow exactly like Continue and never start a real
              account-creation attempt (see cineAuthStub()). -->
-        <section class="cine-screen cine-screen--hero" data-screen="10">
+        <section class="cine-screen cine-screen--hero" data-screen="11">
           <div class="cine-scroll">
             <img class="cine-hero-img cine-hero-img--sm" src="assets/icons/onb-cloud.png" alt="" />
             <h2 class="cine-title cine-title--plain">Save your progress</h2>
@@ -1332,8 +1364,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 11 — Try Zelo for free ============ -->
-        <section class="cine-screen cine-screen--hero" data-screen="11">
+        <!-- ============ Step 12 — Try Zelo for free ============ -->
+        <section class="cine-screen cine-screen--hero" data-screen="12">
           <div class="cine-scroll">
             <h2 class="cine-title">We want you to try<br><span class="hl">Zelo</span> for free</h2>
             <img class="cine-trial-phone" src="assets/icons/onb-trial-phone.png" alt="" />
@@ -1341,8 +1373,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 12 — Trial reminder ============ -->
-        <section class="cine-screen cine-screen--hero" data-screen="12">
+        <!-- ============ Step 13 — Trial reminder ============ -->
+        <section class="cine-screen cine-screen--hero" data-screen="13">
           <div class="cine-scroll">
             <h2 class="cine-title">We'll send a <span class="hl">reminder</span><br>before your trial ends</h2>
             <p class="cine-lede">As long as notifications are enabled</p>
@@ -1361,16 +1393,21 @@
 
         <button class="cine-next cine-hidden" id="cine-next" onclick="cineNext()">Next</button>
 
-        <!-- Age wheel sheet (step 1) — hosts the EXISTING age-roller
-             component (AUTH.initAgeRoller / AUTH.readAge, services/auth.js),
-             same one the post-signup setup screen uses. Not a rebuilt picker. -->
-        <div class="cine-sheet" id="cine-age-sheet" hidden>
+        <!-- Birth-date wheel sheet (step 1) — 3-column native-style Month /
+             Day / Year picker (cineInitDobRoller() / cineReadDob(),
+             script.js). Independent of the post-signup setup screen's own
+             single-column #age-roller (AUTH.initAgeRoller/readAge, services/
+             auth.js) — that one is untouched. Backing is translucent, not an
+             opaque card, so the screen behind stays visible through it. -->
+        <div class="cine-sheet cine-sheet--dob" id="cine-age-sheet" hidden>
           <div class="cine-sheet-scrim" onclick="cineCloseAgeSheet()"></div>
-          <div class="cine-sheet-card">
-            <p class="cine-sheet-title">How old are you?</p>
-            <div class="age-roller-wrap">
-              <div class="age-roller-highlight" aria-hidden="true"></div>
-              <div class="age-roller" id="cine-age-roller"></div>
+          <div class="cine-sheet-card cine-sheet-card--dob">
+            <p class="cine-sheet-title">When were you born?</p>
+            <div class="dob-roller-wrap">
+              <div class="dob-roller-highlight" aria-hidden="true"></div>
+              <div class="dob-roller" id="cine-dob-month"></div>
+              <div class="dob-roller" id="cine-dob-day"></div>
+              <div class="dob-roller" id="cine-dob-year"></div>
             </div>
             <p class="age-warn" id="cine-age-warn"></p>
             <button type="button" class="cine-btn" onclick="cineConfirmAge()">Done</button>
@@ -1512,7 +1549,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         </button>
         <div class="cine-trial-hero">
-          <img class="cine-trial-hero-img" src="assets/icons/onb-trial-start.png" alt="" />
+          <img class="cine-trial-hero-img" id="cine-trial-hero-img" src="assets/icons/onb-trial-start-male.png" alt="" />
           <h1 class="cine-trial-headline">Start your <span class="hl">3-day FREE</span><br>trial to continue</h1>
         </div>
         <div class="cine-trial-sheet">

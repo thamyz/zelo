@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-14 21:45";
+const BUILD_STAMP = "2026-08-14 23:10";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -95,7 +95,7 @@ window.addEventListener('DOMContentLoaded', () => {
   localStorage.removeItem('zelo_mode_selected');
   localStorage.removeItem('zelo_age_range');
   localStorage.removeItem('zelo_display_name');
-  localStorage.removeItem('zelo_gender');
+  localStorage.removeItem('zelo_onb_gender');
   localStorage.removeItem('zelo_user_age');
   localStorage.removeItem('zelo_age_pool');
   localStorage.removeItem('zelo_birthdate');
@@ -3325,15 +3325,15 @@ function copyReplyFromCard(style, btn) {
 //   SHOWCASE (Cal AI style landing, auto-shown right after Phase 1):
 //     phone mockup + headline + dark "Get Started" CTA + "Sign in" link.
 //     No dots, no skip — tapping Get Started begins Phase 2.
-//   PHASE 2 (Next + X-to-skip, 15 dot-stepper screens — see CINE_STEPS):
-//     1 name · 2 gender · 3 birth date · 4 photo · 5 icebreaker ·
-//     [spec referral-source screen would insert here, parked] ·
-//     6 practice partner (King/Queen/Both popup) · 7 swipe -> match ·
-//     8-11 four personalization questions · 12 thanks/transition ·
-//     13 ATT · 14 notifications · 15 Zelo Plan (computes + sets real
-//     default tone pair / practice mode)  ->  cineFinishPhase2() then runs
-//     the tail: sign-up (hard gate) -> splash -> trial-reminder -> paywall
-//     (X declines to a one-time discount screen) -> lands on Scan.
+//   PHASE 2 (Next + back, 13 dot-stepper screens — see CINE_STEPS):
+//     1 name/photo/birth date · 2 gender · 3 be honest (overthink) ·
+//     4 help with (multi) · 5 tone · 6 thanks/transition ·
+//     7 see what you can achieve · 8 notifications · 9 setting up (auto) ·
+//     10 Zelo Plan (decorative) · 11 save your progress (inert providers) ·
+//     12 try for free · 13 trial reminder  ->  cineFinishPhase2() then hands
+//     off to #screen-trial-start (own overlay, not #cine-onboarding) ->
+//     Continue finishes onboarding straight onto Scan; back on that screen
+//     shows the one-time offer screen instead, which also finishes onto Scan.
 // Every screen fits the viewport (no scroll). App stays pink throughout —
 // no theme/color picker anywhere.
 // Legacy 3-slide onboarding + 12-step spotlight tour live in
@@ -3342,8 +3342,8 @@ function copyReplyFromCard(style, btn) {
 
 let threadEditMode = false;
 
-const CINE_LAST = 12;          // last Phase 2 step that lives in #cine-onboarding
-let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-12 = Phase 2 screens
+const CINE_LAST = 13;          // last Phase 2 step that lives in #cine-onboarding
+let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-13 = Phase 2 screens
 
 // Per-step config for the shared chrome (#cine-next label + gating +
 // visibility, back button, progress) and each screen's entrance hook. Head/
@@ -3355,28 +3355,31 @@ let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-12 = Phase 2 screen
 //   entrance     — run on entering the step
 //   noChrome     — hide back + progress (used by the auto-running setup step)
 //   noCta        — screen has no shared bottom CTA at all
-// Screens 13 (paywall) and 14 (one-time offer) are NOT in this table: they're
-// standalone .screen overlays reached after step 12 — see cineFinishPhase2().
+// Screens (trial-start) and (one-time offer) are NOT in this table: they're
+// standalone .screen overlays reached after step 13 — see cineFinishPhase2().
 const CINE_STEPS = {
   1:  { label: 'Continue', enabledFn: () => cineIntroReady(), entrance: cineRunIntroEntrance },
-  2:  { label: 'Continue', enabledFn: () => !!cineAnswers.overthink },
-  3:  { label: 'Continue', enabledFn: () => (cineAnswers.help || []).length > 0 },
-  4:  { label: 'Continue', enabledFn: () => !!cineAnswers.tone },
-  5:  { label: 'Continue' },
+  2:  { label: 'Continue', enabledFn: () => !!cineAnswers.gender },
+  3:  { label: 'Continue', enabledFn: () => !!cineAnswers.overthink },
+  4:  { label: 'Continue', enabledFn: () => (cineAnswers.help || []).length > 0 },
+  5:  { label: 'Continue', enabledFn: () => !!cineAnswers.tone },
   6:  { label: 'Continue' },
-  7:  { noCta: true },                              // notifications — no shared CTA, see cineRequestNotifAndAdvance()
-  8:  { noCta: true, noChrome: true, entrance: cineRunSetupEntrance },  // auto-advances
-  9:  { label: 'Continue' },
+  7:  { label: 'Continue' },
+  8:  { noCta: true },                              // notifications — no shared CTA, see cineRequestNotifAndAdvance()
+  9:  { noCta: true, noChrome: true, entrance: cineRunSetupEntrance },  // auto-advances
   10: { label: 'Continue' },
-  11: { label: 'Try for FREE' },
-  12: { label: 'Continue for FREE', dark: true, arrow: true },
+  11: { label: 'Continue' },
+  12: { label: 'Try for FREE' },
+  13: { label: 'Continue for FREE', dark: true, arrow: true },
 };
 
 // Answers collected during onboarding. Kept in memory + mirrored to
 // localStorage so back-navigation restores the user's picks; deliberately NOT
 // wired into reply-tone/practice-mode defaults — the Zelo Plan screen is
-// decorative for now and real personalization is a separate task.
-let cineAnswers = { overthink: null, help: [], tone: null };
+// decorative for now and real personalization is a separate task. `gender`
+// IS wired to one real thing though — see cineTrialHeroSrc() — the trial-start
+// hero photo picks its male/female crop from this answer.
+let cineAnswers = { gender: null, overthink: null, help: [], tone: null };
 
 let _cineTimers = [];
 
@@ -3614,7 +3617,7 @@ function cineNext() {
   cineGoTo(cineStep + 1);
 }
 
-// Step 7 (notifications) has no shared bottom CTA (CINE_STEPS[7].noCta) —
+// Step 8 (notifications) has no shared bottom CTA (CINE_STEPS[8].noCta) —
 // the reference has no visible Continue on this screen at all, just the
 // mockup permission dialog itself. Tapping the mockup's "Allow" is what
 // fires the REAL native permission prompt, then advances automatically the
@@ -3623,7 +3626,7 @@ function cineNext() {
 // the real dialog is up.
 function cineRequestNotifAndAdvance() {
   const stepWhenTapped = cineStep;
-  if (stepWhenTapped !== 7) return;
+  if (stepWhenTapped !== 8) return;
   const dialog = document.querySelector('.cine-sysprompt');
   dialog?.classList.add('cine-sysprompt--busy');
   Promise.resolve(requestNotifPermission()).finally(() => {
@@ -3717,16 +3720,136 @@ function cineRenderPhoto() {
   if (del) del.hidden = !data;
 }
 
-// ---- age (reuses the existing roller component from services/auth.js) ----
+// ---- birth date — 3-column Month/Day/Year wheel, independent of the
+// post-signup setup screen's own single-column #age-roller (that one still
+// uses AUTH.initAgeRoller/readAge, services/auth.js, untouched). Stores the
+// full date (zelo_birthdate, 'YYYY-MM-DD') AND the computed integer age
+// (zelo_user_age) — every existing age-based reader (matching, filters,
+// the profile row) keeps reading zelo_user_age exactly as before. ----
+const DOB_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOB_YEAR_SPAN = 100; // oldest selectable birth year = today - this many years
+
+function _dobDaysInMonth(month, year) {
+  return new Date(year, month, 0).getDate(); // month is 1-based; day 0 of next month = last day of this one
+}
+
+function _dobBuildColumn(rollerId, items, defaultIndex) {
+  const roller = document.getElementById(rollerId);
+  if (!roller) return;
+  roller.innerHTML = '';
+  for (let i = 0; i < 2; i++) {
+    const g = document.createElement('div');
+    g.className = 'age-roller-item age-roller-ghost';
+    roller.appendChild(g);
+  }
+  items.forEach(txt => {
+    const item = document.createElement('div');
+    item.className = 'age-roller-item';
+    item.textContent = txt;
+    roller.appendChild(item);
+  });
+  for (let i = 0; i < 2; i++) {
+    const g = document.createElement('div');
+    g.className = 'age-roller-item age-roller-ghost';
+    roller.appendChild(g);
+  }
+  roller.scrollTop = Math.max(0, defaultIndex || 0) * 44;
+}
+
+function _dobColumnIndex(rollerId) {
+  const r = document.getElementById(rollerId);
+  if (!r) return 0;
+  return Math.max(0, Math.round(r.scrollTop / 44));
+}
+
+function cineReadDob() {
+  const yearMin = new Date().getFullYear() - DOB_YEAR_SPAN;
+  return {
+    month: _dobColumnIndex('cine-dob-month') + 1,
+    day:   _dobColumnIndex('cine-dob-day') + 1,
+    year:  yearMin + _dobColumnIndex('cine-dob-year'),
+  };
+}
+
+function _cineComputeAge(year, month, day) {
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  const beforeBirthdayThisYear = (today.getMonth() + 1 < month) ||
+    (today.getMonth() + 1 === month && today.getDate() < day);
+  if (beforeBirthdayThisYear) age--;
+  return Math.max(0, age);
+}
+
+function _dobRefreshWarn() {
+  const { year, month, day } = cineReadDob();
+  const warnEl = document.getElementById('cine-age-warn');
+  if (warnEl) warnEl.textContent = _cineComputeAge(year, month, day) < 18 ? 'Zelo is for users 18 and older.' : '';
+}
+
+// Month/Year changes can change how many days exist (Feb 28 vs 29, 30 vs 31)
+// — rebuild the Day column only when the count actually changes, preserving
+// whatever day was selected (clamped into range) so spinning Month/Year
+// doesn't silently reset Day back to the 1st.
+let _dobRebuildTimer = null;
+function _dobOnMonthYearScroll() {
+  clearTimeout(_dobRebuildTimer);
+  _dobRebuildTimer = setTimeout(() => {
+    const month = _dobColumnIndex('cine-dob-month') + 1;
+    const yearMin = new Date().getFullYear() - DOB_YEAR_SPAN;
+    const year = yearMin + _dobColumnIndex('cine-dob-year');
+    const dayEl = document.getElementById('cine-dob-day');
+    const currentDay = _dobColumnIndex('cine-dob-day') + 1;
+    const newCount = _dobDaysInMonth(month, year);
+    const existingCount = dayEl.querySelectorAll('.age-roller-item:not(.age-roller-ghost)').length;
+    if (newCount !== existingCount) {
+      _dobBuildColumn('cine-dob-day', Array.from({ length: newCount }, (_, i) => String(i + 1)), Math.min(currentDay, newCount) - 1);
+    }
+    _dobRefreshWarn();
+  }, 90);
+}
+function _dobOnDayScroll() {
+  clearTimeout(_dobRebuildTimer);
+  _dobRebuildTimer = setTimeout(_dobRefreshWarn, 90);
+}
+
+function cineInitDobRoller() {
+  const stored = localStorage.getItem('zelo_birthdate'); // 'YYYY-MM-DD'
+  const today = new Date();
+  let defYear = today.getFullYear() - 22, defMonth = 6, defDay = 15;
+  if (stored) {
+    const [y, m, d] = stored.split('-').map(Number);
+    if (y) defYear = y;
+    if (m) defMonth = m;
+    if (d) defDay = d;
+  }
+
+  const yearMin = today.getFullYear() - DOB_YEAR_SPAN;
+  const yearMax = today.getFullYear();
+
+  _dobBuildColumn('cine-dob-month', DOB_MONTHS, defMonth - 1);
+  const dayCount = _dobDaysInMonth(defMonth, defYear);
+  _dobBuildColumn('cine-dob-day', Array.from({ length: dayCount }, (_, i) => String(i + 1)), Math.min(defDay, dayCount) - 1);
+  const years = [];
+  for (let y = yearMin; y <= yearMax; y++) years.push(String(y));
+  _dobBuildColumn('cine-dob-year', years, defYear - yearMin);
+
+  const monthEl = document.getElementById('cine-dob-month');
+  const dayEl   = document.getElementById('cine-dob-day');
+  const yearEl  = document.getElementById('cine-dob-year');
+  monthEl.removeEventListener('scroll', _dobOnMonthYearScroll);
+  yearEl.removeEventListener('scroll', _dobOnMonthYearScroll);
+  dayEl.removeEventListener('scroll', _dobOnDayScroll);
+  monthEl.addEventListener('scroll', _dobOnMonthYearScroll, { passive: true });
+  yearEl.addEventListener('scroll', _dobOnMonthYearScroll, { passive: true });
+  dayEl.addEventListener('scroll', _dobOnDayScroll, { passive: true });
+  _dobRefreshWarn();
+}
+
 function cineOpenAgeSheet() {
   const sheet = document.getElementById('cine-age-sheet');
   if (!sheet) return;
   sheet.hidden = false;
-  const current = parseInt(localStorage.getItem('zelo_user_age') || '', 10);
-  AUTH.initAgeRoller({
-    rollerId: 'cine-age-roller', warnId: 'cine-age-warn',
-    minAge: 18, maxAge: 60, defaultAge: Number.isFinite(current) ? current : 22
-  });
+  cineInitDobRoller();
 }
 
 function cineCloseAgeSheet() {
@@ -3735,7 +3858,9 @@ function cineCloseAgeSheet() {
 }
 
 function cineConfirmAge() {
-  const age = AUTH.readAge('cine-age-roller', 18);
+  const { year, month, day } = cineReadDob();
+  const age = _cineComputeAge(year, month, day);
+  localStorage.setItem('zelo_birthdate', `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
   localStorage.setItem('zelo_user_age', String(age));
   cineCloseAgeSheet();
   cineRenderAge();
@@ -3782,6 +3907,9 @@ function cinePickMany(field, value, el) {
 // Re-paints the selected state from cineAnswers — needed because navigating
 // back re-enters a screen whose buttons still carry (or have lost) .selected.
 function cineRestoreAnswers() {
+  document.querySelectorAll('#cine-opts-gender .cine-opt').forEach((b, i) => {
+    b.classList.toggle('selected', ['male','female','other'][i] === cineAnswers.gender);
+  });
   document.querySelectorAll('#cine-opts-overthink .cine-opt').forEach((b, i) => {
     b.classList.toggle('selected', ['almost-never','sometimes','pretty-often','way-too-often'][i] === cineAnswers.overthink);
   });
@@ -3795,7 +3923,7 @@ function cineRestoreAnswers() {
 }
 
 // ================================================================
-// STEP 8 — "setting everything up" (auto-advances, no CTA)
+// STEP 9 — "setting everything up" (auto-advances, no CTA)
 // ================================================================
 
 const CINE_SETUP_MS = 5200;
@@ -3827,7 +3955,7 @@ function cineRunSetupEntrance() {
 }
 
 // ================================================================
-// STEP 10 — provider buttons are intentionally inert for now
+// STEP 11 — provider buttons are intentionally inert for now
 // ================================================================
 
 // Apple / Google / email all advance exactly like Continue and never start a
@@ -4142,16 +4270,6 @@ function requestTrackingPermission() {
     .catch(() => {});
 }
 
-// ---- Step 2 — gender (standalone screen; birth date is its own step 3
-// now, see cineBirthdateValid()/cineCommitBirthdate() above) ----
-function cineSelectGender(gender, el) {
-  localStorage.setItem('zelo_gender', gender);
-  document.querySelectorAll('.cine-gender-pill').forEach(c => c.classList.remove('selected'));
-  if (el) el.classList.add('selected');
-  cineSetNextEnabled(true);
-  navigator.vibrate?.(4);
-}
-
 // Phase 1 / showcase are non-interactive except their own dedicated buttons.
 function cineNoop() {}
 
@@ -4198,6 +4316,11 @@ let _cineTrialPlan = 'annual';
 function cineShowTrialStart() {
   _cineTrialPlan = 'annual';
   cineSelectTrialPlan('annual');
+  const img = document.getElementById('cine-trial-hero-img');
+  if (img) {
+    const gender = localStorage.getItem('zelo_onb_gender');
+    img.src = gender === 'female' ? 'assets/icons/onb-trial-start-female.png' : 'assets/icons/onb-trial-start-male.png';
+  }
   _replaceActiveScreen('trial-start');
 }
 
