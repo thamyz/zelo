@@ -1023,7 +1023,7 @@
              in the sequence. -->
         <div class="cine-topbar cine-hidden" id="cine-topbar">
           <button class="cine-back" id="cine-back" onclick="cineBack(event)" aria-label="Back">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
             </svg>
           </button>
@@ -1108,7 +1108,7 @@
               </span>
               <span class="cine-field-body">
                 <label class="cine-field-label" for="cine-name-input">Your name</label>
-                <input type="text" class="cine-field-input" id="cine-name-input" placeholder="Your name"
+                <input type="text" class="cine-field-input" id="cine-name-input" placeholder="e.g. Alex"
                        maxlength="30" autocomplete="off" enterkeyhint="done" oninput="cineNameInput()" />
               </span>
               <span class="cine-field-check" id="cine-name-check" hidden>
@@ -1238,13 +1238,18 @@
         <section class="cine-screen cine-screen--notif" data-screen="7">
           <div class="cine-scroll cine-scroll--center">
             <h2 class="cine-title cine-title--plain">Stay on track with Zelo notifications</h2>
-            <div class="cine-sysprompt" aria-hidden="true">
-              <p class="cine-sysprompt-txt">"Zelo" would like to send you Notifications</p>
+            <!-- No shared Continue on this screen (see CINE_STEPS[7]) — the
+                 reference has no visible CTA at all, just this mockup of the
+                 dialog. Tapping "Allow" here is the real trigger for the
+                 actual native permission request (cineRequestNotifAndAdvance),
+                 not decoration. -->
+            <div class="cine-sysprompt">
+              <p class="cine-sysprompt-txt">Zelo would like to send you Notifications</p>
               <div class="cine-sysprompt-btns">
-                <span class="cine-sysprompt-btn">Don't Allow</span>
-                <span class="cine-sysprompt-btn cine-sysprompt-btn--go">Allow</span>
+                <button type="button" class="cine-sysprompt-btn" onclick="cineRequestNotifAndAdvance()">Don't Allow</button>
+                <button type="button" class="cine-sysprompt-btn cine-sysprompt-btn--go" onclick="cineRequestNotifAndAdvance()">Allow</button>
               </div>
-              <span class="cine-sysprompt-hand">👆</span>
+              <span class="cine-sysprompt-hand" aria-hidden="true">👆</span>
             </div>
           </div>
         </section>
@@ -1527,7 +1532,7 @@
             </span>
             <span class="cine-trial-plan-price cine-trial-plan-price--muted">THB 399.00/mo</span>
           </button>
-          <button type="button" class="cine-btn" onclick="cineTrialStartContinue()">Continue</button>
+          <button type="button" class="cine-btn cine-btn--dark" onclick="cineTrialStartContinue()">Continue</button>
           <p class="cine-trial-legal" id="cine-trial-legal">3 days free, then THB 999.00 per year.<br>Billed annually and renews automatically unless canceled in the App Store.</p>
           <p class="cine-offer-legal">Terms &middot; Privacy &middot; Restore</p>
         </div>
@@ -1558,7 +1563,7 @@
           <p class="cine-offer-sub"><span id="cine-offer-pct2">78</span>% less than our monthly rate!</p>
         </div>
         <div class="cine-offer-foot">
-          <button type="button" class="cine-btn" onclick="cineOfferClaim()">Claim your free trial now</button>
+          <button type="button" class="cine-btn cine-btn--dark" onclick="cineOfferClaim()">Claim your free trial now</button>
           <p class="cine-tick"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>No Commitment &ndash; Cancel Anytime</p>
           <p class="cine-offer-legal">Terms &middot; Privacy &middot; Restore</p>
         </div>

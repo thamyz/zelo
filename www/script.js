@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-14 17:35";
+const BUILD_STAMP = "2026-08-14 18:15";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -3364,12 +3364,12 @@ const CINE_STEPS = {
   4:  { label: 'Continue', enabledFn: () => !!cineAnswers.tone },
   5:  { label: 'Continue' },
   6:  { label: 'Continue' },
-  7:  { label: 'Continue' },                       // notifications — fires the real native dialog in cineNext()
+  7:  { noCta: true },                              // notifications — no shared CTA, see cineRequestNotifAndAdvance()
   8:  { noCta: true, noChrome: true, entrance: cineRunSetupEntrance },  // auto-advances
   9:  { label: 'Continue' },
   10: { label: 'Continue' },
   11: { label: 'Try for FREE' },
-  12: { label: 'Continue for FREE' },
+  12: { label: 'Continue for FREE', dark: true, arrow: true },
 };
 
 // Answers collected during onboarding. Kept in memory + mirrored to
@@ -3577,7 +3577,12 @@ function cineGoTo(n) {
     nextBtn.classList.toggle('cine-hidden', !!step.noCta);
     nextBtn.disabled = false;
     nextBtn.classList.remove('cine-next--disabled');
-    nextBtn.textContent = step.label || 'Continue';
+    // Pink is the progression colour used everywhere else; a small number of
+    // trial/subscription-confirmation screens use black in the reference
+    // instead (matches the same distinction real App Store onboarding flows
+    // make between "keep going" and "you're now committing to something").
+    nextBtn.classList.toggle('cine-next--dark', !!step.dark);
+    nextBtn.innerHTML = (step.label || 'Continue') + (step.arrow ? ' <span class="cine-next-arrow">&rarr;</span>' : '');
   }
 
   // Re-paint any previously-given answers before evaluating the gate, so a
@@ -3603,25 +3608,29 @@ function cineNext() {
   const btn = document.getElementById('cine-next');
   if (btn?.disabled) return;
 
-  // Step 7 (notifications): the CTA fires the REAL native permission prompt,
-  // then advances automatically the instant it's answered (granted OR
-  // denied) — no separate tap needed. The button stays disabled for that
-  // brief async gap only, to prevent a double-tap while the dialog is up.
-  if (cineStep === 7) {
-    const stepWhenTapped = cineStep;
-    if (btn) { btn.disabled = true; btn.classList.add('cine-next--disabled'); }
-    Promise.resolve(requestNotifPermission()).finally(() => {
-      if (btn) { btn.disabled = false; btn.classList.remove('cine-next--disabled'); }
-      if (cineStep !== stepWhenTapped) return; // navigated away while waiting
-      cineGoTo(stepWhenTapped + 1);
-    });
-    return;
-  }
-
   if (cineStep === 1) cineCommitIntro();
 
   if (cineStep >= CINE_LAST) { cineFinishPhase2(); return; }
   cineGoTo(cineStep + 1);
+}
+
+// Step 7 (notifications) has no shared bottom CTA (CINE_STEPS[7].noCta) —
+// the reference has no visible Continue on this screen at all, just the
+// mockup permission dialog itself. Tapping the mockup's "Allow" is what
+// fires the REAL native permission prompt, then advances automatically the
+// instant it's answered (granted OR denied). The mockup buttons are
+// disabled for that brief async gap only, to prevent a double-tap while
+// the real dialog is up.
+function cineRequestNotifAndAdvance() {
+  const stepWhenTapped = cineStep;
+  if (stepWhenTapped !== 7) return;
+  const dialog = document.querySelector('.cine-sysprompt');
+  dialog?.classList.add('cine-sysprompt--busy');
+  Promise.resolve(requestNotifPermission()).finally(() => {
+    dialog?.classList.remove('cine-sysprompt--busy');
+    if (cineStep !== stepWhenTapped) return; // navigated away while waiting
+    cineGoTo(stepWhenTapped + 1);
+  });
 }
 
 // Back — available from step 1 onward; step 1 goes back to the showcase
