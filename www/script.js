@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-14 16:05";
+const BUILD_STAMP = "2026-08-14 16:20";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -4191,16 +4191,15 @@ function cinePaywallContinue() {
   cineFinishOnboardingLanding();
 }
 
-// Declining the paywall is the ONLY route to screen 14. Shown once ever —
-// after that, declining just finishes onboarding.
+// Declining the paywall is the ONLY route to screen 14. Meant to be shown
+// once ever — after that, declining just finishes onboarding — but the
+// once-ever cap is disabled below (TESTING ONLY) so it can be re-triggered
+// as many times as needed while QA'ing the offer screen. Restore the
+// `if (localStorage.getItem('zelo_offer_shown')) { ... }` guard before
+// release; `zelo_offer_shown` is still written each time so flipping the
+// guard back on doesn't need any other change.
 function cinePaywallDecline() {
   if (!_paywallOnboardingTail) { closePaywall(); return; }
-  if (localStorage.getItem('zelo_offer_shown')) {
-    _paywallOnboardingTail = false;
-    closePaywall();
-    cineFinishOnboardingLanding();
-    return;
-  }
   localStorage.setItem('zelo_offer_shown', '1');
   closePaywall();
   cineShowOffer();
