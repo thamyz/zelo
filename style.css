@@ -6377,22 +6377,22 @@ a { text-decoration: none; color: inherit; }
   -webkit-tap-highlight-color: transparent;
 }
 .cine-back:active { transform: scale(0.92); }
-/* Segments are generated from CINE_LAST by cineBuildProgress() so the count
-   always matches the real number of steps. */
+/* Single continuous track + fill — width set from cineStep/CINE_LAST in
+   cineGoTo(), not a row of individual dashes. */
 .cine-progress {
   flex: 1 1 auto;
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
-.cine-prog-seg {
-  flex: 1 1 0;
   height: 4px;
   border-radius: 99px;
   background: #e7e0d9;
-  transition: background 0.25s ease;
+  overflow: hidden;
 }
-.cine-prog-seg.done { background: var(--accent); }
+.cine-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
 
 .cine-screen {
   position: absolute;

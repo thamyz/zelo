@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-14 15:10";
+const BUILD_STAMP = "2026-08-14 16:05";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -3538,20 +3538,6 @@ function cineRevealShowcaseReply() {
 
 // ---- PHASE 2 navigation ----
 
-// Builds the segmented progress bar once, one segment per tracked step, so
-// the segment count is derived from CINE_LAST and can never fall out of sync
-// with the step table the way the reference mockups do with each other.
-function cineBuildProgress() {
-  const bar = document.getElementById('cine-progress');
-  if (!bar || bar.childElementCount === CINE_LAST) return;
-  bar.innerHTML = '';
-  for (let i = 0; i < CINE_LAST; i++) {
-    const seg = document.createElement('span');
-    seg.className = 'cine-prog-seg';
-    bar.appendChild(seg);
-  }
-}
-
 function cineGoTo(n) {
   _cineClearTimers();
   cineStep = n;
@@ -3570,7 +3556,6 @@ function cineGoTo(n) {
   // timer having already run.
   document.getElementById('cine-preblack')?.classList.add('cine-preblack-out');
   cineSetChrome('phase2');
-  cineBuildProgress();
 
   const step = CINE_STEPS[n] || {};
 
@@ -3580,9 +3565,8 @@ function cineGoTo(n) {
   const topbar = document.getElementById('cine-topbar');
   if (topbar) topbar.classList.toggle('cine-hidden', !!step.noChrome);
 
-  document.querySelectorAll('.cine-prog-seg').forEach((seg, i) => {
-    seg.classList.toggle('done', i < n);
-  });
+  const fill = document.getElementById('cine-progress-fill');
+  if (fill) fill.style.width = Math.max(0, Math.min(100, (n / CINE_LAST) * 100)) + '%';
 
   document.querySelectorAll('.cine-screen').forEach(s => {
     s.classList.toggle('active', Number(s.dataset.screen) === n);
