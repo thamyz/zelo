@@ -1491,11 +1491,55 @@
 
 
       <!-- ============================================================
+           ONBOARDING SCREEN 13 — "Start your 3-day FREE trial to continue".
+           Built to match the reference mockup exactly instead of reusing
+           #screen-paywall's timeline/checklist layout below (that screen is
+           kept only for the History tab's upgradeNow() entry point — a
+           different, already-shipped feature — not for onboarding). The
+           hero photo is a real crop of the reference screenshot
+           (assets/icons/onb-trial-start.png, see design-refs/onboarding/
+           for the source); everything else here — headline, pricing card,
+           CTA — is real markup, not baked into an image. Prices are copied
+           verbatim from the mockup and are NOT a confirmed pricing decision
+           — see the TRIAL_* constants in script.js. -->
+      <div class="screen cine-trial-start" id="screen-trial-start">
+        <button type="button" class="cine-trial-back" onclick="cineTrialStartDecline()" aria-label="Back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div class="cine-trial-hero">
+          <img class="cine-trial-hero-img" src="assets/icons/onb-trial-start.png" alt="" />
+          <h1 class="cine-trial-headline">Start your <span class="hl">3-day FREE</span><br>trial to continue</h1>
+        </div>
+        <div class="cine-trial-sheet">
+          <button type="button" class="cine-trial-plan cine-trial-plan--selected" id="cine-trial-plan-annual" onclick="cineSelectTrialPlan('annual')">
+            <span class="cine-trial-plan-badge">3 DAYS FREE</span>
+            <span class="cine-trial-radio" aria-hidden="true"></span>
+            <span class="cine-trial-plan-col">
+              <span class="cine-trial-plan-name">Start for free &amp; save 75%</span>
+              <span class="cine-trial-plan-note">THB 999.00 billed annually</span>
+            </span>
+            <span class="cine-trial-plan-price">THB 83.25/mo</span>
+          </button>
+          <button type="button" class="cine-trial-plan" id="cine-trial-plan-monthly" onclick="cineSelectTrialPlan('monthly')">
+            <span class="cine-trial-radio" aria-hidden="true"></span>
+            <span class="cine-trial-plan-col">
+              <span class="cine-trial-plan-name">Monthly</span>
+            </span>
+            <span class="cine-trial-plan-price cine-trial-plan-price--muted">THB 399.00/mo</span>
+          </button>
+          <button type="button" class="cine-btn" onclick="cineTrialStartContinue()">Continue</button>
+          <p class="cine-trial-legal" id="cine-trial-legal">3 days free, then THB 999.00 per year.<br>Billed annually and renews automatically unless canceled in the App Store.</p>
+          <p class="cine-offer-legal">Terms &middot; Privacy &middot; Restore</p>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
            ONBOARDING SCREEN 14 — one-time offer. Reached ONLY by declining
-           the paywall (screen 13, the existing #screen-paywall reused as-is).
-           Prices/percentage below are copied verbatim from the reference
-           mockup and are NOT a confirmed pricing decision — see the
-           OFFER_* constants in script.js for the single place to change them.
+           screen 13. Prices/percentage below are copied verbatim from the
+           reference mockup and are NOT a confirmed pricing decision — see
+           the OFFER_* constants in script.js for the single place to change
+           them.
            ============================================================ -->
       <div class="screen cine-offer" id="screen-offer">
         <button type="button" class="cine-offer-x" onclick="cineOfferClose()" aria-label="Close">

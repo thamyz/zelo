@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-14 16:40";
+const BUILD_STAMP = "2026-08-14 17:35";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -4146,32 +4146,32 @@ function cineSelectGender(gender, el) {
 // Phase 1 / showcase are non-interactive except their own dedicated buttons.
 function cineNoop() {}
 
-// ---- End of Phase 2 (step 12) — screen 13 (paywall) then, only if the
-// user declines it, screen 14 (one-time offer). Screen 13 deliberately
-// REUSES the existing #screen-paywall via showPaywallNow() rather than
-// rebuilding the reference's paywall layout, so the History tab's
-// upgradeNow() and onboarding keep sharing exactly one paywall. ----
+// ---- End of Phase 2 (step 12) — screen 13 ("Start your 3-day FREE trial")
+// then, only if the user declines it (taps back), screen 14 (one-time
+// offer). Screen 13 is a dedicated screen built to match the reference
+// mockup exactly (see #screen-trial-start in index.html) — NOT the app's
+// existing #screen-paywall, which stays in place only for the History tab's
+// upgradeNow() entry point, a separate already-shipped feature. ----
 
 // Reference-mockup values. Not a confirmed pricing decision — change here.
-const OFFER_PCT       = 78;
-const OFFER_WAS       = 'THB 2,999.00';
-const OFFER_NOW       = 'THB 699.00/year';
-
-// True only while the paywall was opened by onboarding. upgradeNow() (History
-// tab) shows the same screen and must keep its own close-only behaviour
-// instead of being pulled into the onboarding finish/offer routing.
-let _paywallOnboardingTail = false;
+const TRIAL_ANNUAL_PRICE  = 'THB 83.25/mo';
+const TRIAL_ANNUAL_NOTE   = 'THB 999.00 billed annually';
+const TRIAL_ANNUAL_LEGAL  = '3 days free, then THB 999.00 per year.<br>Billed annually and renews automatically unless canceled in the App Store.';
+const TRIAL_MONTHLY_PRICE = 'THB 399.00/mo';
+const TRIAL_MONTHLY_LEGAL = '3 days free, then THB 399.00 per month.<br>Renews automatically unless canceled in the App Store.';
+const OFFER_PCT = 78;
+const OFFER_WAS = 'THB 2,999.00';
+const OFFER_NOW = 'THB 699.00/year';
 
 function cineFinishPhase2() {
   _cineClearTimers();
   ensureTrialStarted();
-  // The paywall and offer are .screen overlays inside #app, which sits BELOW
+  // #screen-trial-start (like the paywall/offer screens) sits BELOW
   // #cine-onboarding (z-index 1000, opaque background). Leaving the
-  // onboarding overlay up here makes them go .active while staying
-  // completely invisible behind step 12 — so hide it before handing off.
+  // onboarding overlay up here makes it go .active while staying completely
+  // invisible behind step 12 — so hide it before handing off.
   cineHideOverlay();
-  _paywallOnboardingTail = true;
-  showPaywallNow();
+  cineShowTrialStart();
 }
 
 // Hides the onboarding overlay outright (no fade) — used when handing off to
@@ -4184,24 +4184,38 @@ function cineHideOverlay() {
   }
 }
 
-function cinePaywallContinue() {
-  if (!_paywallOnboardingTail) { closePaywall(); return; }
-  _paywallOnboardingTail = false;
-  closePaywall();
+let _cineTrialPlan = 'annual';
+
+function cineShowTrialStart() {
+  _cineTrialPlan = 'annual';
+  cineSelectTrialPlan('annual');
+  _replaceActiveScreen('trial-start');
+}
+
+function cineSelectTrialPlan(plan) {
+  _cineTrialPlan = plan;
+  const annualBtn  = document.getElementById('cine-trial-plan-annual');
+  const monthlyBtn = document.getElementById('cine-trial-plan-monthly');
+  annualBtn.classList.toggle('cine-trial-plan--selected', plan === 'annual');
+  monthlyBtn.classList.toggle('cine-trial-plan--selected', plan === 'monthly');
+  const legal = document.getElementById('cine-trial-legal');
+  if (legal) legal.innerHTML = plan === 'annual' ? TRIAL_ANNUAL_LEGAL : TRIAL_MONTHLY_LEGAL;
+  navigator.vibrate?.(4);
+}
+
+function cineTrialStartContinue() {
   cineFinishOnboardingLanding();
 }
 
-// Declining the paywall is the ONLY route to screen 14. Meant to be shown
-// once ever — after that, declining just finishes onboarding — but the
-// once-ever cap is disabled below (TESTING ONLY) so it can be re-triggered
-// as many times as needed while QA'ing the offer screen. Restore the
-// `if (localStorage.getItem('zelo_offer_shown')) { ... }` guard before
-// release; `zelo_offer_shown` is still written each time so flipping the
-// guard back on doesn't need any other change.
-function cinePaywallDecline() {
-  if (!_paywallOnboardingTail) { closePaywall(); return; }
+// Tapping back on screen 13 is the ONLY route to screen 14. Meant to be
+// shown once ever — after that, declining just finishes onboarding — but
+// the once-ever cap is disabled below (TESTING ONLY) so it can be
+// re-triggered as many times as needed while QA'ing the offer screen.
+// Restore the `if (localStorage.getItem('zelo_offer_shown')) { ... }` guard
+// before release; `zelo_offer_shown` is still written each time so flipping
+// the guard back on doesn't need any other change.
+function cineTrialStartDecline() {
   localStorage.setItem('zelo_offer_shown', '1');
-  closePaywall();
   cineShowOffer();
 }
 
@@ -4214,8 +4228,8 @@ function cineShowOffer() {
   _replaceActiveScreen('offer');
 }
 
-function cineOfferClaim() { _paywallOnboardingTail = false; cineFinishOnboardingLanding(); }
-function cineOfferClose() { _paywallOnboardingTail = false; cineFinishOnboardingLanding(); }
+function cineOfferClaim() { cineFinishOnboardingLanding(); }
+function cineOfferClose() { cineFinishOnboardingLanding(); }
 
 // The real finish — only reached once the paywall (and, if shown, the
 // one-time offer) has resolved.
@@ -5463,10 +5477,10 @@ function upgradeNow() {
 // PAYWALL — UI mock only, no payment logic. RevenueCat/StoreKit
 // integration comes later.
 //
-// Both entry points (upgradeNow(), called from the History tab's upgrade
-// button, and the onboarding-complete flow in
-// cineFinishPhase2()) navigate straight to the paywall — it never
-// dead-ends. The screen isn't pushed onto state.screenStack: it sits on
+// Only entry point left is upgradeNow() (History tab's upgrade button) —
+// onboarding used to route through this screen too but now has its own
+// dedicated #screen-trial-start (see cineFinishPhase2() and the "SCREEN 13"
+// block above). The screen isn't pushed onto state.screenStack: it sits on
 // top of whatever was active and closePaywall() unwinds straight back to
 // it via the existing popScreen()/showTab() fallback.
 // ================================================================
@@ -5477,6 +5491,10 @@ function _replaceActiveScreen(name) {
   document.getElementById("tab-bar").classList.add("hidden");
   state.activeScreen = name;
 }
+
+// Bound to #screen-paywall's own buttons (History tab entry point only).
+function cinePaywallContinue() { closePaywall(); }
+function cinePaywallDecline() { closePaywall(); }
 
 let _paywallOnClose = null;
 let _paywallAnimated = false;

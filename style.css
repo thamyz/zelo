@@ -7002,6 +7002,113 @@ a { text-decoration: none; color: inherit; }
 .cine-next--disabled { opacity: 0.4; pointer-events: none; }
 
 /* ================================================================
+   SCREEN 13 — "Start your 3-day FREE trial to continue"
+   (own .screen overlay, own back button; hero photo is a real crop —
+   see assets/icons/onb-trial-start.png — everything below it is markup)
+   ================================================================ */
+.cine-trial-start {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  background: #16130f;
+  overflow-y: auto;
+}
+.cine-trial-back {
+  position: absolute;
+  top: calc(15px + env(safe-area-inset-top) + 20px); left: 20px;
+  z-index: 5;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  color: #16130f;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-trial-back:active { transform: scale(0.92); }
+.cine-trial-hero { position: relative; width: 100%; flex: none; }
+.cine-trial-hero-img { display: block; width: 100%; height: auto; }
+.cine-trial-headline {
+  position: absolute;
+  left: 24px; right: 24px; bottom: 20px;
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.5px;
+  color: #fff;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.35);
+}
+.cine-trial-headline .hl { color: var(--accent); }
+.cine-trial-sheet {
+  /* flex:1 so the white sheet always reaches the bottom of the screen even
+     when its content is shorter than the remaining space below the hero
+     photo — otherwise the dark page background shows through beneath it. */
+  flex: 1;
+  width: 100%;
+  background: #fff;
+  border-radius: 26px 26px 0 0;
+  margin-top: -22px;
+  padding: 22px 22px calc(26px + env(safe-area-inset-bottom));
+  position: relative;
+  z-index: 1;
+}
+.cine-trial-plan {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 16px 16px;
+  border-radius: 16px;
+  border: 1.5px solid #ece3dc;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-trial-plan--selected { border-color: var(--accent); background: #fdeef4; }
+.cine-trial-plan-badge {
+  position: absolute;
+  top: -13px; left: 16px; right: 16px;
+  padding: 5px 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-align: center;
+}
+.cine-trial-radio {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid #d9cec4;
+  position: relative;
+}
+/* CSS-only checkmark (not an inline SVG in the markup) so both plan
+   buttons share one definition — a per-button hardcoded SVG only showed up
+   on whichever plan happened to have it written in, leaving the other
+   plan's selected state as a blank filled dot. */
+.cine-trial-plan--selected .cine-trial-radio { background: var(--accent); border-color: var(--accent); }
+.cine-trial-plan--selected .cine-trial-radio::after {
+  content: '';
+  position: absolute; left: 7px; top: 4px;
+  width: 6px; height: 11px;
+  border: solid #fff; border-width: 0 2.4px 2.4px 0;
+  transform: rotate(45deg);
+}
+.cine-trial-plan-col { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cine-trial-plan-name { font-size: 0.98rem; font-weight: 800; color: #16130f; }
+.cine-trial-plan-note { font-size: 0.8rem; color: #9a8f86; }
+.cine-trial-plan-price { flex: none; font-size: 0.95rem; font-weight: 800; color: var(--accent); }
+.cine-trial-plan-price--muted { color: #6f665f; }
+.cine-trial-sheet .cine-btn { margin-top: 10px; }
+.cine-trial-legal { margin: 14px 0 4px; font-size: 0.8rem; line-height: 1.5; text-align: center; color: #9a8f86; }
+
+/* ================================================================
    SCREEN 14 — one-time offer (own .screen overlay, own X close)
    ================================================================ */
 .cine-offer {
