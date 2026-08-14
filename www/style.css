@@ -6443,7 +6443,14 @@ a { text-decoration: none; color: inherit; }
    an empty error/warn <p> that would wrongly become the centered element). */
 .cine-vcenter { margin-top: auto; margin-bottom: auto; align-self: flex-start; }
 
-/* ---- PHASE 1 — typewriter -> word morph -> logo (unchanged) ---- */
+/* ---- PHASE 1 — typewriter -> word morph -> logo (unchanged) ----
+   .cine-phase1 is still a .cine-screen, so it inherits that class's base
+   alignment/padding — which now serves the top-left headers on the Phase 2
+   screens (align-items:center; justify-content:flex-start; top-padding for
+   the back/progress row). Phase 1 has none of that chrome and was always
+   meant to sit dead-centre on the screen, so it needs its own override back
+   to the original centered layout instead of inheriting the Phase 2 one. */
+.cine-phase1 { align-items: center; justify-content: center; padding: 26px; }
 .cine-p1-stage { text-align: center; margin-bottom: 50px; }
 .cine-p1-type[hidden],
 .cine-p1-word[hidden],
