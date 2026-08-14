@@ -7069,7 +7069,12 @@ a { text-decoration: none; color: inherit; }
   padding: 22px 22px calc(26px + env(safe-area-inset-bottom));
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
 }
+/* Terms/Privacy/Restore pins to the true bottom of the sheet, separate
+   from the pricing fine print that stays grouped with the plan cards. */
+.cine-trial-sheet .cine-offer-legal { margin-top: auto; padding-top: 14px; }
 .cine-trial-plan {
   position: relative;
   width: 100%;
@@ -7176,7 +7181,7 @@ a { text-decoration: none; color: inherit; }
 .cine-offer-price b { color: var(--accent); white-space: nowrap; }
 .cine-offer-sub { margin: 0; font-size: 1rem; color: #6f665f; }
 .cine-offer-foot { width: 100%; max-width: 340px; }
-.cine-offer-legal { margin: 14px 0 0; font-size: 0.86rem; color: #8d8279; }
+.cine-offer-legal { margin: 14px 0 0; font-size: 0.86rem; color: #8d8279; text-align: center; }
 
 /* ================================================================
    SIGN-UP PROMPT — full-screen overlay after onboarding Screen 5
