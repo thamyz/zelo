@@ -4382,23 +4382,87 @@ a { text-decoration: none; color: inherit; }
    Shown/hidden via the `hidden` attribute.
    ================================================================ */
 
-.auth-overlay {
-  position: absolute;
+.auth-overlay[hidden] { display: none; }
+
+/* ── Stage 1 — iOS-style partial bottom sheet (provider picker) ──
+   Not a full-screen takeover: a dimmed scrim over whatever screen was
+   already showing, with a sheet covering under half the viewport height,
+   sliding up on open / back down on dismiss. Tapping the scrim (anywhere
+   above the sheet) dismisses it exactly like the X does. */
+.auth-overlay--sheet {
+  position: fixed;
   inset: 0;
-  background: var(--bg);
   z-index: 2000;
+  background: transparent;
+}
+.auth-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,13,11,0.45);
+  opacity: 0;
+  transition: opacity 0.32s ease;
+  pointer-events: none;
+}
+.auth-overlay--open .auth-sheet-scrim { opacity: 1; pointer-events: auto; }
+
+.auth-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  max-height: 46vh;
   overflow-y: auto;
+  background: var(--bg);
+  border-radius: 26px 26px 0 0;
+  padding: 18px 22px calc(22px + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.18);
+  transform: translateY(102%);
+  transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
+  box-sizing: border-box;
+}
+.auth-overlay--open .auth-sheet { transform: translateY(0); }
+
+.auth-sheet-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0 16px;
+}
+.auth-sheet-title {
+  margin: 0;
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.auth-sheet-head .auth-dismiss-btn { position: absolute; right: 0; top: 0; width: 34px; height: 34px; }
+.auth-sheet-hr { height: 1px; background: var(--border); margin: 0 -22px 18px; }
+.auth-sheet-legal {
+  margin: 18px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-3);
+  text-align: center;
+}
+.auth-sheet-legal a { color: var(--text-2); text-decoration: underline; }
+
+/* ── Stage 2 — full screen (email + password), reached via "Continue with
+   email". Slides in from the right over the sheet's stage; back returns to
+   stage 1 rather than dismissing the whole flow. ── */
+.auth-email-step {
+  position: fixed;
+  inset: 0;
+  z-index: 2001;
+  background: var(--bg);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  /* Sibling of .screen/.tab under #app, not a descendant — doesn't inherit
-     their safe-area padding, so it needs its own (see .auth-dismiss-btn).
-     34px matches the tightened offset used everywhere else now. */
-  padding-top: 34px;
-  padding-bottom: 34px;
+  padding: calc(20px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(100%);
+  transition: transform 0.32s ease;
+  pointer-events: none;
 }
-
-.auth-overlay[hidden] { display: none; }
+.auth-email-step--show { transform: translateX(0); pointer-events: auto; }
+.auth-email-step-body { flex: 1; padding-top: 44px; }
+.auth-email-step-foot { width: 100%; }
 
 .auth-card {
   position: relative;
@@ -4450,30 +4514,6 @@ a { text-decoration: none; color: inherit; }
 
 .auth-subtext strong { color: var(--text); font-weight: 700; }
 
-/* ── "or" divider between form and social providers ── */
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin: 20px 0;
-  color: var(--text-3);
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.auth-divider[hidden] { display: none; }
-
-.auth-divider::before,
-.auth-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
 /* ── Provider buttons ── */
 .auth-providers {
   display: flex;
@@ -4503,16 +4543,17 @@ a { text-decoration: none; color: inherit; }
 .auth-provider-btn:hover  { background: var(--s1); border-color: var(--border-2); }
 .auth-provider-btn:active { transform: scale(0.985); }
 
-.auth-provider-btn--email {
-  background: var(--s1);
-  border-color: var(--accent-border);
-  color: var(--accent-deep);
+.auth-provider-btn--apple {
+  background: #16130f;
+  border-color: #16130f;
+  color: #fff;
 }
+.auth-provider-btn--apple:hover { background: #16130f; border-color: #16130f; }
 
 /* ── Back button (email screen) ── */
 .auth-back-btn {
   position: absolute;
-  top: 20px;
+  top: calc(20px + env(safe-area-inset-top));
   left: 20px;
   width: 44px;
   height: 44px;
@@ -7146,24 +7187,8 @@ a { text-decoration: none; color: inherit; }
   align-items: stretch;
   justify-content: flex-start;
   padding: 0;
-  /* Only ever visible in the rubber-band overscroll gap above the photo or
-     below the sheet — white so that bounce reads clean, not a dark flash. */
   background: #fff;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-/* Same overflow-forcer as .cine-scroll (see there for the full explanation)
-   — the sheet is deliberately sized to exactly fill the screen, so without
-   this there's nothing to genuinely overflow and the elastic rubber-band
-   drag never engages. */
-.cine-trial-start::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 100%;
-  width: 1px;
-  height: 6px;
-  pointer-events: none;
 }
 .cine-trial-back {
   position: absolute;

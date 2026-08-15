@@ -65,6 +65,7 @@ const AUTH = (() => {
     try { state = JSON.parse(raw); } catch (_) { return; }
     if (!state || (Date.now() - state.t) > RESTORE_TTL_MS) return;
     showEmailScreen(state.mode);
+    showEmailStep(); // the Terms link only exists on stage 2 — that's where they were
     const emailInput = document.getElementById('auth-email-input');
     const termsCheck = document.getElementById('auth-terms-checkbox');
     if (emailInput) emailInput.value = state.email || '';
@@ -122,7 +123,17 @@ const AUTH = (() => {
   function showEmailScreen(mode) {
     _emailMode = mode || 'signup';
     _renderEmailScreen();
+    // Always re-enter on the stage-1 provider-picker sheet, even if a
+    // previous visit was left on the stage-2 email step.
+    document.getElementById('auth-email-step')?.classList.remove('auth-email-step--show');
+    document.getElementById('auth-overlay')?.classList.remove('auth-overlay--open');
     _showOverlay('auth-overlay');
+    // Two-frame delay so the browser paints the pre-open (off-screen) state
+    // first — adding the open class in the same tick as un-hiding would let
+    // the sheet render already-open with no visible slide-up.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.getElementById('auth-overlay')?.classList.add('auth-overlay--open');
+    }));
   }
 
   function _renderEmailScreen() {
@@ -130,10 +141,11 @@ const AUTH = (() => {
     if (!el) return;
     const isSignup = _emailMode === 'signup';
 
-    el.querySelector('#auth-heading').textContent = isSignup ? 'Create your account' : 'Welcome back';
-    el.querySelector('#auth-subtext').textContent  = isSignup
-      ? 'Start practicing real conversations in seconds.'
-      : 'Sign in to pick up where you left off.';
+    el.querySelector('#auth-heading').textContent = isSignup ? 'Create Account' : 'Sign In';
+    el.querySelector('#auth-email-step-title').textContent = "What's your email?";
+    el.querySelector('#auth-subtext').textContent = isSignup
+      ? 'Enter your email and create a password to continue.'
+      : 'Enter your email and password to continue.';
 
     const termsWrap = el.querySelector('#auth-terms-wrap');
     if (termsWrap) termsWrap.hidden = !isSignup;
@@ -142,7 +154,9 @@ const AUTH = (() => {
     el.querySelector('#auth-toggle-btn').textContent = isSignup
       ? 'Already have an account? Sign in'
       : "Don't have an account? Sign up";
-    el.querySelector('#auth-divider span').textContent = isSignup ? 'or sign up with' : 'or';
+    el.querySelector('#auth-apple-btn-label').textContent  = isSignup ? 'Sign up with Apple'  : 'Sign in with Apple';
+    el.querySelector('#auth-google-btn-label').textContent = isSignup ? 'Sign up with Google' : 'Sign in with Google';
+    el.querySelector('#auth-email-btn-label').textContent  = 'Continue with email';
 
     const errEl = el.querySelector('#auth-email-error');
     if (errEl) { errEl.textContent = ''; errEl.style.color = ''; }
@@ -157,15 +171,16 @@ const AUTH = (() => {
     if (termsCheck) termsCheck.checked = false;
   }
 
-  // Puts the caret in the email field and scrolls it into view — the
-  // target for the "Continue with Email" option in the provider row,
-  // since the email field already sits inline in this unified screen
-  // rather than behind a separate "pick a method" step.
-  function focusEmailField() {
-    const input = document.getElementById('auth-email-input');
-    if (!input) return;
-    input.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    input.focus();
+  // Stage 1 (provider-picker sheet) -> stage 2 (full-screen email+password).
+  function showEmailStep() {
+    const step = document.getElementById('auth-email-step');
+    if (!step) return;
+    step.classList.add('auth-email-step--show');
+    setTimeout(() => document.getElementById('auth-email-input')?.focus(), 260);
+  }
+
+  function backToPicker() {
+    document.getElementById('auth-email-step')?.classList.remove('auth-email-step--show');
   }
 
   async function handleEmailSubmit() {
@@ -549,6 +564,15 @@ const AUTH = (() => {
   function dismiss() {
     _pending = null;
     sessionStorage.removeItem('zelo_auth_dest');
+    const overlay = document.getElementById('auth-overlay');
+    // Only the sheet-presented auth-overlay animates closed (slides the
+    // sheet back down) — the verify/setup overlays (full-screen, no sheet)
+    // just hide immediately, same as before.
+    if (overlay && !overlay.hidden && overlay.classList.contains('auth-overlay--open')) {
+      overlay.classList.remove('auth-overlay--open');
+      setTimeout(() => _hideAll(), 320);
+      return;
+    }
     _hideAll();
   }
 
@@ -602,7 +626,8 @@ const AUTH = (() => {
     signedIn,
     requireAuth,
     showEmailScreen,
-    focusEmailField,
+    showEmailStep,
+    backToPicker,
     handleEmailSubmit,
     handleForgotPassword,
     toggleEmailMode,

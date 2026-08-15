@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-15 02:40";
+const BUILD_STAMP = "2026-08-15 03:35";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -108,6 +108,7 @@ window.addEventListener('DOMContentLoaded', () => {
   localStorage.removeItem('zelo_default_tones');
   localStorage.removeItem('zelo_default_card_mode');
   localStorage.removeItem('zelo_decline_discount_shown');
+  localStorage.removeItem('zelo_offer_shown');
 
   AUTH.init(); // session check — must run before any auth triggers fire
   // TODO — merge anonymous scan history on signup
@@ -3586,9 +3587,13 @@ function cineGoTo(n) {
 
   // Steps that run themselves (the setup/loading screen) hide the whole top
   // bar; everything else shows back + progress. Back is available from step 1
-  // onward — on step 1 it returns to the showcase screen.
+  // onward — on step 1 it returns to the showcase screen. Step 12 ("We want
+  // you to try Zelo for free") is a dead end going backward on purpose — no
+  // back button at all, not even to notifications — see cineBack().
   const topbar = document.getElementById('cine-topbar');
   if (topbar) topbar.classList.toggle('cine-hidden', !!step.noChrome);
+  const backBtn = document.getElementById('cine-back');
+  if (backBtn) backBtn.classList.toggle('cine-hidden', n === 12);
 
   const fill = document.getElementById('cine-progress-fill');
   if (fill) fill.style.width = Math.max(0, Math.min(100, (n / CINE_LAST) * 100)) + '%';
@@ -3668,13 +3673,12 @@ function cineBack(e) {
   if (cineStep <= 1) { cineGoToShowcase(); return; }
   // Step 9 (the "setting everything up" loading screen) can't be revisited
   // once its result has landed on step 10 — replaying a loading animation
-  // backward doesn't mean anything. Same skip from step 12, but only once
-  // the one-time offer has already been shown (a repeat pass back through
-  // trial-start, per cineTrialStartDecline()) — steps 9-11 (setup/Zelo
-  // Plan/save-your-progress, sign-up already done) don't need re-visiting a
-  // second time, so back goes straight to notifications instead.
+  // backward doesn't mean anything.
   if (cineStep === 10) { cineGoTo(8); return; }
-  if (cineStep === 12 && localStorage.getItem('zelo_offer_shown')) { cineGoTo(8); return; }
+  // Step 12 ("We want you to try Zelo for free") is a dead end going
+  // backward — no back at all, not even to save-your-progress. The button
+  // itself is hidden here too (see cineGoTo()); this is the no-op fallback.
+  if (cineStep === 12) return;
   cineGoTo(cineStep - 1);
 }
 
@@ -4453,12 +4457,13 @@ function cineShowOffer() {
 }
 
 function cineOfferClaim() { cineFinishOnboardingLanding(); }
-// X on the one-time offer routes back to "Save your progress" (step 11) —
-// not a plain decline/finish — so someone closing out of the last offer
-// screen lands back on account creation instead of skipping it entirely.
-// cineGoTo() re-shows #cine-onboarding itself (it force-clears `hidden` on
-// every entry), covering this .screen overlay back up.
-function cineOfferClose() { cineGoTo(11); }
+// X on the one-time offer routes to step 12 ("We want you to try Zelo for
+// free") — matching the intended flow: trial-start -> offer -> close ->
+// step 12 -> trial reminder -> paywall. cineGoTo() re-shows #cine-onboarding
+// itself (it force-clears `hidden` on every entry), covering this .screen
+// overlay back up. Step 12 itself has no way back from here (see
+// cineBack()) — this is a one-way door once you've seen the offer.
+function cineOfferClose() { cineGoTo(12); }
 
 // The real finish — only reached once the paywall (and, if shown, the
 // one-time offer) has resolved.
