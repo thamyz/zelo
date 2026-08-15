@@ -6738,7 +6738,14 @@ a { text-decoration: none; color: inherit; }
   padding: 0;
 }
 .cine-avatar:active { transform: scale(0.98); }
-.cine-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+/* position:absolute (not a plain flex-item width/height:100%) — .cine-avatar
+   is a row flex container with align-items:center, not stretch, so a
+   replaced element's percentage height there resolves to auto instead of
+   the box's real height, letting the <img> fall back to its own intrinsic
+   aspect ratio (a tall photo rendered as a half-filled circle instead of a
+   full one). Absolute positioning against .cine-avatar's own box sidesteps
+   that flex sizing entirely and always fills the full circle. */
+.cine-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 /* These three are toggled via the `hidden` attribute in JS, but each also has
    an explicit `display` below/above, which beats the UA stylesheet's
@@ -7054,9 +7061,7 @@ a { text-decoration: none; color: inherit; }
 }
 .cine-provider:active { transform: scale(0.99); }
 .cine-provider--apple { background: #0f0f0f; border-color: #0f0f0f; color: #fff; }
-.cine-or { position: relative; width: 100%; margin: 8px 0 14px; text-align: center; }
-.cine-or::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #ece3dc; }
-.cine-or span { position: relative; padding: 0 12px; background: #fdf8f5; font-size: 0.86rem; color: #a89e95; }
+.cine-or { position: relative; width: 100%; height: 1px; margin: 8px 0 14px; background: #ece3dc; }
 .cine-check { width: 100%; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; text-align: left; cursor: pointer; }
 .cine-check input { position: absolute; opacity: 0; width: 0; height: 0; }
 .cine-check-box { flex: none; width: 24px; height: 24px; border-radius: 7px; border: 1.6px solid #d9cec4; background: #fff; position: relative; }
@@ -7067,6 +7072,16 @@ a { text-decoration: none; color: inherit; }
 }
 .cine-check-txt { font-size: 0.85rem; line-height: 1.45; color: #16130f; }
 .cine-check-txt b { color: var(--accent); font-weight: 700; }
+/* Attention nudge when a provider button is tapped before terms are agreed
+   to — see cineProviderTap(). */
+.cine-check--shake { animation: cine-check-shake 0.4s ease; }
+@keyframes cine-check-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
 
 /* ---- Step 11 — trial pitch ---- */
 .cine-trial-phone { width: 100%; max-width: 300px; height: auto; margin: 4px 0 0; }
@@ -7120,6 +7135,20 @@ a { text-decoration: none; color: inherit; }
   padding: 0;
   background: #16130f;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Same overflow-forcer as .cine-scroll (see there for the full explanation)
+   — the sheet is deliberately sized to exactly fill the screen, so without
+   this there's nothing to genuinely overflow and the elastic rubber-band
+   drag never engages. */
+.cine-trial-start::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 1px;
+  height: 6px;
+  pointer-events: none;
 }
 .cine-trial-back {
   position: absolute;

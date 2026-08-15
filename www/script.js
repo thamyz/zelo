@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-15 00:05";
+const BUILD_STAMP = "2026-08-15 01:20";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -3368,7 +3368,7 @@ const CINE_STEPS = {
   8:  { noCta: true },                              // notifications — no shared CTA, see cineRequestNotifAndAdvance()
   9:  { noCta: true, noChrome: true, entrance: cineRunSetupEntrance },  // auto-advances
   10: { label: 'Continue' },
-  11: { label: 'Continue' },
+  11: { noCta: true },   // Save your progress — provider buttons are the only way forward, see cineProviderTap()
   12: { label: 'Try for FREE' },
   13: { label: 'Continue for FREE', dark: true, arrow: true },
 };
@@ -3397,6 +3397,28 @@ function _cineDelay(fn, ms) {
 function _cineNextFrame(fn) {
   requestAnimationFrame(() => requestAnimationFrame(fn));
 }
+
+// Universal light haptic tap for every clickable control across onboarding
+// (option rows, Continue/back, provider buttons, checkboxes, trial/offer
+// screens) — one delegated listener so coverage doesn't depend on
+// remembering to add navigator.vibrate to each individual handler. Matches
+// on the same [onclick] convention every interactive element here already
+// uses, so anything clickable is covered automatically, present or future.
+// Attached once at load, independent of whether onboarding actually runs
+// this session — harmless no-op on a tap that never happens.
+function _cineTapHaptic(e) {
+  const target = e.target.closest('[onclick], input[type="checkbox"]');
+  if (!target) return;
+  navigator.vibrate?.(4);
+  _cineHaptic('LIGHT');
+}
+// Capture phase, not bubble — several handlers here (cineBack among them)
+// call e.stopPropagation(), which would stop a bubble-phase listener on
+// these ancestors from ever seeing the click. Capture fires on the way
+// down, before the target's own handler runs, so it can't be blocked.
+['cine-onboarding', 'screen-trial-start', 'screen-offer'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', _cineTapHaptic, true);
+});
 
 function initOnboarding() {
   initChatsTab();
@@ -3888,7 +3910,6 @@ function cinePickOne(field, value, el) {
     el.classList.add('selected');
   }
   cineSetNextEnabled(true);
-  navigator.vibrate?.(4);
 }
 
 // Multi-select ("pick any that apply"): toggles, and the CTA unlocks as soon
@@ -3901,7 +3922,6 @@ function cinePickMany(field, value, el) {
   localStorage.setItem('zelo_onb_' + field, JSON.stringify(list));
   if (el) el.classList.toggle('selected', list.includes(value));
   cineSetNextEnabled(list.length > 0);
-  navigator.vibrate?.(4);
 }
 
 // Re-paints the selected state from cineAnswers — needed because navigating
@@ -3955,7 +3975,10 @@ function cineRunSetupEntrance() {
 }
 
 // ================================================================
-// STEP 11 — provider buttons are intentionally inert for now
+// STEP 11 — provider buttons are intentionally inert for now, and gated on
+// the terms checkbox — this screen has no shared Continue at all
+// (CINE_STEPS[11].noCta); tapping Apple/Google/email is the only way past
+// it, and only once terms are agreed to.
 // ================================================================
 
 // Apple / Google / email all advance exactly like Continue and never start a
@@ -3964,6 +3987,20 @@ function cineRunSetupEntrance() {
 function cineAuthStub() {
   if (cineStep >= CINE_LAST) { cineFinishPhase2(); return; }
   cineGoTo(cineStep + 1);
+}
+
+// provider is unused for now (no real per-provider auth yet — see
+// cineAuthStub above) but kept as a param so wiring real Apple/Google/email
+// sign-in later is a change inside this function, not at each call site.
+function cineProviderTap(provider) {
+  const terms = document.getElementById('cine-check-terms');
+  if (!terms || !terms.checked) {
+    const row = terms?.closest('.cine-check');
+    row?.classList.remove('cine-check--shake'); void row?.offsetWidth; // restart the animation on repeat taps
+    row?.classList.add('cine-check--shake');
+    return;
+  }
+  cineAuthStub();
 }
 
 // ---- Screen 1 — name input (profanity-filtered, no bad/empty/space-only) ----
@@ -4332,7 +4369,6 @@ function cineSelectTrialPlan(plan) {
   monthlyBtn.classList.toggle('cine-trial-plan--selected', plan === 'monthly');
   const legal = document.getElementById('cine-trial-legal');
   if (legal) legal.innerHTML = plan === 'annual' ? TRIAL_ANNUAL_LEGAL : TRIAL_MONTHLY_LEGAL;
-  navigator.vibrate?.(4);
 }
 
 function cineTrialStartContinue() {
@@ -4361,11 +4397,12 @@ function cineShowOffer() {
 }
 
 function cineOfferClaim() { cineFinishOnboardingLanding(); }
-// X on the one-time offer routes to sign-in (not a plain decline/finish) —
-// the assumption being someone closing out of the last offer screen may
-// already have an account and wants to log into it rather than keep going
-// through onboarding.
-function cineOfferClose() { AUTH.showEmailScreen('signin'); }
+// X on the one-time offer routes back to "Save your progress" (step 11) —
+// not a plain decline/finish — so someone closing out of the last offer
+// screen lands back on account creation instead of skipping it entirely.
+// cineGoTo() re-shows #cine-onboarding itself (it force-clears `hidden` on
+// every entry), covering this .screen overlay back up.
+function cineOfferClose() { cineGoTo(11); }
 
 // The real finish — only reached once the paywall (and, if shown, the
 // one-time offer) has resolved.
@@ -7231,15 +7268,15 @@ document.addEventListener('touchstart', (e) => {
     // seam structurally — there's no stationary line left to cross.
     'message-input': { move: ['.chat-input-bar'] },
     // Onboarding screen 1 (name/photo/birth date): avatar, the name field,
-    // the age field, and the legal text all ride up together instead of
-    // just the name input escaping upward on its own. Headline+lede are
-    // deliberately NOT in this group and NOT inside the clip box — they sit
-    // close enough to the fixed topbar that a keyboard-clearing shift would
-    // push them up underneath it. `clip` locks .cine-name-clip's height so
-    // the avatar clips cleanly at the lede's bottom edge as it rises,
-    // instead of visually overlapping the lede text.
+    // and the age field all ride up together instead of just the name input
+    // escaping upward on its own. Headline+lede are deliberately NOT in this
+    // group and NOT inside the clip box — they sit close enough to the fixed
+    // topbar that a keyboard-clearing shift would push them up underneath
+    // it. `clip` locks .cine-name-clip's height so the avatar clips cleanly
+    // at the lede's bottom edge as it rises, instead of visually overlapping
+    // the lede text.
     'cine-name-input': {
-      move: ['.cine-avatar-wrap', '.cine-field', '#cine-name-error', '#cine-age-field', '.cine-legal'],
+      move: ['.cine-avatar-wrap', '.cine-field', '#cine-name-error', '#cine-age-field'],
       clip: '.cine-name-clip',
       measureBy: '#cine-name-input',
     },
