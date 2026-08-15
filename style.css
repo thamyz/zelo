@@ -7072,16 +7072,29 @@ a { text-decoration: none; color: inherit; }
 }
 .cine-check-txt { font-size: 0.85rem; line-height: 1.45; color: #16130f; }
 .cine-check-txt b { color: var(--accent); font-weight: 700; }
-/* Attention nudge when a provider button is tapped before terms are agreed
-   to — see cineProviderTap(). */
-.cine-check--shake { animation: cine-check-shake 0.4s ease; }
-@keyframes cine-check-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(5px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(3px); }
+/* Drops down from the top of the screen when a provider button is tapped
+   before terms are agreed to — see cineProviderTap(). Dark backing (not a
+   plain yellow-on-white banner) so the yellow text itself stays legible. */
+.cine-terms-warn {
+  position: fixed;
+  left: 16px; right: 16px;
+  top: calc(10px + env(safe-area-inset-top));
+  z-index: 45;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: #16130f;
+  color: #f6c945;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(22,19,15,0.28);
+  transform: translateY(-140%);
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.34, 1.2, 0.4, 1), opacity 0.25s ease;
+  pointer-events: none;
 }
+.cine-terms-warn--show { transform: translateY(0); opacity: 1; }
 
 /* ---- Step 11 — trial pitch ---- */
 .cine-trial-phone { width: 100%; max-width: 300px; height: auto; margin: 4px 0 0; }

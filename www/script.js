@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-15 01:55";
+const BUILD_STAMP = "2026-08-15 02:40";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -3666,6 +3666,15 @@ function cineBack(e) {
   if (e) e.stopPropagation();
   if (cineStep === 0 || cineStep === 'showcase') return;
   if (cineStep <= 1) { cineGoToShowcase(); return; }
+  // Step 9 (the "setting everything up" loading screen) can't be revisited
+  // once its result has landed on step 10 — replaying a loading animation
+  // backward doesn't mean anything. Same skip from step 12, but only once
+  // the one-time offer has already been shown (a repeat pass back through
+  // trial-start, per cineTrialStartDecline()) — steps 9-11 (setup/Zelo
+  // Plan/save-your-progress, sign-up already done) don't need re-visiting a
+  // second time, so back goes straight to notifications instead.
+  if (cineStep === 10) { cineGoTo(8); return; }
+  if (cineStep === 12 && localStorage.getItem('zelo_offer_shown')) { cineGoTo(8); return; }
   cineGoTo(cineStep - 1);
 }
 
@@ -3946,7 +3955,28 @@ function cineRestoreAnswers() {
 // STEP 9 — "setting everything up" (auto-advances, no CTA)
 // ================================================================
 
-const CINE_SETUP_MS = 5200;
+const CINE_SETUP_MS = 10000;
+
+// Piecewise timeline (ms elapsed -> %), not a straight ramp — reads like a
+// real loading bar: steady early progress, visibly slows approaching 90%,
+// holds there for a beat like it's stuck, then finishes quickly.
+const CINE_SETUP_SEGMENTS = [
+  { end: 4500,  from: 0,  to: 75  },
+  { end: 7000,  from: 75, to: 90  },
+  { end: 8500,  from: 90, to: 90  },   // the "pausing for a bit" hold
+  { end: 10000, from: 90, to: 100 },
+];
+function _cineSetupPct(elapsedMs) {
+  let prevEnd = 0;
+  for (const seg of CINE_SETUP_SEGMENTS) {
+    if (elapsedMs <= seg.end) {
+      const segT = seg.end === prevEnd ? 1 : (elapsedMs - prevEnd) / (seg.end - prevEnd);
+      return seg.from + (seg.to - seg.from) * segT;
+    }
+    prevEnd = seg.end;
+  }
+  return 100;
+}
 
 function cineRunSetupEntrance() {
   const numEl  = document.getElementById('cine-pct-num');
@@ -3958,16 +3988,25 @@ function cineRunSetupEntrance() {
 
   const startedAt = Date.now();
   const startedOn = cineStep;
+  let attFired = false;
   const tick = () => {
     // Bail out if the user navigated away mid-animation — otherwise this
     // keeps ticking against a screen that is no longer on-screen and then
     // advances the flow from underneath wherever they actually are.
     if (cineStep !== startedOn) return;
-    const t = Math.min(1, (Date.now() - startedAt) / CINE_SETUP_MS);
-    const pct = Math.max(1, Math.round(t * 100));
+    const elapsed = Date.now() - startedAt;
+    const t = Math.min(1, elapsed / CINE_SETUP_MS);
+    const pct = Math.max(1, Math.round(_cineSetupPct(elapsed)));
     if (numEl)  numEl.textContent = String(pct);
     if (fillEl) fillEl.style.width = pct + '%';
     rows.forEach((r, i) => r.classList.toggle('done', t >= (i + 1) / rows.length));
+    // Real native permission prompt, fired once as the bar passes ~20% —
+    // mid-loading is where these mock "setting up" screens conventionally
+    // slip a real permission ask in, rather than a separate dedicated screen.
+    if (!attFired && pct >= 20) {
+      attFired = true;
+      requestTrackingPermission();
+    }
     if (t < 1) { _cineDelay(tick, 40); return; }
     _cineDelay(() => { if (cineStep === startedOn) cineGoTo(startedOn + 1); }, 420);
   };
@@ -3992,12 +4031,25 @@ function cineAuthStub() {
 // provider is unused for now (no real per-provider auth yet — see
 // cineAuthStub above) but kept as a param so wiring real Apple/Google/email
 // sign-in later is a change inside this function, not at each call site.
+let _cineTermsWarnTimer = null;
+function _cineHideTermsWarn() {
+  clearTimeout(_cineTermsWarnTimer);
+  document.getElementById('cine-terms-warn')?.classList.remove('cine-terms-warn--show');
+}
+// Checking the box while the warning is still showing dismisses it right
+// away instead of leaving it up for the rest of its timer.
+function cineTermsChecked() {
+  if (document.getElementById('cine-check-terms')?.checked) _cineHideTermsWarn();
+}
 function cineProviderTap(provider) {
   const terms = document.getElementById('cine-check-terms');
   if (!terms || !terms.checked) {
-    const row = terms?.closest('.cine-check');
-    row?.classList.remove('cine-check--shake'); void row?.offsetWidth; // restart the animation on repeat taps
-    row?.classList.add('cine-check--shake');
+    const warn = document.getElementById('cine-terms-warn');
+    if (warn) {
+      clearTimeout(_cineTermsWarnTimer);
+      warn.classList.add('cine-terms-warn--show');
+      _cineTermsWarnTimer = setTimeout(() => warn.classList.remove('cine-terms-warn--show'), 2600);
+    }
     return;
   }
   cineAuthStub();
@@ -4375,14 +4427,18 @@ function cineTrialStartContinue() {
   cineFinishOnboardingLanding();
 }
 
-// Tapping back on screen 13 is the ONLY route to screen 14. Meant to be
-// shown once ever — after that, declining just finishes onboarding — but
-// the once-ever cap is disabled below (TESTING ONLY) so it can be
-// re-triggered as many times as needed while QA'ing the offer screen.
-// Restore the `if (localStorage.getItem('zelo_offer_shown')) { ... }` guard
-// before release; `zelo_offer_shown` is still written each time so flipping
-// the guard back on doesn't need any other change.
+// Tapping back on screen 13 is the route to the one-time offer — but only
+// the FIRST time. Once the offer has already been shown once (user declined
+// it, came back around through sign-up/notifications/trial-start again),
+// showing it a second time doesn't make sense — back instead goes straight
+// to "We want you to try Zelo for free" (step 12), skipping the offer
+// entirely. See cineBack() for the matching step-12 skip on the way back
+// further than that.
 function cineTrialStartDecline() {
+  if (localStorage.getItem('zelo_offer_shown')) {
+    cineGoTo(12);
+    return;
+  }
   localStorage.setItem('zelo_offer_shown', '1');
   cineShowOffer();
 }

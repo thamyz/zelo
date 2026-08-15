@@ -1344,6 +1344,7 @@
              advance the flow exactly like Continue and never start a real
              account-creation attempt (see cineAuthStub()). -->
         <section class="cine-screen cine-screen--hero" data-screen="11">
+          <div class="cine-terms-warn" id="cine-terms-warn" aria-live="polite">You must accept the Terms and Conditions and Privacy Policy to continue</div>
           <div class="cine-scroll">
             <img class="cine-hero-img cine-hero-img--sm" src="assets/icons/onb-cloud.png" alt="" />
             <h2 class="cine-title cine-title--plain">Save your progress</h2>
@@ -1364,7 +1365,7 @@
 
             <div class="cine-or"></div>
 
-            <label class="cine-check"><input type="checkbox" id="cine-check-terms" /><span class="cine-check-box" aria-hidden="true"></span><span class="cine-check-txt">I agree to Zelo's <b>Terms and Conditions</b> and <b>Privacy Policy</b></span></label>
+            <label class="cine-check"><input type="checkbox" id="cine-check-terms" onchange="cineTermsChecked()" /><span class="cine-check-box" aria-hidden="true"></span><span class="cine-check-txt">I agree to Zelo's <b>Terms and Conditions</b> and <b>Privacy Policy</b></span></label>
             <label class="cine-check"><input type="checkbox" id="cine-check-news" /><span class="cine-check-box" aria-hidden="true"></span><span class="cine-check-txt">Send me tips, new features, and personalized offers from Zelo</span></label>
           </div>
         </section>
