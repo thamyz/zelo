@@ -6558,6 +6558,27 @@ a { text-decoration: none; color: inherit; }
   padding: 48px 28px 58px;
   gap: 0;
 }
+/* TESTING ONLY — see the HTML comment above this button. Deliberately
+   understated (small, muted, no label) so it doesn't read as real product
+   UI — remove this whole rule along with the button before release. */
+.cine-showcase-skip {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  right: 14px;
+  z-index: 5;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(28,25,23,0.08);
+  color: rgba(28,25,23,0.45);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-showcase-skip:active { transform: scale(0.92); }
 .cine-showcase-top {
   flex: 1;
   display: flex;

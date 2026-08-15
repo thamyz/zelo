@@ -1044,6 +1044,11 @@
         <!-- ============ SHOWCASE — Cal AI style landing, between Phase 1 and Phase 2 ============
              No dots, no skip. Static, renders immediately after Phase 1 ends. -->
         <section class="cine-screen cine-showcase" data-screen="showcase">
+          <!-- TESTING ONLY — skips the entire onboarding flow straight to
+               Scan. Remove before release. -->
+          <button type="button" class="cine-showcase-skip" onclick="finishOnboardingNoPrompt()" aria-label="Skip to Scan (testing)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
           <div class="cine-showcase-top">
             <div class="cine-phone">
               <div class="cine-phone-notch"></div>
