@@ -7133,7 +7133,9 @@ a { text-decoration: none; color: inherit; }
   align-items: stretch;
   justify-content: flex-start;
   padding: 0;
-  background: #16130f;
+  /* Only ever visible in the rubber-band overscroll gap above the photo or
+     below the sheet — white so that bounce reads clean, not a dark flash. */
+  background: #fff;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
