@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-14 23:10";
+const BUILD_STAMP = "2026-08-15 00:05";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -4361,7 +4361,11 @@ function cineShowOffer() {
 }
 
 function cineOfferClaim() { cineFinishOnboardingLanding(); }
-function cineOfferClose() { cineFinishOnboardingLanding(); }
+// X on the one-time offer routes to sign-in (not a plain decline/finish) —
+// the assumption being someone closing out of the last offer screen may
+// already have an account and wants to log into it rather than keep going
+// through onboarding.
+function cineOfferClose() { AUTH.showEmailScreen('signin'); }
 
 // The real finish — only reached once the paywall (and, if shown, the
 // one-time offer) has resolved.
@@ -7226,6 +7230,19 @@ document.addEventListener('touchstart', (e) => {
     // how the color transition was tuned. Moving them together removes the
     // seam structurally — there's no stationary line left to cross.
     'message-input': { move: ['.chat-input-bar'] },
+    // Onboarding screen 1 (name/photo/birth date): avatar, the name field,
+    // the age field, and the legal text all ride up together instead of
+    // just the name input escaping upward on its own. Headline+lede are
+    // deliberately NOT in this group and NOT inside the clip box — they sit
+    // close enough to the fixed topbar that a keyboard-clearing shift would
+    // push them up underneath it. `clip` locks .cine-name-clip's height so
+    // the avatar clips cleanly at the lede's bottom edge as it rises,
+    // instead of visually overlapping the lede text.
+    'cine-name-input': {
+      move: ['.cine-avatar-wrap', '.cine-field', '#cine-name-error', '#cine-age-field', '.cine-legal'],
+      clip: '.cine-name-clip',
+      measureBy: '#cine-name-input',
+    },
   };
 
   // Bug fixed here: previously fell back to `{ move: [input] }` — an actual

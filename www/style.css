@@ -6641,6 +6641,7 @@ a { text-decoration: none; color: inherit; }
    fixed top bar and ends above the fixed CTA, so long screens scroll
    instead of colliding with either. */
 .cine-scroll {
+  position: relative; /* containing block for the ::after overflow-forcer below */
   width: 100%;
   max-width: 340px;
   margin: 0 auto;
@@ -6655,6 +6656,33 @@ a { text-decoration: none; color: inherit; }
 }
 .cine-scroll::-webkit-scrollbar { display: none; }
 .cine-scroll--center { justify-content: center; }
+/* Screen 1's keyboard-nudge clip boundary — plain pass-through box in normal
+   use (mirrors .cine-scroll's own centering so nothing shifts visually),
+   gets overflow:hidden + a locked height added via JS only while the nudge
+   is active. See MOVABLE_OVERRIDE['cine-name-input'] in script.js. */
+.cine-name-clip {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* Guarantees scrollHeight is always a few px taller than the box, even on
+   screens whose real content is much shorter than the available space —
+   without this, iOS WebKit only allows the elastic rubber-band drag when
+   content genuinely overflows, so short screens felt like a dead, still
+   frame instead of a page you can nudge like the Scan tab. Absolutely
+   positioned (not a normal flex child) so it sits 6px below .cine-scroll's
+   own bottom edge without affecting real content's layout or its centering
+   on --center screens — invisible, purely a scroll-physics enabler. */
+.cine-scroll::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 1px;
+  height: 6px;
+  pointer-events: none;
+}
 
 .cine-title {
   font-size: 2.2rem;

@@ -1087,6 +1087,12 @@
             <h2 class="cine-title">Let's get to<br>know <span class="hl">you</span> 👋</h2>
             <p class="cine-lede">This helps us personalize your experience and keep Zelo safe.</p>
 
+            <!-- Stationary boundary: gets overflow:hidden + a locked height
+                 while the keyboard-nudge is active (see MOVABLE_OVERRIDE /
+                 applyClip in script.js), so the avatar sliding up under the
+                 keyboard clips cleanly at the lede's bottom edge instead of
+                 visually overlapping it. -->
+            <div class="cine-name-clip">
             <div class="cine-avatar-wrap">
               <button type="button" class="cine-avatar" id="cine-avatar" onclick="cinePickPhoto()" aria-label="Add profile photo">
                 <img class="cine-avatar-img" id="cine-avatar-img" hidden alt="" />
@@ -1131,6 +1137,7 @@
             </button>
 
             <p class="cine-legal">By continuing, you agree to our<br><span class="cine-legal-link">Terms and Privacy Policy.</span></p>
+            </div>
           </div>
         </section>
 
