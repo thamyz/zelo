@@ -5318,7 +5318,7 @@ a { text-decoration: none; color: inherit; }
   /* Sits just below the fold at rest, reachable with a normal small scroll —
      same plain, native overflow-y:auto behavior as the Account screen, no
      custom reveal/snap-back logic. */
-  margin-top: 36px;
+  margin-top: 80px;
   padding-top: 14px;
   font-size: 0.8rem;
   color: var(--text-3);
