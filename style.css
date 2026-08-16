@@ -128,15 +128,28 @@ a { text-decoration: none; color: inherit; }
 .chat-messages::-webkit-scrollbar { width: 0; }
 
 /* Wraps .tab-scroll on the Scan tab only — a plain pass-through box in
-   normal use (mirrors .tab-scroll's own min-height:100% so the percentage-
-   height chain down to .tab is unchanged), but gets overflow:hidden + a
-   locked height added via JS while the keyboard-open shift is active, so
-   content sliding up clips cleanly at the header's bottom edge instead of
-   overlapping it. See the keyboard-nudge code in script.js. */
+   normal use, but gets overflow:hidden + a locked height added via JS while
+   the keyboard-open shift is active, so content sliding up clips cleanly at
+   the header's bottom edge instead of overlapping it. See the keyboard-nudge
+   code in script.js. */
 .scan-scroll-clip {
-  min-height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* #tab-assistant is display:flex/column with a fixed-height header above
+   this wrapper (see the #tab-assistant block below) — flex:1 lets this
+   wrapper claim exactly the real remaining space. min-height:100% (the
+   naive alternative) resolves against #tab-assistant's full content-box
+   height, blind to how much of it the header already consumed, which
+   silently added a phantom ~74px of extra scrollable height (exactly the
+   header's own height) below the real content. That extra scroll distance
+   was reachable but had nothing to show for it, which is what produced
+   both the "peek from the top" scroll glitch and the privacy note not
+   staying put at the bottom. */
+#tab-assistant .scan-scroll-clip {
+  flex: 1;
+  min-height: 0;
 }
 
 .tab-scroll {
@@ -146,7 +159,12 @@ a { text-decoration: none; color: inherit; }
   flex-direction: column;
 }
 
-.tab-bottom-spacer { height: 28px; }
+/* flex-shrink:0 — .tab-scroll is a flex column on the tabs that scope it to
+   flex:1 (see #tab-assistant/#tab-chats .tab-scroll below); without this,
+   the flex algorithm shrinks this spacer toward 0 first whenever content
+   runs long, silently losing its clearance instead of just letting the
+   column scroll normally like it's supposed to. */
+.tab-bottom-spacer { height: 28px; flex-shrink: 0; }
 /* Scoped to this tab only (Practice tab keeps the default 28px) — the trust
    line uses margin-top: auto to hug the bottom, so this spacer just needs to
    clear the floating Scan FAB, not act as generic bottom padding. */
@@ -1144,6 +1162,28 @@ a { text-decoration: none; color: inherit; }
   z-index: 10;
 }
 
+/* Account (#screen-dashboard) swaps its header to position:fixed instead of
+   the sticky above — scoped to just this screen since it's the one with a
+   long enough settings list to actually be scrolled far, where WebKit's
+   known sticky-vs-elastic-overscroll rendering bug (the header visibly
+   detaching/lagging during the rubber-band bounce past the top) is
+   reachable. See the matching #tab-assistant/#tab-practice/#tab-chats
+   .app-header override above for the fuller rationale — same mechanism,
+   same fix. 109px = .screen's own 36px padding-top + this header's ~73px
+   height, now that the header no longer occupies flow space of its own. */
+#screen-dashboard {
+  padding-top: 109px;
+}
+
+#screen-dashboard .screen-header {
+  position: fixed;
+  top: 36px;
+  left: 0;
+  right: 0;
+  max-width: 430px;
+  margin: 0 auto;
+}
+
 /* Close/back button on the right instead of the left — used only for
    Settings and History (both entered via a top-right tap on their
    respective screens), scoped so no other .screen-header/.app-header
@@ -2094,10 +2134,11 @@ a { text-decoration: none; color: inherit; }
      padding-top (higher specificity) and silently zeroes it — this was the
      actual reason the header kept clipping under the notch/Dynamic Island
      no matter what mechanism was used to set that padding-top value.
-     34px + .app-header's own 16px top padding = 50px total to the header
-     content, matching #tab-assistant (same header markup, same target gap
-     against the Dynamic Island). */
-  padding-top: 34px;
+     34px original gap + .app-header's own 74px height, now that
+     .app-header is position:fixed (see below) and no longer occupies flow
+     space of its own — this padding is what keeps content starting below
+     the header instead of sliding underneath it. */
+  padding-top: 108px;
   overflow: hidden;
 }
 
@@ -2111,8 +2152,9 @@ a { text-decoration: none; color: inherit; }
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0;
-  /* See #tab-practice above — same ID-specificity override problem. */
-  padding-top: 34px;
+  /* See #tab-practice above — same ID-specificity override problem, same
+     108px = 34px original gap + .app-header's own 74px height. */
+  padding-top: 108px;
 }
 
 #tab-chats {
@@ -2121,7 +2163,33 @@ a { text-decoration: none; color: inherit; }
   overflow: hidden;
   padding: 0;
   /* See #tab-practice above — same ID-specificity override problem. */
-  padding-top: 34px;
+  padding-top: 108px;
+}
+
+/* position:fixed (not sticky) here, scoped to just these 3 tabs — sticky
+   pins correctly for ordinary in-bounds scrolling (verified: it renders at
+   a constant screen position for the entire scrollable range), but WebKit
+   has a known class of bug where a position:sticky element visibly detaches
+   or lags for a frame during the native elastic overscroll/rubber-band
+   bounce past a scroll container's start, which reads as the header
+   "peeking" or the content beneath it tearing loose. Fixed elements are
+   composited independently of the scrolling container and don't
+   participate in that bounce rendering at all, which is exactly why
+   .cine-topbar already uses this same swap elsewhere in this file. Native
+   keyboard-triggered scrolling (the original reason sticky was chosen here)
+   is now off entirely (Keyboard.resize: "none", see the keyboard-nudge
+   block in script.js), so that rationale no longer applies. max-width +
+   margin:auto matches #app's own centering, so this stays correctly scoped
+   to the app's column instead of the full viewport on wider screens. */
+#tab-assistant .app-header,
+#tab-practice .app-header,
+#tab-chats .app-header {
+  position: fixed;
+  top: 34px;
+  left: 0;
+  right: 0;
+  max-width: 430px;
+  margin: 0 auto;
 }
 
 #tab-assistant .tab-scroll,
