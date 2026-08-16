@@ -358,85 +358,16 @@
             </div>
           </div>
 
-          <!-- History — reuses the exact same data/rows as the full History
-               screen (getThreads() for Scans, chatStore for Matches, see
-               screen-history). One data source, tabbed here as a compact
-               preview; "See all" opens the full screen on the same tab. -->
-          <div class="dash-section">
-            <div class="dash-section-head">
-              <span class="block-label">History</span>
-              <button class="dash-seeall-btn" onclick="openHistory(_dashHistoryTab)">See all</button>
-            </div>
-            <div class="dash-history-tabs">
-              <button class="dash-history-tab active" id="dash-history-tab-scans"
-                      onclick="setDashHistoryTab('scans')">Scans</button>
-              <button class="dash-history-tab" id="dash-history-tab-matches"
-                      onclick="setDashHistoryTab('matches')">Matches</button>
-            </div>
-            <div class="dash-list" id="dash-history-list"></div>
-          </div>
+          <!-- History and Leaderboard preview panels removed for now (see
+               script.js — renderDashHistoryPreview/setDashHistoryTab were
+               removed with them; the full History/Leaderboard screens and
+               their own entry points elsewhere are untouched). -->
 
-          <!-- Leaderboard — compact card, reuses the same rank computation
-               as the full leaderboard screen (getMyLeaderboardEntry()). -->
-          <div class="dash-section">
-            <button class="dash-lb-card" id="dash-lb-card" onclick="openLeaderboard()">
-              <span class="dash-lb-icon" aria-hidden="true">🏆</span>
-              <span class="dash-lb-text">
-                <span class="dash-lb-title">Leaderboard</span>
-                <span class="dash-lb-rank" id="dash-lb-rank">Rank #—</span>
-              </span>
-              <span class="dash-lb-chevron" aria-hidden="true">›</span>
-            </button>
-          </div>
-
-          <!-- Settings — navigates to the full Settings Home screen
-               (Settings 2.0, see screen-settings) instead of expanding
-               inline the way it used to. -->
-          <div class="dash-section">
-            <button class="dash-menu-row dash-settings-btn" onclick="openSettingsHome()">
-              Settings <span>›</span>
-            </button>
-          </div>
-
-        </div>
-      </div>
-
-
-      <!-- ============================================================
-           SETTINGS 2.0 — rebuilt against the settings-flow reference
-           (design-refs/settings/settings-flow-reference.png).
-           LAYOUT/STRUCTURE PASS ONLY:
-             · Pricing ("THB 999/year" etc.) is placeholder copy from the
-               reference, not a real/final price.
-             · Scan history retention is the 7/30/90/forever picker exactly
-               as shown in the reference — not a decided tier system.
-             · Every .settings2-icon is an intentionally EMPTY placeholder
-               slot (no glyph) — real icon assets land in a follow-up pass.
-             · Button styling (primary/secondary/destructive) follows the
-               shared .btn2-* system — see that block in style.css.
-           20 screens total: 01 Settings Home through 07 Privacy & Data,
-           plus all 13 sub-screens the reference shows branching off them.
-           ============================================================ -->
-
-      <!-- 01 — SETTINGS HOME -->
-      <div class="screen" id="screen-settings">
-        <div class="screen-header">
-          <button class="back-btn" onclick="settingsBack()" aria-label="Back">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <span class="screen-title">Settings</span>
-        </div>
-        <div class="settings2-layout">
-
-          <button class="settings2-profile-card" onclick="openSettingsProfileLogin()">
-            <span class="settings2-avatar" id="settings2-avatar">Y</span>
-            <span class="settings2-profile-info">
-              <span class="settings2-profile-name" id="settings2-name">You</span>
-              <span class="settings2-profile-sub">Manage your Zelo account</span>
-            </span>
-            <span class="settings2-chevron" aria-hidden="true">›</span>
-          </button>
-
+          <!-- Settings 2.0 — merged directly into Account instead of being
+               a separate screen you navigate into. The profile card above
+               already covers "Manage your Zelo account", so Settings' own
+               duplicate profile card was dropped; everything else below is
+               unchanged from the standalone Settings Home screen. -->
           <button class="settings2-pro-card" onclick="pushScreen('settings-zelo-pro')">
             <span class="settings2-icon settings2-icon--pro" aria-hidden="true"></span>
             <span class="settings2-pro-info">

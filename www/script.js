@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-16 15:10";
+const BUILD_STAMP = "2026-08-16 15:45";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -136,8 +136,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // in the app is untouched. Each entry reuses that screen's own existing
   // back/close function (see attachEdgeSwipeBack's own comment for why
   // nothing else is shared/created).
-  attachEdgeSwipeBack('screen-dashboard',   popScreen);         // Account page
-  attachEdgeSwipeBack('screen-settings',    settingsBack);      // Login & Security / Notifications / Privacy / Help & Support
+  attachEdgeSwipeBack('screen-dashboard',   popScreen);         // Account page (Settings 2.0 now lives here too, see below)
   attachEdgeSwipeBack('screen-history',     closeHistory);      // History overlay
   attachEdgeSwipeBack('screen-tellzelo',    tellZeloBack, {     // "Other" wizard — mid-wizard steps back within the same screen (no sibling to reveal), so only fall back to a live reveal once back would actually exit
     resolveTarget: () => state.tzStep > 0 ? null : _defaultBackRevealTarget(),
@@ -4765,66 +4764,6 @@ function recordScan() {
   localStorage.setItem('zelo_scans', scanCount);
 }
 
-let _dashHistoryTab = 'scans';
-
-function setDashHistoryTab(tab) {
-  _dashHistoryTab = tab;
-  document.getElementById('dash-history-tab-scans')?.classList.toggle('active', tab === 'scans');
-  document.getElementById('dash-history-tab-matches')?.classList.toggle('active', tab === 'matches');
-  renderDashHistoryPreview();
-}
-
-// Compact History preview on the Account page — reuses the exact same data
-// (getThreads() / chatStore) and row helpers (_threadLastActivity,
-// historyTime) as the full History screen (screen-history). One data
-// source, two presentations — no separate "recent scans"/"recent matches"
-// logic to keep in sync.
-function renderDashHistoryPreview() {
-  const listEl = document.getElementById('dash-history-list');
-  if (!listEl) return;
-  listEl.innerHTML = '';
-
-  if (_dashHistoryTab === 'scans') {
-    const threads = getThreads();
-    if (threads.length === 0) {
-      listEl.innerHTML = '<p class="dash-empty">No scans yet</p>';
-      return;
-    }
-    threads.slice(0, 3).forEach(thread => {
-      const activity = _threadLastActivity(thread);
-      const row = document.createElement('div');
-      row.className = 'dash-history-row';
-      row.onclick = () => openThreadDetail(thread.id);
-      row.innerHTML = `
-        <div class="dash-history-avatar">${(thread.name || '?').trim().charAt(0).toUpperCase()}</div>
-        <div class="dash-history-main">
-          <span class="dash-history-name">${thread.name}</span>
-          <span class="dash-history-preview">${activity.text}</span>
-        </div>
-        <span class="dash-history-time">${historyTime(activity.time)}</span>`;
-      listEl.appendChild(row);
-    });
-  } else {
-    if (chatStore.length === 0) {
-      listEl.innerHTML = '<p class="dash-empty">No matches yet</p>';
-      return;
-    }
-    chatStore.slice(0, 3).forEach(c => {
-      const grad = `linear-gradient(145deg, ${c.profile.gradientColors[0]}, ${c.profile.gradientColors[1]})`;
-      const row = document.createElement('div');
-      row.className = 'dash-history-row';
-      row.onclick = () => openChatFromStore(c);
-      row.innerHTML = `
-        <div class="dash-history-avatar" style="background:${grad}">${c.profile.initial}</div>
-        <div class="dash-history-main">
-          <span class="dash-history-name">${c.profile.name}</span>
-          <span class="dash-history-preview">${c.lastMessage || 'New match!'}</span>
-        </div>`;
-      listEl.appendChild(row);
-    });
-  }
-}
-
 function openDashboard() {
   const displayName = getDisplayName();
   document.getElementById('dash-name').textContent   = displayName;
@@ -4835,15 +4774,6 @@ function openDashboard() {
   document.getElementById('stat-matches').textContent = matchCount();
   document.getElementById('stat-chats').textContent   =
     chatStore.filter(c => c.messages.length > 0).length;
-
-  // History — see renderDashHistoryPreview() above
-  _dashHistoryTab = 'scans';
-  setDashHistoryTab('scans');
-
-  // Leaderboard — reuses the same rank computation as the full leaderboard screen
-  const myEntry = getMyLeaderboardEntry();
-  const rankEl = document.getElementById('dash-lb-rank');
-  if (rankEl) rankEl.textContent = `Rank #${myEntry.rank}`;
 
   pushScreen('dashboard');
 }
@@ -6887,28 +6817,16 @@ function openLeaderboardFromDash() {
 
 
 // ================================================================
-// SETTINGS 2.0 — rebuilt against the settings-flow reference. Settings is
-// its own full screen tree now (pushScreen/popScreen, see openSettingsHome
-// below and everywhere else in this block that calls pushScreen('settings-
-// ...')), not the old inline dropdown-on-Account-page + panel-switching-
-// within-one-screen setup. Layout/structure pass only — see the big
+// SETTINGS 2.0 — rebuilt against the settings-flow reference, then merged
+// directly into the Account page (screen-dashboard) instead of living
+// behind its own "Settings" tap-through — see the Account markup in
+// index.html. Everything below this point pushes straight from Account
+// into its own sub-screen (pushScreen/popScreen), same mechanism as
+// before, just with Account as the starting point instead of a
+// standalone Settings Home screen. Layout/structure pass only — see the
 // comment at the top of the Settings 2.0 markup in index.html for what's
 // deliberately left as placeholder (pricing, scan-retention values, icons).
 // ================================================================
-
-function openSettingsHome() {
-  const name = getDisplayName();
-  const avatarEl = document.getElementById('settings2-avatar');
-  const nameEl   = document.getElementById('settings2-name');
-  if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
-  if (nameEl)   nameEl.textContent   = name;
-  pushScreen('settings');
-}
-
-// No intermediate list page anymore — back always returns to Account.
-function settingsBack() {
-  popScreen();
-}
 
 function openSettingsProfileLogin() {
   const name = getDisplayName();

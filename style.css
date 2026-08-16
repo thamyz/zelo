@@ -2801,208 +2801,11 @@ a { text-decoration: none; color: inherit; }
   letter-spacing: 0.06em;
 }
 
-/* Sections */
-.dash-section { display: flex; flex-direction: column; }
-
-.dash-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* History section — compact tabbed preview (Account page) */
-.dash-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.dash-seeall-btn {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.dash-history-tabs {
-  display: flex;
-  gap: 4px;
-  background: rgba(236, 72, 153, 0.08);
-  border-radius: 999px;
-  padding: 3px;
-  margin-bottom: 10px;
-}
-
-.dash-history-tab {
-  flex: 1;
-  padding: 7px 0;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-2);
-  transition: background 0.15s, color 0.15s;
-}
-
-.dash-history-tab.active {
-  background: #fff;
-  color: var(--accent);
-  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.12);
-}
-
-.dash-history-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 10px 12px;
-  cursor: pointer;
-}
-
-.dash-history-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(236, 72, 153, 0.12);
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.dash-history-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.dash-history-name {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.dash-history-preview {
-  font-size: 0.76rem;
-  color: var(--text-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dash-history-time {
-  font-size: 0.68rem;
-  color: var(--text-3);
-  flex-shrink: 0;
-}
-
-/* Leaderboard — compact card */
-.dash-lb-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 14px 16px;
-  text-align: left;
-}
-
-.dash-lb-icon { font-size: 1.4rem; }
-
-.dash-lb-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.dash-lb-title { font-size: 0.88rem; font-weight: 700; color: var(--text); }
-.dash-lb-rank  { font-size: 0.76rem; color: var(--text-2); }
-
-.dash-lb-chevron { color: var(--text-3); font-size: 1.15rem; line-height: 1; }
-
-.dash-empty {
-  font-size: 0.8rem;
-  color: var(--text-3);
-}
-
-/* Settings menu */
-.dash-menu {
-  display: flex;
-  flex-direction: column;
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-
-.dash-menu-row {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--text);
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  transition: background 0.12s;
-}
-
-.dash-menu-row:last-child { border-bottom: none; }
-/* hover:hover — WKWebView/mobile Safari apply :hover on tap and it sticks
-   until the next tap elsewhere, showing as a stray grey box; scope it to
-   devices that actually have a pointer capable of hovering. */
-@media (hover: hover) {
-  .dash-menu-row:hover { background: var(--s2); }
-}
-
-.dash-menu-row span {
-  color: var(--text-3);
-  font-size: 1.15rem;
-  line-height: 1;
-}
-
-/* Settings — expands inline instead of navigating to a new page */
-.dash-settings-chevron {
-  display: inline-block;
-  transition: transform 0.15s;
-}
-
-.dash-settings-btn--open .dash-settings-chevron {
-  transform: rotate(90deg);
-}
-
-/* Collapsed by default; expanding animates max-height instead of an
-   instant hidden-attribute swap, for a slow dropdown slide (same pattern
-   as .aicoach-suggest-body). */
-.dash-settings-dropdown {
-  max-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: max-height 0.4s ease, margin-top 0.4s ease;
-}
-
-.dash-settings-dropdown.open {
-  max-height: 60vh;
-  margin-top: 8px;
-}
-
-
 /* ================================================================
-   ACCOUNT SETTINGS (screen-settings)
+   Account-page settings fields (screen-home-settings still uses these —
+   the standalone Settings Home screen these were originally built for is
+   gone now; its content lives directly on screen-dashboard, see Settings
+   2.0 / .settings2-* below).
    ================================================================ */
 .settings-layout {
   display: flex;
@@ -7866,20 +7669,6 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* ---- Profile / Pro cards on Settings Home ---- */
-.settings2-profile-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 14px 16px;
-  background: var(--s1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  text-align: left;
-  font-family: inherit;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
 .settings2-avatar {
   flex: none;
   width: 44px; height: 44px;
@@ -7890,9 +7679,6 @@ a { text-decoration: none; color: inherit; }
   font-size: 1.1rem; font-weight: 800;
 }
 .settings2-avatar--sm { width: 36px; height: 36px; font-size: 0.95rem; }
-.settings2-profile-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.settings2-profile-name { font-size: 0.98rem; font-weight: 800; color: var(--text); }
-.settings2-profile-sub { font-size: 0.8rem; color: var(--text-2); }
 
 .settings2-pro-card {
   position: relative;
