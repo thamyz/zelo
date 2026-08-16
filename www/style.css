@@ -5315,10 +5315,10 @@ a { text-decoration: none; color: inherit; }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  /* Sits just below the fold at rest, reachable with a normal small scroll —
-     same plain, native overflow-y:auto behavior as the Account screen, no
-     custom reveal/snap-back logic. */
-  margin-top: 80px;
+  /* Plain document flow, same as everything above it — reachable with a
+     normal small scroll, same native overflow-y:auto behavior as the
+     Account screen. No absolute positioning, no scroll-triggered logic. */
+  margin-top: 50px;
   padding-top: 14px;
   font-size: 0.8rem;
   color: var(--text-3);
