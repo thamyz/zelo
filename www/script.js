@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-16 21:30";
+const BUILD_STAMP = "2026-08-16 22:05";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -7583,6 +7583,29 @@ document.addEventListener('touchstart', (e) => {
     const { els } = movableElsAndClip(e.target);
     if (nudgedEls.length && nudgedEls[0] === els[0]) clearNudge();
   }, true);
+})();
+
+// ============================================================
+// SCAN TAB — "Your chats are private and secure" reveal-on-pull
+// ============================================================
+// The privacy note sits below the fold at rest (see .scan-privacy-reveal-gap
+// in style.css) — pulling down past the AI Coach card reveals it, and once
+// the user lets go it should spring back to rest instead of staying
+// scrolled, matching how a native app's pull gesture behaves. CSS
+// scroll-snap looked like the natural fit but doesn't reliably force the
+// return here (verified: it settles wherever momentum runs out instead of
+// snapping to the one defined point) — so this does it explicitly: once
+// scrolling has settled anywhere off zero, animate back to the top.
+(function () {
+  const el = document.querySelector('#tab-assistant .tab-scroll');
+  if (!el) return;
+  let settleTimer = null;
+  el.addEventListener('scroll', () => {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => {
+      if (el.scrollTop > 0) el.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 200);
+  }, { passive: true });
 })();
 
 // ============================================================

@@ -1175,13 +1175,19 @@ a { text-decoration: none; color: inherit; }
   padding-top: 109px;
 }
 
+/* top:0 + padding-top absorbing the 36px gap (same reasoning as the
+   .app-header override above) — the header's own white background has to
+   reach the real top of the screen or that strip is left uncovered and can
+   flash through on scroll/bounce. padding-top: 50px = 36px gap + this
+   header's original 14px own padding, so the back button/title stay put. */
 #screen-dashboard .screen-header {
   position: fixed;
-  top: 36px;
+  top: 0;
   left: 0;
   right: 0;
   max-width: 430px;
   margin: 0 auto;
+  padding-top: 50px;
 }
 
 /* Close/back button on the right instead of the left — used only for
@@ -2181,15 +2187,23 @@ a { text-decoration: none; color: inherit; }
    block in script.js), so that rationale no longer applies. max-width +
    margin:auto matches #app's own centering, so this stays correctly scoped
    to the app's column instead of the full viewport on wider screens. */
+/* top:0 (not 34px) + padding-top absorbing that 34px gap instead — the
+   header's own opaque background needs to physically extend up to the real
+   top of the screen (status bar / Dynamic Island zone), or that strip is
+   left uncovered by any fixed element and can flash through during scroll.
+   padding-top: 50px = the 34px gap + this header's original 16px own
+   padding, so the icons/wordmark still land at the same visual spot as
+   before — only the box's own top edge moved, not its content. */
 #tab-assistant .app-header,
 #tab-practice .app-header,
 #tab-chats .app-header {
   position: fixed;
-  top: 34px;
+  top: 0;
   left: 0;
   right: 0;
   max-width: 430px;
   margin: 0 auto;
+  padding-top: 50px;
 }
 
 #tab-assistant .tab-scroll,
@@ -5305,6 +5319,18 @@ a { text-decoration: none; color: inherit; }
   padding-top: 14px;
   font-size: 0.8rem;
   color: var(--text-3);
+}
+
+/* Deliberately generous — this note sits below the fold at rest and only
+   reveals on an active pull past the AI Coach card (see the scroll-snap
+   pair on #tab-assistant .tab-scroll / .scan-main further down), so this is
+   the gesture's travel distance, not visual breathing room. Height lives on
+   a dedicated element rather than the note's own padding/margin because
+   those push the note's *content* down without moving the note's own box,
+   which doesn't create real pull distance before it. */
+.scan-privacy-reveal-gap {
+  flex-shrink: 0;
+  height: 104px;
 }
 
 
