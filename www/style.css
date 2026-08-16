@@ -5315,22 +5315,13 @@ a { text-decoration: none; color: inherit; }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: auto; /* pushes to the bottom of .scan-main, close to the tab bar — the AI Coach banner above stays put */
+  /* Sits just below the fold at rest, reachable with a normal small scroll —
+     same plain, native overflow-y:auto behavior as the Account screen, no
+     custom reveal/snap-back logic. */
+  margin-top: 36px;
   padding-top: 14px;
   font-size: 0.8rem;
   color: var(--text-3);
-}
-
-/* Deliberately generous — this note sits below the fold at rest and only
-   reveals on an active pull past the AI Coach card (see the scroll-snap
-   pair on #tab-assistant .tab-scroll / .scan-main further down), so this is
-   the gesture's travel distance, not visual breathing room. Height lives on
-   a dedicated element rather than the note's own padding/margin because
-   those push the note's *content* down without moving the note's own box,
-   which doesn't create real pull distance before it. */
-.scan-privacy-reveal-gap {
-  flex-shrink: 0;
-  height: 104px;
 }
 
 

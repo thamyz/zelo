@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-16 22:15";
+const BUILD_STAMP = "2026-08-16 22:30";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -7583,48 +7583,6 @@ document.addEventListener('touchstart', (e) => {
     const { els } = movableElsAndClip(e.target);
     if (nudgedEls.length && nudgedEls[0] === els[0]) clearNudge();
   }, true);
-})();
-
-// ============================================================
-// SCAN TAB — "Your chats are private and secure" reveal-on-pull
-// ============================================================
-// The privacy note sits below the fold at rest (see .scan-privacy-reveal-gap
-// in style.css) — pulling down past the AI Coach card reveals it, and once
-// the user lets go it should spring back to rest instead of staying
-// scrolled, matching how a native app's pull gesture behaves. CSS
-// scroll-snap looked like the natural fit but doesn't reliably force the
-// return here (verified: it settles wherever momentum runs out instead of
-// snapping to the one defined point) — so this does it explicitly: once
-// scrolling has settled anywhere off zero, animate back to the top.
-// A short custom rAF animation instead of scrollTo({behavior:'smooth'}) —
-// native smooth-scroll duration isn't controllable and reads as sluggish
-// for a "spring back" (real rubber-band settles fast). 60ms debounce is
-// just enough to tell "still actively scrolling" from "stopped."
-(function () {
-  const el = document.querySelector('#tab-assistant .tab-scroll');
-  if (!el) return;
-  let settleTimer = null;
-  let raf = null;
-  const DURATION = 160;
-  function animateBack() {
-    cancelAnimationFrame(raf);
-    const start = el.scrollTop;
-    if (start <= 0) return;
-    const startTime = performance.now();
-    function step(now) {
-      const t = Math.min(1, (now - startTime) / DURATION);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-      el.scrollTop = start * (1 - eased);
-      if (t < 1) raf = requestAnimationFrame(step);
-      else raf = null;
-    }
-    raf = requestAnimationFrame(step);
-  }
-  el.addEventListener('scroll', () => {
-    if (raf) return; // scroll events fired by our own animation — ignore
-    clearTimeout(settleTimer);
-    settleTimer = setTimeout(animateBack, 60);
-  }, { passive: true });
 })();
 
 // ============================================================
