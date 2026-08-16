@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-16 13:35";
+const BUILD_STAMP = "2026-08-16 15:10";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -4845,12 +4845,6 @@ function openDashboard() {
   const rankEl = document.getElementById('dash-lb-rank');
   if (rankEl) rankEl.textContent = `Rank #${myEntry.rank}`;
 
-  // Settings dropdown always starts collapsed
-  const settingsDropdown = document.getElementById('dash-settings-dropdown');
-  const settingsBtn      = document.getElementById('dash-settings-btn');
-  if (settingsDropdown) settingsDropdown.classList.remove('open');
-  if (settingsBtn) settingsBtn.classList.remove('dash-settings-btn--open');
-
   pushScreen('dashboard');
 }
 
@@ -6893,58 +6887,22 @@ function openLeaderboardFromDash() {
 
 
 // ================================================================
-// ACCOUNT SETTINGS
-// The Settings entry point is an inline dropdown on the Account page
-// (toggleSettingsDropdown), not a page of its own. Each row in that
-// dropdown pushes straight into screen-settings on its own panel;
-// the header back button there always returns straight to Account.
+// SETTINGS 2.0 — rebuilt against the settings-flow reference. Settings is
+// its own full screen tree now (pushScreen/popScreen, see openSettingsHome
+// below and everywhere else in this block that calls pushScreen('settings-
+// ...')), not the old inline dropdown-on-Account-page + panel-switching-
+// within-one-screen setup. Layout/structure pass only — see the big
+// comment at the top of the Settings 2.0 markup in index.html for what's
+// deliberately left as placeholder (pricing, scan-retention values, icons).
 // ================================================================
 
-let _settingsPanel = null;
-
-const SETTINGS_PANEL_IDS = {
-  'login':           'settings-panel-login',
-  'security':        'settings-panel-security',
-  'notifications':   'settings-panel-notifications',
-  'privacy':         'settings-panel-privacy',
-  'help':            'settings-panel-help'
-};
-
-const SETTINGS_PANEL_TITLES = {
-  'login':           'Login',
-  'security':        'Security',
-  'notifications':   'Notifications',
-  'privacy':         'Privacy',
-  'help':            'Help & Support'
-};
-
-// Settings section on the Account page — expands/collapses in place.
-function toggleSettingsDropdown() {
-  const dropdown = document.getElementById('dash-settings-dropdown');
-  const btn      = document.getElementById('dash-settings-btn');
-  if (!dropdown) return;
-  const open = !dropdown.classList.contains('open');
-  dropdown.classList.toggle('open', open);
-  if (btn) btn.classList.toggle('dash-settings-btn--open', open);
-}
-
-function openSettingsSubpage(name) {
-  showSettingsPanel(name);
+function openSettingsHome() {
+  const name = getDisplayName();
+  const avatarEl = document.getElementById('settings2-avatar');
+  const nameEl   = document.getElementById('settings2-name');
+  if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+  if (nameEl)   nameEl.textContent   = name;
   pushScreen('settings');
-}
-
-function showSettingsPanel(name) {
-  _settingsPanel = name;
-  Object.entries(SETTINGS_PANEL_IDS).forEach(([key, id]) => {
-    const el = document.getElementById(id);
-    if (el) el.hidden = (key !== name);
-  });
-  const titleEl = document.getElementById('settings-screen-title');
-  if (titleEl) titleEl.textContent = SETTINGS_PANEL_TITLES[name] || 'Settings';
-
-  if (name === 'login')          _populateLoginPanel();
-  if (name === 'notifications')  _populateNotificationsPanel();
-  if (name === 'privacy')        _populatePrivacyPanel();
 }
 
 // No intermediate list page anymore — back always returns to Account.
@@ -6952,29 +6910,247 @@ function settingsBack() {
   popScreen();
 }
 
-function _populateLoginPanel() {
-  const nameInput = document.getElementById('settings-display-name-input');
-  if (nameInput) nameInput.value = getDisplayName();
+function openSettingsProfileLogin() {
+  const name = getDisplayName();
+  const avatarEl = document.getElementById('settings2-avatar-2');
+  if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+  const previewEl = document.getElementById('settings2-display-name-preview');
+  if (previewEl) previewEl.textContent = name;
   const emailInput = document.getElementById('settings-email-input');
   if (emailInput) emailInput.value = AUTH.currentEmail();
   const emailMsg = document.getElementById('settings-email-msg');
   if (emailMsg) emailMsg.textContent = '';
   const pwMsg = document.getElementById('settings-password-msg');
   if (pwMsg) pwMsg.textContent = '';
+  pushScreen('settings-profile-login');
 }
 
-function _populateNotificationsPanel() {
-  const push  = document.getElementById('toggle-push-notifications');
-  const email = document.getElementById('toggle-email-notifications');
-  if (push)  push.checked  = localStorage.getItem('zelo_push_notifications')  === 'true';
-  if (email) email.checked = localStorage.getItem('zelo_email_notifications') === 'true';
+function openSettingsEditName() {
+  const input = document.getElementById('settings-display-name-input');
+  if (input) input.value = getDisplayName();
+  _settingsNameCounter();
+  pushScreen('settings-edit-name');
 }
 
-function _populatePrivacyPanel() {
+function _settingsNameCounter() {
+  const input   = document.getElementById('settings-display-name-input');
+  const countEl = document.getElementById('settings2-name-count');
+  if (input && countEl) countEl.textContent = `${input.value.length}/30`;
+}
+
+// ---- Personalization (tone + "what Zelo helps you with") ----
+const SETTINGS_TONE_LABELS = {
+  friendly: 'Friendly', playful: 'Playful', confident: 'Confident', casual: 'Casual', direct: 'Direct',
+};
+const SETTINGS_TONE_PREVIEWS = {
+  friendly:  "It was good! Thanks for asking 😊 How was yours?",
+  playful:   "It was good, chaotic as always 😂 yours?",
+  confident: "It was good! Busy but productive 💪 How was yours?",
+  casual:    "Pretty good, nothing crazy. You?",
+  direct:    "Good. Productive day. You?",
+};
+
+function openSettingsPersonalization() {
+  const tone = localStorage.getItem('zelo_settings_tone') || 'confident';
+  document.querySelectorAll('#settings2-tone-list .settings2-radio-row').forEach(row => {
+    row.classList.toggle('selected', row.dataset.tone === tone);
+  });
+  let helpWith;
+  try { helpWith = JSON.parse(localStorage.getItem('zelo_settings_help_with') || '[]'); }
+  catch { helpWith = []; }
+  if (!helpWith.length) helpWith = ['replying', 'starting', 'understanding'];
+  document.querySelectorAll('#settings2-helpswith-list .settings2-check-row').forEach(row => {
+    row.classList.toggle('selected', helpWith.includes(row.dataset.help));
+  });
+  pushScreen('settings-personalization');
+}
+
+function settingsToneSelect(tone, el) {
+  document.querySelectorAll('#settings2-tone-list .settings2-radio-row').forEach(row => row.classList.remove('selected'));
+  el.classList.add('selected');
+  localStorage.setItem('zelo_settings_tone', tone);
+  const labelEl = document.getElementById('settings2-preview-tone-label');
+  const replyEl = document.getElementById('settings2-preview-reply');
+  if (labelEl) labelEl.textContent = `Zelo (${SETTINGS_TONE_LABELS[tone] || tone})`;
+  if (replyEl) replyEl.textContent = SETTINGS_TONE_PREVIEWS[tone] || SETTINGS_TONE_PREVIEWS.confident;
+  pushScreen('settings-tone-preview');
+}
+
+function settingsHelpWithToggle(key, el) {
+  let list;
+  try { list = JSON.parse(localStorage.getItem('zelo_settings_help_with') || '[]'); }
+  catch { list = []; }
+  if (!list.length) list = ['replying', 'starting', 'understanding'];
+  const i = list.indexOf(key);
+  if (i === -1) list.push(key); else list.splice(i, 1);
+  localStorage.setItem('zelo_settings_help_with', JSON.stringify(list));
+  el.classList.toggle('selected', list.includes(key));
+}
+
+function saveSettingsPersonalization() {
+  popScreen();
+}
+
+// ---- Practice Preferences — a NEW screen under Settings Home. Shares the
+// same localStorage keys as the Home tab's own separate practice-prefs
+// screen (screen-home-settings / settingsPracticeSelect / onAgeRangeChange
+// above) so a change from either place takes effect everywhere, but uses
+// its own markup/ids — screen-home-settings is intentionally untouched. ----
+function openSettingsPracticePrefs() {
+  const mode = localStorage.getItem('zelo_practice_mode') || 'women';
+  const modeLabels = { women: 'Women', men: 'Men', both: 'Both' };
+  const whoEl = document.getElementById('settings2-who-preview');
+  if (whoEl) whoEl.textContent = modeLabels[mode] || 'Women';
+
+  const age = localStorage.getItem('zelo_age_range') || '18-24';
+  const ageEl = document.getElementById('settings2-age-preview');
+  if (ageEl) ageEl.textContent = age.replace('-', '–');
+
+  const diff = localStorage.getItem('zelo_settings_difficulty') || 'Balanced';
+  const diffEl = document.getElementById('settings2-difficulty-preview');
+  if (diffEl) diffEl.textContent = diff;
+
+  const topics = localStorage.getItem('zelo_settings_topics') || 'All';
+  const topicsEl = document.getElementById('settings2-topics-preview');
+  if (topicsEl) topicsEl.textContent = topics;
+
+  pushScreen('settings-practice-prefs');
+}
+
+function openSettingsWhoPractice() {
+  const mode = localStorage.getItem('zelo_practice_mode') || 'women';
+  document.querySelectorAll('#settings2-who-list .settings2-radio-row').forEach(row => {
+    row.classList.toggle('selected', row.dataset.mode === mode);
+  });
+  pushScreen('settings-who-practice');
+}
+
+function settingsPrefsWhoSelect(mode, el) {
+  document.querySelectorAll('#settings2-who-list .settings2-radio-row').forEach(row => row.classList.remove('selected'));
+  el.classList.add('selected');
+  localStorage.setItem('zelo_practice_mode', mode);
+  localStorage.setItem('zelo_mode_selected', '1');
+  state.swipeIndex = state.swipeProfiles.length;
+}
+
+function openSettingsAgeRangeSub() {
+  const age = localStorage.getItem('zelo_age_range') || '18-24';
+  document.querySelectorAll('#settings2-age-list .settings2-radio-row').forEach(row => {
+    row.classList.toggle('selected', row.dataset.age === age);
+  });
+  pushScreen('settings-age-range');
+}
+
+function settingsPrefsAgeSelect(value, el) {
+  document.querySelectorAll('#settings2-age-list .settings2-radio-row').forEach(row => row.classList.remove('selected'));
+  el.classList.add('selected');
+  localStorage.setItem('zelo_age_range', value);
+  state.swipeIndex = state.swipeProfiles.length;
+}
+
+// Practice difficulty / conversation topics — the reference doesn't show a
+// dedicated sub-screen for either, so tapping just cycles the value in
+// place (same lightweight pattern as a segmented control).
+const SETTINGS_DIFFICULTY_OPTIONS = ['Easy', 'Balanced', 'Hard'];
+function cycleSettingsDifficulty() {
+  const el = document.getElementById('settings2-difficulty-preview');
+  if (!el) return;
+  const i = SETTINGS_DIFFICULTY_OPTIONS.indexOf(el.textContent);
+  const next = SETTINGS_DIFFICULTY_OPTIONS[(i + 1) % SETTINGS_DIFFICULTY_OPTIONS.length];
+  el.textContent = next;
+  localStorage.setItem('zelo_settings_difficulty', next);
+}
+const SETTINGS_TOPICS_OPTIONS = ['All', 'Dating', 'Friendship', 'Work'];
+function cycleSettingsTopics() {
+  const el = document.getElementById('settings2-topics-preview');
+  if (!el) return;
+  const i = SETTINGS_TOPICS_OPTIONS.indexOf(el.textContent);
+  const next = SETTINGS_TOPICS_OPTIONS[(i + 1) % SETTINGS_TOPICS_OPTIONS.length];
+  el.textContent = next;
+  localStorage.setItem('zelo_settings_topics', next);
+}
+
+// ---- Notifications ----
+function openSettingsNotifications() {
+  const set = (id, key, def) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const stored = localStorage.getItem(key);
+    el.checked = stored === null ? def : stored === 'true';
+  };
+  set('toggle-push-notifications', 'zelo_push_notifications', true);
+  set('toggle-email-notifications', 'zelo_email_notifications', true);
+  set('toggle-reply-reminders', 'zelo_notif_reply_reminders', true);
+  set('toggle-practice-updates', 'zelo_notif_practice_updates', true);
+  set('toggle-zelo-tips', 'zelo_notif_tips', false);
+  set('toggle-trial-reminders', 'zelo_notif_trial_reminders', true);
+  pushScreen('settings-notifications');
+}
+
+// ---- Privacy & Data ----
+function openSettingsPrivacyData() {
   const dns = document.getElementById('toggle-do-not-sell');
   if (dns) dns.checked = localStorage.getItem('zelo_do_not_sell') === 'true';
-  const sel = document.getElementById('settings-retention-select');
-  if (sel) sel.value = localStorage.getItem('zelo_history_retention_days') || '7';
+  const days = localStorage.getItem('zelo_history_retention_days') || '7';
+  const labels = { '7': '7 days', '30': '30 days', '90': '90 days', forever: 'Keep forever' };
+  const previewEl = document.getElementById('settings2-retention-preview');
+  if (previewEl) previewEl.textContent = labels[days] || '7 days';
+  pushScreen('settings-privacy-data');
+}
+
+function openSettingsScanRetention() {
+  const days = localStorage.getItem('zelo_history_retention_days') || '7';
+  document.querySelectorAll('#settings2-retention-list .settings2-radio-row').forEach(row => {
+    row.classList.toggle('selected', row.dataset.days === days);
+  });
+  pushScreen('settings-scan-retention');
+}
+
+function settingsRetentionSelect(value, el) {
+  document.querySelectorAll('#settings2-retention-list .settings2-radio-row').forEach(row => row.classList.remove('selected'));
+  el.classList.add('selected');
+  onRetentionChange(value);
+}
+
+// ---- Zelo Pro ----
+function restoreSettingsPurchases() {
+  _settingsToast('No purchases found to restore.');
+}
+
+// ---- Help & Support ----
+function toggleSettingsFaq(rowEl) {
+  const answer  = rowEl.querySelector('.settings2-faq-answer');
+  const chevron = rowEl.querySelector('.settings2-chevron');
+  if (!answer) return;
+  const opening = answer.hidden;
+  answer.hidden = !opening;
+  if (chevron) chevron.style.transform = opening ? 'rotate(90deg)' : '';
+}
+
+function sendSettingsSupportMessage() {
+  const textarea = document.getElementById('settings2-support-message');
+  const msg = (textarea?.value || '').trim();
+  if (!msg) return;
+  if (textarea) textarea.value = '';
+  _settingsToast("Thanks — we'll get back to you soon.");
+}
+
+// Minimal single-button acknowledgement — reuses the same mini-modal shell
+// as showDeleteConfirm() above (see that function) rather than a jarring
+// native alert().
+function _settingsToast(message) {
+  const app = document.getElementById('app');
+  const overlay = document.createElement('div');
+  overlay.className = 'mini-modal-overlay';
+  overlay.innerHTML = `
+    <div class="mini-modal-card">
+      <p class="mini-modal-body">${message}</p>
+      <div class="mini-modal-actions">
+        <button class="mini-modal-confirm">OK</button>
+      </div>
+    </div>`;
+  app.appendChild(overlay);
+  overlay.querySelector('.mini-modal-confirm').onclick = () => overlay.remove();
 }
 
 function onSettingsToggle(key, value) {
@@ -7112,11 +7288,6 @@ const TEST_LAYOUT_PROFILES = Array.from({ length: 10 }, (_, i) => ({
 
 function onRetentionChange(value) {
   localStorage.setItem('zelo_history_retention_days', value);
-}
-
-function toggleHelpFaq() {
-  const el = document.getElementById('settings-faq-content');
-  if (el) el.hidden = !el.hidden;
 }
 
 function saveAccountDisplayName() {

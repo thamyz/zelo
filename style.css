@@ -3191,26 +3191,6 @@ a { text-decoration: none; color: inherit; }
 }
 .settings-info-link:active { opacity: 0.6; }
 
-.settings-faq-content {
-  padding: 4px 4px 6px;
-}
-
-.settings-faq-item { margin-bottom: 14px; }
-.settings-faq-item:last-child { margin-bottom: 0; }
-
-.settings-faq-q {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 3px;
-}
-
-.settings-faq-a {
-  font-size: 0.8rem;
-  color: var(--text-2);
-  line-height: 1.5;
-}
-
 
 /* ----------------------------------------------------------------
    NEW FEATURE DECISIONS — onboarding example, profile detail, card modes,
@@ -7599,3 +7579,426 @@ a { text-decoration: none; color: inherit; }
 }
 .home-locked-title { font-size: 1.05rem; font-weight: 800; color: #1c1917; margin: 12px 0 6px; }
 .home-locked-sub { font-size: 0.85rem; line-height: 1.4; color: #9a8f86; margin: 0; }
+
+/* ================================================================
+   SETTINGS 2.0 — rebuilt against the settings-flow reference. Two
+   independent concerns, kept in one block for locality:
+
+   1) .btn2-* — the shared button system (polish pass): primary/
+      secondary/destructive/text/link, each with a real pressed state
+      (compress + shadow-collapse + color-shift on :active), flat brand
+      colors only — no gradients, no purple, restrained shadow. Used
+      across every Settings 2.0 screen for consistency.
+
+   2) .settings2-* — the screen/card/row component system every new
+      Settings screen is built from. Icon slots (.settings2-icon) are
+      deliberately empty — no glyph, no generated icon art — real icon
+      assets land in a follow-up pass; the --tint-* modifiers only set a
+      background tint so the row rhythm matches the reference, nothing
+      more.
+   ================================================================ */
+
+/* ---- Button system ---- */
+.btn2 {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  font-size: 0.96rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+}
+.btn2-sm { width: auto; padding: 11px 18px; font-size: 0.86rem; border-radius: var(--r-md); }
+
+.btn2-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(236,72,153,0.28), 0 1px 0 rgba(255,255,255,0.18) inset;
+}
+@media (hover: hover) { .btn2-primary:hover { background: var(--accent-deep); } }
+.btn2-primary:active {
+  background: var(--accent-deep);
+  transform: scale(0.98) translateY(1px);
+  box-shadow: 0 1px 3px rgba(236,72,153,0.24);
+}
+
+.btn2-secondary {
+  background: var(--s1);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+@media (hover: hover) { .btn2-secondary:hover { background: var(--s2); } }
+.btn2-secondary:active {
+  background: var(--s2);
+  transform: scale(0.98) translateY(1px);
+}
+
+.btn2-destructive {
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.26), 0 1px 0 rgba(255,255,255,0.18) inset;
+}
+@media (hover: hover) { .btn2-destructive:hover { background: #dc2626; } }
+.btn2-destructive:active {
+  background: #dc2626;
+  transform: scale(0.98) translateY(1px);
+  box-shadow: 0 1px 3px rgba(239,68,68,0.22);
+}
+
+.btn2-text {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-weight: 600;
+  padding: 10px;
+}
+.btn2-text:active { opacity: 0.55; }
+
+.btn2-link {
+  display: inline-block;
+  width: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+.btn2-link:active { opacity: 0.55; }
+
+/* ---- Screen layout shell ---- */
+.settings2-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 48px;
+  flex: 1;
+}
+.settings2-layout--centered { align-items: center; text-align: center; padding-top: 32px; }
+
+.settings2-title { font-size: 1.5rem; font-weight: 800; color: var(--text); margin: 4px 0 0; letter-spacing: -0.3px; }
+.settings2-title--sm { font-size: 1.15rem; margin-top: 0; }
+.settings2-lede { font-size: 0.88rem; color: var(--text-2); line-height: 1.5; margin: 0 0 4px; }
+.settings2-footnote { font-size: 0.78rem; color: var(--text-3); line-height: 1.5; text-align: center; margin: 0; }
+.settings2-footlink { display: inline-block; text-align: center; width: 100%; font-size: 0.86rem; font-weight: 700; color: var(--accent-deep); margin: 4px 0; }
+.settings2-footlink:active { opacity: 0.6; }
+
+.settings2-section { display: flex; flex-direction: column; gap: 8px; }
+.settings2-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 6px 0 0;
+}
+
+/* ---- Icon placeholder slots — intentionally empty, see block comment ---- */
+.settings2-icon {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--s2);
+}
+.settings2-icon--xl { width: 64px; height: 64px; border-radius: 50%; background: var(--accent-border, #fbe0ec); margin-bottom: 4px; }
+.settings2-icon--danger { background: rgba(239,68,68,0.12); }
+.settings2-icon--tint-a { background: #fbe4d8; }
+.settings2-icon--tint-b { background: #fdf0c8; }
+.settings2-icon--tint-c { background: #fbe0ec; }
+.settings2-icon--tint-d { background: #f1e6fb; }
+.settings2-icon--tint-e { background: #e3ecfb; }
+.settings2-icon--pro { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.25); }
+.settings2-icon--pro-lg { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.25); margin-bottom: 6px; }
+
+/* ---- Cards + rows ---- */
+.settings2-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.settings2-card--full { width: 100%; text-align: left; }
+
+.settings2-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+.settings2-card > .settings2-row:last-child,
+.settings2-card > a.settings2-row:last-child { border-bottom: none; }
+@media (hover: hover) { .settings2-row:hover { background: var(--s2); } }
+.settings2-row:active { background: var(--s2); }
+.settings2-row--noborder { border-bottom: none; padding: 12px 0; }
+.settings2-row--danger .settings2-row-text b { color: var(--red); }
+.settings2-row--danger .settings2-row-text span { color: var(--red); opacity: 0.75; }
+.settings2-row--link .settings2-row-text b { color: var(--accent-deep); }
+
+.settings2-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings2-row-text b { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.settings2-row-text span { font-size: 0.8rem; color: var(--text-2); }
+.settings2-row-value { font-size: 0.86rem; color: var(--text-2); }
+
+.settings2-chevron { flex: none; color: var(--text-3); font-size: 1.2rem; line-height: 1; }
+.settings2-extlink { flex: none; color: var(--text-3); display: flex; }
+.settings2-lock { flex: none; color: var(--text-3); display: flex; }
+
+/* ---- Radio-select rows (tone, who-practice, age, retention) ---- */
+.settings2-radio-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings2-card > .settings2-radio-row:last-child { border-bottom: none; }
+.settings2-radio-row:active { background: var(--s2); }
+.settings2-radio {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border-2, #d9cec4);
+  position: relative;
+}
+.settings2-radio-row.selected .settings2-radio { border-color: var(--accent); background: var(--accent); }
+.settings2-radio-row.selected .settings2-radio::after {
+  content: '';
+  position: absolute; left: 6px; top: 3px;
+  width: 6px; height: 11px;
+  border: solid #fff; border-width: 0 2.4px 2.4px 0;
+  transform: rotate(45deg);
+}
+.settings2-radio-row.selected .settings2-row-text b { color: var(--accent-deep); }
+
+/* ---- Check rows (multi-select, "what Zelo helps with") ---- */
+.settings2-check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings2-card > .settings2-check-row:last-child { border-bottom: none; }
+.settings2-check-row:active { background: var(--s2); }
+.settings2-check {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border-2, #d9cec4);
+  position: relative;
+}
+.settings2-check-row.selected .settings2-check { border-color: var(--accent); background: var(--accent); }
+.settings2-check-row.selected .settings2-check::after {
+  content: '';
+  position: absolute; left: 6px; top: 3px;
+  width: 6px; height: 11px;
+  border: solid #fff; border-width: 0 2.4px 2.4px 0;
+  transform: rotate(45deg);
+}
+
+/* ---- Toggle rows (reuses .settings-toggle-slider's mechanics, own class
+   name so it can sit inside a .settings2-card without needing the old
+   bordered-standalone-row look) ---- */
+.settings2-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.settings2-card > .settings2-toggle-row:last-child { border-bottom: none; }
+.settings2-toggle { position: relative; flex: none; display: inline-block; width: 44px; height: 26px; }
+.settings2-toggle input { opacity: 0; width: 0; height: 0; }
+.settings2-toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--border);
+  border-radius: 999px;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.settings2-toggle-slider::before {
+  content: '';
+  position: absolute; width: 20px; height: 20px; left: 3px; top: 3px;
+  background: #fff; border-radius: 50%;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.settings2-toggle input:checked + .settings2-toggle-slider { background: var(--accent); }
+.settings2-toggle input:checked + .settings2-toggle-slider::before { transform: translateX(18px); }
+
+/* ---- Info cards (AI & Transparency — static, non-interactive) ---- */
+.settings2-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+/* ---- Profile / Pro cards on Settings Home ---- */
+.settings2-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings2-avatar {
+  flex: none;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 800;
+}
+.settings2-avatar--sm { width: 36px; height: 36px; font-size: 0.95rem; }
+.settings2-profile-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings2-profile-name { font-size: 0.98rem; font-weight: 800; color: var(--text); }
+.settings2-profile-sub { font-size: 0.8rem; color: var(--text-2); }
+
+.settings2-pro-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  border: none;
+  border-radius: var(--r-lg);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 6px 20px rgba(236,72,153,0.28);
+}
+.settings2-pro-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings2-pro-title { font-size: 0.98rem; font-weight: 800; color: #fff; }
+.settings2-pro-sub { font-size: 0.8rem; color: rgba(255,255,255,0.85); line-height: 1.4; }
+.settings2-pro-card .settings2-chevron { color: rgba(255,255,255,0.8); align-self: flex-start; }
+.settings2-manage-link {
+  position: absolute;
+  right: 16px; bottom: 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.settings2-pro-hero {
+  padding: 22px 18px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  border-radius: var(--r-lg);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(236,72,153,0.28);
+}
+.settings2-pro-hero-title { font-size: 1.15rem; font-weight: 800; margin: 0 0 4px; }
+.settings2-pro-hero-sub { font-size: 0.86rem; color: rgba(255,255,255,0.88); margin: 0 0 14px; }
+.settings2-pro-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.settings2-pro-list li { font-size: 0.86rem; font-weight: 600; padding-left: 22px; position: relative; }
+.settings2-pro-list li::before {
+  content: '✓';
+  position: absolute; left: 0; top: 0;
+  font-weight: 800;
+}
+.settings2-plan-card { padding: 14px 16px; }
+.settings2-plan-name { font-size: 0.88rem; font-weight: 700; color: var(--accent-deep); margin: 0 0 2px; }
+.settings2-plan-price { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 0 0 2px; }
+.settings2-plan-renew { font-size: 0.78rem; color: var(--text-3); margin: 0; }
+.settings2-signout-btn { margin-top: 8px; }
+
+/* ---- Fields (email/password/display-name inputs) ---- */
+.settings2-field { display: flex; flex-direction: column; gap: 6px; padding: 12px 4px; }
+.settings2-card > .settings2-field { padding: 14px 16px; }
+.settings2-field-label { font-size: 0.76rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.settings2-field-row { display: flex; gap: 8px; align-items: center; }
+.settings2-field-msg { font-size: 0.76rem; color: var(--text-2); min-height: 1em; margin: 0; }
+.settings2-input {
+  flex: 1; min-width: 0;
+  padding: 13px 14px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  background: var(--s1);
+  font-size: 16px; /* avoids iOS auto-zoom-on-focus */
+  color: var(--text);
+  font-family: inherit;
+}
+.settings2-input:focus { border-color: var(--accent); outline: none; }
+.settings2-textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  background: var(--s1);
+  font-size: 16px;
+  color: var(--text);
+  font-family: inherit;
+  resize: none;
+  box-sizing: border-box;
+}
+.settings2-textarea:focus { border-color: var(--accent); outline: none; }
+.settings2-char-count { font-size: 0.76rem; color: var(--text-3); text-align: right; margin: 0; }
+
+/* ---- Tone preview chat bubbles ---- */
+.settings2-bubble { max-width: 88%; padding: 12px 14px; border-radius: 16px; font-size: 0.88rem; line-height: 1.45; }
+.settings2-bubble--you { align-self: flex-start; background: var(--s2); color: var(--text); border-bottom-left-radius: 4px; }
+.settings2-bubble--zelo { align-self: flex-start; background: #dbeafe; color: #1e3a5f; border-bottom-left-radius: 4px; }
+
+/* ---- Bullet lists (delete account / download data) ---- */
+.settings2-bullet-list { list-style: none; margin: 6px 0; padding: 0; text-align: left; width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.settings2-bullet-list li { font-size: 0.86rem; color: var(--text-2); padding-left: 18px; position: relative; }
+.settings2-bullet-list li::before { content: '•'; position: absolute; left: 2px; color: var(--text-3); }
+
+/* ---- FAQ rows (Help & Support) ---- */
+.settings2-faq-row { border-bottom: 1px solid var(--border); }
+.settings2-faq-row:last-child { border-bottom: none; }
+.settings2-faq-answer { margin: 0 0 14px; padding: 0 16px; font-size: 0.82rem; color: var(--text-2); line-height: 1.5; }
+.settings2-faq-row .settings2-row { padding: 14px 16px; }
+
+/* ---- About Zelo mark ---- */
+.settings2-about-mark {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+}
+.settings2-about-name { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 0; }

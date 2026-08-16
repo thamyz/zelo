@@ -332,8 +332,8 @@
         <div class="dash-layout">
 
           <!-- Header: avatar, display name (or "Player #XXXX" fallback), member
-               label — tapping opens the Login page (name/email/password) -->
-          <button class="dash-profile-card" onclick="openSettingsSubpage('login')">
+               label — tapping opens Profile & Login (see Settings 2.0) -->
+          <button class="dash-profile-card" onclick="openSettingsProfileLogin()">
             <div class="dash-avatar" id="dash-avatar">Y</div>
             <div class="dash-profile-info">
               <span class="dash-name" id="dash-name">You</span>
@@ -389,30 +389,13 @@
             </button>
           </div>
 
-          <!-- Settings — section label that expands inline, not a new page.
-               Each row still opens its own sub-page (screen-settings). -->
+          <!-- Settings — navigates to the full Settings Home screen
+               (Settings 2.0, see screen-settings) instead of expanding
+               inline the way it used to. -->
           <div class="dash-section">
-            <button class="dash-menu-row dash-settings-btn" id="dash-settings-btn" onclick="toggleSettingsDropdown()">
-              Settings <span class="dash-settings-chevron" id="dash-settings-chevron">›</span>
+            <button class="dash-menu-row dash-settings-btn" onclick="openSettingsHome()">
+              Settings <span>›</span>
             </button>
-            <div class="dash-settings-dropdown" id="dash-settings-dropdown">
-              <div class="dash-menu">
-                <button class="dash-menu-row" onclick="openSettingsSubpage('security')">
-                  Security <span>›</span>
-                </button>
-                <button class="dash-menu-row" onclick="openSettingsSubpage('notifications')">
-                  Notifications <span>›</span>
-                </button>
-                <button class="dash-menu-row" onclick="openSettingsSubpage('privacy')">
-                  Privacy <span>›</span>
-                </button>
-                <button class="dash-menu-row" onclick="openSettingsSubpage('help')">
-                  Help &amp; Support <span>›</span>
-                </button>
-              </div>
-              <!-- Separate from the list above; signs out immediately, no confirmation -->
-              <button class="settings-signout-btn" onclick="AUTH.signOut()">Sign Out</button>
-            </div>
           </div>
 
         </div>
@@ -420,157 +403,824 @@
 
 
       <!-- ============================================================
-           SCREEN: ACCOUNT SETTINGS
-           Distinct from the top-level Account page (screen-dashboard) —
-           "Login & Security" below is intentionally never called
-           "Account", to avoid confusion between the two in code and UI.
-           Entry point is the inline Settings dropdown on the Account page,
-           not a list page here — each row pushes straight to its panel,
-           and the back button returns straight to Account.
+           SETTINGS 2.0 — rebuilt against the settings-flow reference
+           (design-refs/settings/settings-flow-reference.png).
+           LAYOUT/STRUCTURE PASS ONLY:
+             · Pricing ("THB 999/year" etc.) is placeholder copy from the
+               reference, not a real/final price.
+             · Scan history retention is the 7/30/90/forever picker exactly
+               as shown in the reference — not a decided tier system.
+             · Every .settings2-icon is an intentionally EMPTY placeholder
+               slot (no glyph) — real icon assets land in a follow-up pass.
+             · Button styling (primary/secondary/destructive) follows the
+               shared .btn2-* system — see that block in style.css.
+           20 screens total: 01 Settings Home through 07 Privacy & Data,
+           plus all 13 sub-screens the reference shows branching off them.
            ============================================================ -->
-      <div class="screen" id="screen-settings">
 
-        <div class="screen-header screen-header--closeright">
-          <span class="screen-title" id="settings-screen-title">Settings</span>
-          <button class="back-btn" onclick="settingsBack()" aria-label="Close">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <!-- 01 — SETTINGS HOME -->
+      <div class="screen" id="screen-settings">
+        <div class="screen-header">
+          <button class="back-btn" onclick="settingsBack()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Settings</span>
+        </div>
+        <div class="settings2-layout">
+
+          <button class="settings2-profile-card" onclick="openSettingsProfileLogin()">
+            <span class="settings2-avatar" id="settings2-avatar">Y</span>
+            <span class="settings2-profile-info">
+              <span class="settings2-profile-name" id="settings2-name">You</span>
+              <span class="settings2-profile-sub">Manage your Zelo account</span>
+            </span>
+            <span class="settings2-chevron" aria-hidden="true">›</span>
+          </button>
+
+          <button class="settings2-pro-card" onclick="pushScreen('settings-zelo-pro')">
+            <span class="settings2-icon settings2-icon--pro" aria-hidden="true"></span>
+            <span class="settings2-pro-info">
+              <span class="settings2-pro-title">Zelo Pro</span>
+              <span class="settings2-pro-sub">Annual plan<br>THB 999 / year</span>
+            </span>
+            <span class="settings2-chevron" aria-hidden="true">›</span>
+            <span class="settings2-manage-link">Manage subscription ›</span>
+          </button>
+
+          <div class="settings2-section">
+            <p class="settings2-section-label">Zelo</p>
+            <div class="settings2-card">
+              <button class="settings2-row" onclick="openSettingsPersonalization()">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>Personalization</b><span>Change how Zelo responds to you</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <button class="settings2-row" onclick="openSettingsPracticePrefs()">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>Practice preferences</b><span>Customize your practice experience</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings2-section">
+            <p class="settings2-section-label">Account</p>
+            <div class="settings2-card">
+              <button class="settings2-row" onclick="openSettingsProfileLogin()">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>Profile &amp; login</b><span>Manage your account details</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <button class="settings2-row" onclick="openSettingsNotifications()">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>Notifications</b><span>Manage what you want to hear</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings2-section">
+            <p class="settings2-section-label">Privacy &amp; Data</p>
+            <div class="settings2-card">
+              <button class="settings2-row" onclick="openSettingsPrivacyData()">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>Privacy &amp; data</b><span>Control your data and privacy</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <button class="settings2-row" onclick="pushScreen('settings-ai-transparency')">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>AI &amp; transparency</b><span>Learn how Zelo uses AI</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings2-section">
+            <p class="settings2-section-label">Support</p>
+            <div class="settings2-card">
+              <button class="settings2-row" onclick="pushScreen('settings-help-support')">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>Help &amp; Support</b><span>Get help and contact Zelo</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings2-section">
+            <p class="settings2-section-label">About</p>
+            <div class="settings2-card">
+              <button class="settings2-row" onclick="pushScreen('settings-about')">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>About Zelo</b><span>App info, terms, and more</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+
+          <button class="btn2 btn2-primary settings2-signout-btn" onclick="AUTH.signOut()">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- 02 — PROFILE & LOGIN -->
+      <div class="screen" id="screen-settings-profile-login">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Profile &amp; Login</span>
+        </div>
+        <div class="settings2-layout">
+          <div class="settings2-section">
+            <p class="settings2-section-label">Profile</p>
+            <div class="settings2-card">
+              <button class="settings2-row" onclick="openSettingsEditName()">
+                <span class="settings2-avatar settings2-avatar--sm" id="settings2-avatar-2">Y</span>
+                <span class="settings2-row-text"><b>Profile photo</b></span>
+              </button>
+              <button class="settings2-row" onclick="openSettingsEditName()">
+                <span class="settings2-row-text"><b>Display name</b><span id="settings2-display-name-preview">—</span></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+            <div class="settings2-card">
+              <div class="settings2-field">
+                <label class="settings2-field-label">Email</label>
+                <div class="settings2-field-row">
+                  <input type="email" id="settings-email-input" class="settings2-input" placeholder="you@example.com" enterkeyhint="done" />
+                  <button class="btn2 btn2-primary btn2-sm" onclick="changeAccountEmail()">Save</button>
+                </div>
+                <p class="settings2-field-msg" id="settings-email-msg"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings2-section">
+            <p class="settings2-section-label">Security</p>
+            <div class="settings2-card">
+              <div class="settings2-field">
+                <label class="settings2-field-label">Password</label>
+                <div class="settings2-field-row">
+                  <input type="password" id="settings-password-input" class="settings2-input" placeholder="New password" enterkeyhint="done" />
+                  <button class="btn2 btn2-primary btn2-sm" onclick="changeAccountPassword()">Save</button>
+                </div>
+                <p class="settings2-field-msg" id="settings-password-msg"></p>
+              </div>
+              <div class="settings2-row">
+                <span class="settings2-icon" aria-hidden="true"></span>
+                <span class="settings2-row-text"><b>Sign-in method</b><span>Email</span></span>
+              </div>
+              <button class="settings2-row" onclick="exportAccountData()">
+                <span class="settings2-row-text"><b>Export my data (GDPR)</b></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+          </div>
+
+          <button class="btn2 btn2-secondary" onclick="AUTH.signOut()">Sign Out of All Devices</button>
+          <p class="settings2-footnote">You'll stay signed in on this device.</p>
+        </div>
+      </div>
+
+      <!-- 02a — EDIT DISPLAY NAME -->
+      <div class="screen" id="screen-settings-edit-name">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Edit Display Name</span>
+        </div>
+        <div class="settings2-layout">
+          <p class="settings2-lede">This is how your name appears in Zelo.</p>
+          <div class="settings2-field">
+            <label class="settings2-field-label">Display name</label>
+            <input type="text" id="settings-display-name-input" class="settings2-input" maxlength="30" enterkeyhint="done" oninput="_settingsNameCounter()" />
+            <p class="settings2-char-count" id="settings2-name-count">0/30</p>
+          </div>
+          <button class="btn2 btn2-primary" onclick="saveAccountDisplayName(); popScreen();">Save</button>
+          <button class="btn2 btn2-text" onclick="popScreen()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- 03 — PERSONALIZATION -->
+      <div class="screen" id="screen-settings-personalization">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
         </div>
+        <div class="settings2-layout">
+          <p class="settings2-lede">Customize how Zelo talks to you and supports your goals.</p>
 
-        <div class="settings-layout">
-
-          <!-- LOGIN — entered from the profile card at the top of Account,
-               not from the Settings dropdown -->
-          <div id="settings-panel-login" hidden>
-            <div class="settings-field">
-              <label class="settings-field-label">Display name</label>
-              <div class="settings-field-row">
-                <input type="text" id="settings-display-name-input" class="settings-input" maxlength="30" enterkeyhint="done" />
-                <button class="settings-save-btn" onclick="saveAccountDisplayName()">Save</button>
-              </div>
-            </div>
-
-            <div class="settings-field">
-              <label class="settings-field-label">Email</label>
-              <div class="settings-field-row">
-                <input type="email" id="settings-email-input" class="settings-input" placeholder="you@example.com" enterkeyhint="done" />
-                <button class="settings-save-btn" onclick="changeAccountEmail()">Save</button>
-              </div>
-              <p class="settings-field-msg" id="settings-email-msg"></p>
-            </div>
-
-            <div class="settings-field">
-              <label class="settings-field-label">New password</label>
-              <div class="settings-field-row">
-                <input type="password" id="settings-password-input" class="settings-input" placeholder="New password" enterkeyhint="done" />
-                <button class="settings-save-btn" onclick="changeAccountPassword()">Save</button>
-              </div>
-              <p class="settings-field-msg" id="settings-password-msg"></p>
-            </div>
-          </div>
-
-          <!-- SECURITY — stays in the Settings dropdown, in the same place
-               "Login & Security" used to be -->
-          <div id="settings-panel-security" hidden>
-            <button class="dash-menu-row" onclick="exportAccountData()">
-              Export my data (GDPR) <span>›</span>
+          <p class="settings2-section-label">Your style</p>
+          <div class="settings2-card" id="settings2-tone-list">
+            <button type="button" class="settings2-radio-row" data-tone="friendly" onclick="settingsToneSelect('friendly', this)">
+              <span class="settings2-icon settings2-icon--tint-a" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Friendly</b><span>Warm and supportive</span></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
             </button>
-
-            <button class="settings-delete-account-btn" onclick="confirmDeleteAccount()">
-              Delete account permanently
+            <button type="button" class="settings2-radio-row" data-tone="playful" onclick="settingsToneSelect('playful', this)">
+              <span class="settings2-icon settings2-icon--tint-b" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Playful</b><span>Fun and casual</span></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-tone="confident" onclick="settingsToneSelect('confident', this)">
+              <span class="settings2-icon settings2-icon--tint-c" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Confident</b><span>Encouraging and bold</span></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-tone="casual" onclick="settingsToneSelect('casual', this)">
+              <span class="settings2-icon settings2-icon--tint-d" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Casual</b><span>Laid-back and chill</span></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-tone="direct" onclick="settingsToneSelect('direct', this)">
+              <span class="settings2-icon settings2-icon--tint-e" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Direct</b><span>Straight to the point</span></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
             </button>
           </div>
 
-          <!-- NOTIFICATIONS -->
-          <div id="settings-panel-notifications" hidden>
-            <label class="settings-toggle-row">
-              <span class="settings-toggle-label">Push notifications</span>
-              <span class="settings-toggle">
-                <input type="checkbox" id="toggle-push-notifications"
-                       onchange="onSettingsToggle('zelo_push_notifications', this.checked)">
-                <span class="settings-toggle-slider"></span>
-              </span>
-            </label>
-            <label class="settings-toggle-row">
-              <span class="settings-toggle-label">Email notifications</span>
-              <span class="settings-toggle">
-                <input type="checkbox" id="toggle-email-notifications"
-                       onchange="onSettingsToggle('zelo_email_notifications', this.checked)">
-                <span class="settings-toggle-slider"></span>
-              </span>
-            </label>
-          </div>
-
-          <!-- PRIVACY -->
-          <div id="settings-panel-privacy" hidden>
-            <!-- Legal pages open in an in-app Safari view (Browser plugin),
-                 pointing at the matching page on zelofficial.com — see
-                 openLegalPage() in script.js. -->
-            <a class="dash-menu-row" href="#" onclick="openLegalPage('privacy.html'); return false;">
-              Privacy Policy <span>›</span>
-            </a>
-            <a class="dash-menu-row" href="#" onclick="openLegalPage('terms.html'); return false;">
-              Terms of Service <span>›</span>
-            </a>
-            <label class="settings-toggle-row">
-              <span class="settings-toggle-label">Do Not Sell My Data (CCPA)</span>
-              <span class="settings-toggle">
-                <input type="checkbox" id="toggle-do-not-sell"
-                       onchange="onSettingsToggle('zelo_do_not_sell', this.checked)">
-                <span class="settings-toggle-slider"></span>
-              </span>
-            </label>
-            <a class="settings-info-link" href="#" onclick="openLegalPage('do-not-sell.html'); return false;">View full policy ›</a>
-            <div class="settings-info-block">
-              <p class="settings-info-title">AI Disclosure</p>
-              <p class="settings-info-text">
-                Every character you chat with in Practice mode is an AI, not a real person.
-                Scan and AI Coach analyze real conversations you paste in or upload — Zelo
-                itself never pretends to be a real match.
-              </p>
-              <a class="settings-info-link" href="#" onclick="openLegalPage('ai-disclosure.html'); return false;">Read full disclosure ›</a>
-            </div>
-            <div class="settings-field">
-              <label class="settings-field-label">Scan history retention</label>
-              <select class="settings-select" id="settings-retention-select" onchange="onRetentionChange(this.value)">
-                <option value="7">7 days</option>
-                <option value="30">30 days</option>
-                <option value="90">90 days</option>
-                <option value="forever">Keep forever</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- HELP & SUPPORT -->
-          <div id="settings-panel-help" hidden>
-            <!-- Opens the real Contact/Support page on zelofficial.com (its
-                 own mailto CTA there points at the actual working support
-                 address) instead of a raw mailto: straight from this row. -->
-            <a class="dash-menu-row" href="#" onclick="openLegalPage('contact.html'); return false;">
-              Contact us <span>›</span>
-            </a>
-            <button class="dash-menu-row" onclick="toggleHelpFaq()">
-              FAQ <span>›</span>
+          <p class="settings2-section-label">What Zelo helps you with</p>
+          <div class="settings2-card" id="settings2-helpswith-list">
+            <button type="button" class="settings2-check-row" data-help="replying" onclick="settingsHelpWithToggle('replying', this)">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Replying to messages</b></span>
+              <span class="settings2-check" aria-hidden="true"></span>
             </button>
-            <div class="settings-faq-content" id="settings-faq-content" hidden>
-              <div class="settings-faq-item">
-                <p class="settings-faq-q">Is Zelo free to use?</p>
-                <p class="settings-faq-a">Yes — Zelo has a free daily scan limit and free thread storage. Upgrading removes the daily caps.</p>
-              </div>
-              <div class="settings-faq-item">
-                <p class="settings-faq-q">Are the people I practice with real?</p>
-                <p class="settings-faq-a">No — Practice mode characters are AI. Scan and AI Coach work on real conversations you provide.</p>
-              </div>
-              <div class="settings-faq-item">
-                <p class="settings-faq-q">How do I delete my account?</p>
-                <p class="settings-faq-a">Go to Settings → Login &amp; Security → Delete account permanently.</p>
-              </div>
-            </div>
-            <a class="dash-menu-row" href="mailto:support@zelo.app?subject=Report%20a%20problem">
-              Report a problem <span>›</span>
-            </a>
+            <button type="button" class="settings2-check-row" data-help="starting" onclick="settingsHelpWithToggle('starting', this)">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Starting conversations</b></span>
+              <span class="settings2-check" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-check-row" data-help="keepgoing" onclick="settingsHelpWithToggle('keepgoing', this)">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Keeping conversations going</b></span>
+              <span class="settings2-check" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-check-row" data-help="understanding" onclick="settingsHelpWithToggle('understanding', this)">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Understanding what to say</b></span>
+              <span class="settings2-check" aria-hidden="true"></span>
+            </button>
           </div>
 
+          <button class="btn2 btn2-primary" onclick="saveSettingsPersonalization()">Save Changes</button>
+        </div>
+      </div>
+
+      <!-- 03a — TONE PREVIEW -->
+      <div class="screen" id="screen-settings-tone-preview">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Tone Preview</span>
+        </div>
+        <div class="settings2-layout">
+          <p class="settings2-lede">See how Zelo responds with this tone.</p>
+          <p class="settings2-section-label">You</p>
+          <div class="settings2-bubble settings2-bubble--you">Hey, how was your day?</div>
+          <p class="settings2-section-label" id="settings2-preview-tone-label">Zelo (Confident)</p>
+          <div class="settings2-bubble settings2-bubble--zelo" id="settings2-preview-reply">It was good! Busy but productive 💪 How was yours?</div>
+          <button class="btn2 btn2-primary" onclick="popScreen()">Looks Good</button>
+          <button class="btn2 btn2-text" onclick="popScreen()">Try Another Tone</button>
+        </div>
+      </div>
+
+      <!-- 04 — PRACTICE PREFERENCES -->
+      <div class="screen" id="screen-settings-practice-prefs">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+        <div class="settings2-layout">
+          <h1 class="settings2-title">Practice Preferences</h1>
+          <p class="settings2-lede">Tailor your practice experience.</p>
+          <div class="settings2-card">
+            <button class="settings2-row" onclick="openSettingsWhoPractice()">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Who you practice with</b><span id="settings2-who-preview">Women</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div class="settings2-card">
+            <button class="settings2-row" onclick="openSettingsAgeRangeSub()">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Age range</b><span id="settings2-age-preview">25–30</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div class="settings2-card">
+            <button class="settings2-row" onclick="cycleSettingsDifficulty()">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Practice difficulty</b><span id="settings2-difficulty-preview">Balanced</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div class="settings2-card">
+            <button class="settings2-row" onclick="cycleSettingsTopics()">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Conversation topics</b><span id="settings2-topics-preview">All</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div class="settings2-card">
+            <div class="settings2-row">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Show skipped profiles</b><span>Upgrade to see</span></span>
+              <span class="settings2-lock" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+              </span>
+            </div>
+          </div>
+          <p class="settings2-footnote">These settings only affect your practice sessions.</p>
+        </div>
+      </div>
+
+      <!-- 04a — WHO YOU PRACTICE WITH -->
+      <div class="screen" id="screen-settings-who-practice">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Who You Practice With</span>
+        </div>
+        <div class="settings2-layout">
+          <p class="settings2-lede">Choose who you want to practice with.</p>
+          <div class="settings2-card" id="settings2-who-list">
+            <button type="button" class="settings2-radio-row" data-mode="women" onclick="settingsPrefsWhoSelect('women', this)">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Women</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-mode="men" onclick="settingsPrefsWhoSelect('men', this)">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Men</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-mode="both" onclick="settingsPrefsWhoSelect('both', this)">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Both</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+          </div>
+          <button class="btn2 btn2-primary" onclick="popScreen()">Save</button>
+        </div>
+      </div>
+
+      <!-- 04b — AGE RANGE -->
+      <div class="screen" id="screen-settings-age-range">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Age Range</span>
+        </div>
+        <div class="settings2-layout">
+          <p class="settings2-lede">Select the age range you want to practice with.</p>
+          <div class="settings2-card" id="settings2-age-list">
+            <button type="button" class="settings2-radio-row" data-age="18-24" onclick="settingsPrefsAgeSelect('18-24', this)">
+              <span class="settings2-row-text"><b>18–24</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-age="25-30" onclick="settingsPrefsAgeSelect('25-30', this)">
+              <span class="settings2-row-text"><b>25–30</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-age="31-39" onclick="settingsPrefsAgeSelect('31-39', this)">
+              <span class="settings2-row-text"><b>31–39</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-age="40+" onclick="settingsPrefsAgeSelect('40+', this)">
+              <span class="settings2-row-text"><b>40+</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+          </div>
+          <button class="btn2 btn2-primary" onclick="popScreen()">Save</button>
+        </div>
+      </div>
+
+      <!-- 05 — NOTIFICATIONS -->
+      <div class="screen" id="screen-settings-notifications">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+        <div class="settings2-layout">
+          <h1 class="settings2-title">Notifications</h1>
+          <p class="settings2-lede">Choose what you want to hear about.</p>
+          <div class="settings2-card">
+            <label class="settings2-toggle-row">
+              <span class="settings2-row-text"><b>Push notifications</b></span>
+              <span class="settings2-toggle">
+                <input type="checkbox" id="toggle-push-notifications" onchange="onSettingsToggle('zelo_push_notifications', this.checked)">
+                <span class="settings2-toggle-slider"></span>
+              </span>
+            </label>
+            <label class="settings2-toggle-row">
+              <span class="settings2-row-text"><b>Email notifications</b></span>
+              <span class="settings2-toggle">
+                <input type="checkbox" id="toggle-email-notifications" onchange="onSettingsToggle('zelo_email_notifications', this.checked)">
+                <span class="settings2-toggle-slider"></span>
+              </span>
+            </label>
+          </div>
+
+          <p class="settings2-section-label">What you'd like to hear about</p>
+          <div class="settings2-card">
+            <label class="settings2-toggle-row">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Reply reminders</b><span>Get reminded to reply</span></span>
+              <span class="settings2-toggle">
+                <input type="checkbox" id="toggle-reply-reminders" onchange="onSettingsToggle('zelo_notif_reply_reminders', this.checked)">
+                <span class="settings2-toggle-slider"></span>
+              </span>
+            </label>
+            <label class="settings2-toggle-row">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Practice updates</b><span>New features and improvements</span></span>
+              <span class="settings2-toggle">
+                <input type="checkbox" id="toggle-practice-updates" onchange="onSettingsToggle('zelo_notif_practice_updates', this.checked)">
+                <span class="settings2-toggle-slider"></span>
+              </span>
+            </label>
+            <label class="settings2-toggle-row">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Zelo tips</b><span>Helpful tips and advice</span></span>
+              <span class="settings2-toggle">
+                <input type="checkbox" id="toggle-zelo-tips" onchange="onSettingsToggle('zelo_notif_tips', this.checked)">
+                <span class="settings2-toggle-slider"></span>
+              </span>
+            </label>
+            <label class="settings2-toggle-row">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Trial &amp; subscription reminders</b><span>Important account updates</span></span>
+              <span class="settings2-toggle">
+                <input type="checkbox" id="toggle-trial-reminders" onchange="onSettingsToggle('zelo_notif_trial_reminders', this.checked)">
+                <span class="settings2-toggle-slider"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 06 — ZELO PRO (SUBSCRIPTION) -->
+      <div class="screen" id="screen-settings-zelo-pro">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Zelo Pro</span>
+        </div>
+        <div class="settings2-layout">
+          <div class="settings2-pro-hero">
+            <span class="settings2-icon settings2-icon--pro-lg" aria-hidden="true"></span>
+            <p class="settings2-pro-hero-title">Zelo Pro</p>
+            <p class="settings2-pro-hero-sub">You're getting the most out of Zelo.</p>
+            <ul class="settings2-pro-list">
+              <li>Unlimited Scans</li>
+              <li>Advanced AI Coach</li>
+              <li>Custom tones &amp; styles</li>
+              <li>Priority support</li>
+              <li>And more...</li>
+            </ul>
+          </div>
+
+          <p class="settings2-section-label">Current plan</p>
+          <div class="settings2-card settings2-plan-card">
+            <p class="settings2-plan-name">Annual Plan</p>
+            <p class="settings2-plan-price">THB 999 / year</p>
+            <p class="settings2-plan-renew">Renews on Aug 15, 2026</p>
+          </div>
+          <div class="settings2-card">
+            <button class="settings2-row settings2-row--link" onclick="showPaywallNow()">
+              <span class="settings2-row-text"><b>Change Plan</b></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="settings2-row settings2-row--link" onclick="restoreSettingsPurchases()">
+              <span class="settings2-row-text"><b>Restore Purchases</b></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <a class="settings2-footlink" href="#" onclick="openLegalPage('pro.html'); return false;">Learn more about Zelo Pro</a>
+        </div>
+      </div>
+
+      <!-- 07 — PRIVACY & DATA -->
+      <div class="screen" id="screen-settings-privacy-data">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+        <div class="settings2-layout">
+          <h1 class="settings2-title">Privacy &amp; Data</h1>
+          <p class="settings2-lede">Manage your data and privacy preferences.</p>
+
+          <p class="settings2-section-label">Your data</p>
+          <div class="settings2-card">
+            <button class="settings2-row" onclick="openSettingsScanRetention()">
+              <span class="settings2-row-text"><b>Scan history retention</b><span id="settings2-retention-preview">7 days</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="settings2-row" onclick="pushScreen('settings-download-data')">
+              <span class="settings2-row-text"><b>Download my data</b><span>Export your Zelo data</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="settings2-row settings2-row--danger" onclick="pushScreen('settings-delete-account')">
+              <span class="settings2-row-text"><b>Delete my account</b><span>Permanently delete your account</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+
+          <p class="settings2-section-label">Your privacy choices</p>
+          <div class="settings2-card">
+            <label class="settings2-toggle-row">
+              <span class="settings2-row-text"><b>Do Not Sell or Share My Data</b></span>
+              <span class="settings2-toggle">
+                <input type="checkbox" id="toggle-do-not-sell" onchange="onSettingsToggle('zelo_do_not_sell', this.checked)">
+                <span class="settings2-toggle-slider"></span>
+              </span>
+            </label>
+          </div>
+
+          <p class="settings2-section-label">Legal</p>
+          <div class="settings2-card">
+            <button class="settings2-row" onclick="pushScreen('settings-privacy-policy')">
+              <span class="settings2-row-text"><b>Privacy Policy</b></span>
+              <span class="settings2-extlink" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </span>
+            </button>
+            <button class="settings2-row" onclick="pushScreen('settings-terms')">
+              <span class="settings2-row-text"><b>Terms of Service</b></span>
+              <span class="settings2-extlink" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCAN HISTORY RETENTION -->
+      <div class="screen" id="screen-settings-scan-retention">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Scan History Retention</span>
+        </div>
+        <div class="settings2-layout">
+          <p class="settings2-lede">Choose how long Zelo keeps your scan history.</p>
+          <div class="settings2-card" id="settings2-retention-list">
+            <button type="button" class="settings2-radio-row" data-days="7" onclick="settingsRetentionSelect('7', this)">
+              <span class="settings2-row-text"><b>7 days</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-days="30" onclick="settingsRetentionSelect('30', this)">
+              <span class="settings2-row-text"><b>30 days</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-days="90" onclick="settingsRetentionSelect('90', this)">
+              <span class="settings2-row-text"><b>90 days</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="settings2-radio-row" data-days="forever" onclick="settingsRetentionSelect('forever', this)">
+              <span class="settings2-row-text"><b>Keep forever</b></span>
+              <span class="settings2-radio" aria-hidden="true"></span>
+            </button>
+          </div>
+          <p class="settings2-footnote">Older scans will be deleted automatically.</p>
+          <button class="btn2 btn2-primary" onclick="popScreen()">Save</button>
+        </div>
+      </div>
+
+      <!-- DOWNLOAD MY DATA -->
+      <div class="screen" id="screen-settings-download-data">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Download My Data</span>
+        </div>
+        <div class="settings2-layout settings2-layout--centered">
+          <span class="settings2-icon settings2-icon--xl" aria-hidden="true"></span>
+          <p class="settings2-lede">We'll prepare a copy of your data and email it to you.</p>
+          <ul class="settings2-bullet-list">
+            <li>Profile information</li>
+            <li>Scans and results</li>
+            <li>Subscription info</li>
+          </ul>
+          <button class="btn2 btn2-primary" onclick="exportAccountData()">Request Data</button>
+          <p class="settings2-footnote">This may take a few minutes to prepare.</p>
+        </div>
+      </div>
+
+      <!-- DELETE MY ACCOUNT -->
+      <div class="screen" id="screen-settings-delete-account">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Delete My Account</span>
+        </div>
+        <div class="settings2-layout settings2-layout--centered">
+          <span class="settings2-icon settings2-icon--xl settings2-icon--danger" aria-hidden="true"></span>
+          <p class="settings2-lede">This action cannot be undone. All your data will be permanently deleted.</p>
+          <ul class="settings2-bullet-list">
+            <li>Your profile will be deleted</li>
+            <li>All scans and matches will be removed</li>
+            <li>You'll lose access to Zelo</li>
+          </ul>
+          <button class="btn2 btn2-destructive" onclick="confirmDeleteAccount()">Delete Account</button>
+        </div>
+      </div>
+
+      <!-- AI & TRANSPARENCY -->
+      <div class="screen" id="screen-settings-ai-transparency">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">AI &amp; Transparency</span>
+        </div>
+        <div class="settings2-layout">
+          <p class="settings2-lede">Learn how Zelo uses AI to help you improve.</p>
+          <div class="settings2-info-card">
+            <span class="settings2-icon settings2-icon--tint-c" aria-hidden="true"></span>
+            <span class="settings2-row-text"><b>Practice conversations</b><span>Characters in Practice mode are AI, not real people.</span></span>
+          </div>
+          <div class="settings2-info-card">
+            <span class="settings2-icon settings2-icon--tint-b" aria-hidden="true"></span>
+            <span class="settings2-row-text"><b>Scan</b><span>Zelo analyzes conversations you paste or upload to help generate replies.</span></span>
+          </div>
+          <div class="settings2-info-card">
+            <span class="settings2-icon" aria-hidden="true"></span>
+            <span class="settings2-row-text"><b>Your data</b><span>Learn how your conversations and uploaded content are handled.</span></span>
+          </div>
+          <a class="settings2-footlink" href="#" onclick="openLegalPage('ai-disclosure.html'); return false;">Read full AI disclosure ↗</a>
+        </div>
+      </div>
+
+      <!-- HELP & SUPPORT -->
+      <div class="screen" id="screen-settings-help-support">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Help &amp; Support</span>
+        </div>
+        <div class="settings2-layout">
+          <p class="settings2-title settings2-title--sm">How can we help?</p>
+          <p class="settings2-section-label">Frequently asked questions</p>
+          <div class="settings2-card" id="settings2-faq-list">
+            <div class="settings2-faq-row" onclick="toggleSettingsFaq(this)">
+              <button type="button" class="settings2-row settings2-row--noborder">
+                <span class="settings2-row-text"><b>How does Zelo work?</b></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <p class="settings2-faq-answer" hidden>Zelo analyzes conversations you provide and suggests replies that match your chosen tone.</p>
+            </div>
+            <div class="settings2-faq-row" onclick="toggleSettingsFaq(this)">
+              <button type="button" class="settings2-row settings2-row--noborder">
+                <span class="settings2-row-text"><b>Are Practice characters real?</b></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <p class="settings2-faq-answer" hidden>No — every character in Practice mode is AI, not a real person.</p>
+            </div>
+            <div class="settings2-faq-row" onclick="toggleSettingsFaq(this)">
+              <button type="button" class="settings2-row settings2-row--noborder">
+                <span class="settings2-row-text"><b>How does Scan work?</b></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <p class="settings2-faq-answer" hidden>Paste or upload a real conversation and Zelo suggests how to reply.</p>
+            </div>
+            <div class="settings2-faq-row" onclick="toggleSettingsFaq(this)">
+              <button type="button" class="settings2-row settings2-row--noborder">
+                <span class="settings2-row-text"><b>How does my trial work?</b></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <p class="settings2-faq-answer" hidden>Your trial gives full access to Zelo Pro until it ends, then reverts to the free plan.</p>
+            </div>
+            <div class="settings2-faq-row" onclick="toggleSettingsFaq(this)">
+              <button type="button" class="settings2-row settings2-row--noborder">
+                <span class="settings2-row-text"><b>How do I cancel?</b></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <p class="settings2-faq-answer" hidden>Go to Settings → Zelo Pro → Change Plan to cancel or switch plans.</p>
+            </div>
+            <div class="settings2-faq-row" onclick="toggleSettingsFaq(this)">
+              <button type="button" class="settings2-row settings2-row--noborder">
+                <span class="settings2-row-text"><b>How do I delete my account?</b></span>
+                <span class="settings2-chevron" aria-hidden="true">›</span>
+              </button>
+              <p class="settings2-faq-answer" hidden>Go to Settings → Privacy &amp; Data → Delete my account.</p>
+            </div>
+          </div>
+
+          <p class="settings2-section-label">Need more help?</p>
+          <div class="settings2-card">
+            <a class="settings2-row" href="mailto:support@zelo.app?subject=Report%20a%20problem">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Report a problem</b><span>Let us know what went wrong</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </a>
+            <button class="settings2-row" onclick="pushScreen('settings-contact-support')">
+              <span class="settings2-icon" aria-hidden="true"></span>
+              <span class="settings2-row-text"><b>Contact support</b><span>We'll get back to you</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTACT SUPPORT -->
+      <div class="screen" id="screen-settings-contact-support">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Contact Support</span>
+        </div>
+        <div class="settings2-layout">
+          <p class="settings2-lede">Send us a message and we'll get back to you.</p>
+          <div class="settings2-field">
+            <label class="settings2-field-label">Your message</label>
+            <textarea id="settings2-support-message" class="settings2-textarea" rows="5" placeholder="Describe your issue..."></textarea>
+          </div>
+          <button class="btn2 btn2-primary" onclick="sendSettingsSupportMessage()">Send Message</button>
+          <p class="settings2-footnote">We typically reply within 24 hours.</p>
+        </div>
+      </div>
+
+      <!-- ABOUT ZELO -->
+      <div class="screen" id="screen-settings-about">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">About Zelo</span>
+        </div>
+        <div class="settings2-layout settings2-layout--centered">
+          <div class="settings2-about-mark" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
+          </div>
+          <p class="settings2-about-name">Zelo</p>
+          <p class="settings2-footnote">Version 1.0.0 (100)</p>
+          <p class="settings2-lede">Made with ❤️ for better conversations.</p>
+          <div class="settings2-card settings2-card--full">
+            <button class="settings2-row" onclick="openLegalPage('whats-new.html'); return false;">
+              <span class="settings2-row-text"><b>What's New</b></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="settings2-row" onclick="openLegalPage('rate.html'); return false;">
+              <span class="settings2-row-text"><b>Rate Zelo</b></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="settings2-row" onclick="openLegalPage('follow.html'); return false;">
+              <span class="settings2-row-text"><b>Follow us</b></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="settings2-row">
+              <span class="settings2-row-text"><b>App version</b></span>
+              <span class="settings2-row-value">1.0.0</span>
+            </div>
+          </div>
+          <p class="settings2-footnote">© 2026 Zelo. All rights reserved.</p>
+        </div>
+      </div>
+
+      <!-- TERMS OF SERVICE -->
+      <div class="screen" id="screen-settings-terms">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Terms of Service</span>
+        </div>
+        <div class="settings2-layout settings2-layout--centered">
+          <span class="settings2-icon settings2-icon--xl" aria-hidden="true"></span>
+          <p class="settings2-lede">Please read our Terms of Service carefully.</p>
+          <a class="settings2-footlink" href="#" onclick="openLegalPage('terms.html'); return false;">View Terms of Service ↗</a>
+          <p class="settings2-footnote">Last updated: Aug 1, 2026</p>
+        </div>
+      </div>
+
+      <!-- PRIVACY POLICY -->
+      <div class="screen" id="screen-settings-privacy-policy">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="screen-title">Privacy Policy</span>
+        </div>
+        <div class="settings2-layout settings2-layout--centered">
+          <span class="settings2-icon settings2-icon--xl" aria-hidden="true"></span>
+          <p class="settings2-lede">Your privacy is important to us.</p>
+          <a class="settings2-footlink" href="#" onclick="openLegalPage('privacy.html'); return false;">View Privacy Policy ↗</a>
+          <p class="settings2-footnote">Last updated: Aug 1, 2026</p>
         </div>
       </div>
 
