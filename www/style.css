@@ -5310,6 +5310,7 @@ a { text-decoration: none; color: inherit; }
 }
 .asst-coach-upgrade-btn:active { transform: scale(0.96); }
 
+.scan-privacy-note[hidden] { display: none; } /* the class's own display:flex below otherwise beats the browser's default [hidden] styling */
 .scan-privacy-note {
   display: flex;
   align-items: center;
