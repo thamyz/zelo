@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-16 23:35";
+const BUILD_STAMP = "2026-08-16 23:50";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -2408,6 +2408,34 @@ function _showScanOcrError(message) {
 // always enforced regardless of what the table says.
 // ================================================================
 
+// ================================================================
+// DEMO SCAN OVERRIDE — fixed/scripted output for exactly one input string,
+// for a repeatable screen-recording demo (see generateReplies()/
+// _buildZeloRead() below for where these are consumed). Does not touch
+// carousel/layout/swipe code at all — only short-circuits which text ends
+// up in state.asstCurrentSet and state.eligibleStyles for this one input,
+// same as a real scan would populate them.
+// ================================================================
+const DEMO_SCAN_TRIGGER = "how's your day going";
+const DEMO_SCAN_REPLIES = {
+  smooth: "pretty good actually, kept busy. how about you?",
+  warmer: "pretty good, thanks for asking. how's yours going?",
+  longer: "honestly pretty good, kept busy all day so it went by fast. how about you, anything interesting happen?"
+};
+// Order matters: renderReplyCarousel() centers on index 0 and clones the
+// *last* style as the left-peek phantom card — so this exact order is what
+// puts Smooth centered, Warmer peeking right, Longer peeking left.
+const DEMO_SCAN_STYLES = ["smooth", "warmer", "longer"];
+const DEMO_ZELO_READ = "Casual question, but it's your chance to make the conversation more interesting.";
+
+// Case/whitespace-insensitive, and normalizes curly quotes to straight —
+// iOS auto-capitalizes the first letter and smart-punctuation can turn "'"
+// into a curly apostrophe, either of which would otherwise silently miss
+// the trigger on a real device.
+function _isDemoScanTrigger(text) {
+  return String(text || "").trim().toLowerCase().replace(/[‘’]/g, "'") === DEMO_SCAN_TRIGGER;
+}
+
 const SAFE_FALLBACK_STYLES        = ["direct", "shorter"];
 // No Situation/Goal provided at all — gives a spread across the main axes
 // (neutral, direct, shorter, longer) so there's something to swipe through
@@ -2643,6 +2671,7 @@ function renderHerMessagePreview(text, screenshotUrl) {
 function _buildZeloRead(message, ctx) {
   const msg = (message || "").trim();
   if (!msg) return "Drop her message in and I'll tell you what she's really saying.";
+  if (_isDemoScanTrigger(msg)) return DEMO_ZELO_READ;
   const low   = msg.toLowerCase();
   const words = low.split(/\s+/).filter(Boolean);
   const goal  = (ctx && ctx.goal ? String(ctx.goal) : "").toLowerCase();
@@ -2825,7 +2854,12 @@ async function generateReplies() {
 
   if (!userInput && !hasImage) { shakeInputCard(); return; }
 
-  if (!isPaidUser() && scansRemainingToday() <= 0) {
+  // Fixed demo input (DEMO_SCAN_TRIGGER, above) bypasses the scan limit and
+  // gibberish check too — it needs to be re-runnable an unlimited number of
+  // times across takes, not gated by the same limits a real scan is.
+  const isDemoScan = _isDemoScanTrigger(userInput);
+
+  if (!isDemoScan && !isPaidUser() && scansRemainingToday() <= 0) {
     refreshScanLimitBanner();
     return;
   }
@@ -2835,7 +2869,7 @@ async function generateReplies() {
   // Temporarily suppressed (SUPPRESS_GIBBERISH_CHECK, top of file) for
   // screen recording — flip back to false when done, nothing else here
   // changed.
-  if (!SUPPRESS_GIBBERISH_CHECK && userInput && _looksLikeGibberish(userInput)) {
+  if (!isDemoScan && !SUPPRESS_GIBBERISH_CHECK && userInput && _looksLikeGibberish(userInput)) {
     const proceed = await _confirmGibberish(userInput);
     if (!proceed) return; // user chose to edit — nothing consumed, no navigation
   }
@@ -2879,6 +2913,35 @@ async function generateReplies() {
   }
 
   renderHerMessagePreview(messageText, screenshotPreviewUrl);
+
+  if (isDemoScan) {
+    // Fixed, scripted output for a repeatable screen-recording demo — see
+    // DEMO_SCAN_TRIGGER/DEMO_SCAN_REPLIES/DEMO_SCAN_STYLES above. Deliberately
+    // skips recordScan()/decrementScanCount() so re-running it across takes
+    // never eats into the real scan limit. Everything else downstream
+    // (carousel rendering, centering, prefetch) is the exact same code a
+    // real scan uses — only the reply text and eligible-styles source differ.
+    state.asstCurrentSet    = { ...DEMO_SCAN_REPLIES };
+    state.asstMessage       = messageText;
+    state.asstContext       = context;
+    state.asstContextObj    = { ...state.scanContext };
+    state.eligibleStyles    = DEMO_SCAN_STYLES.slice();
+    state.currentStyleIndex = 0;
+    state.asstStyle         = state.eligibleStyles[0];
+
+    renderReplyCarousel();
+
+    const firstStyle = state.asstStyle;
+    setTimeout(() => {
+      _renderCardText(firstStyle);
+      loading.hidden = true;
+      content.hidden = false;
+      _centerCarouselOnCurrent();
+      _onReplyRevealed();
+      _prefetchNextStyle();
+    }, 1100); // fixed delay — same "Zelo is thinking…" beat every take, deterministic for recording
+    return;
+  }
 
   recordScan();
   decrementScanCount();
