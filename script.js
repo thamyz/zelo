@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-16 23:50";
+const BUILD_STAMP = "2026-08-16 23:55";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -2422,10 +2422,12 @@ const DEMO_SCAN_REPLIES = {
   warmer: "pretty good, thanks for asking. how's yours going?",
   longer: "honestly pretty good, kept busy all day so it went by fast. how about you, anything interesting happen?"
 };
-// Order matters: renderReplyCarousel() centers on index 0 and clones the
-// *last* style as the left-peek phantom card — so this exact order is what
-// puts Smooth centered, Warmer peeking right, Longer peeking left.
-const DEMO_SCAN_STYLES = ["smooth", "warmer", "longer"];
+// Order matters: renderReplyCarousel() centers on index 0 (also the one
+// that gets the "Best Match" badge — see isBest in _cardHTML()) and clones
+// the *last* style as the left-peek phantom card — so this exact order is
+// what puts Warmer centered/Best Match, Longer peeking right, Smooth
+// peeking left.
+const DEMO_SCAN_STYLES = ["warmer", "longer", "smooth"];
 const DEMO_ZELO_READ = "Casual question, but it's your chance to make the conversation more interesting.";
 
 // Case/whitespace-insensitive, and normalizes curly quotes to straight —
