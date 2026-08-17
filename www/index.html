@@ -2746,6 +2746,23 @@
         </div>
       </div>
 
+      <!-- Copy confirmation toast (reply generator) — see showCopyToast()/
+           hideCopyToast() in script.js. Last child of #app so it paints
+           above every tab/screen/modal. -->
+      <div class="copy-toast" id="copy-toast" hidden>
+        <span class="copy-toast-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+        <span class="copy-toast-copy">
+          <span class="copy-toast-title">Copied!</span>
+          <span class="copy-toast-sub">Zelo response copied to clipboard</span>
+        </span>
+        <button class="copy-toast-close" type="button" onclick="hideCopyToast()" aria-label="Dismiss">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <span class="copy-toast-bar" id="copy-toast-bar"></span>
+      </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

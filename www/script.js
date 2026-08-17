@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-16 23:05";
+const BUILD_STAMP = "2026-08-16 23:20";
 window.addEventListener('DOMContentLoaded', () => {
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
@@ -3282,22 +3282,54 @@ function goToStyleIndex(index) {
 // ================================================================
 
 function copyCurrentReply() {
-  const text  = _currentReplyText();
-  const btn   = document.getElementById("copy-btn");
-  const label = document.getElementById("copy-btn-label");
+  const text = _currentReplyText();
+  // Button itself stays "Copy" always — confirmation is the toast now
+  // (showCopyToast() below), not a label swap. Clipboard write failures
+  // still show the toast (silent fallback, matches the previous behavior).
+  navigator.clipboard.writeText(text).then(showCopyToast).catch(showCopyToast);
+}
 
-  navigator.clipboard.writeText(text).then(() => {
-    label.textContent = "Copied";
-    btn.classList.add("copied");
-    setTimeout(() => {
-      label.textContent = "Copy";
-      btn.classList.remove("copied");
-    }, 2000);
-  }).catch(() => {
-    // Clipboard API blocked — silent fallback
-    label.textContent = "Copied";
-    setTimeout(() => { label.textContent = "Copy"; }, 2000);
-  });
+const COPY_TOAST_DURATION = 2750; // ms — 2.5-3s is standard for this kind of toast
+let _copyToastTimer = null;
+let _copyToastHideTimer = null;
+
+// Single reusable toast node (#copy-toast in index.html) instead of
+// creating a new one per call — tapping Copy again while it's already
+// showing just restarts the countdown bar and the auto-dismiss timer in
+// place, rather than stacking a second toast.
+function showCopyToast() {
+  const toast = document.getElementById('copy-toast');
+  const bar   = document.getElementById('copy-toast-bar');
+  if (!toast || !bar) return;
+
+  clearTimeout(_copyToastTimer);
+  clearTimeout(_copyToastHideTimer);
+  toast.hidden = false;
+
+  // Restart the drain bar cleanly even mid-animation: kill any transition
+  // in progress and snap back to full, force a reflow so the browser
+  // re-registers that starting state, then start draining from it.
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  void bar.offsetWidth;
+  bar.style.transition = `width ${COPY_TOAST_DURATION}ms linear`;
+  bar.style.width = '0%';
+
+  requestAnimationFrame(() => toast.classList.add('visible'));
+
+  _copyToastTimer = setTimeout(hideCopyToast, COPY_TOAST_DURATION);
+}
+
+function hideCopyToast() {
+  const toast = document.getElementById('copy-toast');
+  if (!toast) return;
+  clearTimeout(_copyToastTimer);
+  clearTimeout(_copyToastHideTimer);
+  toast.classList.remove('visible');
+  // Wait out the fade-out transition before removing it from layout, so a
+  // fresh showCopyToast() call (which clears this same timer) can't have
+  // its brand-new toast yanked hidden by a stale one.
+  _copyToastHideTimer = setTimeout(() => { toast.hidden = true; }, 220);
 }
 
 // "Use this reply" on an individual carousel card — copies that card's own
