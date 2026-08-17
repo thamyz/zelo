@@ -10,8 +10,11 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-16 23:20";
+const BUILD_STAMP = "2026-08-16 23:35";
+const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
+const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
+  if (!SHOW_BUILD_STAMP) return;
   const b = document.createElement('div');
   b.textContent = 'build ' + BUILD_STAMP;
   b.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:999999;' +
@@ -2829,7 +2832,10 @@ async function generateReplies() {
 
   // Instant, local check — flags genuine keyboard mashing before anything
   // else happens. No API call, so normal messages pay zero extra delay.
-  if (userInput && _looksLikeGibberish(userInput)) {
+  // Temporarily suppressed (SUPPRESS_GIBBERISH_CHECK, top of file) for
+  // screen recording — flip back to false when done, nothing else here
+  // changed.
+  if (!SUPPRESS_GIBBERISH_CHECK && userInput && _looksLikeGibberish(userInput)) {
     const proceed = await _confirmGibberish(userInput);
     if (!proceed) return; // user chose to edit — nothing consumed, no navigation
   }
