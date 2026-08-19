@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-19 14:50";
+const BUILD_STAMP = "2026-08-19 16:55";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -154,6 +154,8 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   attachEdgeSwipeBack('screen-scan-upload', popScreen);         // Upload Screenshot page
   attachEdgeSwipeBack('screen-home-settings', popScreen);       // Home Settings (top-right icon on Home)
+
+  _wireWidgetCarousel();
 });
 
 
@@ -3309,6 +3311,134 @@ function _initCarouselDrag(track) {
   document.addEventListener("mouseup", onUp);
 
   // A drag that moved shouldn't also fire the card's "Use this reply" click
+  track.addEventListener("click", e => {
+    if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+  }, true);
+}
+
+// ================================================================
+// SCAN WIDGET CAROUSEL — 4 fixed full-width slides (promo + 3 dummy-data
+// widgets). Same native scroll-snap + mouse-drag-polyfill technique as
+// _wireCarousel/_initCarouselDrag above, simplified: no loop/phantom cards
+// (only 4 real slides, arrows just disable at the ends instead of
+// wrapping), no per-card data fetching.
+// ================================================================
+let _widgetCarouselIndex = 0;
+
+function _widgetCarouselCards(track) {
+  return Array.from(track.querySelectorAll(".widget-card"));
+}
+
+function _closestWidgetCard(track) {
+  const cards = _widgetCarouselCards(track);
+  const center = track.scrollLeft + track.clientWidth / 2;
+  let closest = null, closestDist = Infinity;
+  cards.forEach(card => {
+    const dist = Math.abs((card.offsetLeft + card.offsetWidth / 2) - center);
+    if (dist < closestDist) { closestDist = dist; closest = card; }
+  });
+  return closest;
+}
+
+function _wireWidgetCarousel() {
+  const track = document.getElementById("widget-carousel-track");
+  if (!track || track._wired) return;
+  track._wired = true;
+  track.scrollLeft = 0;
+
+  let settleTimer = null;
+  track.addEventListener("scroll", () => {
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => _onWidgetCarouselSettled(track), 100);
+  }, { passive: true });
+
+  _initWidgetCarouselDrag(track);
+  _updateWidgetCarouselChrome();
+
+  // Inter loads async (see the <link> in <head>) — if it swaps in after
+  // this point, the resulting reflow can shift each card's width by a
+  // fraction of a pixel, which is enough for scroll-snap to settle on the
+  // wrong card. Re-pin to whichever card was actually active once fonts
+  // are done, so the swap can never visibly knock the carousel off card 1.
+  document.fonts?.ready?.then(() => {
+    if (track._dragging) return;
+    track.scrollLeft = _widgetCarouselIndex * track.clientWidth;
+  });
+}
+
+function _onWidgetCarouselSettled(track) {
+  if (track._dragging) return;
+  const closest = _closestWidgetCard(track);
+  if (!closest) return;
+  _widgetCarouselIndex = Number(closest.dataset.widgetIndex) || 0;
+  _updateWidgetCarouselChrome();
+}
+
+function _updateWidgetCarouselChrome() {
+  const dots = document.querySelectorAll("#widget-carousel-dots .widget-carousel-dot");
+  dots.forEach((dot, i) => dot.classList.toggle("active", i === _widgetCarouselIndex));
+
+  const prevBtn = document.getElementById("widget-carousel-prev");
+  const nextBtn = document.getElementById("widget-carousel-next");
+  const last = dots.length - 1;
+  if (prevBtn) prevBtn.hidden = _widgetCarouselIndex <= 0;
+  if (nextBtn) nextBtn.hidden = _widgetCarouselIndex >= last;
+}
+
+function _widgetCarouselScrollTo(index) {
+  const track = document.getElementById("widget-carousel-track");
+  const cards = _widgetCarouselCards(track);
+  const card = cards[index];
+  if (!track || !card) return;
+  _widgetCarouselIndex = index;
+  track.scrollTo({ left: card.offsetLeft, behavior: "smooth" });
+  _updateWidgetCarouselChrome();
+}
+
+function widgetCarouselGoTo(index) { _widgetCarouselScrollTo(index); }
+function widgetCarouselPrev()      { _widgetCarouselScrollTo(Math.max(0, _widgetCarouselIndex - 1)); }
+function widgetCarouselNext() {
+  const track = document.getElementById("widget-carousel-track");
+  const last = _widgetCarouselCards(track).length - 1;
+  _widgetCarouselScrollTo(Math.min(last, _widgetCarouselIndex + 1));
+}
+
+// Mouse-drag polyfill — identical technique to _initCarouselDrag above,
+// duplicated rather than shared since that one is wired into the reply
+// carousel's own style-fetch/phantom-loop side effects.
+function _initWidgetCarouselDrag(track) {
+  let startX = 0, startScroll = 0, moved = false;
+
+  function onDown(e) {
+    if (e.button !== 0) return;
+    track._dragging = true;
+    moved = false;
+    startX = e.clientX;
+    startScroll = track.scrollLeft;
+    track.classList.add("dragging");
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if (!track._dragging) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 4) moved = true;
+    track.scrollLeft = startScroll - dx;
+  }
+  function onUp() {
+    if (!track._dragging) return;
+    track._dragging = false;
+    track.classList.remove("dragging");
+    const closest = _closestWidgetCard(track);
+    if (closest) {
+      _widgetCarouselIndex = Number(closest.dataset.widgetIndex) || 0;
+      track.scrollTo({ left: closest.offsetLeft, behavior: "smooth" });
+      _updateWidgetCarouselChrome();
+    }
+  }
+
+  track.addEventListener("mousedown", onDown);
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup", onUp);
   track.addEventListener("click", e => {
     if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
   }, true);
