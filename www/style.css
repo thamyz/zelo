@@ -5348,14 +5348,23 @@ a { text-decoration: none; color: inherit; }
   height: 152px;
   display: flex;
   align-items: center;
+  background: #fff;
+  border-radius: var(--r-lg);
+  /* Same rounded-square "this is a widget" outline on every card, card 1
+     included — a flat white card on a flat white page background was
+     reading as invisible/transparent with no edge to see. This is a
+     box-shadow "border" (0 0 0 1px), not the border property — a real
+     border would eat 2px out of card 1's exactly-152px content height
+     (box-sizing:border-box) and nudge its centered content down by a
+     pixel; a shadow paints on top without touching layout at all, so
+     card 1 stays pixel-identical to its pre-carousel self. */
+  box-shadow: 0 0 0 1px var(--border);
 }
 
 .widget-card--streak,
 .widget-card--activity,
 .widget-card--leaderboard {
-  background: #fff;
-  border-radius: 22px;
-  box-shadow: 0 10px 26px rgba(28,25,23,0.07), 0 2px 8px rgba(28,25,23,0.04);
+  box-shadow: 0 0 0 1px var(--border), 0 10px 26px rgba(28,25,23,0.07), 0 2px 8px rgba(28,25,23,0.04);
   /* Extra left padding — the prev arrow (38px, left:-6px) visually reaches
      to about x:32 from the card's left edge, which was overlapping the
      subtext's second line at the old 20px padding. Top/bottom kept tight —
