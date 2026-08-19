@@ -5383,13 +5383,17 @@ a { text-decoration: none; color: inherit; }
 }
 .widget-carousel.chrome-visible .widget-card::after { opacity: 1; }
 
-/* Breathing room from the border on card 1 — headline text and the
-   illustration were sitting right up against the frame (headline's own
-   box started ~1px from the top border, and the illustration's scaled-up
-   image overlapped the right border by ~19px). Vertical clearance comes
-   from .widget-card's taller box + centering (see height comment above);
-   this adds the matching horizontal clearance. */
-.widget-card--promo { padding: 0 18px; }
+/* Card 1 is reverted as close to its pre-carousel original as the wrapper
+   allows: no side padding (none existed originally), and top-aligned
+   instead of the base .widget-card's align-items:center. Centering inside
+   the 200px box was pushing the headline/subline/illustration down ~24px
+   from where they used to sit — top-aligning removes that offset, so with
+   .scan-headline-row's own margin-top:0 (the carousel's own 24px
+   margin-top already provides the equivalent top gap) this content lands
+   at exactly the same position it always has. It can now run past the
+   card's own bottom border if its natural height exceeds 200px — that's
+   expected/accepted for now, not a bug to fix here. */
+.widget-card--promo { align-items: flex-start; }
 
 .widget-card--streak,
 .widget-card--activity,
