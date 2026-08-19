@@ -2506,12 +2506,9 @@
            ============================================================ -->
       <nav class="tab-bar" id="tab-bar">
         <button class="tab-btn" id="tabbtn-practice" onclick="showTab('practice')">
-          <svg class="tab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          <span class="tab-label">Home</span>
+          <img class="tab-icon tab-icon-img tab-icon-inactive" src="assets/icons/practice-tab-inactive.png" alt="" aria-hidden="true">
+          <img class="tab-icon tab-icon-img tab-icon-active" src="assets/icons/practice-tab-active.png" alt="" aria-hidden="true">
+          <span class="tab-label">Practice</span>
         </button>
         <button class="tab-btn tab-btn--scan active" id="tabbtn-assistant" onclick="showTab('assistant')">
           <span class="scan-fab">

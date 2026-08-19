@@ -2126,6 +2126,15 @@ a { text-decoration: none; color: inherit; }
 .tab-icon { display: block; flex-shrink: 0; }
 .tab-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.04em; }
 
+/* Practice tab — raster icon pair (assets/icons/practice-tab-*.png) instead
+   of an inline stroke SVG, so it can't use currentColor for its
+   active/inactive swap like the other tabs; two stacked <img>s, toggled by
+   .tab-btn.active, do the same job. */
+.tab-icon-img { width: 20px; height: 20px; object-fit: contain; }
+.tab-btn .tab-icon-active { display: none; }
+.tab-btn.active .tab-icon-inactive { display: none; }
+.tab-btn.active .tab-icon-active { display: block; }
+
 /* ---- Center SCAN floating action button ---- */
 .tab-btn--scan {
   overflow: visible;
