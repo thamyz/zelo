@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-19 20:14";
+const BUILD_STAMP = "2026-08-19 20:36";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -3340,6 +3340,22 @@ function _closestWidgetCard(track) {
   return closest;
 }
 
+// Idle-fade chrome (border outline, arrows, dots): hidden by default —
+// nothing to see right after login or swiping into the Scan tab — and
+// only revealed by touching/dragging the carousel or tapping an arrow/dot,
+// then faded back out after 3s of no further interaction. Never auto-shown
+// on load, per the "should not see any of it in the normal state" ask.
+let _widgetChromeTimer = null;
+function _showWidgetChrome() {
+  const carousel = document.getElementById("widget-carousel");
+  if (!carousel) return;
+  carousel.classList.add("chrome-visible");
+  clearTimeout(_widgetChromeTimer);
+  _widgetChromeTimer = setTimeout(() => {
+    carousel.classList.remove("chrome-visible");
+  }, 3000);
+}
+
 function _wireWidgetCarousel() {
   const track = document.getElementById("widget-carousel-track");
   if (!track || track._wired) return;
@@ -3348,9 +3364,14 @@ function _wireWidgetCarousel() {
 
   let settleTimer = null;
   track.addEventListener("scroll", () => {
+    _showWidgetChrome();
     clearTimeout(settleTimer);
     settleTimer = setTimeout(() => _onWidgetCarouselSettled(track), 100);
   }, { passive: true });
+
+  // Touch swipe reveals chrome too — scroll fires during the swipe on most
+  // browsers, but this covers a tap/press that doesn't end up scrolling.
+  track.addEventListener("touchstart", _showWidgetChrome, { passive: true });
 
   _initWidgetCarouselDrag(track);
   _updateWidgetCarouselChrome();
@@ -3396,9 +3417,10 @@ function _widgetCarouselScrollTo(index) {
   _updateWidgetCarouselChrome();
 }
 
-function widgetCarouselGoTo(index) { _widgetCarouselScrollTo(index); }
-function widgetCarouselPrev()      { _widgetCarouselScrollTo(Math.max(0, _widgetCarouselIndex - 1)); }
+function widgetCarouselGoTo(index) { _showWidgetChrome(); _widgetCarouselScrollTo(index); }
+function widgetCarouselPrev()      { _showWidgetChrome(); _widgetCarouselScrollTo(Math.max(0, _widgetCarouselIndex - 1)); }
 function widgetCarouselNext() {
+  _showWidgetChrome();
   const track = document.getElementById("widget-carousel-track");
   const last = _widgetCarouselCards(track).length - 1;
   // Wraps to the first card from the last one instead of stopping dead.
@@ -3414,6 +3436,7 @@ function _initWidgetCarouselDrag(track) {
 
   function onDown(e) {
     if (e.button !== 0) return;
+    _showWidgetChrome();
     track._dragging = true;
     moved = false;
     startX = e.clientX;

@@ -5277,13 +5277,6 @@ a { text-decoration: none; color: inherit; }
   border-radius: 2px;
   background: #EC4899;
   margin-top: 20px;
-  /* Pulled up off the card's bottom-left rounded corner via a pure visual
-     offset (not a smaller margin) — margin-top feeds into the row's own
-     height, and since the row is vertically centered in the card, shrinking
-     it would re-center the whole block and nudge the headline/illustration
-     down too. transform is layout-inert: only this line moves, everything
-     above it (headline, subline) stays exactly where it already was. */
-  transform: translateY(-12px);
 }
 
 /* Hero illustration — the real chat-bubble PNG (assets/icons/chat-bubble-hero.png),
@@ -5349,18 +5342,18 @@ a { text-decoration: none; color: inherit; }
 /* Full-width snap, no partial-card reveal — align:start (not center) since
    there's no side padding on the track creating a peek gap. */
 .widget-card {
+  position: relative; /* anchors the ::after border overlay below */
   flex-shrink: 0;
   width: 100%;
   scroll-snap-align: start;
   box-sizing: border-box;
-  /* Card 1's own natural content height is 152px (unstyled/unpadded).
-     The card box is 170px: 2px for the real top/bottom border, plus 16px
-     of genuine breathing room (8px top + 8px bottom) so the headline text
-     and the pink divider aren't sitting right against the border line —
-     align-items:center distributes that 16px evenly above/below the
-     152px content automatically, no explicit padding needed. Cards 2-4
-     are sized to fit inside this same taller budget. */
-  height: 170px;
+  /* Card 1's own natural content height is 152px (unstyled/unpadded) —
+     the box is 200px so the content has generous room (~24px top+bottom
+     via centering) instead of a tight fit. Border no longer costs any of
+     this height — see the ::after rule below — so this number is pure
+     content-box height. Cards 2-4 are scaled up to fill this same taller
+     budget instead of card 1 being compressed down to match them. */
+  height: 200px;
   display: flex;
   align-items: center;
   background: #fff;
@@ -5369,20 +5362,26 @@ a { text-decoration: none; color: inherit; }
      local here rather than changing --r-lg since that token is shared by
      many unrelated components. */
   border-radius: 26px;
-  /* Same rounded-square "this is a widget" outline on every card, card 1
-     included — a flat white card on a flat white page background was
-     reading as invisible/transparent with no edge to see. A real border
-     (not box-shadow) — pixel-sampled the previous box-shadow "border" and
-     it rendered as functionally invisible (255,255,255, i.e. pure white)
-     along every straight edge, only showing up at all near the curved
-     corners where anti-aliasing spreads it across enough pixels to
-     register; box-shadow's soft edge is just too faint at 1px to read as
-     a real line. A solid border renders crisp at full opacity on every
-     side, matching how .input-card's border already works elsewhere in
-     the app. box-sizing:border-box + the 154px height above means this
-     costs 2px of box height (not content height), so nothing shifts. */
-  border: 1px solid var(--border);
 }
+/* The grey outline, drawn as a separate overlay (not the `border`
+   property) so it can fade in/out independently of the card's own
+   content — see .widget-carousel.chrome-visible below. A real border
+   (not box-shadow) — pixel-sampled a box-shadow attempt here earlier and
+   it rendered as functionally invisible along every straight edge, only
+   showing up near the curved corners; box-shadow's soft edge is too faint
+   at 1px to read as a real line. This overlay uses the same real-border
+   rendering (crisp, full opacity) but as its own paintable layer. */
+.widget-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid var(--border);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.widget-carousel.chrome-visible .widget-card::after { opacity: 1; }
 
 /* Breathing room from the border on card 1 — headline text and the
    illustration were sitting right up against the frame (headline's own
@@ -5398,7 +5397,11 @@ a { text-decoration: none; color: inherit; }
   /* Extra left padding — the prev arrow (38px, left:-6px) visually reaches
      to about x:32 from the card's left edge, which was overlapping the
      subtext's second line at the old 20px padding. */
-  padding: 12px 16px 12px 36px;
+  /* Scaled up along with the taller 200px card (was 12px 16px 12px 36px
+     for the old 152-170px cards) — extra top/bottom room now that there's
+     plenty of height to spend, extra left room to keep the same clearance
+     margin from the prev arrow proportionally. */
+  padding: 20px 20px 20px 38px;
   justify-content: space-between;
   gap: 10px;
 }
@@ -5407,30 +5410,35 @@ a { text-decoration: none; color: inherit; }
 /* Activity's right side has two stat boxes side by side + a full banner —
    needs more room than the streak/leaderboard layouts do. */
 .widget-card--activity .widget-card-left { width: 40%; }
-.widget-card-title { font-size: 15.5px; font-weight: 800; color: var(--text); line-height: 1.2; }
-.widget-card-sub { margin-top: 5px; font-size: 11.5px; line-height: 1.35; color: var(--text-2); }
+.widget-card-title { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.2; }
+.widget-card-sub { margin-top: 7px; font-size: 14px; line-height: 1.35; color: var(--text-2); }
 
 .widget-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px 15px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
 }
 .widget-pill--pink   { background: var(--accent-soft); color: var(--accent-deep); }
 .widget-pill--purple { background: rgba(124,58,237,0.10); color: #7c3aed; }
-.widget-pill-icon { width: 12px; height: 12px; object-fit: contain; display: block; }
+.widget-pill-icon { width: 15px; height: 15px; object-fit: contain; display: block; }
 
 /* ---- Card 2: Your Streak ---- */
-.widget-card-right { flex: 1; display: flex; align-items: center; justify-content: center; }
+/* min-width:0 overrides the flex-item default of min-width:auto, which
+   refuses to shrink a flex item below its content's natural width — at the
+   bigger scaled-up font sizes, the leaderboard's rows (rank + avatar + name
+   + score) were wide enough to push this column past the card's own right
+   edge entirely instead of wrapping/staying inside the allotted space. */
+.widget-card-right { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; }
 .widget-streak-orb {
   position: relative;
-  width: 116px;
-  height: 116px;
+  width: 148px;
+  height: 148px;
   border-radius: 50%;
   background: radial-gradient(circle, var(--accent-soft) 0%, rgba(236,72,153,0.03) 72%, transparent 100%);
   display: flex;
@@ -5439,40 +5447,40 @@ a { text-decoration: none; color: inherit; }
   justify-content: center;
   gap: 0;
 }
-.widget-streak-flame { width: 22px; height: 22px; object-fit: contain; margin-bottom: 2px; }
-.widget-streak-num { font-size: 30px; font-weight: 800; line-height: 1; color: var(--accent); }
-.widget-streak-label { margin-top: 2px; font-size: 10px; font-weight: 700; color: var(--accent); }
+.widget-streak-flame { width: 28px; height: 28px; object-fit: contain; margin-bottom: 3px; }
+.widget-streak-num { font-size: 38px; font-weight: 800; line-height: 1; color: var(--accent); }
+.widget-streak-label { margin-top: 3px; font-size: 13px; font-weight: 700; color: var(--accent); }
 
 /* ---- Card 3: Your Activity ---- */
-.widget-card-right--activity { flex-direction: column; align-items: stretch; gap: 5px; }
+.widget-card-right--activity { flex-direction: column; align-items: stretch; gap: 7px; }
 .widget-activity-hero { display: flex; flex-direction: column; align-items: center; }
-.widget-activity-num { font-size: 24px; font-weight: 800; line-height: 1; color: #7c3aed; }
-.widget-activity-num-label { margin-top: 1px; font-size: 9.5px; color: var(--text-2); }
-.widget-activity-stats { display: flex; gap: 6px; }
+.widget-activity-num { font-size: 30px; font-weight: 800; line-height: 1; color: #7c3aed; }
+.widget-activity-num-label { margin-top: 2px; font-size: 12px; color: var(--text-2); }
+.widget-activity-stats { display: flex; gap: 8px; }
 .widget-activity-stat {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  padding: 5px 6px;
-  border-radius: 14px;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: 17px;
   background: var(--accent-soft);
 }
 .widget-activity-stat--purple { background: rgba(124,58,237,0.08); }
-.widget-activity-stat-row { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 800; color: var(--text); }
+.widget-activity-stat-row { display: flex; align-items: center; gap: 5px; font-size: 16px; font-weight: 800; color: var(--text); }
 .widget-activity-stat--purple .widget-activity-stat-row { color: #7c3aed; }
 .widget-activity-stat:not(.widget-activity-stat--purple) .widget-activity-stat-row { color: var(--accent); }
-.widget-activity-stat-label { font-size: 9.5px; color: var(--text-2); }
+.widget-activity-stat-label { font-size: 12px; color: var(--text-2); }
 
 .widget-banner {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 6px;
-  border-radius: 10px;
-  font-size: 11px;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 13px;
+  font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -5480,33 +5488,35 @@ a { text-decoration: none; color: inherit; }
 .widget-banner--pink   { background: var(--accent-soft); color: var(--accent-deep); }
 
 /* ---- Card 4: Leaderboard ---- */
-.widget-card-right--leaderboard { flex-direction: column; align-items: stretch; gap: 2px; }
-/* Static now, not absolutely positioned above the card — with only 152px
-   of card height total there's no headroom to float it above the rows
-   like the reference does; it just sits as a normal first row instead. */
-.widget-top3-badge { align-self: flex-end; margin: 0 0 2px; }
-.widget-lb-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.widget-card-right--leaderboard { flex-direction: column; align-items: stretch; gap: 3px; }
+.widget-top3-badge { align-self: flex-end; margin: 0 0 3px; }
+.widget-lb-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
 .widget-lb-rank {
   flex-shrink: 0;
-  width: 15px; height: 15px;
+  width: 19px; height: 19px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 8.5px; font-weight: 800; color: #fff;
+  font-size: 10.5px; font-weight: 800; color: #fff;
 }
 .widget-lb-rank--gold   { background: #F5B942; }
 .widget-lb-rank--silver { background: #B9B9B9; }
 .widget-lb-rank--bronze { background: #C97A3D; }
-.widget-lb-avatar { flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; object-fit: cover; }
-.widget-lb-name { flex: 1; font-size: 11.5px; font-weight: 700; color: var(--text); }
-.widget-lb-score { font-size: 11.5px; font-weight: 800; color: var(--accent); }
+.widget-lb-avatar { flex-shrink: 0; width: 27px; height: 27px; border-radius: 50%; object-fit: cover; }
+.widget-lb-name { flex: 1; font-size: 14px; font-weight: 700; color: var(--text); }
+.widget-lb-score { font-size: 14px; font-weight: 800; color: var(--accent); }
 /* Extra right clearance — the next arrow used to hide on this (last) card,
    so this content never needed to make room for it. Now that the arrow
    stays visible everywhere and wraps back to card 1 instead, the score
    column needs the same kind of clearance the left side already has for
    the prev arrow. */
-.widget-card--leaderboard { padding-right: 34px; }
+.widget-card--leaderboard { padding-right: 42px; }
 
 /* ---- Shared carousel chrome: arrows + dots ---- */
+/* Arrows + dots + the border overlay (.widget-card::after, above) are all
+   idle-fade chrome — hidden by default (nothing to see right after login
+   or swiping into the Scan tab), revealed by tapping/dragging the
+   carousel, then faded back out after 3s of no further interaction. See
+   _showWidgetChrome() in script.js for the timer/reveal logic. */
 .widget-carousel-arrow {
   position: absolute;
   top: 50%;
@@ -5521,18 +5531,39 @@ a { text-decoration: none; color: inherit; }
   justify-content: center;
   box-shadow: 0 4px 14px rgba(28,25,23,0.12);
   z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.widget-carousel.chrome-visible .widget-carousel-arrow:not([hidden]) {
+  opacity: 1;
+  pointer-events: auto;
 }
 .widget-carousel-arrow:active { transform: translateY(-50%) scale(0.92); }
 .widget-carousel-arrow--prev { left: -6px; }
 .widget-carousel-arrow--next { right: -6px; }
 .widget-carousel-arrow[hidden] { display: none; }
 
+/* Absolutely positioned so the dots sit inside the card's own bottom edge
+   (every card is the same height, so "bottom of the carousel" = "bottom
+   of whichever card is showing") instead of as a separate row below it. */
 .widget-carousel-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  margin-top: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.widget-carousel.chrome-visible .widget-carousel-dots {
+  opacity: 1;
+  pointer-events: auto;
 }
 .widget-carousel-dot {
   width: 7px;
