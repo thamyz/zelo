@@ -5353,16 +5353,14 @@ a { text-decoration: none; color: inherit; }
   width: 100%;
   scroll-snap-align: start;
   box-sizing: border-box;
-  /* Card 1's own natural content height is 152px (unstyled/unpadded, so
-     this height IS its content) — but the card box itself is 154px, 2px
-     taller, to leave exact room for the real 1px+1px top/bottom border
-     below without shrinking the content area. With box-sizing:border-box,
-     154px box - 2px border = 152px content area, so .scan-headline-row
-     still centers into exactly the same 152px it always has — the whole
-     point of the carousel is that card 1 must render exactly where and at
-     exactly the size it always did; cards 2-4 are sized to fit inside this
-     same budget rather than the other way around. */
-  height: 154px;
+  /* Card 1's own natural content height is 152px (unstyled/unpadded).
+     The card box is 170px: 2px for the real top/bottom border, plus 16px
+     of genuine breathing room (8px top + 8px bottom) so the headline text
+     and the pink divider aren't sitting right against the border line —
+     align-items:center distributes that 16px evenly above/below the
+     152px content automatically, no explicit padding needed. Cards 2-4
+     are sized to fit inside this same taller budget. */
+  height: 170px;
   display: flex;
   align-items: center;
   background: #fff;
@@ -5386,15 +5384,20 @@ a { text-decoration: none; color: inherit; }
   border: 1px solid var(--border);
 }
 
+/* Breathing room from the border on card 1 — headline text and the
+   illustration were sitting right up against the frame (headline's own
+   box started ~1px from the top border, and the illustration's scaled-up
+   image overlapped the right border by ~19px). Vertical clearance comes
+   from .widget-card's taller box + centering (see height comment above);
+   this adds the matching horizontal clearance. */
+.widget-card--promo { padding: 0 18px; }
+
 .widget-card--streak,
 .widget-card--activity,
 .widget-card--leaderboard {
-  box-shadow: 0 10px 26px rgba(28,25,23,0.07), 0 2px 8px rgba(28,25,23,0.04);
   /* Extra left padding — the prev arrow (38px, left:-6px) visually reaches
      to about x:32 from the card's left edge, which was overlapping the
-     subtext's second line at the old 20px padding. Top/bottom kept tight —
-     the whole card is only 152px tall (matches card 1's own content
-     height, see .widget-card), so there's no room to spare. */
+     subtext's second line at the old 20px padding. */
   padding: 12px 16px 12px 36px;
   justify-content: space-between;
   gap: 10px;
