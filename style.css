@@ -5277,6 +5277,13 @@ a { text-decoration: none; color: inherit; }
   border-radius: 2px;
   background: #EC4899;
   margin-top: 20px;
+  /* Pulled up off the card's bottom-left rounded corner via a pure visual
+     offset (not a smaller margin) — margin-top feeds into the row's own
+     height, and since the row is vertically centered in the card, shrinking
+     it would re-center the whole block and nudge the headline/illustration
+     down too. transform is layout-inert: only this line moves, everything
+     above it (headline, subline) stays exactly where it already was. */
+  transform: translateY(-12px);
 }
 
 /* Hero illustration — the real chat-bubble PNG (assets/icons/chat-bubble-hero.png),
@@ -5346,12 +5353,16 @@ a { text-decoration: none; color: inherit; }
   width: 100%;
   scroll-snap-align: start;
   box-sizing: border-box;
-  /* Matches .scan-headline-row's own natural content height exactly (card 1
-     is unstyled/unpadded, so this height IS its content) — the whole point
-     of the carousel is that card 1 must render exactly where and at
+  /* Card 1's own natural content height is 152px (unstyled/unpadded, so
+     this height IS its content) — but the card box itself is 154px, 2px
+     taller, to leave exact room for the real 1px+1px top/bottom border
+     below without shrinking the content area. With box-sizing:border-box,
+     154px box - 2px border = 152px content area, so .scan-headline-row
+     still centers into exactly the same 152px it always has — the whole
+     point of the carousel is that card 1 must render exactly where and at
      exactly the size it always did; cards 2-4 are sized to fit inside this
      same budget rather than the other way around. */
-  height: 152px;
+  height: 154px;
   display: flex;
   align-items: center;
   background: #fff;
@@ -5362,19 +5373,23 @@ a { text-decoration: none; color: inherit; }
   border-radius: 26px;
   /* Same rounded-square "this is a widget" outline on every card, card 1
      included — a flat white card on a flat white page background was
-     reading as invisible/transparent with no edge to see. This is a
-     box-shadow "border" (0 0 0 1px), not the border property — a real
-     border would eat 2px out of card 1's exactly-152px content height
-     (box-sizing:border-box) and nudge its centered content down by a
-     pixel; a shadow paints on top without touching layout at all, so
-     card 1 stays pixel-identical to its pre-carousel self. */
-  box-shadow: 0 0 0 1px var(--border);
+     reading as invisible/transparent with no edge to see. A real border
+     (not box-shadow) — pixel-sampled the previous box-shadow "border" and
+     it rendered as functionally invisible (255,255,255, i.e. pure white)
+     along every straight edge, only showing up at all near the curved
+     corners where anti-aliasing spreads it across enough pixels to
+     register; box-shadow's soft edge is just too faint at 1px to read as
+     a real line. A solid border renders crisp at full opacity on every
+     side, matching how .input-card's border already works elsewhere in
+     the app. box-sizing:border-box + the 154px height above means this
+     costs 2px of box height (not content height), so nothing shifts. */
+  border: 1px solid var(--border);
 }
 
 .widget-card--streak,
 .widget-card--activity,
 .widget-card--leaderboard {
-  box-shadow: 0 0 0 1px var(--border), 0 10px 26px rgba(28,25,23,0.07), 0 2px 8px rgba(28,25,23,0.04);
+  box-shadow: 0 10px 26px rgba(28,25,23,0.07), 0 2px 8px rgba(28,25,23,0.04);
   /* Extra left padding — the prev arrow (38px, left:-6px) visually reaches
      to about x:32 from the card's left edge, which was overlapping the
      subtext's second line at the old 20px padding. Top/bottom kept tight —
