@@ -5235,6 +5235,12 @@ a { text-decoration: none; color: inherit; }
      the equivalent 24px gap above the whole carousel; this used to be a
      second, redundant 24px stacked on top of it, which is what was pushing
      the promo content down further than it originally sat. */
+  /* Full width — as a flex child of .widget-card (display:flex) this would
+     otherwise shrink to its content width (the headline text), which pulled
+     .scan-hero-illustration's "right: 0" in tight against the text instead
+     of the card's actual right edge. Restoring full width puts the
+     illustration back where "right: 0" originally meant. */
+  width: 100%;
 }
 /* +6px left breathing room beyond the tab's own 22px side padding — the
    headline/subline read too close to the edge otherwise. */
@@ -5349,7 +5355,11 @@ a { text-decoration: none; color: inherit; }
   display: flex;
   align-items: center;
   background: #fff;
-  border-radius: var(--r-lg);
+  /* Slightly rounder than the app's standard --r-lg (20px) card corner —
+     a small bump requested specifically for these widget cards, kept
+     local here rather than changing --r-lg since that token is shared by
+     many unrelated components. */
+  border-radius: 26px;
   /* Same rounded-square "this is a widget" outline on every card, card 1
      included — a flat white card on a flat white page background was
      reading as invisible/transparent with no edge to see. This is a
@@ -5471,6 +5481,12 @@ a { text-decoration: none; color: inherit; }
 .widget-lb-avatar { flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; object-fit: cover; }
 .widget-lb-name { flex: 1; font-size: 11.5px; font-weight: 700; color: var(--text); }
 .widget-lb-score { font-size: 11.5px; font-weight: 800; color: var(--accent); }
+/* Extra right clearance — the next arrow used to hide on this (last) card,
+   so this content never needed to make room for it. Now that the arrow
+   stays visible everywhere and wraps back to card 1 instead, the score
+   column needs the same kind of clearance the left side already has for
+   the prev arrow. */
+.widget-card--leaderboard { padding-right: 34px; }
 
 /* ---- Shared carousel chrome: arrows + dots ---- */
 .widget-carousel-arrow {

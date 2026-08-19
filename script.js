@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-19 18:36";
+const BUILD_STAMP = "2026-08-19 19:00";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -3380,9 +3380,10 @@ function _updateWidgetCarouselChrome() {
 
   const prevBtn = document.getElementById("widget-carousel-prev");
   const nextBtn = document.getElementById("widget-carousel-next");
-  const last = dots.length - 1;
   if (prevBtn) prevBtn.hidden = _widgetCarouselIndex <= 0;
-  if (nextBtn) nextBtn.hidden = _widgetCarouselIndex >= last;
+  // Next stays visible even on the last card — it wraps back to card 1
+  // instead of clamping, so there's always a way forward.
+  if (nextBtn) nextBtn.hidden = false;
 }
 
 function _widgetCarouselScrollTo(index) {
@@ -3400,7 +3401,9 @@ function widgetCarouselPrev()      { _widgetCarouselScrollTo(Math.max(0, _widget
 function widgetCarouselNext() {
   const track = document.getElementById("widget-carousel-track");
   const last = _widgetCarouselCards(track).length - 1;
-  _widgetCarouselScrollTo(Math.min(last, _widgetCarouselIndex + 1));
+  // Wraps to the first card from the last one instead of stopping dead.
+  const next = _widgetCarouselIndex >= last ? 0 : _widgetCarouselIndex + 1;
+  _widgetCarouselScrollTo(next);
 }
 
 // Mouse-drag polyfill — identical technique to _initCarouselDrag above,
