@@ -5231,7 +5231,10 @@ a { text-decoration: none; color: inherit; }
    width and intentionally overlap it, with text on top via z-index. */
 .scan-headline-row {
   position: relative;
-  margin-top: 24px;
+  /* margin-top removed — .widget-carousel (its new parent) already supplies
+     the equivalent 24px gap above the whole carousel; this used to be a
+     second, redundant 24px stacked on top of it, which is what was pushing
+     the promo content down further than it originally sat. */
 }
 /* +6px left breathing room beyond the tab's own 22px side padding — the
    headline/subline read too close to the edge otherwise. */
@@ -5337,7 +5340,12 @@ a { text-decoration: none; color: inherit; }
   width: 100%;
   scroll-snap-align: start;
   box-sizing: border-box;
-  height: 234px;
+  /* Matches .scan-headline-row's own natural content height exactly (card 1
+     is unstyled/unpadded, so this height IS its content) — the whole point
+     of the carousel is that card 1 must render exactly where and at
+     exactly the size it always did; cards 2-4 are sized to fit inside this
+     same budget rather than the other way around. */
+  height: 152px;
   display: flex;
   align-items: center;
 }
@@ -5350,8 +5358,10 @@ a { text-decoration: none; color: inherit; }
   box-shadow: 0 10px 26px rgba(28,25,23,0.07), 0 2px 8px rgba(28,25,23,0.04);
   /* Extra left padding — the prev arrow (38px, left:-6px) visually reaches
      to about x:32 from the card's left edge, which was overlapping the
-     subtext's second line at the old 20px padding. */
-  padding: 22px 20px 22px 40px;
+     subtext's second line at the old 20px padding. Top/bottom kept tight —
+     the whole card is only 152px tall (matches card 1's own content
+     height, see .widget-card), so there's no room to spare. */
+  padding: 12px 16px 12px 36px;
   justify-content: space-between;
   gap: 10px;
 }
@@ -5361,93 +5371,97 @@ a { text-decoration: none; color: inherit; }
    needs more room than the streak/leaderboard layouts do. */
 .widget-card--activity .widget-card-left { width: 40%; }
 .widget-card-title { font-size: 15.5px; font-weight: 800; color: var(--text); line-height: 1.2; }
-.widget-card-sub { margin-top: 8px; font-size: 12px; line-height: 1.4; color: var(--text-2); }
+.widget-card-sub { margin-top: 5px; font-size: 11.5px; line-height: 1.35; color: var(--text-2); }
 
 .widget-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 14px;
-  padding: 9px 14px;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 6px 12px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 700;
   white-space: nowrap;
 }
 .widget-pill--pink   { background: var(--accent-soft); color: var(--accent-deep); }
 .widget-pill--purple { background: rgba(124,58,237,0.10); color: #7c3aed; }
-.widget-pill-icon { width: 14px; height: 14px; object-fit: contain; display: block; }
+.widget-pill-icon { width: 12px; height: 12px; object-fit: contain; display: block; }
 
 /* ---- Card 2: Your Streak ---- */
 .widget-card-right { flex: 1; display: flex; align-items: center; justify-content: center; }
 .widget-streak-orb {
   position: relative;
-  width: 148px;
-  height: 148px;
+  width: 116px;
+  height: 116px;
   border-radius: 50%;
   background: radial-gradient(circle, var(--accent-soft) 0%, rgba(236,72,153,0.03) 72%, transparent 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
 }
-.widget-streak-flame { width: 34px; height: 34px; object-fit: contain; margin-bottom: 4px; }
-.widget-streak-num { font-size: 46px; font-weight: 800; line-height: 1; color: var(--accent); }
-.widget-streak-label { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--accent); }
+.widget-streak-flame { width: 22px; height: 22px; object-fit: contain; margin-bottom: 2px; }
+.widget-streak-num { font-size: 30px; font-weight: 800; line-height: 1; color: var(--accent); }
+.widget-streak-label { margin-top: 2px; font-size: 10px; font-weight: 700; color: var(--accent); }
 
 /* ---- Card 3: Your Activity ---- */
-.widget-card-right--activity { flex-direction: column; align-items: stretch; gap: 10px; }
+.widget-card-right--activity { flex-direction: column; align-items: stretch; gap: 5px; }
 .widget-activity-hero { display: flex; flex-direction: column; align-items: center; }
-.widget-activity-num { font-size: 40px; font-weight: 800; line-height: 1; color: #7c3aed; }
-.widget-activity-num-label { margin-top: 2px; font-size: 12px; color: var(--text-2); }
-.widget-activity-stats { display: flex; gap: 8px; }
+.widget-activity-num { font-size: 24px; font-weight: 800; line-height: 1; color: #7c3aed; }
+.widget-activity-num-label { margin-top: 1px; font-size: 9.5px; color: var(--text-2); }
+.widget-activity-stats { display: flex; gap: 6px; }
 .widget-activity-stat {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 6px;
+  gap: 1px;
+  padding: 5px 6px;
   border-radius: 14px;
   background: var(--accent-soft);
 }
 .widget-activity-stat--purple { background: rgba(124,58,237,0.08); }
-.widget-activity-stat-row { display: flex; align-items: center; gap: 5px; font-size: 16px; font-weight: 800; color: var(--text); }
+.widget-activity-stat-row { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 800; color: var(--text); }
 .widget-activity-stat--purple .widget-activity-stat-row { color: #7c3aed; }
 .widget-activity-stat:not(.widget-activity-stat--purple) .widget-activity-stat-row { color: var(--accent); }
-.widget-activity-stat-label { font-size: 11.5px; color: var(--text-2); }
+.widget-activity-stat-label { font-size: 9.5px; color: var(--text-2); }
 
 .widget-banner {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  font-size: 12.5px;
+  gap: 5px;
+  padding: 6px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
 }
 .widget-banner--purple { background: rgba(124,58,237,0.08); color: #7c3aed; }
 .widget-banner--pink   { background: var(--accent-soft); color: var(--accent-deep); }
 
 /* ---- Card 4: Leaderboard ---- */
-.widget-card-right--leaderboard { flex-direction: column; align-items: stretch; gap: 6px; position: relative; }
-.widget-top3-badge { position: absolute; top: -34px; right: 0; margin: 0; }
-.widget-lb-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+.widget-card-right--leaderboard { flex-direction: column; align-items: stretch; gap: 2px; }
+/* Static now, not absolutely positioned above the card — with only 152px
+   of card height total there's no headroom to float it above the rows
+   like the reference does; it just sits as a normal first row instead. */
+.widget-top3-badge { align-self: flex-end; margin: 0 0 2px; }
+.widget-lb-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
 .widget-lb-rank {
   flex-shrink: 0;
-  width: 20px; height: 20px;
+  width: 15px; height: 15px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 800; color: #fff;
+  font-size: 8.5px; font-weight: 800; color: #fff;
 }
 .widget-lb-rank--gold   { background: #F5B942; }
 .widget-lb-rank--silver { background: #B9B9B9; }
 .widget-lb-rank--bronze { background: #C97A3D; }
-.widget-lb-avatar { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
-.widget-lb-name { flex: 1; font-size: 14px; font-weight: 700; color: var(--text); }
-.widget-lb-score { font-size: 14px; font-weight: 800; color: var(--accent); }
+.widget-lb-avatar { flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; object-fit: cover; }
+.widget-lb-name { flex: 1; font-size: 11.5px; font-weight: 700; color: var(--text); }
+.widget-lb-score { font-size: 11.5px; font-weight: 800; color: var(--accent); }
 
 /* ---- Shared carousel chrome: arrows + dots ---- */
 .widget-carousel-arrow {
