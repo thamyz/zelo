@@ -5375,7 +5375,15 @@ a { text-decoration: none; color: inherit; }
 .widget-card::after {
   content: "";
   position: absolute;
-  inset: 0;
+  /* Top extended 18px above the card's real edge — purely a paint-time
+     overlay (this pseudo-element has no effect on layout/box model at
+     all), so it adds visible breathing room above the content — card 1's
+     headline was sitting flush against the top border with zero gap —
+     without moving the content itself, the card's actual height, or
+     anything below the carousel by so much as a pixel. There's 36px of
+     genuine blank space between the header and the carousel to spend this
+     from (measured live), so this still leaves room before the header. */
+  inset: -18px 0 0 0;
   border-radius: inherit;
   border: 1px solid var(--border);
   pointer-events: none;
