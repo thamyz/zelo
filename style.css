@@ -5270,29 +5270,13 @@ a { text-decoration: none; color: inherit; }
 }
 /* Decorative separator between the hero text block and the input card below
    (replaces the old underline-under-"right" treatment). */
-/* Was a flat background-color bar; now an SVG stroke path so the accent
-   can actually bend — a short straight run (matching where the old bar
-   sat, below the subtext) curving into an arc that shares the card's own
-   corner-curve center and a radius 2px inside it, so it reads as running
-   alongside the grey border rather than just touching it at one point.
-   Total path length is ~48px, matching the original bar's length (not
-   longer) — see the inline `d` attribute in index.html for the exact
-   path. viewBox is sized to the row's actual on-screen pixel box so the
-   path coordinates (computed against the live card/border geometry) map
-   1:1 with no scaling distortion. */
 .scan-headline-divider {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  /* Fixed, not 100% — .scan-headline-row's own content height shrank to
-     ~129px once this became position:absolute (nothing left in normal
-     flow to reach the old 152px), but the path's coordinates were
-     computed against the card's real 152px height. 100% here would have
-     vertically squeezed/distorted the arc to fit the shorter box. */
-  height: 152px;
-  pointer-events: none;
-  z-index: 2; /* same layer as .scan-headline-text, above the illustration */
+  display: block;
+  width: 48px;
+  height: 3px;
+  border-radius: 2px;
+  background: #EC4899;
+  margin-top: 20px;
 }
 
 /* Hero illustration — the real chat-bubble PNG (assets/icons/chat-bubble-hero.png),
@@ -5409,6 +5393,9 @@ a { text-decoration: none; color: inherit; }
    lands at exactly the same position it always has, independent of
    whatever height .widget-card ends up at. */
 .widget-card--promo { align-items: flex-start; }
+/* Thicker top edge only, card 1 only — left/right/bottom stay the normal
+   1px shared by every other widget. */
+.widget-card--promo::after { border-top-width: 3px; }
 
 .widget-card--streak,
 .widget-card--activity,

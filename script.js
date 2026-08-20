@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-20 20:27";
+const BUILD_STAMP = "2026-08-20 20:57";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -1410,6 +1410,17 @@ function _slideUnmountEl(el) {
   el.style.pointerEvents = '';
   el.style.boxShadow = '';
   document.getElementById('app').appendChild(el);
+  // Reparenting a live subtree resets scrollLeft on any nested
+  // overflow-x:auto descendant (a WebKit detach/reattach quirk) — the
+  // widget carousel's own JS state (_widgetCarouselIndex) survives this
+  // untouched, but its visual scroll position silently snaps back to card
+  // 1 every time the Scan tab takes part in a swipe-nav gesture, even when
+  // Scan is just the tab being slid away FROM. Re-pin it to whichever card
+  // was actually active immediately after reattaching.
+  if (el.id === 'tab-assistant') {
+    const track = document.getElementById('widget-carousel-track');
+    if (track) track.scrollLeft = _widgetCarouselIndex * track.clientWidth;
+  }
 }
 
 function attachTabSwipeGestures(tabName, excludeSelector) {
@@ -3367,6 +3378,20 @@ document.addEventListener("focusin", e => {
 document.addEventListener("focusout", e => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") _textInputFocused = false;
 });
+// If a tap lands outside a currently-focused text input, that SAME tap is
+// the one dismissing the keyboard — it shouldn't ALSO count as a tap on
+// whatever it happened to land on. There's already a dedicated
+// touchstart/capture listener elsewhere (search "blur it directly" further
+// down this file) that performs the actual blur() for exactly this case —
+// _dismissingKeyboard is set from inside THAT listener (not a second one
+// here) so this reliably reflects "focused right before that blur," not a
+// separately-raced guess: a second capture listener checking
+// document.activeElement on its own could easily run after that one
+// already blurred it, seeing "nothing was focused" and missing the case
+// entirely (checking _textInputFocused alone has that exact problem — by
+// the time a bubble-phase listener like the widget's own touchstart runs,
+// the existing blur has already fired and flipped it back to false).
+let _dismissingKeyboard = false;
 
 function _showWidgetChrome() {
   // While a text field is focused (keyboard up), taps anywhere — including
@@ -3374,7 +3399,7 @@ function _showWidgetChrome() {
   // asking to see the widget's chrome. Every reveal path (swipe, scroll,
   // drag, arrow tap, dot tap) funnels through this one function, so gating
   // it here covers all of them.
-  if (_textInputFocused) return;
+  if (_textInputFocused || _dismissingKeyboard) return;
   const carousel = document.getElementById("widget-carousel");
   if (!carousel) return;
   carousel.classList.add("chrome-visible");
@@ -7665,6 +7690,13 @@ document.addEventListener('touchstart', (e) => {
   // lands outside the now-moved button and the click gets silently
   // swallowed, which is exactly why the toggle needed two taps before.
   if (target && target.closest && target.closest('#aicoach-suggest-toggle')) return;
+  // Flag this exact tap as "just dismissed the keyboard" (see
+  // _dismissingKeyboard's own declaration, ~line 3370) so whatever it
+  // landed on — the widget carousel, for instance — can tell not to also
+  // treat it as a normal tap. Cleared on the next tick, once this same
+  // gesture's other listeners have all had their turn.
+  _dismissingKeyboard = true;
+  setTimeout(() => { _dismissingKeyboard = false; }, 0);
   active.blur();
 }, { capture: true, passive: true });
 
