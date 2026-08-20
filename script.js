@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-20 20:10";
+const BUILD_STAMP = "2026-08-20 20:27";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -132,7 +132,14 @@ window.addEventListener('DOMContentLoaded', () => {
   // excludes the swipe-card deck (#card-deck) — a drag started on a card
   // belongs to that card's own like/nope swipe, not the tab-nav gesture.
   attachTabSwipeGestures('practice', '#card-deck');
-  attachTabSwipeGestures('assistant');
+  // Scan excludes the widget carousel (#widget-carousel) the same way —
+  // a drag started on it belongs to its own horizontal scroll-snap swipe,
+  // not the tab-nav gesture. Without this, both gestures were reading the
+  // same touch on the Scan tab at once: the tab-nav swipe still armed and
+  // could visibly fight the carousel's native scroll, and on some drags
+  // would leave the carousel's scroll position knocked back to card 1
+  // regardless of which card was showing before the swipe.
+  attachTabSwipeGestures('assistant', '#widget-carousel');
   attachTabSwipeGestures('chats');
 
   // Trackpad-style swipe-back — explicit allowlist only, everything else
@@ -3346,14 +3353,28 @@ function _closestWidgetCard(track) {
 // then faded back out after 3s of no further interaction. Never auto-shown
 // on load, per the "should not see any of it in the normal state" ask.
 let _widgetChromeTimer = null;
+// Tracked via focus/blur rather than reading document.activeElement live
+// inside _showWidgetChrome() — that raced the browser's own blur timing:
+// the tap that closes the keyboard fires pointerdown while the input can
+// still momentarily report as document.activeElement, so that first tap
+// after closing the keyboard would suppress the reveal too, and the user
+// had to tap the widget a second time before it actually worked. A flag
+// updated by real focus/blur events isn't subject to that race.
+let _textInputFocused = false;
+document.addEventListener("focusin", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") _textInputFocused = true;
+});
+document.addEventListener("focusout", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") _textInputFocused = false;
+});
+
 function _showWidgetChrome() {
   // While a text field is focused (keyboard up), taps anywhere — including
   // on the widget itself — are the user dismissing the keyboard, not
   // asking to see the widget's chrome. Every reveal path (swipe, scroll,
   // drag, arrow tap, dot tap) funnels through this one function, so gating
   // it here covers all of them.
-  const tag = document.activeElement?.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (_textInputFocused) return;
   const carousel = document.getElementById("widget-carousel");
   if (!carousel) return;
   carousel.classList.add("chrome-visible");
