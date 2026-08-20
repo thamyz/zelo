@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-20 19:07";
+const BUILD_STAMP = "2026-08-20 20:10";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -3347,6 +3347,13 @@ function _closestWidgetCard(track) {
 // on load, per the "should not see any of it in the normal state" ask.
 let _widgetChromeTimer = null;
 function _showWidgetChrome() {
+  // While a text field is focused (keyboard up), taps anywhere — including
+  // on the widget itself — are the user dismissing the keyboard, not
+  // asking to see the widget's chrome. Every reveal path (swipe, scroll,
+  // drag, arrow tap, dot tap) funnels through this one function, so gating
+  // it here covers all of them.
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
   const carousel = document.getElementById("widget-carousel");
   if (!carousel) return;
   carousel.classList.add("chrome-visible");
@@ -3354,6 +3361,13 @@ function _showWidgetChrome() {
   _widgetChromeTimer = setTimeout(() => {
     carousel.classList.remove("chrome-visible");
   }, 3000);
+}
+
+function _hideWidgetChrome() {
+  const carousel = document.getElementById("widget-carousel");
+  if (!carousel) return;
+  clearTimeout(_widgetChromeTimer);
+  carousel.classList.remove("chrome-visible");
 }
 
 function _wireWidgetCarousel() {
@@ -3372,6 +3386,17 @@ function _wireWidgetCarousel() {
   // Touch swipe reveals chrome too — scroll fires during the swipe on most
   // browsers, but this covers a tap/press that doesn't end up scrolling.
   track.addEventListener("touchstart", _showWidgetChrome, { passive: true });
+
+  // Tap anywhere outside the widget (blank space, the message box, any
+  // other UI) closes the chrome immediately instead of waiting out the 3s
+  // timer. No preventDefault/stopPropagation — the tap still does its own
+  // normal job afterward (e.g. focusing the textarea underneath).
+  const carousel = document.getElementById("widget-carousel");
+  document.addEventListener("pointerdown", e => {
+    if (!carousel.classList.contains("chrome-visible")) return;
+    if (carousel.contains(e.target)) return;
+    _hideWidgetChrome();
+  });
 
   _initWidgetCarouselDrag(track);
   _updateWidgetCarouselChrome();
@@ -7666,7 +7691,11 @@ document.addEventListener('touchstart', (e) => {
     // (previously: the whole block) is what overcorrected before — the card
     // itself was already correct, this only widens which elements share
     // its same transform value.
-    'asst-input':    { move: ['.scan-headline-row', '.scan-message', '.scan-who-section', '#aicoach-card'], measureBy: '.scan-message' },
+    // '.widget-carousel' (not '.scan-headline-row') so the whole widget —
+    // border, arrows, dots — rides up as one piece with its own content
+    // instead of the text sliding up out of alignment with a frame that
+    // stayed put.
+    'asst-input':    { move: ['.widget-carousel', '.scan-message', '.scan-who-section', '#aicoach-card'], measureBy: '.scan-message' },
     'aicoach-input': { move: ['.aicoach-suggest-panel', '.aicoach-input-bar'] }, // suggestions panel travels with the input bar, staying anchored above it
     // The whole bar moves as one piece — border included — instead of just
     // the input escaping a stationary bar. That stationary-bar setup was

@@ -5272,7 +5272,14 @@ a { text-decoration: none; color: inherit; }
    (replaces the old underline-under-"right" treatment). */
 .scan-headline-divider {
   display: block;
-  width: 48px;
+  /* 54px, not the original 48px — extends 6px further left than its own
+     text column (which has its own 6px padding-left) so it reaches the
+     card's true left edge, where the grey border curve sits at this
+     height, instead of floating short of it. The extra width is added via
+     margin-left so the right edge stays exactly where it's always been —
+     only the new left edge moves. */
+  width: 54px;
+  margin-left: -6px;
   height: 3px;
   border-radius: 2px;
   background: #EC4899;
@@ -5362,7 +5369,7 @@ a { text-decoration: none; color: inherit; }
      a small bump requested specifically for these widget cards, kept
      local here rather than changing --r-lg since that token is shared by
      many unrelated components. */
-  border-radius: 26px;
+  border-radius: 34px;
 }
 /* The grey outline, drawn as a separate overlay (not the `border`
    property) so it can fade in/out independently of the card's own
