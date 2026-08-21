@@ -5231,10 +5231,12 @@ a { text-decoration: none; color: inherit; }
    width and intentionally overlap it, with text on top via z-index. */
 .scan-headline-row {
   position: relative;
-  /* margin-top removed — .widget-carousel (its new parent) already supplies
-     the equivalent 24px gap above the whole carousel; this used to be a
-     second, redundant 24px stacked on top of it, which is what was pushing
-     the promo content down further than it originally sat. */
+  /* 18px — exactly offsets .widget-card's own top edge having moved up by
+     18px (see its height comment) and .widget-carousel's margin-top being
+     reduced by the same amount, so this content still lands at the exact
+     same absolute page position it always has despite the box around it
+     now starting higher up. */
+  margin-top: 18px;
   /* Full width — as a flex child of .widget-card (display:flex) this would
      otherwise shrink to its content width (the headline text), which pulled
      .scan-hero-illustration's "right: 0" in tight against the text instead
@@ -5277,7 +5279,16 @@ a { text-decoration: none; color: inherit; }
   border-radius: 2px;
   background: #EC4899;
   margin-top: 20px;
+  opacity: 1;
+  transition: opacity 0.35s ease;
 }
+/* Sits right where the grey border curves round the bottom-left corner —
+   showing both at once reads as the pink line crossing/overlapping the
+   grey one. Since the border only shows when the widget's chrome is
+   revealed anyway, the two now swap: pink shows in the normal idle state,
+   fades out the moment the chrome (and the grey line) appears, and fades
+   back in once it's gone. */
+.widget-carousel.chrome-visible .scan-headline-divider { opacity: 0; }
 
 /* Hero illustration — the real chat-bubble PNG (assets/icons/chat-bubble-hero.png),
    fixed 110x110 box, never stretched (object-fit: contain), with a few small
@@ -5316,7 +5327,12 @@ a { text-decoration: none; color: inherit; }
    script.js (same technique as .yr-carousel's _initCarouselDrag) since
    click-drag-to-scroll isn't native browser behavior.
    ---------------------------------------------------------------- */
-.widget-carousel { position: relative; margin-top: 24px; }
+/* margin-top reduced from 24px — 18px of it moved into the card's own
+   height instead (see .widget-card's height comment) so the border has
+   genuine room to breathe above the content. There's 36px of real blank
+   space between the header and here (measured live) before this touches
+   it, so 18px still leaves clear room. */
+.widget-carousel { position: relative; margin-top: 6px; }
 
 .widget-carousel-track {
   display: flex;
@@ -5347,14 +5363,21 @@ a { text-decoration: none; color: inherit; }
   width: 100%;
   scroll-snap-align: start;
   box-sizing: border-box;
-  /* Card 1's own natural content height is 152px (unstyled/unpadded) — the
-     box just hugs that directly, no extra padding/breathing room. Border
-     no longer costs any of this height (see the ::after rule below), so
-     this is pure content-box height. Card 1 no longer depends on this
-     number at all (see align-items:flex-start below — it renders at its
-     natural size/position regardless of the box), but cards 2-4 are still
-     sized to fit inside this same compact budget. */
-  height: 152px;
+  /* Card 1's own natural content height is 152px (unstyled/unpadded); the
+     box is 170px — 18px taller — so the border has real breathing room
+     above the content instead of sitting flush against it. That 18px was
+     first tried as a paint-only extension on the ::after border overlay
+     (poking above the card's real box) — but .widget-carousel-track has
+     both overflow-y:hidden and contain:paint, which silently clipped that
+     extension on real devices even though it rendered fine in headless
+     screenshots (the ugly cut-off-corner artifact this replaced). Making
+     the box genuinely 170px tall keeps the border fully inside the
+     track's own bounds instead. .widget-carousel's margin-top was reduced
+     by the same 18px, and .scan-headline-row picked up an 18px margin-top
+     (see there) so card 1's actual content still lands at the exact same
+     absolute position on the page as before — this only moves the box's
+     top edge up into space that was already blank, not the content. */
+  height: 170px;
   display: flex;
   align-items: center;
   background: #fff;
@@ -5375,15 +5398,14 @@ a { text-decoration: none; color: inherit; }
 .widget-card::after {
   content: "";
   position: absolute;
-  /* Top extended 18px above the card's real edge — purely a paint-time
-     overlay (this pseudo-element has no effect on layout/box model at
-     all), so it adds visible breathing room above the content — card 1's
-     headline was sitting flush against the top border with zero gap —
-     without moving the content itself, the card's actual height, or
-     anything below the carousel by so much as a pixel. There's 36px of
-     genuine blank space between the header and the carousel to spend this
-     from (measured live), so this still leaves room before the header. */
-  inset: -18px 0 0 0;
+  /* Plain inset:0 — the extra breathing room above the content now comes
+     from .widget-card's own real height (see its comment), not from this
+     overlay poking outside the card's box. That was tried first and
+     looked fine in screenshots, but .widget-carousel-track's
+     overflow-y:hidden + contain:paint silently clip anything painted
+     outside a card's real box on real devices — this border overlay
+     included — producing a cut-off corner artifact there. */
+  inset: 0;
   border-radius: inherit;
   border: 1px solid var(--border);
   pointer-events: none;

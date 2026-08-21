@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-20 21:05";
+const BUILD_STAMP = "2026-08-21 18:23";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -3422,9 +3422,16 @@ function _wireWidgetCarousel() {
   track._wired = true;
   track.scrollLeft = 0;
 
+  // Dot indicator updates live, on every scroll tick during the swipe —
+  // not debounced to "settled" — so it registers the new card the instant
+  // the drag crosses the midpoint, instead of visibly lagging until the
+  // motion fully stops. The 100ms trailing call stays as a cheap safety
+  // net for whichever scroll event actually lands the final position
+  // (harmless — it's just re-running the same closest-card check).
   let settleTimer = null;
   track.addEventListener("scroll", () => {
     _showWidgetChrome();
+    _onWidgetCarouselSettled(track);
     clearTimeout(settleTimer);
     settleTimer = setTimeout(() => _onWidgetCarouselSettled(track), 100);
   }, { passive: true });
