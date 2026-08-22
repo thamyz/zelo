@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-22 12:03";
+const BUILD_STAMP = "2026-08-22 12:15";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -941,18 +941,6 @@ function buildCardElement(profile, stackIndex) {
   card.className    = 'swipe-card';
   card.dataset.stack = stackIndex;
 
-  const interestTags = buildInterestTagsHTML(profile.interests);
-
-  const currentMode = state.cardModes[profile.name] || CARD_MODE_DEFAULT;
-  const currentModeDesc = CARD_MODES.find(m => m.key === currentMode).desc;
-
-  const modePillsHTML = CARD_MODES.map(m => {
-    const locked = !m.free && !isColdAvailable();
-    return `<button type="button" class="card-mode-pill${m.key === currentMode ? ' active' : ''}${locked ? ' locked' : ''}" data-mode="${m.key}">
-      ${m.label}${locked ? ' 🔒' : ''}
-    </button>`;
-  }).join('');
-
   card.innerHTML = `
     <div class="swipe-card-photo">
       <div class="swipe-card-badge-pill">
@@ -970,7 +958,46 @@ function buildCardElement(profile, stackIndex) {
         <span class="swipe-card-name">${profile.name}, ${profile.age}</span>
       </div>
       <span class="swipe-card-occ">${profile.occupation}</span>
-      <hr class="swipe-card-divider"/>
+    </div>
+  `;
+
+  // Wire pill interaction only for top card (only top card is interactive)
+  if (stackIndex === 0) {
+    const moreBtn = card.querySelector('.swipe-card-more-btn');
+    moreBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      showSwipeCardMorePopup(profile);
+    });
+  }
+
+  return card;
+}
+
+// Skeleton-only for now — the button/popup shell is real, but the content
+// inside is placeholder shimmer blocks standing in for whatever "likes and
+// more" ends up living here (a real-content pass is a separate follow-up).
+// Reuses the app's existing .mini-modal-overlay/.mini-modal-card pattern
+// (see showDeleteConfirm for the same shape used with real content).
+function showSwipeCardMorePopup(profile) {
+  const interestTags = buildInterestTagsHTML(profile.interests);
+  const currentMode = state.cardModes[profile.name] || CARD_MODE_DEFAULT;
+  const currentModeDesc = CARD_MODES.find(m => m.key === currentMode).desc;
+  const modePillsHTML = CARD_MODES.map(m => {
+    const locked = !m.free && !isColdAvailable();
+    return `<button type="button" class="card-mode-pill${m.key === currentMode ? ' active' : ''}${locked ? ' locked' : ''}" data-mode="${m.key}">
+      ${m.label}${locked ? ' 🔒' : ''}
+    </button>`;
+  }).join('');
+
+  const app = document.getElementById('app');
+  const overlay = document.createElement('div');
+  overlay.className = 'mini-modal-overlay';
+  overlay.innerHTML = `
+    <div class="mini-modal-card swipe-card-more-modal">
+      <button type="button" class="swipe-card-more-modal-close" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <p class="mini-modal-title">More about ${profile.name}</p>
       <div class="swipe-card-section">
         <span class="swipe-card-section-head">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -989,73 +1016,36 @@ function buildCardElement(profile, stackIndex) {
         <div class="card-mode-pills">${modePillsHTML}</div>
         <p class="card-mode-desc">${currentModeDesc}</p>
       </div>
-    </div>
-  `;
-
-  // Wire pill interaction only for top card (only top card is interactive)
-  if (stackIndex === 0) {
-    const moreBtn = card.querySelector('.swipe-card-more-btn');
-    moreBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      showSwipeCardMorePopup(profile);
-    });
-
-    const pillsWrap = card.querySelector('.card-mode-pills');
-    const descEl    = card.querySelector('.card-mode-desc');
-    pillsWrap.querySelectorAll('.card-mode-pill').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        const modeKey    = btn.dataset.mode;
-        const modeConfig = CARD_MODES.find(m => m.key === modeKey);
-        const locked     = !modeConfig.free && !isColdAvailable();
-        if (locked) {
-          descEl.textContent  = 'Cold mode is a paid feature';
-          descEl.style.color  = 'var(--accent)';
-          btn.classList.add('locked-tap');
-          setTimeout(() => btn.classList.remove('locked-tap'), 260);
-          return;
-        }
-        pillsWrap.querySelectorAll('.card-mode-pill').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.cardModes[profile.name] = modeKey;
-        descEl.textContent = modeConfig.desc;
-        descEl.style.color = '';
-      });
-    });
-  }
-
-  return card;
-}
-
-// Skeleton-only for now — the button/popup shell is real, but the content
-// inside is placeholder shimmer blocks standing in for whatever "likes and
-// more" ends up living here (a real-content pass is a separate follow-up).
-// Reuses the app's existing .mini-modal-overlay/.mini-modal-card pattern
-// (see showDeleteConfirm for the same shape used with real content).
-function showSwipeCardMorePopup(profile) {
-  const app = document.getElementById('app');
-  const overlay = document.createElement('div');
-  overlay.className = 'mini-modal-overlay';
-  overlay.innerHTML = `
-    <div class="mini-modal-card swipe-card-more-modal">
-      <button type="button" class="swipe-card-more-modal-close" aria-label="Close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-      <p class="mini-modal-title">More about ${profile.name}</p>
-      <div class="skeleton-row skeleton-block" style="width:70%;"></div>
-      <div class="skeleton-row skeleton-block" style="width:92%;"></div>
-      <div class="skeleton-row skeleton-block" style="width:55%;"></div>
-      <div class="skeleton-tags">
-        <span class="skeleton-tag skeleton-block"></span>
-        <span class="skeleton-tag skeleton-block"></span>
-        <span class="skeleton-tag skeleton-block"></span>
-      </div>
     </div>`;
   app.appendChild(overlay);
   // Tap the dim backdrop (not the card itself) to close, same idiom used
   // for other overlays in the app.
   overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
   overlay.querySelector('.swipe-card-more-modal-close').onclick = () => overlay.remove();
+
+  // Same mode-pill wiring buildCardElement used to do inline on the card —
+  // now scoped to the popup's own DOM since that's where the pills live.
+  const pillsWrap = overlay.querySelector('.card-mode-pills');
+  const descEl    = overlay.querySelector('.card-mode-desc');
+  pillsWrap.querySelectorAll('.card-mode-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const modeKey    = btn.dataset.mode;
+      const modeConfig = CARD_MODES.find(m => m.key === modeKey);
+      const locked     = !modeConfig.free && !isColdAvailable();
+      if (locked) {
+        descEl.textContent  = 'Cold mode is a paid feature';
+        descEl.style.color  = 'var(--accent)';
+        btn.classList.add('locked-tap');
+        setTimeout(() => btn.classList.remove('locked-tap'), 260);
+        return;
+      }
+      pillsWrap.querySelectorAll('.card-mode-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.cardModes[profile.name] = modeKey;
+      descEl.textContent = modeConfig.desc;
+      descEl.style.color = '';
+    });
+  });
 }
 
 // Wires the Open/Neutral/Cold pills inside the full-screen profile detail

@@ -4124,10 +4124,11 @@ a { text-decoration: none; color: inherit; }
   cursor: pointer;
 }
 
-/* "More about them" skeleton popup — the button/popup shell is real, the
-   content is placeholder shimmer standing in for whatever real "likes and
-   more" content lands here next. */
-.swipe-card-more-modal { padding-top: 44px; }
+/* "More about them" popup — About Me / Likes / mode picker, relocated
+   here from the card body (see buildCardElement/showSwipeCardMorePopup)
+   so the swipe card itself stays down to just name/age/occupation. */
+.swipe-card-more-modal { padding-top: 44px; max-height: 80vh; overflow-y: auto; }
+.swipe-card-more-modal .swipe-card-section:last-of-type { margin-bottom: 0; }
 .swipe-card-more-modal-close {
   position: absolute;
   top: 14px;
@@ -4142,33 +4143,6 @@ a { text-decoration: none; color: inherit; }
   background: #f5f0e8;
   color: #6b5f56;
   cursor: pointer;
-}
-.skeleton-block {
-  position: relative;
-  overflow: hidden;
-  background: #ece5da;
-}
-.skeleton-block::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
-  animation: skeleton-shimmer 1.4s ease-in-out infinite;
-}
-@keyframes skeleton-shimmer {
-  100% { transform: translateX(100%); }
-}
-.skeleton-row {
-  height: 13px;
-  border-radius: 6px;
-  margin-bottom: 10px;
-}
-.skeleton-tags { display: flex; gap: 8px; margin-top: 8px; }
-.skeleton-tag {
-  width: 64px;
-  height: 26px;
-  border-radius: 99px;
 }
 
 /* Thread detail screen */
