@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-21 18:23";
+const BUILD_STAMP = "2026-08-22 12:03";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -959,6 +959,9 @@ function buildCardElement(profile, stackIndex) {
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
         Top Match
       </div>
+      <button type="button" class="swipe-card-more-btn" aria-label="More about ${profile.name}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      </button>
     </div>
     <div class="swipe-stamp swipe-stamp--like">LIKE ♥</div>
     <div class="swipe-stamp swipe-stamp--nope">NOPE ✕</div>
@@ -991,6 +994,12 @@ function buildCardElement(profile, stackIndex) {
 
   // Wire pill interaction only for top card (only top card is interactive)
   if (stackIndex === 0) {
+    const moreBtn = card.querySelector('.swipe-card-more-btn');
+    moreBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      showSwipeCardMorePopup(profile);
+    });
+
     const pillsWrap = card.querySelector('.card-mode-pills');
     const descEl    = card.querySelector('.card-mode-desc');
     pillsWrap.querySelectorAll('.card-mode-pill').forEach(btn => {
@@ -1016,6 +1025,37 @@ function buildCardElement(profile, stackIndex) {
   }
 
   return card;
+}
+
+// Skeleton-only for now — the button/popup shell is real, but the content
+// inside is placeholder shimmer blocks standing in for whatever "likes and
+// more" ends up living here (a real-content pass is a separate follow-up).
+// Reuses the app's existing .mini-modal-overlay/.mini-modal-card pattern
+// (see showDeleteConfirm for the same shape used with real content).
+function showSwipeCardMorePopup(profile) {
+  const app = document.getElementById('app');
+  const overlay = document.createElement('div');
+  overlay.className = 'mini-modal-overlay';
+  overlay.innerHTML = `
+    <div class="mini-modal-card swipe-card-more-modal">
+      <button type="button" class="swipe-card-more-modal-close" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <p class="mini-modal-title">More about ${profile.name}</p>
+      <div class="skeleton-row skeleton-block" style="width:70%;"></div>
+      <div class="skeleton-row skeleton-block" style="width:92%;"></div>
+      <div class="skeleton-row skeleton-block" style="width:55%;"></div>
+      <div class="skeleton-tags">
+        <span class="skeleton-tag skeleton-block"></span>
+        <span class="skeleton-tag skeleton-block"></span>
+        <span class="skeleton-tag skeleton-block"></span>
+      </div>
+    </div>`;
+  app.appendChild(overlay);
+  // Tap the dim backdrop (not the card itself) to close, same idiom used
+  // for other overlays in the app.
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.querySelector('.swipe-card-more-modal-close').onclick = () => overlay.remove();
 }
 
 // Wires the Open/Neutral/Cold pills inside the full-screen profile detail
@@ -1067,6 +1107,8 @@ function attachDragListeners(cardEl) {
 function onDragStart(e) {
   // Don't start drag when tapping a mode pill (Feature 4)
   if (e.target.closest && e.target.closest('.card-mode-pill')) return;
+  // ...or the "more about them" button on the photo
+  if (e.target.closest && e.target.closest('.swipe-card-more-btn')) return;
   // Ignore if we're mid-animation or a reply is pending
   if (drag.active) return;
 
