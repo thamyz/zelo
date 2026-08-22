@@ -2316,6 +2316,16 @@ a { text-decoration: none; color: inherit; }
 .swipe-card {
   position: absolute;
   inset: 0;
+  /* display:flex so .swipe-card-photo's flex:1 (below) actually does
+     something — .swipe-card-body's own flex:1 had been silently inert
+     this whole time (no effect without a flex parent), which is how the
+     card ended up with a blank gap once About Me/Likes/mode-picker moved
+     out of the body: nothing was left to stretch into the leftover space.
+     Now the photo grows to fill it instead — same fix as "make the black
+     background lower" — and the body still sits at its own natural
+     (short) content height right below it. */
+  display: flex;
+  flex-direction: column;
   background: var(--s1);
   border-radius: 24px;
   border: 1px solid var(--border);
@@ -2352,12 +2362,16 @@ a { text-decoration: none; color: inherit; }
 
 /* ---- Card internals ---- */
 .swipe-card-photo {
-  height: 46%;
+  /* flex:1 (was a fixed height:46%) — grows to take up whatever the body
+     (now just name/age/occupation) doesn't need, instead of leaving that
+     space blank. min-height is a floor so it can't collapse to nothing if
+     the body's content ever gets unusually tall. */
+  flex: 1;
+  min-height: 120px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   overflow: hidden;
   background: #000000;
 }
@@ -2409,7 +2423,12 @@ a { text-decoration: none; color: inherit; }
   display: flex;
   flex-direction: column;
   gap: 0;
-  flex: 1;
+  /* flex-shrink:0, not flex:1 — this used to grow to fill the card (back
+     when it held About Me/Likes/mode-picker too), but now that it's just
+     name/age/occupation it should stay sized to its own short content;
+     .swipe-card-photo (flex:1) is what absorbs the remaining space now
+     that .swipe-card is an actual flex container. */
+  flex-shrink: 0;
   overflow-y: auto;
 }
 
