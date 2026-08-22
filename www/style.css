@@ -2307,8 +2307,7 @@ a { text-decoration: none; color: inherit; }
   flex: 1;
   width: calc(100% - 44px);
   max-width: 360px;
-  margin: 4px 0 0;
-  margin-bottom: 84px;   /* clear the pinned swipe-actions bar */
+  margin: 4px 0 16px;
   min-height: 0;
 }
 
@@ -2459,6 +2458,19 @@ a { text-decoration: none; color: inherit; }
   border: none;
   border-top: 1px solid var(--border);
   margin: 10px 0;
+  flex-shrink: 0;
+}
+
+/* Skip / I'm Interested — now live inside the card itself (redesigned
+   from a bar pinned below the deck, see index.html/buildCardElement) so
+   the whole thing reads as one box, matching the reference. Reuses
+   .swipe-action-btn's existing styling as-is. */
+.swipe-card-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px 16px;
 }
 
 .swipe-card-section {
@@ -2518,20 +2530,9 @@ a { text-decoration: none; color: inherit; }
   transform: rotate(12deg);
 }
 
-/* ---- Action buttons below deck — pinned to the bottom of the tab ---- */
-.swipe-actions {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 22px 18px;
-  background: var(--bg);
-  z-index: 10;
-}
-
+/* ---- Action buttons — now rendered per-card (.swipe-card-actions,
+   above), not pinned below the deck. .swipe-action-btn itself is reused
+   as-is for the new placement. ---- */
 .swipe-action-btn {
   flex: 1;
   display: flex;

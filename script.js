@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-22 12:30";
+const BUILD_STAMP = "2026-08-22 12:53";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -959,6 +959,21 @@ function buildCardElement(profile, stackIndex) {
       </div>
       <span class="swipe-card-occ">${profile.occupation}</span>
     </div>
+    <hr class="swipe-card-divider"/>
+    <div class="swipe-card-actions">
+      <button type="button" class="swipe-action-btn swipe-action-btn--skip"${stackIndex === 0 ? ' id="btn-skip" onclick="onSkipBtn()"' : ' tabindex="-1" aria-hidden="true"'}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        Skip
+      </button>
+      <button type="button" class="swipe-action-btn swipe-action-btn--like"${stackIndex === 0 ? ' id="btn-like" onclick="onLikeBtn()"' : ' tabindex="-1" aria-hidden="true"'}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        I'm Interested
+      </button>
+    </div>
   `;
 
   // Wire pill interaction only for top card (only top card is interactive)
@@ -973,11 +988,10 @@ function buildCardElement(profile, stackIndex) {
   return card;
 }
 
-// Skeleton-only for now — the button/popup shell is real, but the content
-// inside is placeholder shimmer blocks standing in for whatever "likes and
-// more" ends up living here (a real-content pass is a separate follow-up).
-// Reuses the app's existing .mini-modal-overlay/.mini-modal-card pattern
-// (see showDeleteConfirm for the same shape used with real content).
+// About Me / Likes / mode picker, relocated here from the card body so the
+// card itself stays down to just name/age/occupation. Reuses the app's
+// existing .mini-modal-overlay/.mini-modal-card pattern (see
+// showDeleteConfirm for the same shape used elsewhere).
 function showSwipeCardMorePopup(profile) {
   const interestTags = buildInterestTagsHTML(profile.interests);
   const currentMode = state.cardModes[profile.name] || CARD_MODE_DEFAULT;
@@ -1099,6 +1113,8 @@ function onDragStart(e) {
   if (e.target.closest && e.target.closest('.card-mode-pill')) return;
   // ...or the "more about them" button on the photo
   if (e.target.closest && e.target.closest('.swipe-card-more-btn')) return;
+  // ...or Skip/I'm Interested, now that they live inside the card
+  if (e.target.closest && e.target.closest('.swipe-card-actions')) return;
   // Ignore if we're mid-animation or a reply is pending
   if (drag.active) return;
 
