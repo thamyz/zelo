@@ -2394,26 +2394,24 @@ a { text-decoration: none; color: inherit; }
   z-index: 1;
 }
 
-/* "More about them" button — mirrors .swipe-card-badge-pill's exact visual
-   treatment on the opposite corner, but interactive (no pointer-events:
-   none) and icon-only, so it doesn't compete for space with the Top
-   Match label. */
+/* "More about them" button — now sits inline in .swipe-card-name-row
+   (right side, same row as the name) instead of floating over the photo.
+   margin-left:auto pushes it to the row's right edge regardless of the
+   name's length. Solid grey fill instead of the old translucent-white/
+   blur treatment, since it's on the plain white body now, not the photo. */
 .swipe-card-more-btn {
-  position: absolute;
-  top: 14px;
-  right: 14px;
+  margin-left: auto;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  background: rgba(255,255,255,0.88);
+  width: 26px;
+  height: 26px;
+  background: var(--s2);
   color: var(--accent);
   border: none;
   border-radius: 99px;
-  backdrop-filter: blur(4px);
   cursor: pointer;
-  z-index: 1;
 }
 .swipe-card-more-btn:active { transform: scale(0.92); }
 
