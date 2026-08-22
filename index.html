@@ -2123,6 +2123,23 @@
 
 
       <!-- ============================================================
+           PRACTICE TAB — first-visit tutorial welcome screen. Replaces the
+           old "who do you want to practice with" mode popup below (still
+           present but no longer called from showTab()). Start tutorial →
+           startPracticeTutorial()'s swipe-right/swipe-left/photo-nav
+           lessons run directly on the real card deck underneath.
+           ============================================================ -->
+      <div class="practice-tutorial-welcome" id="practice-tutorial-welcome" hidden>
+        <div class="ptw-icon-wrap">
+          <img class="ptw-icon" src="assets/icons/tutorial-waving-hand.png" alt="" />
+        </div>
+        <h1 class="ptw-title">Let's get you <span class="ptw-accent">ready!</span></h1>
+        <p class="ptw-sub">Here's everything you need to know</p>
+        <button type="button" class="ptw-start-btn" onclick="practiceTutorialStart()">Start tutorial</button>
+        <button type="button" class="ptw-skip-btn" onclick="practiceTutorialSkip()">Skip</button>
+      </div>
+
+      <!-- ============================================================
            HOME TAB — first-visit practice-mode selection popup
            ============================================================ -->
       <div class="home-mode-popup" id="home-mode-popup" hidden>

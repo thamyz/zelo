@@ -7755,6 +7755,147 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* ================================================================
+   PRACTICE TAB TUTORIAL — welcome screen + swipe/photo-nav lesson
+   overlays (see script.js: startPracticeTutorial and friends)
+   ================================================================ */
+.practice-tutorial-welcome {
+  position: absolute;
+  inset: 0;
+  z-index: 1010;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px;
+  text-align: center;
+}
+.practice-tutorial-welcome[hidden] { display: none !important; }
+
+.ptw-icon-wrap {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft) 0%, rgba(236,72,153,0.03) 72%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.ptw-icon-wrap::before,
+.ptw-icon-wrap::after {
+  content: "";
+  position: absolute;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+}
+.ptw-icon-wrap::before { top: 10px; left: 18px; width: 18px; height: 18px; }
+.ptw-icon-wrap::after  { bottom: 18px; right: 6px; width: 13px; height: 13px; }
+.ptw-icon { width: 130px; height: 130px; object-fit: contain; position: relative; z-index: 1; }
+
+.ptw-title {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.ptw-accent { color: var(--accent); }
+.ptw-sub {
+  font-size: 0.95rem;
+  color: var(--text-2);
+  margin: 0 0 28px;
+}
+.ptw-start-btn {
+  width: 100%;
+  max-width: 340px;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 8px 22px rgba(236,72,153,0.3);
+}
+.ptw-start-btn:active { transform: scale(0.98); }
+.ptw-skip-btn {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+/* ---- Swipe-right / swipe-left lesson overlay, shown on the top card's
+   own photo (see _showPracticeTutorialStep in script.js) ---- */
+.ptw-dim::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1;
+}
+.ptw-swipe-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 28px;
+  text-align: center;
+  pointer-events: none;
+}
+.ptw-swipe-hand { width: 64px; height: 64px; object-fit: contain; margin-bottom: 22px; }
+.ptw-swipe-hand--left { width: 46px; height: 46px; }
+.ptw-swipe-title {
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 10px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--accent);
+}
+.ptw-swipe-sub {
+  color: rgba(255,255,255,0.9);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ---- Photo-nav lesson overlay (tap either side to dismiss — no real
+   multi-photo data exists yet, this just teaches the gesture) ---- */
+.ptw-photo-nav-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+.ptw-photo-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  border-left: 2px dashed rgba(255,255,255,0.6);
+}
+.ptw-photo-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ptw-photo-zone img { width: 44px; height: 44px; object-fit: contain; }
+.ptw-photo-zone span { color: #fff; font-size: 0.82rem; font-weight: 700; }
+
+/* ================================================================
    HOME TAB — first-visit practice-mode popup
    ================================================================ */
 .home-mode-popup {

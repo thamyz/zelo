@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-22 12:58";
+const BUILD_STAMP = "2026-08-22 13:35";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -207,11 +207,13 @@ function showTab(name) {
   state.activeScreen = null;
   state.screenStack  = [];
 
-  // Practice (Home) tab: first visit shows the mode popup; after that,
-  // signed-in users get the deck and anonymous users see it locked.
+  // Practice (Home) tab: first visit shows the tutorial (welcome screen →
+  // swipe-right/swipe-left/photo-nav lessons — replaces the old "who do
+  // you want to practice with" mode popup entirely); after that, signed-in
+  // users get the deck and anonymous users see it locked.
   if (name === 'practice') {
     if (!localStorage.getItem('zelo_mode_selected')) {
-      showHomeModePopup();
+      startPracticeTutorial();
     } else if (AUTH.signedIn()) {
       hideHomeLocked();
       initSwipeDeck();
@@ -1115,6 +1117,14 @@ function onDragStart(e) {
   if (e.target.closest && e.target.closest('.swipe-card-more-btn')) return;
   // ...or Skip/I'm Interested, now that they live inside the card
   if (e.target.closest && e.target.closest('.swipe-card-actions')) return;
+  // ...or the practice-tutorial's photo-nav lesson — it has its own tap
+  // handler (_practiceTutorialPhotoTap); without this exclusion, that same
+  // tap also reached the card's own tap-to-open-profile-detail logic in
+  // onDragEnd (stopPropagation() on the tutorial's click handler doesn't
+  // stop it — mousedown/touchend are separate listeners, not part of the
+  // click bubble it's stopping), popping the full-screen profile modal
+  // open behind the tutorial.
+  if (e.target.closest && e.target.closest('.ptw-photo-nav-overlay')) return;
   // Ignore if we're mid-animation or a reply is pending
   if (drag.active) return;
 
@@ -1198,7 +1208,10 @@ function onDragEnd(e) {
     // full-screen profile detail page instead of treating it as a swipe.
     // Not applicable to the onboarding demo card — it isn't backed by
     // state.swipeProfiles, so there's no real profile detail page for it.
-    if (moved < TAP_MAX_MOVEMENT && drag.card.id !== 'cine-swipe-card') openProfileDetail();
+    // Also suppressed during the swipe-right/swipe-left tutorial steps — a
+    // stray tap there shouldn't interrupt the lesson with an unrelated
+    // full-screen page.
+    if (moved < TAP_MAX_MOVEMENT && drag.card.id !== 'cine-swipe-card' && !_practiceTutorialActive) openProfileDetail();
   }
 }
 
@@ -1282,6 +1295,15 @@ function commitSwipe(cardEl, direction) {
     state.swipeIndex++;
     cardEl.remove();
 
+    // Practice-tab tutorial: swiping IS the lesson here too — a matching
+    // swipe advances to the next step, anything else just re-deals and
+    // re-shows the same step's overlay on the new top card. Skips the
+    // normal match-overlay/renderDeck continuation entirely while active.
+    if (_practiceTutorialActive) {
+      _handlePracticeTutorialSwipe(direction);
+      return;
+    }
+
     // During a Home swipe step, swiping IS the lesson. Each step teaches one
     // direction; a matching swipe advances, anything else just re-deals and
     // re-demos the intended motion.
@@ -1306,6 +1328,137 @@ function commitSwipe(cardEl, direction) {
       renderDeck();  // simple re-render — picks up new swipeIndex
     }
   }, { once: true });
+}
+
+
+// ================================================================
+// PRACTICE TAB TUTORIAL — replaces the old "who do you want to practice
+// with" mode popup as the first-visit experience. 4 steps: welcome screen
+// (practiceTutorialStart/Skip) → swipe-right lesson → swipe-left lesson →
+// a 1.5s pause → photo-nav lesson (tap-to-dismiss, no real swipe needed
+// since cards don't have multiple photos yet). Reuses the real deck and
+// real commitSwipe() throughout — a tutorial swipe is a real swipe, just
+// intercepted at the very end (see the _practiceTutorialActive check
+// inside commitSwipe) so it advances the lesson instead of the normal
+// match-overlay/renderDeck continuation.
+// ================================================================
+
+let _practiceTutorialActive = false;
+let _practiceTutorialStep   = 0; // 2 = swipe right, 3 = swipe left, 4 = photo nav
+
+function startPracticeTutorial() {
+  const el = document.getElementById('practice-tutorial-welcome');
+  if (el) el.hidden = false;
+}
+
+function practiceTutorialSkip() {
+  const el = document.getElementById('practice-tutorial-welcome');
+  if (el) el.hidden = true;
+  _finishPracticeTutorial();
+}
+
+function practiceTutorialStart() {
+  const el = document.getElementById('practice-tutorial-welcome');
+  if (el) el.hidden = true;
+  initSwipeDeck();
+  _practiceTutorialActive = true;
+  _practiceTutorialStep   = 2;
+  _showPracticeTutorialStep();
+}
+
+function _practiceTutorialTopPhoto() {
+  const card = document.querySelector('#card-deck .swipe-card[data-stack="0"]');
+  return card ? card.querySelector('.swipe-card-photo') : null;
+}
+
+function _showPracticeTutorialStep() {
+  const photo = _practiceTutorialTopPhoto();
+  if (!photo) { _finishPracticeTutorial(); return; } // ran out of demo profiles — bail cleanly
+  photo.querySelectorAll('.ptw-swipe-overlay, .ptw-photo-nav-overlay').forEach(n => n.remove());
+  photo.classList.remove('ptw-dim');
+
+  if (_practiceTutorialStep === 2) {
+    photo.classList.add('ptw-dim');
+    photo.insertAdjacentHTML('beforeend', `
+      <div class="ptw-swipe-overlay">
+        <img class="ptw-swipe-hand" src="assets/icons/tutorial-swipe-right.png" alt="" />
+        <p class="ptw-swipe-title">Slide right to like</p>
+        <p class="ptw-swipe-sub">It will only be a Match if you both Like each other. Try it out!</p>
+      </div>`);
+  } else if (_practiceTutorialStep === 3) {
+    photo.classList.add('ptw-dim');
+    photo.insertAdjacentHTML('beforeend', `
+      <div class="ptw-swipe-overlay">
+        <img class="ptw-swipe-hand ptw-swipe-hand--left" src="assets/icons/tutorial-swipe-left.png" alt="" />
+        <p class="ptw-swipe-title">Slide left to pass</p>
+        <p class="ptw-swipe-sub">If you don't Like them, simply pass. No one has to know you said Nope.</p>
+      </div>`);
+  } else if (_practiceTutorialStep === 4) {
+    photo.insertAdjacentHTML('beforeend', `
+      <div class="ptw-photo-nav-overlay" onclick="_practiceTutorialPhotoTap(event)">
+        <div class="ptw-photo-divider"></div>
+        <div class="ptw-photo-zone ptw-photo-zone--last">
+          <img src="assets/icons/tutorial-last-photo.png" alt="" />
+          <span>Last photo</span>
+        </div>
+        <div class="ptw-photo-zone ptw-photo-zone--next">
+          <img src="assets/icons/tutorial-next-photo.png" alt="" />
+          <span>Next photo</span>
+        </div>
+      </div>`);
+  }
+}
+
+function _handlePracticeTutorialSwipe(direction) {
+  renderDeck(); // fresh top card either way
+  const expected = _practiceTutorialStep === 2 ? 'right' : 'left';
+  if (direction !== expected) {
+    _showPracticeTutorialStep(); // wrong way — same lesson, new card
+    return;
+  }
+  if (_practiceTutorialStep === 2) {
+    _practiceTutorialStep = 3;
+    _showPracticeTutorialStep();
+  } else if (_practiceTutorialStep === 3) {
+    const photo = _practiceTutorialTopPhoto();
+    photo?.classList.remove('ptw-dim');
+    photo?.querySelectorAll('.ptw-swipe-overlay').forEach(n => n.remove());
+    setTimeout(() => {
+      if (!_practiceTutorialActive) return; // user skipped mid-pause
+      _practiceTutorialStep = 4;
+      _showPracticeTutorialStep();
+    }, 1500);
+  }
+}
+
+function _practiceTutorialPhotoTap(e) {
+  e.stopPropagation();
+  _finishPracticeTutorial();
+}
+
+function _finishPracticeTutorial() {
+  _practiceTutorialActive = false;
+  _practiceTutorialStep   = 0;
+  localStorage.setItem('zelo_mode_selected', '1');
+  const photo = _practiceTutorialTopPhoto();
+  photo?.querySelectorAll('.ptw-swipe-overlay, .ptw-photo-nav-overlay').forEach(n => n.remove());
+  photo?.classList.remove('ptw-dim');
+
+  if (AUTH.signedIn()) {
+    hideHomeLocked();
+    // practiceTutorialSkip() can reach here without ever going through
+    // practiceTutorialStart() (which is what normally loads the deck) —
+    // without this, skipping straight from the welcome screen leaves
+    // #card-deck permanently empty.
+    initSwipeDeck();
+  } else {
+    showHomeLocked();
+    showSignupPrompt(
+      'Create an account to start matching.',
+      'Sign up to unlock swiping and start real conversations.',
+      null
+    );
+  }
 }
 
 
