@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-22 13:35";
+const BUILD_STAMP = "2026-08-23 17:05";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -943,21 +943,27 @@ function buildCardElement(profile, stackIndex) {
   card.className    = 'swipe-card';
   card.dataset.stack = stackIndex;
 
+  card.dataset.photoIndex = '0';
+
   card.innerHTML = `
     <div class="swipe-card-photo">
+      <div class="swipe-photo-dots">
+        <span class="swipe-photo-dot active"></span>
+        <span class="swipe-photo-dot"></span>
+        <span class="swipe-photo-dot"></span>
+        <span class="swipe-photo-dot"></span>
+      </div>
       <div class="swipe-card-badge-pill">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
         Top Match
       </div>
+      <span class="swipe-photo-label">Card 1</span>
     </div>
     <div class="swipe-stamp swipe-stamp--like">LIKE ♥</div>
     <div class="swipe-stamp swipe-stamp--nope">NOPE ✕</div>
     <div class="swipe-card-body">
       <div class="swipe-card-name-row">
         <span class="swipe-card-name">${profile.name}, ${profile.age}</span>
-        <button type="button" class="swipe-card-more-btn" aria-label="More about ${profile.name}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        </button>
       </div>
       <span class="swipe-card-occ">${profile.occupation}</span>
     </div>
@@ -978,90 +984,24 @@ function buildCardElement(profile, stackIndex) {
     </div>
   `;
 
-  // Wire pill interaction only for top card (only top card is interactive)
-  if (stackIndex === 0) {
-    const moreBtn = card.querySelector('.swipe-card-more-btn');
-    moreBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      showSwipeCardMorePopup(profile);
-    });
-  }
-
   return card;
 }
 
-// About Me / Likes / mode picker, relocated here from the card body so the
-// card itself stays down to just name/age/occupation. Reuses the app's
-// existing .mini-modal-overlay/.mini-modal-card pattern (see
-// showDeleteConfirm for the same shape used elsewhere).
-function showSwipeCardMorePopup(profile) {
-  const interestTags = buildInterestTagsHTML(profile.interests);
-  const currentMode = state.cardModes[profile.name] || CARD_MODE_DEFAULT;
-  const currentModeDesc = CARD_MODES.find(m => m.key === currentMode).desc;
-  const modePillsHTML = CARD_MODES.map(m => {
-    const locked = !m.free && !isColdAvailable();
-    return `<button type="button" class="card-mode-pill${m.key === currentMode ? ' active' : ''}${locked ? ' locked' : ''}" data-mode="${m.key}">
-      ${m.label}${locked ? ' 🔒' : ''}
-    </button>`;
-  }).join('');
+// Tap left/right half of the card's photo to step back/forward through its
+// 4 "cards" (replaces the old tap-anywhere-opens-profile-detail behavior
+// and the (i) "more about them" popup — both removed). Only card slots
+// 2-4 exist as placeholders for now; real per-slot photos are a separate,
+// later pass (see SWIPE_PHOTO_SLOTS).
+const SWIPE_PHOTO_SLOTS = 4;
 
-  const app = document.getElementById('app');
-  const overlay = document.createElement('div');
-  overlay.className = 'mini-modal-overlay';
-  overlay.innerHTML = `
-    <div class="mini-modal-card swipe-card-more-modal">
-      <button type="button" class="swipe-card-more-modal-close" aria-label="Close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-      <p class="mini-modal-title">More about ${profile.name}</p>
-      <div class="swipe-card-section">
-        <span class="swipe-card-section-head">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          About Me
-        </span>
-        <p class="swipe-card-bio">${profile.bio}</p>
-      </div>
-      <div class="swipe-card-section">
-        <span class="swipe-card-section-head">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          Likes
-        </span>
-        <div class="swipe-card-tags">${interestTags}</div>
-      </div>
-      <div class="card-mode-section">
-        <div class="card-mode-pills">${modePillsHTML}</div>
-        <p class="card-mode-desc">${currentModeDesc}</p>
-      </div>
-    </div>`;
-  app.appendChild(overlay);
-  // Tap the dim backdrop (not the card itself) to close, same idiom used
-  // for other overlays in the app.
-  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
-  overlay.querySelector('.swipe-card-more-modal-close').onclick = () => overlay.remove();
-
-  // Same mode-pill wiring buildCardElement used to do inline on the card —
-  // now scoped to the popup's own DOM since that's where the pills live.
-  const pillsWrap = overlay.querySelector('.card-mode-pills');
-  const descEl    = overlay.querySelector('.card-mode-desc');
-  pillsWrap.querySelectorAll('.card-mode-pill').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const modeKey    = btn.dataset.mode;
-      const modeConfig = CARD_MODES.find(m => m.key === modeKey);
-      const locked     = !modeConfig.free && !isColdAvailable();
-      if (locked) {
-        descEl.textContent  = 'Cold mode is a paid feature';
-        descEl.style.color  = 'var(--accent)';
-        btn.classList.add('locked-tap');
-        setTimeout(() => btn.classList.remove('locked-tap'), 260);
-        return;
-      }
-      pillsWrap.querySelectorAll('.card-mode-pill').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.cardModes[profile.name] = modeKey;
-      descEl.textContent = modeConfig.desc;
-      descEl.style.color = '';
-    });
-  });
+function _navigateCardPhoto(cardEl, dir) {
+  const current = Number(cardEl.dataset.photoIndex) || 0;
+  const next = Math.max(0, Math.min(SWIPE_PHOTO_SLOTS - 1, current + dir));
+  if (next === current) return;
+  cardEl.dataset.photoIndex = String(next);
+  cardEl.querySelectorAll('.swipe-photo-dot').forEach((dot, i) => dot.classList.toggle('active', i === next));
+  const label = cardEl.querySelector('.swipe-photo-label');
+  if (label) label.textContent = 'Card ' + (next + 1);
 }
 
 // Wires the Open/Neutral/Cold pills inside the full-screen profile detail
@@ -1111,19 +1051,16 @@ function attachDragListeners(cardEl) {
 }
 
 function onDragStart(e) {
-  // Don't start drag when tapping a mode pill (Feature 4)
-  if (e.target.closest && e.target.closest('.card-mode-pill')) return;
-  // ...or the "more about them" button on the photo
-  if (e.target.closest && e.target.closest('.swipe-card-more-btn')) return;
-  // ...or Skip/I'm Interested, now that they live inside the card
+  // Don't start drag when tapping Skip/I'm Interested (they live inside
+  // the card now, not a separate pinned bar)
   if (e.target.closest && e.target.closest('.swipe-card-actions')) return;
   // ...or the practice-tutorial's photo-nav lesson — it has its own tap
   // handler (_practiceTutorialPhotoTap); without this exclusion, that same
-  // tap also reached the card's own tap-to-open-profile-detail logic in
+  // tap also reached the card's own tap-to-navigate-photos logic in
   // onDragEnd (stopPropagation() on the tutorial's click handler doesn't
   // stop it — mousedown/touchend are separate listeners, not part of the
-  // click bubble it's stopping), popping the full-screen profile modal
-  // open behind the tutorial.
+  // click bubble it's stopping), advancing the real photo index behind
+  // the tutorial's own fake one.
   if (e.target.closest && e.target.closest('.ptw-photo-nav-overlay')) return;
   // Ignore if we're mid-animation or a reply is pending
   if (drag.active) return;
@@ -1204,14 +1141,18 @@ function onDragEnd(e) {
     commitSwipe(drag.card, direction);
   } else {
     springBack(drag.card);
-    // A release with barely any movement is a tap, not a drag — open the
-    // full-screen profile detail page instead of treating it as a swipe.
-    // Not applicable to the onboarding demo card — it isn't backed by
-    // state.swipeProfiles, so there's no real profile detail page for it.
-    // Also suppressed during the swipe-right/swipe-left tutorial steps — a
-    // stray tap there shouldn't interrupt the lesson with an unrelated
-    // full-screen page.
-    if (moved < TAP_MAX_MOVEMENT && drag.card.id !== 'cine-swipe-card' && !_practiceTutorialActive) openProfileDetail();
+    // A release with barely any movement is a tap, not a drag — step
+    // back/forward through this card's photos depending on which half was
+    // tapped (left = back, right = forward), instead of treating it as a
+    // swipe. Not applicable to the onboarding demo card — it isn't backed
+    // by state.swipeProfiles. Also suppressed during the swipe-right/
+    // swipe-left tutorial steps — a stray tap there shouldn't advance a
+    // real photo mid-lesson.
+    if (moved < TAP_MAX_MOVEMENT && drag.card.id !== 'cine-swipe-card' && !_practiceTutorialActive) {
+      const rect = drag.card.getBoundingClientRect();
+      const tappedLeftHalf = (drag.startX - rect.left) < rect.width / 2;
+      _navigateCardPhoto(drag.card, tappedLeftHalf ? -1 : 1);
+    }
   }
 }
 
@@ -1766,8 +1707,27 @@ function attachTabSwipeGestures(tabName, excludeSelector) {
       // always starts from a screen that already looks correct.
       requestAnimationFrame(() => {
         if (myToken !== gestureToken) { cleanupTrack(); return; }
+        // Both tabs are already visually settled in their final on-screen
+        // position from the slide animation that just finished — cleanupTrack
+        // clearing the inline opacity override it forced during the drag (see
+        // _slideUnmountEl), and showTab()'s .active class swap below, are
+        // state corrections, not real visual changes. But .tab's CSS
+        // `transition: opacity 0.18s ease` doesn't know that — either step can
+        // read as a genuine computed-opacity change and animate a brief fade,
+        // letting the tab underneath visibly bleed through for a moment
+        // (the recurring "quick flash of the old page" bug). Suppress the
+        // transition on both tabs for this one swap so any correction is
+        // instant, then restore it next frame so normal tap-to-switch tab
+        // changes keep their intended fade.
+        el.style.transition = 'none';
+        finishedDestTab.style.transition = 'none';
         cleanupTrack();
         if (commit) showTab(finishedDestName);
+        void finishedDestTab.offsetHeight;
+        requestAnimationFrame(() => {
+          el.style.transition = '';
+          finishedDestTab.style.transition = '';
+        });
       });
     }
     requestAnimationFrame(frame);

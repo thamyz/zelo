@@ -2394,26 +2394,40 @@ a { text-decoration: none; color: inherit; }
   z-index: 1;
 }
 
-/* "More about them" button — now sits inline in .swipe-card-name-row
-   (right side, same row as the name) instead of floating over the photo.
-   margin-left:auto pushes it to the row's right edge regardless of the
-   name's length. Solid grey fill instead of the old translucent-white/
-   blur treatment, since it's on the plain white body now, not the photo. */
-.swipe-card-more-btn {
-  margin-left: auto;
-  flex-shrink: 0;
+/* Photo-nav progress dots — tap the left/right half of the photo (wired
+   in onDragEnd's tap-detection, not a separate click target) to step
+   through this card's 4 "cards". Replaces the old (i) "more about them"
+   button and the tap-to-open-profile-detail behavior entirely. */
+.swipe-photo-dots {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  right: 14px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: var(--s2);
-  color: var(--accent);
-  border: none;
-  border-radius: 99px;
-  cursor: pointer;
+  gap: 5px;
+  z-index: 1;
 }
-.swipe-card-more-btn:active { transform: scale(0.92); }
+.swipe-photo-dot {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.35);
+}
+.swipe-photo-dot.active { background: #fff; }
+
+/* Placeholder label standing in for the real per-slot photo (cards 2-4
+   have no real image yet — see SWIPE_PHOTO_SLOTS/_navigateCardPhoto). */
+.swipe-photo-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(255,255,255,0.5);
+  font-size: 1.1rem;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 1;
+}
 
 .swipe-card-body {
   padding: 14px 16px 16px;
@@ -4142,27 +4156,6 @@ a { text-decoration: none; color: inherit; }
   cursor: pointer;
 }
 
-/* "More about them" popup — About Me / Likes / mode picker, relocated
-   here from the card body (see buildCardElement/showSwipeCardMorePopup)
-   so the swipe card itself stays down to just name/age/occupation. */
-.swipe-card-more-modal { padding-top: 44px; max-height: 80vh; overflow-y: auto; }
-.swipe-card-more-modal .swipe-card-section:last-of-type { margin-bottom: 0; }
-.swipe-card-more-modal-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: #f5f0e8;
-  color: #6b5f56;
-  cursor: pointer;
-}
-
 /* Thread detail screen */
 .thread-detail-layout {
   display: flex;
@@ -5487,8 +5480,6 @@ a { text-decoration: none; color: inherit; }
 .widget-card--promo { align-items: flex-start; }
 /* Thicker top edge only, card 1 only — left/right/bottom stay the normal
    1px shared by every other widget. */
-.widget-card--promo::after { border-top-width: 3px; }
-
 .widget-card--streak,
 .widget-card--activity,
 .widget-card--leaderboard {
