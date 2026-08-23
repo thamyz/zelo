@@ -7829,25 +7829,6 @@ a { text-decoration: none; color: inherit; }
   font-weight: 700;
 }
 
-/* ---- "Do it yourself" peek hint — the real top card, at rest, nudges a
-   short way toward the swipe direction, pauses, eases back to center, pauses
-   again, then repeats — a do-it-yourself style preview rather than a
-   full-distance demo swipe. Applied/removed in _showPracticeTutorialStep;
-   removed instantly (no easing) the moment the card is actually touched, see
-   onDragStart, so a real drag never has to fight a leftover peek transform. ---- */
-@keyframes ptw-peek-hint {
-  0%        { transform: translate(0, 0) rotate(0deg); }
-  18%, 38%  { transform: translate(var(--ptw-peek-dx, 30px), 0) rotate(var(--ptw-peek-rot, 3deg)); }
-  56%, 100% { transform: translate(0, 0) rotate(0deg); }
-}
-.ptw-peek-hint {
-  animation: ptw-peek-hint 3s ease-in-out infinite;
-}
-.ptw-peek-hint--left {
-  --ptw-peek-dx: -30px;
-  --ptw-peek-rot: -3deg;
-}
-
 /* ---- Swipe-right / swipe-left lesson overlay, shown on the top card's
    own photo (see _showPracticeTutorialStep in script.js) ---- */
 .ptw-dim::before {

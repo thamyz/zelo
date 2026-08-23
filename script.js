@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-23 17:48";
+const BUILD_STAMP = "2026-08-23 17:52";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -1051,12 +1051,6 @@ function attachDragListeners(cardEl) {
 }
 
 function onDragStart(e) {
-  // Any real touch on the card snaps a still-playing peek-hint loop (see
-  // .ptw-peek-hint in style.css) back to center instantly, no easing —
-  // removing the class stops the CSS animation outright, before any of the
-  // exclusion returns below, so a real drag never starts from an offset
-  // transform the hint left behind.
-  if (e.currentTarget) e.currentTarget.classList.remove('ptw-peek-hint', 'ptw-peek-hint--left');
   // Don't start drag when tapping Skip/I'm Interested (they live inside
   // the card now, not a separate pinned bar) or the (i) info button.
   if (e.target.closest && e.target.closest('.swipe-card-actions')) return;
@@ -1331,14 +1325,8 @@ function _practiceTutorialTopPhoto() {
 function _showPracticeTutorialStep() {
   const photo = _practiceTutorialTopPhoto();
   if (!photo) { _finishPracticeTutorial(); return; } // ran out of demo profiles — bail cleanly
-  const card = photo.closest('.swipe-card');
   photo.querySelectorAll('.ptw-swipe-overlay, .ptw-photo-nav-overlay').forEach(n => n.remove());
   photo.classList.remove('ptw-dim');
-  // A CSS animation (see .ptw-peek-hint in style.css), not JS-driven — cheap
-  // to start/stop instantly (see onDragStart, which removes this class the
-  // moment the card is actually touched, snapping it back to center with no
-  // easing so a real drag never has to fight a leftover peek transform).
-  card?.classList.remove('ptw-peek-hint', 'ptw-peek-hint--left');
 
   if (_practiceTutorialStep === 2) {
     photo.classList.add('ptw-dim');
@@ -1348,7 +1336,6 @@ function _showPracticeTutorialStep() {
         <p class="ptw-swipe-title">Slide right to like</p>
         <p class="ptw-swipe-sub">It will only be a Match if you both Like each other. Try it out!</p>
       </div>`);
-    card?.classList.add('ptw-peek-hint');
   } else if (_practiceTutorialStep === 3) {
     photo.classList.add('ptw-dim');
     photo.insertAdjacentHTML('beforeend', `
@@ -1357,7 +1344,6 @@ function _showPracticeTutorialStep() {
         <p class="ptw-swipe-title">Slide left to pass</p>
         <p class="ptw-swipe-sub">If you don't Like them, simply pass. No one has to know you said Nope.</p>
       </div>`);
-    card?.classList.add('ptw-peek-hint', 'ptw-peek-hint--left');
   } else if (_practiceTutorialStep === 4) {
     photo.insertAdjacentHTML('beforeend', `
       <div class="ptw-photo-nav-overlay" onclick="_practiceTutorialPhotoTap(event)">
