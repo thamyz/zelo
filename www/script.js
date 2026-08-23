@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-23 20:30";
+const BUILD_STAMP = "2026-08-23 22:02";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -4425,12 +4425,57 @@ function _dobBuildColumn(rollerId, items, defaultIndex) {
     roller.appendChild(g);
   }
   roller.scrollTop = Math.max(0, defaultIndex || 0) * 44;
+  // Paint the dimmed/shrunk non-centered rows immediately (not just once the
+  // user first scrolls), and seed the haptic tracker to the row we just
+  // landed on so opening the sheet doesn't itself count as a "change".
+  _dobUpdateRowFocus(rollerId);
+  _dobLastIndex[rollerId] = _dobColumnIndex(rollerId);
 }
 
 function _dobColumnIndex(rollerId) {
   const r = document.getElementById(rollerId);
   if (!r) return 0;
   return Math.max(0, Math.round(r.scrollTop / 44));
+}
+
+// ---- Native-feeling wheel-picker polish — the two things a plain
+// scroll-snap column doesn't give you for free: rows dimming/shrinking the
+// further they sit from the centered one (an iOS UIPickerView's "focus
+// lens"), and a light haptic tick every time the centered row itself
+// changes, not just once when the whole scroll settles — spin the wheel
+// fast and it should tick through every row it passes, the same as the
+// real thing. Both run straight off the native momentum-scroll's own
+// `scroll` events (see cine-sheet--dob's -webkit-overflow-scrolling:touch +
+// scroll-snap-type in style.css) — no separate physics/animation of our
+// own to keep in sync with it.
+function _dobUpdateRowFocus(rollerId) {
+  const roller = document.getElementById(rollerId);
+  if (!roller) return;
+  const centerY = roller.scrollTop + roller.clientHeight / 2;
+  roller.querySelectorAll('.age-roller-item:not(.age-roller-ghost)').forEach(item => {
+    const dist = Math.abs((item.offsetTop + 22) - centerY); // 22 = half of the 44px row height
+    const t = Math.min(1, dist / 60); // full dim/shrink by ~1.5 rows away
+    item.style.opacity   = String(1 - t * 0.75);
+    item.style.transform = `scale(${1 - t * 0.14})`;
+  });
+}
+
+let _dobLastIndex  = {}; // rollerId -> last index a haptic tick fired for
+let _dobFocusQueued = {}; // rollerId -> rAF already scheduled, coalesces bursty scroll events
+
+function _dobLiveUpdate(rollerId) {
+  if (_dobFocusQueued[rollerId]) return;
+  _dobFocusQueued[rollerId] = true;
+  requestAnimationFrame(() => {
+    _dobFocusQueued[rollerId] = false;
+    _dobUpdateRowFocus(rollerId);
+    const idx = _dobColumnIndex(rollerId);
+    if (_dobLastIndex[rollerId] !== idx) {
+      _dobLastIndex[rollerId] = idx;
+      navigator.vibrate?.(3);
+      _cineHaptic('LIGHT');
+    }
+  });
 }
 
 function cineReadDob() {
@@ -4463,6 +4508,14 @@ function _dobRefreshWarn() {
 // doesn't silently reset Day back to the 1st.
 let _dobRebuildTimer = null;
 function _dobOnMonthYearScroll() {
+  // Live focus/haptic runs every event, unthrottled by the rebuild debounce
+  // below — a fast spin should visibly and tactilely tick through every row
+  // it passes, not just react once the whole thing settles. Calling both
+  // unconditionally (rather than figuring out which of month/year actually
+  // fired) is harmless: _dobLiveUpdate no-ops on a roller whose index hasn't
+  // moved since its last call.
+  _dobLiveUpdate('cine-dob-month');
+  _dobLiveUpdate('cine-dob-year');
   clearTimeout(_dobRebuildTimer);
   _dobRebuildTimer = setTimeout(() => {
     const month = _dobColumnIndex('cine-dob-month') + 1;
@@ -4479,6 +4532,7 @@ function _dobOnMonthYearScroll() {
   }, 90);
 }
 function _dobOnDayScroll() {
+  _dobLiveUpdate('cine-dob-day');
   clearTimeout(_dobRebuildTimer);
   _dobRebuildTimer = setTimeout(_dobRefreshWarn, 90);
 }

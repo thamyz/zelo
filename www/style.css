@@ -7525,6 +7525,16 @@ a { text-decoration: none; color: inherit; }
   background: #16130f;
   box-shadow: 0 10px 26px rgba(22,19,15,0.28);
 }
+/* Plain-text secondary button — Cancel next to the DOB sheet's Done, the
+   only place this flow pairs a CTA with a dismiss action rather than a
+   scrim tap alone. */
+.cine-btn--ghost {
+  background: none;
+  box-shadow: none;
+  color: var(--text-2);
+}
+.dob-sheet-actions { display: flex; gap: 10px; margin-top: 16px; }
+.dob-sheet-actions .cine-btn { margin-top: 0; }
 .cine-next-arrow { margin-left: 2px; }
 .cine-next {
   position: fixed; /* stays pinned during keyboard-open shift */
