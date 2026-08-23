@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-23 17:05";
+const BUILD_STAMP = "2026-08-23 17:23";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -947,12 +947,6 @@ function buildCardElement(profile, stackIndex) {
 
   card.innerHTML = `
     <div class="swipe-card-photo">
-      <div class="swipe-photo-dots">
-        <span class="swipe-photo-dot active"></span>
-        <span class="swipe-photo-dot"></span>
-        <span class="swipe-photo-dot"></span>
-        <span class="swipe-photo-dot"></span>
-      </div>
       <div class="swipe-card-badge-pill">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg>
         Top Match
@@ -964,6 +958,13 @@ function buildCardElement(profile, stackIndex) {
     <div class="swipe-card-body">
       <div class="swipe-card-name-row">
         <span class="swipe-card-name">${profile.name}, ${profile.age}</span>
+        ${stackIndex === 0 ? `<button type="button" class="swipe-card-info-btn" onclick="openProfileDetail()" aria-label="More info">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9.5"/>
+            <line x1="12" y1="11" x2="12" y2="16.5"/>
+            <circle cx="12" cy="7.6" r="0.6" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>` : ''}
       </div>
       <span class="swipe-card-occ">${profile.occupation}</span>
     </div>
@@ -999,7 +1000,6 @@ function _navigateCardPhoto(cardEl, dir) {
   const next = Math.max(0, Math.min(SWIPE_PHOTO_SLOTS - 1, current + dir));
   if (next === current) return;
   cardEl.dataset.photoIndex = String(next);
-  cardEl.querySelectorAll('.swipe-photo-dot').forEach((dot, i) => dot.classList.toggle('active', i === next));
   const label = cardEl.querySelector('.swipe-photo-label');
   if (label) label.textContent = 'Card ' + (next + 1);
 }
@@ -1052,8 +1052,9 @@ function attachDragListeners(cardEl) {
 
 function onDragStart(e) {
   // Don't start drag when tapping Skip/I'm Interested (they live inside
-  // the card now, not a separate pinned bar)
+  // the card now, not a separate pinned bar) or the (i) info button.
   if (e.target.closest && e.target.closest('.swipe-card-actions')) return;
+  if (e.target.closest && e.target.closest('.swipe-card-info-btn')) return;
   // ...or the practice-tutorial's photo-nav lesson — it has its own tap
   // handler (_practiceTutorialPhotoTap); without this exclusion, that same
   // tap also reached the card's own tap-to-navigate-photos logic in
@@ -1130,6 +1131,15 @@ function onDragMove(e) {
 function onDragEnd(e) {
   if (!drag.active) return;
   drag.active = false;
+
+  // A touchend that isn't preventDefault()-ed causes the browser to also
+  // synthesize a mousedown/mouseup/click sequence a moment later for
+  // compatibility — since mousedown is bound directly on the card (see
+  // attachDragListeners) and drag.active is already false by then, that
+  // synthetic sequence re-enters this same tap-handling logic a second time
+  // and double-applies whatever the tap just did (e.g. stepping 2 photo
+  // slots per tap instead of 1). Suppressing it here is the standard fix.
+  if (e.touches) e.preventDefault();
 
   document.removeEventListener('mousemove', onDragMove);
   document.removeEventListener('mouseup',   onDragEnd);

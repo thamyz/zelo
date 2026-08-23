@@ -2394,27 +2394,6 @@ a { text-decoration: none; color: inherit; }
   z-index: 1;
 }
 
-/* Photo-nav progress dots — tap the left/right half of the photo (wired
-   in onDragEnd's tap-detection, not a separate click target) to step
-   through this card's 4 "cards". Replaces the old (i) "more about them"
-   button and the tap-to-open-profile-detail behavior entirely. */
-.swipe-photo-dots {
-  position: absolute;
-  top: 10px;
-  left: 14px;
-  right: 14px;
-  display: flex;
-  gap: 5px;
-  z-index: 1;
-}
-.swipe-photo-dot {
-  flex: 1;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.35);
-}
-.swipe-photo-dot.active { background: #fff; }
-
 /* Placeholder label standing in for the real per-slot photo (cards 2-4
    have no real image yet — see SWIPE_PHOTO_SLOTS/_navigateCardPhoto). */
 .swipe-photo-label {
@@ -2428,6 +2407,16 @@ a { text-decoration: none; color: inherit; }
   pointer-events: none;
   z-index: 1;
 }
+
+/* Placeholder background per photo slot (tap left/right half of the photo,
+   wired in onDragEnd's tap-detection, to step data-photo-index 0-3 and
+   switch between these) — stands in for real per-slot photos until those
+   exist (see SWIPE_PHOTO_SLOTS/_navigateCardPhoto). Specificity beats the
+   plain .swipe-card-photo rule above without needing !important. */
+.swipe-card[data-photo-index="0"] .swipe-card-photo { background: #5B8DEF; }
+.swipe-card[data-photo-index="1"] .swipe-card-photo { background: #F2C94C; }
+.swipe-card[data-photo-index="2"] .swipe-card-photo { background: #EB5757; }
+.swipe-card[data-photo-index="3"] .swipe-card-photo { background: #F783C7; }
 
 .swipe-card-body {
   padding: 14px 16px 16px;
@@ -2451,6 +2440,22 @@ a { text-decoration: none; color: inherit; }
   gap: 8px;
   margin-bottom: 2px;
 }
+
+.swipe-card-info-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--s2);
+  color: var(--accent);
+  border: none;
+  border-radius: 99px;
+  cursor: pointer;
+}
+.swipe-card-info-btn:active { transform: scale(0.92); }
 
 .swipe-card-name {
   font-size: 1.25rem;
