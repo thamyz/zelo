@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-23 17:42";
+const BUILD_STAMP = "2026-08-23 17:48";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -1051,6 +1051,12 @@ function attachDragListeners(cardEl) {
 }
 
 function onDragStart(e) {
+  // Any real touch on the card snaps a still-playing peek-hint loop (see
+  // .ptw-peek-hint in style.css) back to center instantly, no easing —
+  // removing the class stops the CSS animation outright, before any of the
+  // exclusion returns below, so a real drag never starts from an offset
+  // transform the hint left behind.
+  if (e.currentTarget) e.currentTarget.classList.remove('ptw-peek-hint', 'ptw-peek-hint--left');
   // Don't start drag when tapping Skip/I'm Interested (they live inside
   // the card now, not a separate pinned bar) or the (i) info button.
   if (e.target.closest && e.target.closest('.swipe-card-actions')) return;
@@ -1081,11 +1087,6 @@ function onDragStart(e) {
   // since the guided-tour script that declares tourSwipeArmed is archived
   // and not loaded in the shipped bundle)
   if (typeof tourSwipeArmed !== 'undefined' && tourSwipeArmed) cancelSwipeDemo();
-  // Same idea for the current practice tutorial's own card-nudge demo — if
-  // its spring-back timer is still pending when a real swipe starts and
-  // finishes fast, it could fire mid-flight and stomp commitSwipe's own
-  // fly-off transition on this same card.
-  clearTimeout(_practiceTutorialDemoTimeout);
 
   // Attach document-level mouse handlers (removed in onDragEnd)
   document.addEventListener('mousemove', onDragMove);
@@ -1301,7 +1302,6 @@ function commitSwipe(cardEl, direction) {
 
 let _practiceTutorialActive = false;
 let _practiceTutorialStep   = 0; // 2 = swipe right, 3 = swipe left, 4 = photo nav
-let _practiceTutorialDemoTimeout = null;
 
 function startPracticeTutorial() {
   const el = document.getElementById('practice-tutorial-welcome');
@@ -1328,41 +1328,17 @@ function _practiceTutorialTopPhoto() {
   return card ? card.querySelector('.swipe-card-photo') : null;
 }
 
-// Gently slides the real top card in the given direction, fades in its own
-// LIKE/NOPE stamp, then springs it back to center — the card itself
-// demonstrates the gesture before the user does it for real. Reimplemented
-// fresh for the current tutorial (the old guided-tour version this is
-// based on, archive/legacy-onboarding.js's runSwipeDemo(), targeted DOM/CSS
-// that's no longer part of the live app and is fully dead code otherwise —
-// see that file's own header comment). Intentionally just the motion: no
-// heart/✕ popup, no tooltip text/styles from that old system.
-function _practiceTutorialCardDemo(direction) {
-  clearTimeout(_practiceTutorialDemoTimeout);
-  const card = document.querySelector('#card-deck .swipe-card[data-stack="0"]');
-  if (!card) return;
-
-  const dx    = direction === 'right' ? 96 : -96;
-  const rot   = direction === 'right' ? 9  : -9;
-  const stamp = card.querySelector(direction === 'right' ? '.swipe-stamp--like' : '.swipe-stamp--nope');
-
-  card.style.transition = 'transform 0.55s cubic-bezier(0.33, 0, 0.2, 1)';
-  card.style.transform  = `translate(${dx}px, 0) rotate(${rot}deg)`;
-  if (stamp) stamp.style.opacity = '1';
-
-  _practiceTutorialDemoTimeout = setTimeout(() => {
-    if (drag.active && drag.card === card) return; // user already grabbed it for real
-    card.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    card.style.transform  = '';
-    if (stamp) stamp.style.opacity = '0';
-  }, 720);
-}
-
 function _showPracticeTutorialStep() {
   const photo = _practiceTutorialTopPhoto();
   if (!photo) { _finishPracticeTutorial(); return; } // ran out of demo profiles — bail cleanly
-  clearTimeout(_practiceTutorialDemoTimeout);
+  const card = photo.closest('.swipe-card');
   photo.querySelectorAll('.ptw-swipe-overlay, .ptw-photo-nav-overlay').forEach(n => n.remove());
   photo.classList.remove('ptw-dim');
+  // A CSS animation (see .ptw-peek-hint in style.css), not JS-driven — cheap
+  // to start/stop instantly (see onDragStart, which removes this class the
+  // moment the card is actually touched, snapping it back to center with no
+  // easing so a real drag never has to fight a leftover peek transform).
+  card?.classList.remove('ptw-peek-hint', 'ptw-peek-hint--left');
 
   if (_practiceTutorialStep === 2) {
     photo.classList.add('ptw-dim');
@@ -1372,7 +1348,7 @@ function _showPracticeTutorialStep() {
         <p class="ptw-swipe-title">Slide right to like</p>
         <p class="ptw-swipe-sub">It will only be a Match if you both Like each other. Try it out!</p>
       </div>`);
-    _practiceTutorialCardDemo('right');
+    card?.classList.add('ptw-peek-hint');
   } else if (_practiceTutorialStep === 3) {
     photo.classList.add('ptw-dim');
     photo.insertAdjacentHTML('beforeend', `
@@ -1381,7 +1357,7 @@ function _showPracticeTutorialStep() {
         <p class="ptw-swipe-title">Slide left to pass</p>
         <p class="ptw-swipe-sub">If you don't Like them, simply pass. No one has to know you said Nope.</p>
       </div>`);
-    _practiceTutorialCardDemo('left');
+    card?.classList.add('ptw-peek-hint', 'ptw-peek-hint--left');
   } else if (_practiceTutorialStep === 4) {
     photo.insertAdjacentHTML('beforeend', `
       <div class="ptw-photo-nav-overlay" onclick="_practiceTutorialPhotoTap(event)">
