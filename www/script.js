@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-23 20:20";
+const BUILD_STAMP = "2026-08-23 20:30";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -1374,12 +1374,9 @@ function _handlePracticeTutorialSwipe(direction) {
     const photo = _practiceTutorialTopPhoto();
     photo?.classList.remove('ptw-dim');
     photo?.querySelectorAll('.ptw-swipe-overlay').forEach(n => n.remove());
-    setTimeout(() => {
-      if (!_practiceTutorialActive) return; // user skipped mid-pause
-      _practiceRenderConfirmProfile();
-      const el = document.getElementById('practice-confirm-profile');
-      if (el) el.hidden = false;
-    }, 1500);
+    _practiceRenderConfirmProfile();
+    const el = document.getElementById('practice-confirm-profile');
+    if (el) el.hidden = false;
   }
 }
 
@@ -1391,18 +1388,24 @@ function _handlePracticeTutorialSwipe(direction) {
 // — so an edit made here is the same edit made anywhere else in the app, not
 // a separate, disconnected copy.
 function _pedAttractedLabel(mode) {
-  return { women: 'Women', men: 'Men', both: 'Everyone' }[mode] || 'Everyone';
+  return { women: 'Women', men: 'Men', both: 'Everyone' }[mode] || 'Women';
 }
 
+// Placeholder headshot (assets/icons/tutorial-profile-photo.png, cropped
+// straight from the reference — not a mockup) shown until the user has a
+// real zelo_profile_photo of their own, so this demo screen reads as a
+// filled-in example (matching the reference) instead of an empty state.
+const PRACTICE_TUTORIAL_DEMO_PHOTO = 'assets/icons/tutorial-profile-photo.png';
+
 function _practiceRenderConfirmProfile() {
-  document.getElementById('pcp-name').textContent = localStorage.getItem('zelo_display_name') || 'You';
-  document.getElementById('pcp-age').textContent  = localStorage.getItem('zelo_user_age') || '—';
+  document.getElementById('pcp-name').textContent = localStorage.getItem('zelo_display_name') || 'Alex';
+  document.getElementById('pcp-age').textContent  = localStorage.getItem('zelo_user_age') || '22';
   document.getElementById('pcp-attracted').textContent = _pedAttractedLabel(localStorage.getItem('zelo_practice_mode'));
   const data = localStorage.getItem('zelo_profile_photo');
   const img  = document.getElementById('pcp-avatar-img');
   const ph   = document.getElementById('pcp-avatar-ph');
-  if (img) { if (data) { img.src = data; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; } }
-  if (ph)  ph.hidden = !!data;
+  if (img) { img.src = data || PRACTICE_TUTORIAL_DEMO_PHOTO; img.hidden = false; }
+  if (ph)  ph.hidden = true;
 }
 
 function practiceConfirmProfileContinue() {
@@ -1432,8 +1435,8 @@ function practiceCloseEditDetails() { _practiceReturnToConfirmProfile(); }
 function practiceSaveEditDetails()  { _practiceReturnToConfirmProfile(); }
 
 function _practiceRenderEditDetails() {
-  document.getElementById('ped-name-val').textContent = localStorage.getItem('zelo_display_name') || 'You';
-  document.getElementById('ped-age-val').textContent  = localStorage.getItem('zelo_user_age') || '—';
+  document.getElementById('ped-name-val').textContent = localStorage.getItem('zelo_display_name') || 'Alex';
+  document.getElementById('ped-age-val').textContent  = localStorage.getItem('zelo_user_age') || '22';
   document.getElementById('ped-attracted-val').textContent = _pedAttractedLabel(localStorage.getItem('zelo_practice_mode'));
   _pedRenderPhoto();
 }
@@ -1458,8 +1461,8 @@ function _pedRenderPhoto() {
   const data = localStorage.getItem('zelo_profile_photo');
   const img  = document.getElementById('ped-avatar-img');
   const ph   = document.getElementById('ped-avatar-ph');
-  if (img) { if (data) { img.src = data; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; } }
-  if (ph)  ph.hidden = !!data;
+  if (img) { img.src = data || PRACTICE_TUTORIAL_DEMO_PHOTO; img.hidden = false; }
+  if (ph)  ph.hidden = true;
 }
 
 // ---- Name — small bottom sheet (own, not Step 1's inline field — Step 1
