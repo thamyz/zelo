@@ -2417,6 +2417,11 @@ a { text-decoration: none; color: inherit; }
 .swipe-card[data-photo-index="1"] .swipe-card-photo { background: #F2C94C; }
 .swipe-card[data-photo-index="2"] .swipe-card-photo { background: #EB5757; }
 .swipe-card[data-photo-index="3"] .swipe-card-photo { background: #F783C7; }
+/* Swipe-right/swipe-left tutorial lesson (.ptw-dim, see _showPracticeTutorialStep
+   in script.js) keeps the plain black backdrop instead of the placeholder
+   color — same specificity as the rules above, so source order (this comes
+   after) is what wins the tie. */
+.swipe-card .swipe-card-photo.ptw-dim { background: #000; }
 
 .swipe-card-body {
   padding: 14px 16px 16px;
