@@ -1889,8 +1889,37 @@
           </div>
         </section>
 
-        <!-- ============ Step 5 — Tone (single-select, with descriptions) ============ -->
+        <!-- ============ Step 5 — Who are you most attracted to (single-select) ============ -->
         <section class="cine-screen cine-screen--q" data-screen="5">
+          <div class="cine-scroll">
+            <h2 class="cine-title">Who are you<br>most <span class="hl">attracted to?</span></h2>
+            <p class="cine-lede">This helps Zelo personalize your experience and create better practice for you.</p>
+            <div class="cine-opts" id="cine-opts-attracted">
+              <button type="button" class="cine-opt cine-opt--desc" onclick="cinePickOne('attracted','women',this)">
+                <span class="cine-opt-tile cine-opt-tile--round cine-opt-tile--pink"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6.5"/><line x1="12" y1="15.5" x2="12" y2="21.5"/><line x1="8.8" y1="18.5" x2="15.2" y2="18.5"/></svg></span>
+                <span class="cine-opt-textcol"><span class="cine-opt-name">Women</span><span class="cine-opt-desc">I'm most attracted to women.</span></span>
+                <span class="cine-radio"></span>
+              </button>
+              <button type="button" class="cine-opt cine-opt--desc" onclick="cinePickOne('attracted','men',this)">
+                <span class="cine-opt-tile cine-opt-tile--round cine-opt-tile--blue"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="6.5"/><line x1="14.5" y1="9.5" x2="20.5" y2="3.5"/><polyline points="15.5 3.5 20.5 3.5 20.5 8.5"/></svg></span>
+                <span class="cine-opt-textcol"><span class="cine-opt-name">Men</span><span class="cine-opt-desc">I'm most attracted to men.</span></span>
+                <span class="cine-radio"></span>
+              </button>
+              <button type="button" class="cine-opt cine-opt--desc" onclick="cinePickOne('attracted','both',this)">
+                <span class="cine-opt-tile cine-opt-tile--round cine-opt-tile--purple"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9.5" cy="12" r="6"/><circle cx="14.5" cy="12" r="6"/></svg></span>
+                <span class="cine-opt-textcol"><span class="cine-opt-name">Everyone</span><span class="cine-opt-desc">I'm attracted to all genders.</span></span>
+                <span class="cine-radio"></span>
+              </button>
+            </div>
+            <p class="cine-footnote">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V6a3 3 0 0 1 3-3z"/></svg>
+              This is private and you can change it anytime.
+            </p>
+          </div>
+        </section>
+
+        <!-- ============ Step 6 — Tone (single-select, with descriptions) ============ -->
+        <section class="cine-screen cine-screen--q" data-screen="6">
           <div class="cine-scroll">
             <h2 class="cine-title">Let's make Zelo<br>sound like <span class="hl">you.</span></h2>
             <p class="cine-lede">Which tone fits you best?</p>
@@ -1914,8 +1943,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 6 — Thanks for trusting us ============ -->
-        <section class="cine-screen cine-screen--hero" data-screen="6">
+        <!-- ============ Step 7 — Thanks for trusting us ============ -->
+        <section class="cine-screen cine-screen--hero" data-screen="7">
           <div class="cine-scroll">
             <img class="cine-hero-img" src="assets/icons/onb-thanks.png" alt="" />
             <h2 class="cine-title">Thanks for<br><span class="hl">trusting us!</span></h2>
@@ -1930,8 +1959,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 7 — See what you can achieve ============ -->
-        <section class="cine-screen cine-screen--hero" data-screen="7">
+        <!-- ============ Step 8 — See what you can achieve ============ -->
+        <section class="cine-screen cine-screen--hero" data-screen="8">
           <div class="cine-scroll">
             <img class="cine-hero-img" src="assets/icons/onb-achieve.png" alt="" />
             <h2 class="cine-title">See what you can<br><span class="hl">achieve.</span></h2>
@@ -1953,11 +1982,11 @@
           </div>
         </section>
 
-        <!-- ============ Step 8 — Notification permission ============
+        <!-- ============ Step 9 — Notification permission ============
              The card below is an illustrative preview of the system prompt
              (matching the reference); Continue fires the REAL native dialog
              via requestNotifPermission() and auto-advances once answered. -->
-        <section class="cine-screen cine-screen--notif" data-screen="8">
+        <section class="cine-screen cine-screen--notif" data-screen="9">
           <div class="cine-scroll cine-scroll--center">
             <h2 class="cine-title cine-title--plain">Stay on track with Zelo notifications</h2>
             <!-- No shared Continue on this screen (see CINE_STEPS[7]) — the
@@ -1976,8 +2005,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 9 — Setting everything up (auto-advances) ============ -->
-        <section class="cine-screen cine-screen--setup" data-screen="9">
+        <!-- ============ Step 10 — Setting everything up (auto-advances) ============ -->
+        <section class="cine-screen cine-screen--setup" data-screen="10">
           <div class="cine-scroll">
             <p class="cine-pct"><span id="cine-pct-num">1</span><span class="cine-pct-sym">%</span></p>
             <h2 class="cine-title cine-title--plain">We're setting everything up for you</h2>
@@ -1993,10 +2022,10 @@
           </div>
         </section>
 
-        <!-- ============ Step 10 — Your Zelo Plan is ready (static/decorative) ============
+        <!-- ============ Step 11 — Your Zelo Plan is ready (static/decorative) ============
              Values here are illustrative placeholders — real personalization
              logic is deliberately NOT wired up at this stage. -->
-        <section class="cine-screen cine-screen--hero" data-screen="10">
+        <section class="cine-screen cine-screen--hero" data-screen="11">
           <div class="cine-scroll">
             <img class="cine-hero-img cine-hero-img--sm" src="assets/icons/onb-plan.png" alt="" />
             <h2 class="cine-title">Your Zelo Plan<br><span class="hl">is ready.</span></h2>
@@ -2024,11 +2053,11 @@
           </div>
         </section>
 
-        <!-- ============ Step 11 — Save your progress ============
+        <!-- ============ Step 12 — Save your progress ============
              The three provider buttons are deliberately inert for now: they
              advance the flow exactly like Continue and never start a real
              account-creation attempt (see cineAuthStub()). -->
-        <section class="cine-screen cine-screen--hero" data-screen="11">
+        <section class="cine-screen cine-screen--hero" data-screen="12">
           <div class="cine-terms-warn" id="cine-terms-warn" aria-live="polite">You must accept the Terms and Conditions and Privacy Policy to continue</div>
           <div class="cine-scroll">
             <img class="cine-hero-img cine-hero-img--sm" src="assets/icons/onb-cloud.png" alt="" />
@@ -2055,8 +2084,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 12 — Try Zelo for free ============ -->
-        <section class="cine-screen cine-screen--hero" data-screen="12">
+        <!-- ============ Step 13 — Try Zelo for free ============ -->
+        <section class="cine-screen cine-screen--hero" data-screen="13">
           <div class="cine-scroll">
             <h2 class="cine-title">We want you to try<br><span class="hl">Zelo</span> for free</h2>
             <img class="cine-trial-phone" src="assets/icons/onb-trial-phone.png" alt="" />
@@ -2064,8 +2093,8 @@
           </div>
         </section>
 
-        <!-- ============ Step 13 — Trial reminder ============ -->
-        <section class="cine-screen cine-screen--hero" data-screen="13">
+        <!-- ============ Step 14 — Trial reminder ============ -->
+        <section class="cine-screen cine-screen--hero" data-screen="14">
           <div class="cine-scroll">
             <h2 class="cine-title">We'll send a <span class="hl">reminder</span><br>before your trial ends</h2>
             <p class="cine-lede">As long as notifications are enabled</p>
@@ -2083,26 +2112,34 @@
         </section>
 
         <button class="cine-next cine-hidden" id="cine-next" onclick="cineNext()">Next</button>
+      </div>
 
-        <!-- Birth-date wheel sheet (step 1) — 3-column native-style Month /
-             Day / Year picker (cineInitDobRoller() / cineReadDob(),
-             script.js). Independent of the post-signup setup screen's own
-             single-column #age-roller (AUTH.initAgeRoller/readAge, services/
-             auth.js) — that one is untouched. Backing is translucent, not an
-             opaque card, so the screen behind stays visible through it. -->
-        <div class="cine-sheet cine-sheet--dob" id="cine-age-sheet" hidden>
-          <div class="cine-sheet-scrim" onclick="cineCloseAgeSheet()"></div>
-          <div class="cine-sheet-card cine-sheet-card--dob">
-            <p class="cine-sheet-title">When were you born?</p>
-            <div class="dob-roller-wrap">
-              <div class="dob-roller-highlight" aria-hidden="true"></div>
-              <div class="dob-roller" id="cine-dob-month"></div>
-              <div class="dob-roller" id="cine-dob-day"></div>
-              <div class="dob-roller" id="cine-dob-year"></div>
-            </div>
-            <p class="age-warn" id="cine-age-warn"></p>
-            <button type="button" class="cine-btn" onclick="cineConfirmAge()">Done</button>
+      <!-- Birth-date wheel sheet (step 1) — 3-column native-style Month /
+           Day / Year picker (cineInitDobRoller() / cineReadDob(), script.js).
+           Independent of the post-signup setup screen's own single-column
+           #age-roller (AUTH.initAgeRoller/readAge, services/auth.js) — that
+           one is untouched. Backing is translucent, not an opaque card, so
+           the screen behind stays visible through it. Lives OUTSIDE
+           #cine-onboarding (not nested inside it like every other Phase-2
+           screen) — #cine-onboarding gets `hidden` set once the main
+           onboarding finishes, and the practice tutorial's Edit Details
+           screen (see index.html below, and pedOpenAttractedSheet's sibling
+           Age row in script.js) reopens this exact same sheet long after
+           that point; nested inside a hidden ancestor, toggling its own
+           `hidden` off would do nothing — the whole subtree stays
+           display:none regardless. -->
+      <div class="cine-sheet cine-sheet--dob" id="cine-age-sheet" hidden>
+        <div class="cine-sheet-scrim" onclick="cineCloseAgeSheet()"></div>
+        <div class="cine-sheet-card cine-sheet-card--dob">
+          <p class="cine-sheet-title">When were you born?</p>
+          <div class="dob-roller-wrap">
+            <div class="dob-roller-highlight" aria-hidden="true"></div>
+            <div class="dob-roller" id="cine-dob-month"></div>
+            <div class="dob-roller" id="cine-dob-day"></div>
+            <div class="dob-roller" id="cine-dob-year"></div>
           </div>
+          <p class="age-warn" id="cine-age-warn"></p>
+          <button type="button" class="cine-btn" onclick="cineConfirmAge()">Done</button>
         </div>
       </div>
 
@@ -2137,6 +2174,97 @@
         <p class="ptw-sub">Here's everything you need to know</p>
         <button type="button" class="ptw-start-btn" onclick="practiceTutorialStart()">Start tutorial</button>
         <button type="button" class="ptw-skip-btn" onclick="practiceTutorialSkip()">Skip</button>
+      </div>
+
+      <!-- ============================================================
+           PRACTICE TAB TUTORIAL — "Let's confirm your profile", shown
+           between the swipe-left lesson and the photo-nav lesson (see
+           _handlePracticeTutorialSwipe). "Edit details" opens the screen
+           right after it.
+           ============================================================ -->
+      <div class="practice-tutorial-welcome" id="practice-confirm-profile" hidden>
+        <span class="pcp-step-badge">2</span>
+        <h2 class="home-brand" style="font-size:1.5rem; margin-bottom:22px;">Zelo<span class="scan-spark" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span></h2>
+        <h1 class="ptw-title">Let's confirm<br><span class="ptw-accent">your profile</span></h1>
+        <p class="ptw-sub">Double check your details before we begin.</p>
+        <div class="pcp-avatar-wrap">
+          <span class="pcp-sparkle pcp-sparkle--1"></span>
+          <span class="pcp-sparkle pcp-sparkle--2"></span>
+          <span class="pcp-sparkle pcp-sparkle--3"></span>
+          <div class="cine-avatar" style="pointer-events:none;">
+            <img class="cine-avatar-img" id="pcp-avatar-img" hidden alt="" />
+            <svg class="cine-avatar-ph" id="pcp-avatar-ph" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+        <p class="pcp-name" id="pcp-name">—</p>
+        <p class="pcp-meta"><span id="pcp-age">—</span> &nbsp;&bull;&nbsp; Attracted to <span class="pcp-accent" id="pcp-attracted">—</span></p>
+        <button type="button" class="ptw-start-btn" onclick="practiceConfirmProfileContinue()">Continue</button>
+        <button type="button" class="ptw-skip-btn" onclick="practiceOpenEditDetails()">Edit details</button>
+      </div>
+
+      <!-- ============================================================
+           PRACTICE TAB TUTORIAL — "Edit Details", opened from the "Edit
+           details" link on the confirm-profile screen above.
+           ============================================================ -->
+      <div class="practice-tutorial-welcome" id="practice-edit-details" hidden>
+        <button type="button" class="cine-back ped-back-btn" onclick="practiceCloseEditDetails()" aria-label="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h2 class="home-brand" style="font-size:1.5rem; margin-bottom:22px;">Zelo<span class="scan-spark" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span></h2>
+        <h1 class="ptw-title">Edit Details</h1>
+        <p class="ptw-sub">Update your information and make it yours.</p>
+        <div class="pcp-avatar-wrap">
+          <span class="pcp-sparkle pcp-sparkle--1"></span>
+          <span class="pcp-sparkle pcp-sparkle--2"></span>
+          <span class="pcp-sparkle pcp-sparkle--3"></span>
+          <div class="cine-avatar" id="ped-avatar" onclick="pedPickPhoto()">
+            <img class="cine-avatar-img" id="ped-avatar-img" hidden alt="" />
+            <svg class="cine-avatar-ph" id="ped-avatar-ph" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="cine-avatar-cam"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span>
+          </div>
+          <input type="file" accept="image/*" id="ped-photo-input" hidden onchange="pedPhotoSelected(event)" />
+        </div>
+        <div class="settings2-card settings2-card--full ped-rows">
+          <button type="button" class="settings2-row" onclick="pedOpenNameSheet()">
+            <span class="settings2-icon settings2-icon--tint-c" style="border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--accent);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+            <span class="settings2-row-text"><span>Name</span><b id="ped-name-val">—</b></span>
+            <span class="settings2-chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="settings2-row" onclick="cineOpenAgeSheet()">
+            <span class="settings2-icon settings2-icon--tint-c" style="border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--accent);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+            <span class="settings2-row-text"><span>Age</span><b id="ped-age-val">—</b></span>
+            <span class="settings2-chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="settings2-row settings2-row--noborder" onclick="pedOpenAttractedSheet()">
+            <span class="settings2-icon settings2-icon--tint-c" style="border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--accent);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.2l7.8-7.8 1-1.1a5.5 5.5 0 0 0 0-7.7z"/></svg></span>
+            <span class="settings2-row-text"><span>Attracted to</span><b id="ped-attracted-val">—</b></span>
+            <span class="settings2-chevron" aria-hidden="true">›</span>
+          </button>
+        </div>
+        <button type="button" class="ptw-start-btn" onclick="practiceSaveEditDetails()">Save Changes</button>
+      </div>
+
+      <!-- Name edit — small bottom sheet, same shell as #cine-age-sheet -->
+      <div class="cine-sheet" id="ped-name-sheet" hidden>
+        <div class="cine-sheet-scrim" onclick="pedCloseNameSheet()"></div>
+        <div class="cine-sheet-card">
+          <h3 class="cine-sheet-title">Your name</h3>
+          <input type="text" class="ped-name-input" id="ped-name-input" maxlength="20" placeholder="e.g. Alex" />
+          <button type="button" class="cine-btn" onclick="pedConfirmName()">Done</button>
+        </div>
+      </div>
+
+      <!-- Attracted-to edit — small bottom sheet, same shell as #cine-age-sheet -->
+      <div class="cine-sheet" id="ped-attracted-sheet" hidden>
+        <div class="cine-sheet-scrim" onclick="pedCloseAttractedSheet()"></div>
+        <div class="cine-sheet-card ped-attracted-sheet">
+          <h3 class="cine-sheet-title">Attracted to</h3>
+          <div class="cine-opts" id="ped-opts-attracted">
+            <button type="button" class="cine-opt" onclick="pedPickAttracted('women',this)"><span class="cine-opt-tile cine-opt-tile--round cine-opt-tile--pink"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6.5"/><line x1="12" y1="15.5" x2="12" y2="21.5"/><line x1="8.8" y1="18.5" x2="15.2" y2="18.5"/></svg></span><span class="cine-opt-label">Women</span><span class="cine-radio"></span></button>
+            <button type="button" class="cine-opt" onclick="pedPickAttracted('men',this)"><span class="cine-opt-tile cine-opt-tile--round cine-opt-tile--blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="6.5"/><line x1="14.5" y1="9.5" x2="20.5" y2="3.5"/><polyline points="15.5 3.5 20.5 3.5 20.5 8.5"/></svg></span><span class="cine-opt-label">Men</span><span class="cine-radio"></span></button>
+            <button type="button" class="cine-opt" onclick="pedPickAttracted('both',this)"><span class="cine-opt-tile cine-opt-tile--round cine-opt-tile--purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9.5" cy="12" r="6"/><circle cx="14.5" cy="12" r="6"/></svg></span><span class="cine-opt-label">Everyone</span><span class="cine-radio"></span></button>
+          </div>
+        </div>
       </div>
 
       <!-- ============================================================

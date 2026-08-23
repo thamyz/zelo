@@ -7201,8 +7201,11 @@ a { text-decoration: none; color: inherit; }
 .cine-field-check { flex: none; color: #22c55e; display: flex; }
 .cine-field-error { margin: -6px 0 8px; font-size: 0.82rem; color: #ef4444; min-height: 1em; }
 
-/* Age wheel sheet — hosts the existing .age-roller component */
-.cine-sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; }
+/* Age wheel sheet — hosts the existing .age-roller component. z-index 1050:
+   comfortably above both #cine-onboarding (1000, its normal home) and the
+   practice-tutorial full-screen overlays (1010) that also open this same
+   sheet for their own Age row — see Edit Details in the practice tutorial. */
+.cine-sheet { position: fixed; inset: 0; z-index: 1050; display: flex; align-items: flex-end; }
 .cine-sheet[hidden] { display: none !important; }
 .cine-sheet-scrim { position: absolute; inset: 0; background: rgba(28,25,23,0.45); }
 .cine-sheet-card {
@@ -7305,6 +7308,12 @@ a { text-decoration: none; color: inherit; }
 }
 .cine-opt-tile--emoji { font-size: 1.7rem; background: #f7efe9; }
 .cine-opt-tile--round { border-radius: 50%; }
+/* Step 5 — attracted-to: each option gets its own tint (reference shows
+   pink/blue/purple per row) instead of the single shared pink used by every
+   other option list in this flow. */
+.cine-opt-tile--pink   { background: #fce3ee; color: #ec4899; }
+.cine-opt-tile--blue   { background: #dfebfc; color: #3b82f6; }
+.cine-opt-tile--purple { background: #ece6fb; color: #8b5cf6; }
 /* Step 2 — gender: real cropped illustration (see onb-gender-icon.png),
    not a redrawn mockup. */
 .cine-gender-icon { width: 128px; height: auto; margin: 4px 0 18px; }
@@ -7417,9 +7426,9 @@ a { text-decoration: none; color: inherit; }
 /* ---- Step 9 — Zelo Plan (decorative) ----
    Densest screen in the flow; its own slightly tighter title/hero so the
    whole plan fits without scrolling on a 390x844 viewport. */
-.cine-screen[data-screen="10"] .cine-title { font-size: 1.72rem; margin-bottom: 8px; }
-.cine-screen[data-screen="10"] .cine-lede { margin-bottom: 14px; }
-.cine-screen[data-screen="10"] .cine-hero-img { width: 138px; margin: 0 0 12px; }
+.cine-screen[data-screen="11"] .cine-title { font-size: 1.72rem; margin-bottom: 8px; }
+.cine-screen[data-screen="11"] .cine-lede { margin-bottom: 14px; }
+.cine-screen[data-screen="11"] .cine-hero-img { width: 138px; margin: 0 0 12px; }
 .cine-plan-card { padding: 15px 16px; margin-top: 11px; text-align: left; }
 .cine-plan-head { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 1rem; font-weight: 800; color: var(--accent); }
 .cine-plan-ic { flex: none; width: 36px; height: 36px; border-radius: 12px; background: #fce3ee; color: var(--accent); display: flex; align-items: center; justify-content: center; }
@@ -7828,6 +7837,87 @@ a { text-decoration: none; color: inherit; }
   font-size: 0.95rem;
   font-weight: 700;
 }
+
+/* ----------------------------------------------------------------
+   PRACTICE TUTORIAL — "Let's confirm your profile" + "Edit Details".
+   Slotted between the swipe-left lesson and the photo-nav lesson (see
+   _handlePracticeTutorialSwipe in script.js). Both reuse the
+   .practice-tutorial-welcome full-screen shell (same z-index/positioning)
+   and .ptw-title/.ptw-sub/.ptw-start-btn/.ptw-skip-btn for headline/body/CTA
+   styling, so they sit visually consistent with the welcome screen either
+   side of them.
+   ---------------------------------------------------------------- */
+.pcp-step-badge {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+  box-shadow: 0 6px 16px rgba(236,72,153,0.28);
+}
+
+.pcp-avatar-wrap {
+  position: relative;
+  margin: 6px 0 20px;
+}
+/* Same 4-pointed clip-path sparkle already used around .ptw-icon, scattered
+   at a few more positions/sizes around the profile photo instead. */
+.pcp-sparkle {
+  position: absolute;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  opacity: 0.55;
+}
+.pcp-sparkle--1 { width: 20px; height: 20px; top: -6px;  left: -14px; }
+.pcp-sparkle--2 { width: 13px; height: 13px; top: 46%;   right: -20px; }
+.pcp-sparkle--3 { width: 16px; height: 16px; bottom: -2px; right: 8px; opacity: 0.35; }
+
+.pcp-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.pcp-meta {
+  font-size: 0.92rem;
+  color: var(--text-2);
+  margin: 0 0 28px;
+}
+.pcp-meta .pcp-accent { color: var(--accent); font-weight: 700; }
+
+/* ---- Edit Details ---- */
+.ped-back-btn { position: absolute; top: 18px; left: 18px; }
+/* .cine-avatar-cam is already an edit-photo badge (Step 1 reuses it as-is);
+   here it's purely decorative-triggered — the avatar itself carries the tap
+   handler (see #ped-avatar onclick) so the whole circle, not just the badge,
+   is tappable, matching the rest of this app's avatar-edit affordances. */
+.ped-rows { width: 100%; max-width: 340px; margin-bottom: 22px; }
+.ped-rows .settings2-row-text { gap: 3px; }
+.ped-rows .settings2-row-text span:first-child { font-size: 0.82rem; color: var(--text-2); }
+.ped-rows .settings2-row-text b { font-size: 1.02rem; }
+
+/* ---- Small bottom sheets for the Name / Attracted-to rows — same shell as
+   #cine-age-sheet (.cine-sheet/.cine-sheet-scrim/.cine-sheet-card), just a
+   simpler body. Both this and the age sheet need to render above whichever
+   full-screen practice-tutorial overlay opened them (z-index 1010), not just
+   above #cine-onboarding (1000) — see the bumped .cine-sheet z-index below. ---- */
+.ped-name-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--s2);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+  margin-bottom: 4px;
+}
+.ped-attracted-sheet .cine-opts { gap: 10px; }
+.ped-attracted-sheet .cine-opt { padding: 14px 16px; }
 
 /* ---- Swipe-right / swipe-left lesson overlay, shown on the top card's
    own photo (see _showPracticeTutorialStep in script.js) ---- */

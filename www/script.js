@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-23 17:52";
+const BUILD_STAMP = "2026-08-23 20:07";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -1376,10 +1376,130 @@ function _handlePracticeTutorialSwipe(direction) {
     photo?.querySelectorAll('.ptw-swipe-overlay').forEach(n => n.remove());
     setTimeout(() => {
       if (!_practiceTutorialActive) return; // user skipped mid-pause
-      _practiceTutorialStep = 4;
-      _showPracticeTutorialStep();
+      _practiceRenderConfirmProfile();
+      const el = document.getElementById('practice-confirm-profile');
+      if (el) el.hidden = false;
     }, 1500);
   }
+}
+
+// ---- "Let's confirm your profile" + "Edit Details" — slotted between the
+// swipe-left lesson and the photo-nav lesson (see _handlePracticeTutorialSwipe
+// above). Reads/writes the SAME localStorage fields the main app onboarding
+// (Step 1, and the new "who are you attracted to" step) already uses —
+// zelo_display_name / zelo_user_age / zelo_profile_photo / zelo_practice_mode
+// — so an edit made here is the same edit made anywhere else in the app, not
+// a separate, disconnected copy.
+function _pedAttractedLabel(mode) {
+  return { women: 'Women', men: 'Men', both: 'Everyone' }[mode] || 'Everyone';
+}
+
+function _practiceRenderConfirmProfile() {
+  document.getElementById('pcp-name').textContent = localStorage.getItem('zelo_display_name') || 'You';
+  document.getElementById('pcp-age').textContent  = localStorage.getItem('zelo_user_age') || '—';
+  document.getElementById('pcp-attracted').textContent = _pedAttractedLabel(localStorage.getItem('zelo_practice_mode'));
+  const data = localStorage.getItem('zelo_profile_photo');
+  const img  = document.getElementById('pcp-avatar-img');
+  const ph   = document.getElementById('pcp-avatar-ph');
+  if (img) { if (data) { img.src = data; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; } }
+  if (ph)  ph.hidden = !!data;
+}
+
+function practiceConfirmProfileContinue() {
+  const el = document.getElementById('practice-confirm-profile');
+  if (el) el.hidden = true;
+  if (!_practiceTutorialActive) return; // user backed out via Edit Details/Settings mid-way
+  _practiceTutorialStep = 4;
+  _showPracticeTutorialStep();
+}
+
+function practiceOpenEditDetails() {
+  document.getElementById('practice-confirm-profile').hidden = true;
+  _practiceRenderEditDetails();
+  document.getElementById('practice-edit-details').hidden = false;
+}
+
+// Both "back" and "Save Changes" return the same way — every field here
+// saves itself immediately when picked (see pedConfirmName/pedPickAttracted/
+// cineConfirmAge/pedPhotoSelected), so there's no separate draft/commit step
+// to distinguish between "saved" and "cancelled".
+function _practiceReturnToConfirmProfile() {
+  document.getElementById('practice-edit-details').hidden = true;
+  _practiceRenderConfirmProfile();
+  document.getElementById('practice-confirm-profile').hidden = false;
+}
+function practiceCloseEditDetails() { _practiceReturnToConfirmProfile(); }
+function practiceSaveEditDetails()  { _practiceReturnToConfirmProfile(); }
+
+function _practiceRenderEditDetails() {
+  document.getElementById('ped-name-val').textContent = localStorage.getItem('zelo_display_name') || 'You';
+  document.getElementById('ped-age-val').textContent  = localStorage.getItem('zelo_user_age') || '—';
+  document.getElementById('ped-attracted-val').textContent = _pedAttractedLabel(localStorage.getItem('zelo_practice_mode'));
+  _pedRenderPhoto();
+}
+
+// ---- Photo — parallel to cinePickPhoto/cinePhotoSelected/cineRenderPhoto
+// (Step 1 of the main onboarding), targeting this screen's own avatar
+// elements instead. Same zelo_profile_photo key, so either editor sees the
+// other's change.
+function pedPickPhoto() { document.getElementById('ped-photo-input')?.click(); }
+function pedPhotoSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    localStorage.setItem('zelo_profile_photo', reader.result);
+    _pedRenderPhoto();
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+function _pedRenderPhoto() {
+  const data = localStorage.getItem('zelo_profile_photo');
+  const img  = document.getElementById('ped-avatar-img');
+  const ph   = document.getElementById('ped-avatar-ph');
+  if (img) { if (data) { img.src = data; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; } }
+  if (ph)  ph.hidden = !!data;
+}
+
+// ---- Name — small bottom sheet (own, not Step 1's inline field — Step 1
+// isn't a modal, so there's nothing to reuse there beyond the validation).
+function pedOpenNameSheet() {
+  const input = document.getElementById('ped-name-input');
+  if (input) input.value = localStorage.getItem('zelo_display_name') || '';
+  document.getElementById('ped-name-sheet').hidden = false;
+  input?.focus();
+}
+function pedCloseNameSheet() { document.getElementById('ped-name-sheet').hidden = true; }
+function pedConfirmName() {
+  const input = document.getElementById('ped-name-input');
+  const trimmed = (input?.value || '').trim();
+  if (cineNameValid(trimmed)) {
+    localStorage.setItem('zelo_display_name', trimmed);
+    document.getElementById('ped-name-val').textContent = trimmed;
+  }
+  pedCloseNameSheet();
+}
+
+// ---- Attracted to — small bottom sheet, same 3 options/colors as the main
+// onboarding's own "who are you attracted to" step, writing to the same
+// zelo_practice_mode key.
+function pedOpenAttractedSheet() {
+  const current = localStorage.getItem('zelo_practice_mode') || 'women';
+  document.querySelectorAll('#ped-opts-attracted .cine-opt').forEach((b, i) => {
+    b.classList.toggle('selected', ['women','men','both'][i] === current);
+  });
+  document.getElementById('ped-attracted-sheet').hidden = false;
+}
+function pedCloseAttractedSheet() { document.getElementById('ped-attracted-sheet').hidden = true; }
+function pedPickAttracted(value, el) {
+  localStorage.setItem('zelo_practice_mode', value);
+  document.getElementById('ped-attracted-val').textContent = _pedAttractedLabel(value);
+  if (el && el.parentElement) {
+    el.parentElement.querySelectorAll('.cine-opt').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  pedCloseAttractedSheet();
 }
 
 function _practiceTutorialPhotoTap(e) {
@@ -3833,12 +3953,13 @@ function copyReplyFromCard(style, btn) {
 //   SHOWCASE (Cal AI style landing, auto-shown right after Phase 1):
 //     phone mockup + headline + dark "Get Started" CTA + "Sign in" link.
 //     No dots, no skip — tapping Get Started begins Phase 2.
-//   PHASE 2 (Next + back, 13 dot-stepper screens — see CINE_STEPS):
+//   PHASE 2 (Next + back, 14 dot-stepper screens — see CINE_STEPS):
 //     1 name/photo/birth date · 2 gender · 3 be honest (overthink) ·
-//     4 help with (multi) · 5 tone · 6 thanks/transition ·
-//     7 see what you can achieve · 8 notifications · 9 setting up (auto) ·
-//     10 Zelo Plan (decorative) · 11 save your progress (inert providers) ·
-//     12 try for free · 13 trial reminder  ->  cineFinishPhase2() then hands
+//     4 help with (multi) · 5 who you're attracted to · 6 tone ·
+//     7 thanks/transition · 8 see what you can achieve · 9 notifications ·
+//     10 setting up (auto) · 11 Zelo Plan (decorative) ·
+//     12 save your progress (inert providers) ·
+//     13 try for free · 14 trial reminder  ->  cineFinishPhase2() then hands
 //     off to #screen-trial-start (own overlay, not #cine-onboarding) ->
 //     Continue finishes onboarding straight onto Scan; back on that screen
 //     shows the one-time offer screen instead, which also finishes onto Scan.
@@ -3850,8 +3971,8 @@ function copyReplyFromCard(style, btn) {
 
 let threadEditMode = false;
 
-const CINE_LAST = 13;          // last Phase 2 step that lives in #cine-onboarding
-let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-13 = Phase 2 screens
+const CINE_LAST = 14;          // last Phase 2 step that lives in #cine-onboarding
+let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-14 = Phase 2 screens
 
 // Per-step config for the shared chrome (#cine-next label + gating +
 // visibility, back button, progress) and each screen's entrance hook. Head/
@@ -3864,21 +3985,22 @@ let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-13 = Phase 2 screen
 //   noChrome     — hide back + progress (used by the auto-running setup step)
 //   noCta        — screen has no shared bottom CTA at all
 // Screens (trial-start) and (one-time offer) are NOT in this table: they're
-// standalone .screen overlays reached after step 13 — see cineFinishPhase2().
+// standalone .screen overlays reached after step 14 — see cineFinishPhase2().
 const CINE_STEPS = {
   1:  { label: 'Continue', enabledFn: () => cineIntroReady(), entrance: cineRunIntroEntrance },
   2:  { label: 'Continue', enabledFn: () => !!cineAnswers.gender },
   3:  { label: 'Continue', enabledFn: () => !!cineAnswers.overthink },
   4:  { label: 'Continue', enabledFn: () => (cineAnswers.help || []).length > 0 },
-  5:  { label: 'Continue', enabledFn: () => !!cineAnswers.tone },
-  6:  { label: 'Continue' },
+  5:  { label: 'Continue', enabledFn: () => !!cineAnswers.attracted },
+  6:  { label: 'Continue', enabledFn: () => !!cineAnswers.tone },
   7:  { label: 'Continue' },
-  8:  { noCta: true },                              // notifications — no shared CTA, see cineRequestNotifAndAdvance()
-  9:  { noCta: true, noChrome: true, entrance: cineRunSetupEntrance },  // auto-advances
-  10: { label: 'Continue' },
-  11: { noCta: true },   // Save your progress — provider buttons are the only way forward, see cineProviderTap()
-  12: { label: 'Try for FREE' },
-  13: { label: 'Continue for FREE', dark: true, arrow: true },
+  8:  { label: 'Continue' },
+  9:  { noCta: true },                              // notifications — no shared CTA, see cineRequestNotifAndAdvance()
+  10: { noCta: true, noChrome: true, entrance: cineRunSetupEntrance },  // auto-advances
+  11: { label: 'Continue' },
+  12: { noCta: true },   // Save your progress — provider buttons are the only way forward, see cineProviderTap()
+  13: { label: 'Try for FREE' },
+  14: { label: 'Continue for FREE', dark: true, arrow: true },
 };
 
 // Answers collected during onboarding. Kept in memory + mirrored to
@@ -3886,8 +4008,12 @@ const CINE_STEPS = {
 // wired into reply-tone/practice-mode defaults — the Zelo Plan screen is
 // decorative for now and real personalization is a separate task. `gender`
 // IS wired to one real thing though — see cineTrialHeroSrc() — the trial-start
-// hero photo picks its male/female crop from this answer.
-let cineAnswers = { gender: null, overthink: null, help: [], tone: null };
+// hero photo picks its male/female crop from this answer. `attracted` IS also
+// wired to something real: it writes straight to zelo_practice_mode (see
+// cinePickOne), the same key the swipe-deck's dating-pool preference and the
+// "Who You Practice With" settings panel already read/write — not a separate,
+// disconnected answer.
+let cineAnswers = { gender: null, overthink: null, help: [], attracted: null, tone: null };
 
 let _cineTimers = [];
 
@@ -4094,13 +4220,13 @@ function cineGoTo(n) {
 
   // Steps that run themselves (the setup/loading screen) hide the whole top
   // bar; everything else shows back + progress. Back is available from step 1
-  // onward — on step 1 it returns to the showcase screen. Step 12 ("We want
+  // onward — on step 1 it returns to the showcase screen. Step 13 ("We want
   // you to try Zelo for free") is a dead end going backward on purpose — no
   // back button at all, not even to notifications — see cineBack().
   const topbar = document.getElementById('cine-topbar');
   if (topbar) topbar.classList.toggle('cine-hidden', !!step.noChrome);
   const backBtn = document.getElementById('cine-back');
-  if (backBtn) backBtn.classList.toggle('cine-hidden', n === 12);
+  if (backBtn) backBtn.classList.toggle('cine-hidden', n === 13);
 
   const fill = document.getElementById('cine-progress-fill');
   if (fill) fill.style.width = Math.max(0, Math.min(100, (n / CINE_LAST) * 100)) + '%';
@@ -4151,7 +4277,7 @@ function cineNext() {
   cineGoTo(cineStep + 1);
 }
 
-// Step 8 (notifications) has no shared bottom CTA (CINE_STEPS[8].noCta) —
+// Step 9 (notifications) has no shared bottom CTA (CINE_STEPS[9].noCta) —
 // the reference has no visible Continue on this screen at all, just the
 // mockup permission dialog itself. Tapping the mockup's "Allow" is what
 // fires the REAL native permission prompt, then advances automatically the
@@ -4178,14 +4304,14 @@ function cineBack(e) {
   if (e) e.stopPropagation();
   if (cineStep === 0 || cineStep === 'showcase') return;
   if (cineStep <= 1) { cineGoToShowcase(); return; }
-  // Step 9 (the "setting everything up" loading screen) can't be revisited
-  // once its result has landed on step 10 — replaying a loading animation
+  // Step 10 (the "setting everything up" loading screen) can't be revisited
+  // once its result has landed on step 11 — replaying a loading animation
   // backward doesn't mean anything.
-  if (cineStep === 10) { cineGoTo(8); return; }
-  // Step 12 ("We want you to try Zelo for free") is a dead end going
+  if (cineStep === 11) { cineGoTo(9); return; }
+  // Step 13 ("We want you to try Zelo for free") is a dead end going
   // backward — no back at all, not even to save-your-progress. The button
   // itself is hidden here too (see cineGoTo()); this is the no-op fallback.
-  if (cineStep === 12) return;
+  if (cineStep === 13) return;
   cineGoTo(cineStep - 1);
 }
 
@@ -4410,11 +4536,17 @@ function cineConfirmAge() {
 }
 
 function cineRenderAge() {
-  const el = document.getElementById('cine-age-value');
   const age = localStorage.getItem('zelo_user_age');
-  if (!el) return;
-  el.textContent = age || 'Tap to choose';
-  el.classList.toggle('cine-field-value--empty', !age);
+  const el = document.getElementById('cine-age-value');
+  if (el) {
+    el.textContent = age || 'Tap to choose';
+    el.classList.toggle('cine-field-value--empty', !age);
+  }
+  // Edit Details (practice tutorial) reuses this same age sheet — see
+  // pedOpenAttractedSheet's sibling row, wired straight to
+  // cineOpenAgeSheet() — so its own display needs the same refresh.
+  const pedEl = document.getElementById('ped-age-val');
+  if (pedEl) pedEl.textContent = age || '—';
 }
 
 // ================================================================
@@ -4425,6 +4557,10 @@ function cineRenderAge() {
 function cinePickOne(field, value, el) {
   cineAnswers[field] = value;
   localStorage.setItem('zelo_onb_' + field, value);
+  // Bridges into the swipe-deck's own dating-pool preference / the "Who You
+  // Practice With" settings panel, which already read and write this same
+  // key ('women'/'men'/'both') — not a separate, disconnected answer.
+  if (field === 'attracted') localStorage.setItem('zelo_practice_mode', value);
   if (el && el.parentElement) {
     el.parentElement.querySelectorAll('.cine-opt').forEach(b => b.classList.remove('selected'));
     el.classList.add('selected');
@@ -4457,13 +4593,16 @@ function cineRestoreAnswers() {
   document.querySelectorAll('#cine-opts-help .cine-opt').forEach((b, i) => {
     b.classList.toggle('selected', help.includes(['what-to-say','keep-going','natural','flirting','confident'][i]));
   });
+  document.querySelectorAll('#cine-opts-attracted .cine-opt').forEach((b, i) => {
+    b.classList.toggle('selected', ['women','men','both'][i] === cineAnswers.attracted);
+  });
   document.querySelectorAll('#cine-opts-tone .cine-opt').forEach((b, i) => {
     b.classList.toggle('selected', ['playful','chill','direct'][i] === cineAnswers.tone);
   });
 }
 
 // ================================================================
-// STEP 9 — "setting everything up" (auto-advances, no CTA)
+// STEP 10 — "setting everything up" (auto-advances, no CTA)
 // ================================================================
 
 const CINE_SETUP_MS = 10000;
@@ -4525,7 +4664,7 @@ function cineRunSetupEntrance() {
 }
 
 // ================================================================
-// STEP 11 — provider buttons are intentionally inert for now, and gated on
+// STEP 12 — provider buttons are intentionally inert for now, and gated on
 // the terms checkbox — this screen has no shared Continue at all
 // (CINE_STEPS[11].noCta); tapping Apple/Google/email is the only way past
 // it, and only once terms are agreed to.
@@ -4842,7 +4981,7 @@ function cineShowMatchContinuePrompt(demoChatId, prevState) {
   matchScreen.addEventListener('click', advance);
 }
 
-// ---- Step 7 — notification permission (the real native dialog) ----
+// ---- Step 9 — notification permission (the real native dialog) ----
 function requestNotifPermission() {
   const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
   if (LocalNotifications) {
@@ -4873,7 +5012,7 @@ function requestTrackingPermission() {
 // Phase 1 / showcase are non-interactive except their own dedicated buttons.
 function cineNoop() {}
 
-// ---- End of Phase 2 (step 12) — screen 13 ("Start your 3-day FREE trial")
+// ---- End of Phase 2 (step 13) — screen 14 ("Start your 3-day FREE trial")
 // then, only if the user declines it (taps back), screen 14 (one-time
 // offer). Screen 13 is a dedicated screen built to match the reference
 // mockup exactly (see #screen-trial-start in index.html) — NOT the app's
@@ -4896,7 +5035,7 @@ function cineFinishPhase2() {
   // #screen-trial-start (like the paywall/offer screens) sits BELOW
   // #cine-onboarding (z-index 1000, opaque background). Leaving the
   // onboarding overlay up here makes it go .active while staying completely
-  // invisible behind step 12 — so hide it before handing off.
+  // invisible behind step 13 — so hide it before handing off.
   cineHideOverlay();
   cineShowTrialStart();
 }
@@ -4942,12 +5081,12 @@ function cineTrialStartContinue() {
 // the FIRST time. Once the offer has already been shown once (user declined
 // it, came back around through sign-up/notifications/trial-start again),
 // showing it a second time doesn't make sense — back instead goes straight
-// to "We want you to try Zelo for free" (step 12), skipping the offer
-// entirely. See cineBack() for the matching step-12 skip on the way back
+// to "We want you to try Zelo for free" (step 13), skipping the offer
+// entirely. See cineBack() for the matching step-13 skip on the way back
 // further than that.
 function cineTrialStartDecline() {
   if (localStorage.getItem('zelo_offer_shown')) {
-    cineGoTo(12);
+    cineGoTo(13);
     return;
   }
   localStorage.setItem('zelo_offer_shown', '1');
@@ -4964,13 +5103,13 @@ function cineShowOffer() {
 }
 
 function cineOfferClaim() { cineFinishOnboardingLanding(); }
-// X on the one-time offer routes to step 12 ("We want you to try Zelo for
+// X on the one-time offer routes to step 13 ("We want you to try Zelo for
 // free") — matching the intended flow: trial-start -> offer -> close ->
-// step 12 -> trial reminder -> paywall. cineGoTo() re-shows #cine-onboarding
+// step 13 -> trial reminder -> paywall. cineGoTo() re-shows #cine-onboarding
 // itself (it force-clears `hidden` on every entry), covering this .screen
-// overlay back up. Step 12 itself has no way back from here (see
+// overlay back up. Step 13 itself has no way back from here (see
 // cineBack()) — this is a one-way door once you've seen the offer.
-function cineOfferClose() { cineGoTo(12); }
+function cineOfferClose() { cineGoTo(13); }
 
 // The real finish — only reached once the paywall (and, if shown, the
 // one-time offer) has resolved.
