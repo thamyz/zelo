@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-23 20:07";
+const BUILD_STAMP = "2026-08-23 20:20";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -4286,7 +4286,7 @@ function cineNext() {
 // the real dialog is up.
 function cineRequestNotifAndAdvance() {
   const stepWhenTapped = cineStep;
-  if (stepWhenTapped !== 8) return;
+  if (stepWhenTapped !== 9) return;
   const dialog = document.querySelector('.cine-sysprompt');
   dialog?.classList.add('cine-sysprompt--busy');
   Promise.resolve(requestNotifPermission()).finally(() => {
