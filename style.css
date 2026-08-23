@@ -7833,6 +7833,11 @@ a { text-decoration: none; color: inherit; }
   background: rgba(0,0,0,0.45);
   z-index: 1;
 }
+/* The "Card N" placeholder label sits at the same z-index as this dim
+   overlay's ::before, and (being a real later DOM sibling) paints on top of
+   it rather than being covered — hide it outright during the swipe-right/
+   swipe-left lessons instead. */
+.ptw-dim .swipe-photo-label { display: none; }
 .ptw-swipe-overlay {
   position: absolute;
   inset: 0;
