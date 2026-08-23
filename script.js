@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-23 22:02";
+const BUILD_STAMP = "2026-08-23 22:20";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -1424,8 +1424,8 @@ function practiceOpenEditDetails() {
 
 // Both "back" and "Save Changes" return the same way — every field here
 // saves itself immediately when picked (see pedConfirmName/pedPickAttracted/
-// cineConfirmAge/pedPhotoSelected), so there's no separate draft/commit step
-// to distinguish between "saved" and "cancelled".
+// cineOpenAgeSheet/pedPhotoSelected), so there's no separate draft/commit
+// step to distinguish between "saved" and "cancelled".
 function _practiceReturnToConfirmProfile() {
   document.getElementById('practice-edit-details').hidden = true;
   _practiceRenderConfirmProfile();
@@ -4397,95 +4397,7 @@ function cineRenderPhoto() {
 // full date (zelo_birthdate, 'YYYY-MM-DD') AND the computed integer age
 // (zelo_user_age) — every existing age-based reader (matching, filters,
 // the profile row) keeps reading zelo_user_age exactly as before. ----
-const DOB_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DOB_YEAR_SPAN = 100; // oldest selectable birth year = today - this many years
-
-function _dobDaysInMonth(month, year) {
-  return new Date(year, month, 0).getDate(); // month is 1-based; day 0 of next month = last day of this one
-}
-
-function _dobBuildColumn(rollerId, items, defaultIndex) {
-  const roller = document.getElementById(rollerId);
-  if (!roller) return;
-  roller.innerHTML = '';
-  for (let i = 0; i < 2; i++) {
-    const g = document.createElement('div');
-    g.className = 'age-roller-item age-roller-ghost';
-    roller.appendChild(g);
-  }
-  items.forEach(txt => {
-    const item = document.createElement('div');
-    item.className = 'age-roller-item';
-    item.textContent = txt;
-    roller.appendChild(item);
-  });
-  for (let i = 0; i < 2; i++) {
-    const g = document.createElement('div');
-    g.className = 'age-roller-item age-roller-ghost';
-    roller.appendChild(g);
-  }
-  roller.scrollTop = Math.max(0, defaultIndex || 0) * 44;
-  // Paint the dimmed/shrunk non-centered rows immediately (not just once the
-  // user first scrolls), and seed the haptic tracker to the row we just
-  // landed on so opening the sheet doesn't itself count as a "change".
-  _dobUpdateRowFocus(rollerId);
-  _dobLastIndex[rollerId] = _dobColumnIndex(rollerId);
-}
-
-function _dobColumnIndex(rollerId) {
-  const r = document.getElementById(rollerId);
-  if (!r) return 0;
-  return Math.max(0, Math.round(r.scrollTop / 44));
-}
-
-// ---- Native-feeling wheel-picker polish — the two things a plain
-// scroll-snap column doesn't give you for free: rows dimming/shrinking the
-// further they sit from the centered one (an iOS UIPickerView's "focus
-// lens"), and a light haptic tick every time the centered row itself
-// changes, not just once when the whole scroll settles — spin the wheel
-// fast and it should tick through every row it passes, the same as the
-// real thing. Both run straight off the native momentum-scroll's own
-// `scroll` events (see cine-sheet--dob's -webkit-overflow-scrolling:touch +
-// scroll-snap-type in style.css) — no separate physics/animation of our
-// own to keep in sync with it.
-function _dobUpdateRowFocus(rollerId) {
-  const roller = document.getElementById(rollerId);
-  if (!roller) return;
-  const centerY = roller.scrollTop + roller.clientHeight / 2;
-  roller.querySelectorAll('.age-roller-item:not(.age-roller-ghost)').forEach(item => {
-    const dist = Math.abs((item.offsetTop + 22) - centerY); // 22 = half of the 44px row height
-    const t = Math.min(1, dist / 60); // full dim/shrink by ~1.5 rows away
-    item.style.opacity   = String(1 - t * 0.75);
-    item.style.transform = `scale(${1 - t * 0.14})`;
-  });
-}
-
-let _dobLastIndex  = {}; // rollerId -> last index a haptic tick fired for
-let _dobFocusQueued = {}; // rollerId -> rAF already scheduled, coalesces bursty scroll events
-
-function _dobLiveUpdate(rollerId) {
-  if (_dobFocusQueued[rollerId]) return;
-  _dobFocusQueued[rollerId] = true;
-  requestAnimationFrame(() => {
-    _dobFocusQueued[rollerId] = false;
-    _dobUpdateRowFocus(rollerId);
-    const idx = _dobColumnIndex(rollerId);
-    if (_dobLastIndex[rollerId] !== idx) {
-      _dobLastIndex[rollerId] = idx;
-      navigator.vibrate?.(3);
-      _cineHaptic('LIGHT');
-    }
-  });
-}
-
-function cineReadDob() {
-  const yearMin = new Date().getFullYear() - DOB_YEAR_SPAN;
-  return {
-    month: _dobColumnIndex('cine-dob-month') + 1,
-    day:   _dobColumnIndex('cine-dob-day') + 1,
-    year:  yearMin + _dobColumnIndex('cine-dob-year'),
-  };
-}
 
 function _cineComputeAge(year, month, day) {
   const today = new Date();
@@ -4496,100 +4408,47 @@ function _cineComputeAge(year, month, day) {
   return Math.max(0, age);
 }
 
-function _dobRefreshWarn() {
-  const { year, month, day } = cineReadDob();
-  const warnEl = document.getElementById('cine-age-warn');
-  if (warnEl) warnEl.textContent = _cineComputeAge(year, month, day) < 18 ? 'Zelo is for users 18 and older.' : '';
-}
+// Birth date — presents the REAL native iOS date picker (UIDatePicker,
+// wheels style) via @capgo/capacitor-date-picker, instead of a hand-built
+// scroll-snap recreation. Same trigger everywhere (index.html's
+// #cine-age-field on the main onboarding form, and Edit Details' Age row in
+// the practice tutorial both still just call cineOpenAgeSheet()) — the
+// plugin itself owns the sheet, its scroll physics, and its Cancel/Done
+// buttons, so there's no separate open/build/confirm/close cycle to keep in
+// sync any more, just one round trip.
+async function cineOpenAgeSheet() {
+  const DatePicker = window.Capacitor?.Plugins?.DatePicker;
+  if (!DatePicker) return; // no native bridge (plain web preview) — nothing to present
 
-// Month/Year changes can change how many days exist (Feb 28 vs 29, 30 vs 31)
-// — rebuild the Day column only when the count actually changes, preserving
-// whatever day was selected (clamped into range) so spinning Month/Year
-// doesn't silently reset Day back to the 1st.
-let _dobRebuildTimer = null;
-function _dobOnMonthYearScroll() {
-  // Live focus/haptic runs every event, unthrottled by the rebuild debounce
-  // below — a fast spin should visibly and tactilely tick through every row
-  // it passes, not just react once the whole thing settles. Calling both
-  // unconditionally (rather than figuring out which of month/year actually
-  // fired) is harmless: _dobLiveUpdate no-ops on a roller whose index hasn't
-  // moved since its last call.
-  _dobLiveUpdate('cine-dob-month');
-  _dobLiveUpdate('cine-dob-year');
-  clearTimeout(_dobRebuildTimer);
-  _dobRebuildTimer = setTimeout(() => {
-    const month = _dobColumnIndex('cine-dob-month') + 1;
-    const yearMin = new Date().getFullYear() - DOB_YEAR_SPAN;
-    const year = yearMin + _dobColumnIndex('cine-dob-year');
-    const dayEl = document.getElementById('cine-dob-day');
-    const currentDay = _dobColumnIndex('cine-dob-day') + 1;
-    const newCount = _dobDaysInMonth(month, year);
-    const existingCount = dayEl.querySelectorAll('.age-roller-item:not(.age-roller-ghost)').length;
-    if (newCount !== existingCount) {
-      _dobBuildColumn('cine-dob-day', Array.from({ length: newCount }, (_, i) => String(i + 1)), Math.min(currentDay, newCount) - 1);
-    }
-    _dobRefreshWarn();
-  }, 90);
-}
-function _dobOnDayScroll() {
-  _dobLiveUpdate('cine-dob-day');
-  clearTimeout(_dobRebuildTimer);
-  _dobRebuildTimer = setTimeout(_dobRefreshWarn, 90);
-}
-
-function cineInitDobRoller() {
   const stored = localStorage.getItem('zelo_birthdate'); // 'YYYY-MM-DD'
   const today = new Date();
-  let defYear = today.getFullYear() - 22, defMonth = 6, defDay = 15;
-  if (stored) {
-    const [y, m, d] = stored.split('-').map(Number);
-    if (y) defYear = y;
-    if (m) defMonth = m;
-    if (d) defDay = d;
-  }
-
+  const defaultDate = stored || `${today.getFullYear() - 22}-06-15`;
   const yearMin = today.getFullYear() - DOB_YEAR_SPAN;
-  const yearMax = today.getFullYear();
 
-  _dobBuildColumn('cine-dob-month', DOB_MONTHS, defMonth - 1);
-  const dayCount = _dobDaysInMonth(defMonth, defYear);
-  _dobBuildColumn('cine-dob-day', Array.from({ length: dayCount }, (_, i) => String(i + 1)), Math.min(defDay, dayCount) - 1);
-  const years = [];
-  for (let y = yearMin; y <= yearMax; y++) years.push(String(y));
-  _dobBuildColumn('cine-dob-year', years, defYear - yearMin);
+  let result;
+  try {
+    result = await DatePicker.present({
+      mode: 'date',
+      date: defaultDate,
+      min: `${yearMin}-01-01`,
+      max: today.toISOString().slice(0, 10),
+      format: 'yyyy-MM-dd',
+      title: 'When were you born?',
+      ios: { style: 'wheels' },
+    });
+  } catch {
+    return; // native call failed — leave the stored date untouched
+  }
+  if (!result?.value) return; // user tapped Cancel
 
-  const monthEl = document.getElementById('cine-dob-month');
-  const dayEl   = document.getElementById('cine-dob-day');
-  const yearEl  = document.getElementById('cine-dob-year');
-  monthEl.removeEventListener('scroll', _dobOnMonthYearScroll);
-  yearEl.removeEventListener('scroll', _dobOnMonthYearScroll);
-  dayEl.removeEventListener('scroll', _dobOnDayScroll);
-  monthEl.addEventListener('scroll', _dobOnMonthYearScroll, { passive: true });
-  yearEl.addEventListener('scroll', _dobOnMonthYearScroll, { passive: true });
-  dayEl.addEventListener('scroll', _dobOnDayScroll, { passive: true });
-  _dobRefreshWarn();
-}
-
-function cineOpenAgeSheet() {
-  const sheet = document.getElementById('cine-age-sheet');
-  if (!sheet) return;
-  sheet.hidden = false;
-  cineInitDobRoller();
-}
-
-function cineCloseAgeSheet() {
-  const sheet = document.getElementById('cine-age-sheet');
-  if (sheet) sheet.hidden = true;
-}
-
-function cineConfirmAge() {
-  const { year, month, day } = cineReadDob();
+  const [year, month, day] = result.value.split('-').map(Number);
   const age = _cineComputeAge(year, month, day);
-  localStorage.setItem('zelo_birthdate', `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+  localStorage.setItem('zelo_birthdate', result.value);
   localStorage.setItem('zelo_user_age', String(age));
-  cineCloseAgeSheet();
   cineRenderAge();
   cineRefreshIntroChecks();
+  const warnEl = document.getElementById('cine-age-warn');
+  if (warnEl) warnEl.textContent = age < 18 ? 'Zelo is for users 18 and older.' : '';
 }
 
 function cineRenderAge() {
