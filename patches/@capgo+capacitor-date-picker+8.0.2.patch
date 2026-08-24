@@ -1,0 +1,169 @@
+diff --git a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
+old mode 100644
+new mode 100755
+index 2a2a677..b148fcc
+--- a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
++++ b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
+@@ -18,7 +18,9 @@ final class DatePickerView: UIView {
+     private let titleLabel = UILabel()
+     private let doneButton = UIButton(type: .system)
+     private let cancelButton = UIButton(type: .system)
+-    private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
++    // Plain solid-color scrim, not a frosted UIVisualEffectView blur — see
++    // its backgroundColor assignment in configureTheme() (dimColor option).
++    private let blur = UIView()
+     private lazy var bottomConstraint = panel.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor)
+     private lazy var centerConstraint = panel.centerYAnchor.constraint(equalTo: centerYAnchor)
+ 
+@@ -159,33 +161,31 @@ final class DatePickerView: UIView {
+     }
+ 
+     private func configureButtons() {
+-        let separator = UIView()
+-        separator.translatesAutoresizingMaskIntoConstraints = false
+-        separator.backgroundColor = UIColor(white: 0.78, alpha: 1)
+-
+         let stack = UIStackView(arrangedSubviews: [cancelButton, doneButton])
+         stack.translatesAutoresizingMaskIntoConstraints = false
+         stack.axis = .horizontal
+         stack.distribution = .fillEqually
++        stack.spacing = 10
+ 
+         cancelButton.setTitle(options.cancelText, for: .normal)
+         doneButton.setTitle(options.doneText, for: .normal)
++        cancelButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
++        doneButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .bold)
+         cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
+         doneButton.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
++        cancelButton.layer.cornerRadius = 18
++        cancelButton.clipsToBounds = true
++        doneButton.layer.cornerRadius = 18
++        doneButton.clipsToBounds = true
+ 
+-        panel.addSubview(separator)
+         panel.addSubview(stack)
+ 
+         NSLayoutConstraint.activate([
+-            separator.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
+-            separator.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
+-            separator.topAnchor.constraint(equalTo: picker.bottomAnchor, constant: 8),
+-            separator.heightAnchor.constraint(equalToConstant: 1),
+-            stack.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
+-            stack.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
+-            stack.topAnchor.constraint(equalTo: separator.bottomAnchor),
+-            stack.heightAnchor.constraint(equalToConstant: 44),
+-            stack.bottomAnchor.constraint(equalTo: panel.safeAreaLayoutGuide.bottomAnchor)
++            stack.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 20),
++            stack.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -20),
++            stack.topAnchor.constraint(equalTo: picker.bottomAnchor, constant: 16),
++            stack.heightAnchor.constraint(equalToConstant: 56),
++            stack.bottomAnchor.constraint(equalTo: panel.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+         ])
+     }
+ 
+@@ -194,8 +194,17 @@ final class DatePickerView: UIView {
+         let titleFont = UIColor(hex: options.titleFontColor) ?? (dark ? .white : .label)
+         let titleBackground = UIColor(hex: options.titleBgColor) ?? (dark ? UIColor(white: 0.08, alpha: 1) : .systemBackground)
+         let panelBackground = UIColor(hex: options.bgColor) ?? titleBackground
+-        let buttonBackground = UIColor(hex: options.buttonBgColor) ?? panelBackground
++        // Cancel and Done are independently styleable (doneButtonBgColor /
++        // cancelButtonBgColor) instead of sharing one buttonBgColor — Cancel
++        // defaults to no fill at all (plain text, like a system action-sheet
++        // button) unless a color is explicitly given for it; Done falls back
++        // to the older shared buttonBgColor for callers still using that.
++        let cancelBackground = UIColor(hex: options.cancelButtonBgColor) ?? .clear
++        let doneBackground = UIColor(hex: options.doneButtonBgColor) ?? UIColor(hex: options.buttonBgColor) ?? panelBackground
+         let buttonFont = UIColor(hex: options.buttonFontColor) ?? (dark ? .white : .systemBlue)
++        // A filled Done button reads better with light text on it than
++        // whatever buttonFontColor was chosen for the plain-text Cancel.
++        let doneFont: UIColor = options.doneButtonBgColor != nil ? .white : buttonFont
+ 
+         overrideUserInterfaceStyle = dark ? .dark : .light
+         picker.overrideUserInterfaceStyle = dark ? .dark : .light
+@@ -206,10 +215,14 @@ final class DatePickerView: UIView {
+         panel.backgroundColor = panelBackground
+         titleLabel.textColor = titleFont
+         titleLabel.backgroundColor = titleBackground
+-        cancelButton.backgroundColor = buttonBackground
+-        doneButton.backgroundColor = buttonBackground
++        // Plain, non-blurred dim (see the `blur` property itself, no longer
++        // a UIVisualEffectView) — a solid semi-transparent scrim instead of
++        // a frosted backdrop.
++        blur.backgroundColor = UIColor(hex: options.dimColor) ?? UIColor.black.withAlphaComponent(dark ? 0.55 : 0.45)
++        cancelButton.backgroundColor = cancelBackground
++        doneButton.backgroundColor = doneBackground
+         cancelButton.setTitleColor(buttonFont, for: .normal)
+-        doneButton.setTitleColor(buttonFont, for: .normal)
++        doneButton.setTitleColor(doneFont, for: .normal)
+     }
+ 
+     private func applyMode() {
+@@ -306,14 +319,17 @@ private extension UIColor {
+         if hex.hasPrefix("#") {
+             hex.removeFirst()
+         }
+-        guard hex.count == 6, let value = Int(hex, radix: 16) else {
++        // 6 digits = RRGGBB (alpha 1); 8 digits = RRGGBBAA (e.g. a
++        // semi-transparent dim color) — both go through the same parse.
++        guard hex.count == 6 || hex.count == 8, let value = Int(hex, radix: 16) else {
+             return nil
+         }
++        let hasAlpha = hex.count == 8
+         self.init(
+-            red: CGFloat((value >> 16) & 0xff) / 255,
+-            green: CGFloat((value >> 8) & 0xff) / 255,
+-            blue: CGFloat(value & 0xff) / 255,
+-            alpha: 1
++            red: CGFloat((value >> (hasAlpha ? 24 : 16)) & 0xff) / 255,
++            green: CGFloat((value >> (hasAlpha ? 16 : 8)) & 0xff) / 255,
++            blue: CGFloat((value >> (hasAlpha ? 8 : 0)) & 0xff) / 255,
++            alpha: hasAlpha ? CGFloat(value & 0xff) / 255 : 1
+         )
+     }
+ }
+diff --git a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePickerOptions.swift b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePickerOptions.swift
+old mode 100644
+new mode 100755
+index b358beb..ea4cef5
+--- a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePickerOptions.swift
++++ b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePickerOptions.swift
+@@ -23,6 +23,9 @@ final class DatePickerOptions: NSCopying {
+     var fontColor: String?
+     var buttonBgColor: String?
+     var buttonFontColor: String?
++    var doneButtonBgColor: String?
++    var cancelButtonBgColor: String?
++    var dimColor: String?
+     var mergedDateAndTime = false
+     var date: Date?
+     var min: Date?
+@@ -66,6 +69,9 @@ final class DatePickerOptions: NSCopying {
+         options.fontColor = config.getString("ios.fontColor", options.fontColor)
+         options.buttonBgColor = config.getString("ios.buttonBgColor", options.buttonBgColor)
+         options.buttonFontColor = config.getString("ios.buttonFontColor", options.buttonFontColor)
++        options.doneButtonBgColor = config.getString("ios.doneButtonBgColor", options.doneButtonBgColor)
++        options.cancelButtonBgColor = config.getString("ios.cancelButtonBgColor", options.cancelButtonBgColor)
++        options.dimColor = config.getString("ios.dimColor", options.dimColor)
+         options.mergedDateAndTime = config.getBoolean("ios.mergedDateAndTime", options.mergedDateAndTime)
+         return options
+     }
+@@ -95,6 +101,9 @@ final class DatePickerOptions: NSCopying {
+         clone.fontColor = fontColor
+         clone.buttonBgColor = buttonBgColor
+         clone.buttonFontColor = buttonFontColor
++        clone.doneButtonBgColor = doneButtonBgColor
++        clone.cancelButtonBgColor = cancelButtonBgColor
++        clone.dimColor = dimColor
+         clone.mergedDateAndTime = mergedDateAndTime
+         clone.date = date
+         clone.min = min
+@@ -130,6 +139,9 @@ final class DatePickerOptions: NSCopying {
+         options.fontColor = stringValue("fontColor", call: call, platform: ios) ?? options.fontColor
+         options.buttonBgColor = stringValue("buttonBgColor", call: call, platform: ios) ?? options.buttonBgColor
+         options.buttonFontColor = stringValue("buttonFontColor", call: call, platform: ios) ?? options.buttonFontColor
++        options.doneButtonBgColor = stringValue("doneButtonBgColor", call: call, platform: ios) ?? options.doneButtonBgColor
++        options.cancelButtonBgColor = stringValue("cancelButtonBgColor", call: call, platform: ios) ?? options.cancelButtonBgColor
++        options.dimColor = stringValue("dimColor", call: call, platform: ios) ?? options.dimColor
+         options.mergedDateAndTime = boolValue("mergedDateAndTime", call: call, platform: ios) ?? options.mergedDateAndTime
+         options.range = range || options.mode == "range"
+ 

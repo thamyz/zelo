@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "postinstall": "patch-package"
+  },
   "dependencies": {
     "@capacitor/browser": "^8.0.4",
     "@capacitor/cli": "^8.4.2",
@@ -10,5 +13,8 @@
     "@capgo/capacitor-date-picker": "^8.0.2",
     "@capgo/capacitor-social-login": "^8.3.40",
     "capacitor-plugin-app-tracking-transparency": "^3.0.0"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }

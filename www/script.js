@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-24 14:56";
+const BUILD_STAMP = "2026-08-24 15:20";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -4434,20 +4434,24 @@ async function cineOpenAgeSheet() {
       max: today.toISOString().slice(0, 10),
       format: 'yyyy-MM-dd',
       title: 'When were you born?',
-      // Matches the old custom sheet's own frame colors (cream panel, bold
-      // near-black title, pink buttons) instead of the plugin's pale system
-      // default (.systemBackground panel, .label title) — same cream/pink
-      // values as .cine-sheet-card/.cine-sheet-title/--accent in style.css.
-      // buttonFontColor tints both Cancel and Done — the plugin applies one
-      // color to both (no per-button override), so this is the closest
-      // match to Zelo's pink accent the native sheet's own Cancel/Done can
-      // take without patching the plugin's native styling code.
+      // Matches the old custom sheet's own frame exactly: cream panel, bold
+      // near-black title, plain grey Cancel, filled pink Done pill (white
+      // text), and a plain dim instead of a frosted blur behind it — same
+      // values as .cine-sheet-card/.cine-sheet-title/.cine-btn/--accent/
+      // --text-2/.cine-sheet-scrim in style.css. doneButtonBgColor/
+      // cancelButtonBgColor/dimColor are patched-in additions to the
+      // plugin's native iOS side (see node_modules/@capgo/capacitor-date-picker
+      // — patched via patch-package, survives npm reinstalls) since the
+      // published plugin only exposes one shared buttonBgColor for both
+      // buttons and a hardcoded dark blur with no option to replace it.
       ios: {
         style: 'wheels',
         bgColor: '#fdf8f5',
         titleBgColor: '#fdf8f5',
         titleFontColor: '#16130f',
-        buttonFontColor: '#ec4899',
+        buttonFontColor: '#8a8175',
+        doneButtonBgColor: '#ec4899',
+        dimColor: '#1c191773', // rgba(28,25,23,0.45), same as the old .cine-sheet-scrim
       },
     });
   } catch {
