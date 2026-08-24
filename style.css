@@ -8076,6 +8076,24 @@ a { text-decoration: none; color: inherit; }
   max-width: 320px;
 }
 
+/* Onboarding -> Scan handoff loader — see cineFinishOnboardingLanding() in
+   script.js. Same fixed-overlay/fade-out pattern as .welcome-back above. */
+.cine-landing-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #fdf8f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  transition: opacity 0.3s ease;
+}
+.cine-landing-loader[hidden] { display: none !important; }
+.cine-landing-loader--out { opacity: 0; }
+.cine-landing-bar { width: 100%; max-width: 220px; margin: 26px 0 14px; }
+
 /* ================================================================
    HOME TAB — locked-deck overlay (mode chosen, not signed in)
    ================================================================ */

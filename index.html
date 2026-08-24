@@ -2285,6 +2285,20 @@
         <h1 class="welcome-back-type" id="welcome-back-type"></h1>
       </div>
 
+      <!-- ============================================================
+           ONBOARDING -> SCAN handoff — brief branded loading beat shown
+           after the trial-start/offer screen resolves, before landing on
+           Scan (see cineFinishOnboardingLanding in script.js). Reuses the
+           same progress-bar visual language as Step 10's "setting
+           everything up" screen (.cine-setup-bar/.cine-setup-fill), just
+           condensed to one line instead of repeating that whole screen.
+           ============================================================ -->
+      <div class="cine-landing-loader" id="cine-landing-loader" hidden>
+        <h2 class="home-brand" style="font-size:2rem;">Zelo<span class="scan-spark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/></svg></span></h2>
+        <div class="cine-setup-bar cine-landing-bar"><div class="cine-setup-fill" id="cine-landing-fill"></div></div>
+        <p class="cine-setup-cap">Getting your Scan ready...</p>
+      </div>
+
 
 
 

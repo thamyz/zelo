@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-24 15:38";
+const BUILD_STAMP = "2026-08-24 15:55";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -5052,15 +5052,40 @@ function cineOfferClose() { cineGoTo(13); }
 // one-time offer) has resolved.
 function cineFinishOnboardingLanding() {
   localStorage.setItem('zelo_onboarding_done', '1');
-  const overlay = document.getElementById('cine-onboarding');
-  if (overlay) {
-    overlay.classList.add('cine-out');
-    setTimeout(() => {
-      overlay.setAttribute('hidden', '');
-      overlay.classList.remove('cine-out');
-    }, 360);
+  // Instant, no fade — .cine-landing-loader (z-index 2000, above
+  // #cine-onboarding's 1000) covers it immediately anyway, so animating
+  // this hide separately would just be redundant motion underneath it.
+  cineHideOverlay();
+  _cineShowLandingLoader();
+}
+
+const CINE_LANDING_MS = 1200;
+
+// Brief branded loading beat between onboarding finishing and Scan actually
+// appearing (see .cine-landing-loader in index.html) — reuses the same
+// progress-bar visual language as Step 10's "setting everything up" screen,
+// just condensed to one line and much shorter (that one already ran once
+// this session; repeating a full 10s wait here would be redundant).
+function _cineShowLandingLoader() {
+  const loader = document.getElementById('cine-landing-loader');
+  const fill = document.getElementById('cine-landing-fill');
+  if (!loader || !fill) {
+    if (state.activeTab !== 'assistant') showTab('assistant');
+    return;
   }
-  if (state.activeTab !== 'assistant') showTab('assistant');
+  loader.hidden = false;
+  loader.classList.remove('cine-landing-loader--out');
+  fill.style.transition = 'none';
+  fill.style.width = '0%';
+  void fill.offsetWidth; // force reflow so the width reset above actually paints before animating
+  fill.style.transition = `width ${CINE_LANDING_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+  fill.style.width = '100%';
+
+  _cineDelay(() => {
+    loader.classList.add('cine-landing-loader--out');
+    if (state.activeTab !== 'assistant') showTab('assistant');
+    _cineDelay(() => { loader.hidden = true; }, 300);
+  }, CINE_LANDING_MS);
 }
 
 // Kept as the single "bail out of onboarding entirely" path. No screen in the
