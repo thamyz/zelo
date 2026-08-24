@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-24 15:20";
+const BUILD_STAMP = "2026-08-24 15:28";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -4434,6 +4434,7 @@ async function cineOpenAgeSheet() {
       max: today.toISOString().slice(0, 10),
       format: 'yyyy-MM-dd',
       title: 'When were you born?',
+      doneText: 'Done', // plugin's own default is "OK" — old sheet said "Done"
       // Matches the old custom sheet's own frame exactly: cream panel, bold
       // near-black title, plain grey Cancel, filled pink Done pill (white
       // text), and a plain dim instead of a frosted blur behind it — same

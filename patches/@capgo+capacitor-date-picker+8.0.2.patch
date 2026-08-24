@@ -1,7 +1,7 @@
 diff --git a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
 old mode 100644
 new mode 100755
-index 2a2a677..b148fcc
+index 2a2a677..d808266
 --- a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
 +++ b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
 @@ -18,7 +18,9 @@ final class DatePickerView: UIView {
@@ -15,7 +15,23 @@ index 2a2a677..b148fcc
      private lazy var bottomConstraint = panel.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor)
      private lazy var centerConstraint = panel.centerYAnchor.constraint(equalTo: centerYAnchor)
  
-@@ -159,33 +161,31 @@ final class DatePickerView: UIView {
+@@ -95,7 +97,14 @@ final class DatePickerView: UIView {
+ 
+     private func configurePanel() {
+         panel.translatesAutoresizingMaskIntoConstraints = false
+-        panel.layer.cornerRadius = options.style == "inline" ? 12 : 0
++        // Bottom-sheet styles (everything but "inline") round only the top
++        // two corners, like the old custom sheet's card — the bottom edge
++        // sits flush against the screen, so rounding it would just look like
++        // a gap.
++        panel.layer.cornerRadius = options.style == "inline" ? 12 : 26
++        if options.style != "inline" {
++            panel.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
++        }
+         panel.layer.masksToBounds = true
+         addSubview(panel)
+ 
+@@ -159,33 +168,31 @@ final class DatePickerView: UIView {
      }
  
      private func configureButtons() {
@@ -61,7 +77,7 @@ index 2a2a677..b148fcc
          ])
      }
  
-@@ -194,8 +194,17 @@ final class DatePickerView: UIView {
+@@ -194,8 +201,17 @@ final class DatePickerView: UIView {
          let titleFont = UIColor(hex: options.titleFontColor) ?? (dark ? .white : .label)
          let titleBackground = UIColor(hex: options.titleBgColor) ?? (dark ? UIColor(white: 0.08, alpha: 1) : .systemBackground)
          let panelBackground = UIColor(hex: options.bgColor) ?? titleBackground
@@ -80,7 +96,7 @@ index 2a2a677..b148fcc
  
          overrideUserInterfaceStyle = dark ? .dark : .light
          picker.overrideUserInterfaceStyle = dark ? .dark : .light
-@@ -206,10 +215,14 @@ final class DatePickerView: UIView {
+@@ -206,10 +222,14 @@ final class DatePickerView: UIView {
          panel.backgroundColor = panelBackground
          titleLabel.textColor = titleFont
          titleLabel.backgroundColor = titleBackground
@@ -98,7 +114,7 @@ index 2a2a677..b148fcc
      }
  
      private func applyMode() {
-@@ -306,14 +319,17 @@ private extension UIColor {
+@@ -306,14 +326,17 @@ private extension UIColor {
          if hex.hasPrefix("#") {
              hex.removeFirst()
          }
