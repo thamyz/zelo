@@ -1,21 +1,58 @@
+diff --git a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DateParser.swift b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DateParser.swift
+old mode 100644
+new mode 100755
+index c413b92..cb605a4
+--- a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DateParser.swift
++++ b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DateParser.swift
+@@ -45,6 +45,15 @@ enum DateParser {
+         formatter.dateFormat = normalizeFormat(options.format)
+         formatter.locale = options.localeValue
+         formatter.timeZone = options.timeZoneValue
++        // Without an explicit calendar, DateFormatter derives one from
++        // `locale` — on locales whose default calendar isn't Gregorian
++        // (e.g. Thai, which defaults to the Buddhist calendar, offset +543
++        // years), a "yyyy" pattern silently formats the YEAR in that other
++        // calendar instead of the Gregorian one the picker's own wheel
++        // displays (configurePicker() forces .gregorian on the picker
++        // itself), so the returned string's year doesn't match what was
++        // actually selected. Forcing it here keeps the two in sync.
++        formatter.calendar = Calendar(identifier: .gregorian)
+         return formatter.string(from: date)
+     }
+ 
+@@ -64,6 +73,7 @@ enum DateParser {
+         formatter.dateFormat = format
+         formatter.locale = options.localeValue
+         formatter.timeZone = options.timeZoneValue
++        formatter.calendar = Calendar(identifier: .gregorian) // see format() above — same locale/calendar mismatch risk
+         formatter.isLenient = false
+         return formatter.date(from: value)
+     }
 diff --git a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
 old mode 100644
 new mode 100755
-index 2a2a677..d808266
+index 2a2a677..4630590
 --- a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
 +++ b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
-@@ -18,7 +18,9 @@ final class DatePickerView: UIView {
+@@ -18,8 +18,15 @@ final class DatePickerView: UIView {
      private let titleLabel = UILabel()
      private let doneButton = UIButton(type: .system)
      private let cancelButton = UIButton(type: .system)
 -    private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+-    private lazy var bottomConstraint = panel.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor)
 +    // Plain solid-color scrim, not a frosted UIVisualEffectView blur — see
 +    // its backgroundColor assignment in configureTheme() (dimColor option).
 +    private let blur = UIView()
-     private lazy var bottomConstraint = panel.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor)
++    // True view bottom, not safeAreaLayoutGuide — the panel's own background
++    // needs to extend all the way under the home indicator (the button
++    // stack still sits above it correctly, via its own safeAreaLayoutGuide
++    // constraint in configureButtons()); anchoring the panel itself to the
++    // safe area left a visible gap there showing the dim scrim through.
++    private lazy var bottomConstraint = panel.bottomAnchor.constraint(equalTo: bottomAnchor)
      private lazy var centerConstraint = panel.centerYAnchor.constraint(equalTo: centerYAnchor)
  
-@@ -95,7 +97,14 @@ final class DatePickerView: UIView {
+     init(options: DatePickerOptions) {
+@@ -95,7 +102,14 @@ final class DatePickerView: UIView {
  
      private func configurePanel() {
          panel.translatesAutoresizingMaskIntoConstraints = false
@@ -31,7 +68,7 @@ index 2a2a677..d808266
          panel.layer.masksToBounds = true
          addSubview(panel)
  
-@@ -159,33 +168,31 @@ final class DatePickerView: UIView {
+@@ -159,33 +173,36 @@ final class DatePickerView: UIView {
      }
  
      private func configureButtons() {
@@ -53,8 +90,13 @@ index 2a2a677..d808266
          doneButton.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
 +        cancelButton.layer.cornerRadius = 18
 +        cancelButton.clipsToBounds = true
++        // No clipsToBounds on doneButton — a shadow renders outside a
++        // layer's own bounds, so masking it here would hide the drop shadow
++        // configureTheme() adds below. cornerRadius alone still rounds the
++        // button's own background fill correctly (masksToBounds only
++        // affects clipping of sublayers/subviews, not the layer's own
++        // rendering), so the pill shape is unaffected.
 +        doneButton.layer.cornerRadius = 18
-+        doneButton.clipsToBounds = true
  
 -        panel.addSubview(separator)
          panel.addSubview(stack)
@@ -77,7 +119,7 @@ index 2a2a677..d808266
          ])
      }
  
-@@ -194,8 +201,17 @@ final class DatePickerView: UIView {
+@@ -194,8 +211,17 @@ final class DatePickerView: UIView {
          let titleFont = UIColor(hex: options.titleFontColor) ?? (dark ? .white : .label)
          let titleBackground = UIColor(hex: options.titleBgColor) ?? (dark ? UIColor(white: 0.08, alpha: 1) : .systemBackground)
          let panelBackground = UIColor(hex: options.bgColor) ?? titleBackground
@@ -96,7 +138,7 @@ index 2a2a677..d808266
  
          overrideUserInterfaceStyle = dark ? .dark : .light
          picker.overrideUserInterfaceStyle = dark ? .dark : .light
-@@ -206,10 +222,14 @@ final class DatePickerView: UIView {
+@@ -206,10 +232,26 @@ final class DatePickerView: UIView {
          panel.backgroundColor = panelBackground
          titleLabel.textColor = titleFont
          titleLabel.backgroundColor = titleBackground
@@ -111,10 +153,22 @@ index 2a2a677..d808266
          cancelButton.setTitleColor(buttonFont, for: .normal)
 -        doneButton.setTitleColor(buttonFont, for: .normal)
 +        doneButton.setTitleColor(doneFont, for: .normal)
++
++        // Soft drop shadow under the filled Done button, tinted to match its
++        // own fill (same idea as the old CSS box-shadow, which used the
++        // button's own pink at 30% opacity rather than a neutral grey).
++        if options.doneButtonBgColor != nil {
++            doneButton.layer.shadowColor = doneBackground.cgColor
++            doneButton.layer.shadowOpacity = 0.3
++            doneButton.layer.shadowRadius = 13
++            doneButton.layer.shadowOffset = CGSize(width: 0, height: 10)
++        } else {
++            doneButton.layer.shadowOpacity = 0
++        }
      }
  
      private func applyMode() {
-@@ -306,14 +326,17 @@ private extension UIColor {
+@@ -306,14 +348,17 @@ private extension UIColor {
          if hex.hasPrefix("#") {
              hex.removeFirst()
          }

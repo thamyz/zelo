@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-24 15:28";
+const BUILD_STAMP = "2026-08-24 15:38";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -4466,8 +4466,10 @@ async function cineOpenAgeSheet() {
   localStorage.setItem('zelo_user_age', String(age));
   cineRenderAge();
   cineRefreshIntroChecks();
+  // Soft heads-up, not a hard age gate — Zelo stays usable under 18, some
+  // features just aren't available yet.
   const warnEl = document.getElementById('cine-age-warn');
-  if (warnEl) warnEl.textContent = age < 18 ? 'Zelo is for users 18 and older.' : '';
+  if (warnEl) warnEl.textContent = age < 18 ? 'A few features are limited for users under 18.' : '';
 }
 
 function cineRenderAge() {
