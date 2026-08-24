@@ -1820,7 +1820,6 @@
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16.5 9.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </span>
             </button>
-            <p class="cine-field-error" id="cine-age-warn"></p>
             </div>
           </div>
         </section>
@@ -2115,6 +2114,38 @@
         <button class="cine-next cine-hidden" id="cine-next" onclick="cineNext()">Next</button>
       </div>
 
+      <!-- Birth-date wheel sheet (step 1) — 3-column native-style Month /
+           Day / Year picker (cineInitDobRoller() / cineReadDob(), script.js).
+           Independent of the post-signup setup screen's own single-column
+           #age-roller (AUTH.initAgeRoller/readAge, services/auth.js) — that
+           one is untouched. Backing is translucent, not an opaque card, so
+           the screen behind stays visible through it. Lives OUTSIDE
+           #cine-onboarding (not nested inside it like every other Phase-2
+           screen) — #cine-onboarding gets `hidden` set once the main
+           onboarding finishes, and the practice tutorial's Edit Details
+           screen (see index.html below, and pedOpenAttractedSheet's sibling
+           Age row in script.js) reopens this exact same sheet long after
+           that point; nested inside a hidden ancestor, toggling its own
+           `hidden` off would do nothing — the whole subtree stays
+           display:none regardless. -->
+      <div class="cine-sheet cine-sheet--dob" id="cine-age-sheet" hidden>
+        <div class="cine-sheet-scrim" onclick="cineCloseAgeSheet()"></div>
+        <div class="cine-sheet-card cine-sheet-card--dob">
+          <p class="cine-sheet-title">When were you born?</p>
+          <div class="dob-roller-wrap">
+            <div class="dob-roller-highlight" aria-hidden="true"></div>
+            <div class="dob-roller" id="cine-dob-month"></div>
+            <div class="dob-roller" id="cine-dob-day"></div>
+            <div class="dob-roller" id="cine-dob-year"></div>
+          </div>
+          <p class="age-warn" id="cine-age-warn"></p>
+          <div class="dob-sheet-actions">
+            <button type="button" class="cine-btn cine-btn--ghost" onclick="cineCloseAgeSheet()">Cancel</button>
+            <button type="button" class="cine-btn" onclick="cineConfirmAge()">Done</button>
+          </div>
+        </div>
+      </div>
+
 
       <!-- ============================================================
            SIGN-UP PROMPT — full-screen overlay shown once onboarding
@@ -2216,7 +2247,7 @@
         <button type="button" class="ptw-start-btn" onclick="practiceSaveEditDetails()">Save Changes</button>
       </div>
 
-      <!-- Name edit — small bottom sheet (shared .cine-sheet shell) -->
+      <!-- Name edit — small bottom sheet, same shell as #cine-age-sheet -->
       <div class="cine-sheet" id="ped-name-sheet" hidden>
         <div class="cine-sheet-scrim" onclick="pedCloseNameSheet()"></div>
         <div class="cine-sheet-card">
@@ -2226,7 +2257,7 @@
         </div>
       </div>
 
-      <!-- Attracted-to edit — small bottom sheet (shared .cine-sheet shell) -->
+      <!-- Attracted-to edit — small bottom sheet, same shell as #cine-age-sheet -->
       <div class="cine-sheet" id="ped-attracted-sheet" hidden>
         <div class="cine-sheet-scrim" onclick="pedCloseAttractedSheet()"></div>
         <div class="cine-sheet-card ped-attracted-sheet">
