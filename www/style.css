@@ -2131,6 +2131,12 @@ a { text-decoration: none; color: inherit; }
    active/inactive swap like the other tabs; two stacked <img>s, toggled by
    .tab-btn.active, do the same job. */
 .tab-icon-img { width: 20px; height: 20px; object-fit: contain; }
+/* Chats' source art is wider than tall (two overlapping bubbles vs
+   Practice's near-square heart) — a shared 20x20 box's object-fit:contain
+   constrains it by width, rendering it visibly shorter than Practice's
+   icon. Widening the box (height unchanged) lets it reach the same height
+   at its own natural aspect ratio, instead of stretching or cropping it. */
+#tabbtn-chats .tab-icon-img { width: 28px; }
 .tab-btn .tab-icon-active { display: none; }
 .tab-btn.active .tab-icon-inactive { display: none; }
 .tab-btn.active .tab-icon-active { display: block; }
