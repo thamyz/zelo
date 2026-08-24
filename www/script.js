@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-24 15:55";
+const BUILD_STAMP = "2026-08-24 16:15";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -5070,7 +5070,12 @@ function _cineShowLandingLoader() {
   const loader = document.getElementById('cine-landing-loader');
   const fill = document.getElementById('cine-landing-fill');
   if (!loader || !fill) {
-    if (state.activeTab !== 'assistant') showTab('assistant');
+    // Always run this — state.activeTab defaults to 'assistant' from page
+    // load and nothing during onboarding's own separate screen system ever
+    // changes it, so a "!== 'assistant'" guard here was always false and
+    // showTab() never actually ran: #screen-trial-start stayed .active and
+    // the tab bar stayed hidden, even though state *said* we were on Scan.
+    showTab('assistant');
     return;
   }
   loader.hidden = false;
@@ -5083,7 +5088,12 @@ function _cineShowLandingLoader() {
 
   _cineDelay(() => {
     loader.classList.add('cine-landing-loader--out');
-    if (state.activeTab !== 'assistant') showTab('assistant');
+    // Always run this — state.activeTab defaults to 'assistant' from page
+    // load and nothing during onboarding's own separate screen system ever
+    // changes it, so a "!== 'assistant'" guard here was always false and
+    // showTab() never actually ran: #screen-trial-start stayed .active and
+    // the tab bar stayed hidden, even though state *said* we were on Scan.
+    showTab('assistant');
     _cineDelay(() => { loader.hidden = true; }, 300);
   }, CINE_LANDING_MS);
 }
