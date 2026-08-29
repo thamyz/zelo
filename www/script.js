@@ -10,7 +10,7 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-08-24 16:48";
+const BUILD_STAMP = "2026-08-29 11:52";
 const SHOW_BUILD_STAMP = false; // temporarily off for screen recording — flip back to true when done
 const SUPPRESS_GIBBERISH_CHECK = true; // temporarily off for screen recording — flip back to false when done
 window.addEventListener('DOMContentLoaded', () => {
@@ -161,6 +161,8 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   attachEdgeSwipeBack('screen-scan-upload', popScreen);         // Upload Screenshot page
   attachEdgeSwipeBack('screen-home-settings', popScreen);       // Home Settings (top-right icon on Home)
+  attachEdgeSwipeBack('screen-journey', closeJourney);           // Your Journey (Streak widget)
+  attachEdgeSwipeBack('screen-mission-control', closeMissionControl); // Mission Control (Activity widget)
 
   _wireWidgetCarousel();
 });
@@ -7386,19 +7388,36 @@ function renderLeaderboard() {
     if (btn) btn.classList.toggle('active', c === lbCategory);
   });
 
-  // Podium (top 3)
+  // Podium (top 3) — the pedestal/photo/crown art is the cropped
+  // hero-podium.png background (see index.html); these are just the
+  // dynamic name/score/rank labels sitting below it, one per column.
   const podium = document.getElementById('lb-podium');
   if (podium && data.length >= 3) {
     const order = [data[1], data[0], data[2]]; // left=2nd, center=1st, right=3rd
-    const positions = ['2nd', '1st', '3rd'];
-    podium.innerHTML = order.map((e, i) => `
-      <div class="lb-podium-slot${positions[i] === '1st' ? ' lb-podium-slot--first' : ''}">
-        ${positions[i] === '1st' ? '<div class="lb-crown">👑</div>' : ''}
-        <div class="lb-podium-avatar"></div>
+    podium.innerHTML = order.map(e => `
+      <div class="lb-podium-slot">
         <div class="lb-podium-name">${e.name}</div>
         <div class="lb-podium-score">${e.score}</div>
         <div class="lb-podium-rank">#${e.rank}</div>
       </div>`).join('');
+  }
+
+  // "Keep going!" motivational line — distance to the next rank up. Not
+  // every anonymous player is actually IN the mock 100-entry dataset (see
+  // getMyLeaderboardEntry()'s synthetic fallback) — for those, "next rank
+  // up" is the lowest real entry rather than nothing.
+  const motivEl = document.getElementById('lb-motivation');
+  if (motivEl) {
+    const myIdxInData = data.findIndex(e => e.name === myEntry.name);
+    const aheadIdx = myIdxInData >= 0 ? myIdxInData - 1 : data.length - 1;
+    const ahead = aheadIdx >= 0 ? data[aheadIdx] : null;
+    if (ahead && ahead.score > myEntry.score) {
+      const unit = { streak: 'days', messages: 'messages', cold: 'wins' }[lbCategory] || 'points';
+      motivEl.textContent = `📈 Keep going! You're ${ahead.score - myEntry.score} ${unit} away from #${ahead.rank}`;
+      motivEl.hidden = false;
+    } else {
+      motivEl.hidden = true;
+    }
   }
 
   // List (rank 4+)
@@ -7433,6 +7452,55 @@ function openLeaderboardFromDash() {
   popScreen();   // close dashboard first
   setTimeout(() => openLeaderboard(), 50);
 }
+
+
+// ================================================================
+// YOUR JOURNEY  (Streak & Badges — opened from the Streak widget card)
+// All values are hardcoded dummy data, same convention as the widget
+// cards themselves (7-day streak, etc.) — no Supabase calls.
+// ================================================================
+
+// 7-slot week strip: first 4 done, 1 "today" (mid-streak), last 2 upcoming.
+const JOURNEY_WEEK = ['done', 'done', 'done', 'done', 'today', 'upcoming', 'upcoming'];
+
+function renderJourneyDots() {
+  const wrap = document.getElementById('journey-dots');
+  if (!wrap) return;
+  wrap.innerHTML = JOURNEY_WEEK.map(state => {
+    if (state === 'done') {
+      return `<span class="journey-dot journey-dot--done">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>`;
+    }
+    if (state === 'today') {
+      return `<span class="journey-dot journey-dot--today">
+        <img src="assets/icons/widget-streak-flame-small.png" alt="" aria-hidden="true">
+      </span>`;
+    }
+    return `<span class="journey-dot journey-dot--upcoming"></span>`;
+  }).join('');
+}
+
+function openJourney() {
+  renderJourneyDots();
+  pushScreen('journey');
+}
+
+function closeJourney() { popScreen(); }
+
+
+// ================================================================
+// MISSION CONTROL  (opened from the Activity widget card)
+// All values are hardcoded dummy data directly in index.html — this
+// screen has no per-open rendering to do, same as the widget cards
+// it's opened from.
+// ================================================================
+
+function openMissionControl() {
+  pushScreen('mission-control');
+}
+
+function closeMissionControl() { popScreen(); }
 
 
 // ================================================================
