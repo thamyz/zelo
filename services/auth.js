@@ -12,6 +12,7 @@ const AUTH = (() => {
   let _pending     = null;   // { destination: string, cb: fn }
   let _emailMode   = 'signup';
   let _verifyEmail = '';     // email currently being confirmed on the verify screen
+  let _explicitSignOut = false; // set right before OUR OWN signOut() calls — see onAuthStateChange's SIGNED_OUT branch
 
   const OVERLAY_IDS = ['auth-overlay', 'auth-verify-overlay', 'auth-setup-overlay'];
 
@@ -78,6 +79,7 @@ const AUTH = (() => {
     const { data } = await zeloSupabase.auth.getSession();
     _session     = data.session;
     _initialized = true;
+    if (_session && typeof ZeloRecords !== 'undefined') ZeloRecords.flushConsents().then(() => ZeloRecords.syncPracticeConsent()); // returning user: retry anything queued, then read the server-side consent back
 
     // Post-OAuth page reload: session appeared and we stored a pending dest
     if (_session) {
@@ -99,7 +101,18 @@ const AUTH = (() => {
     zeloSupabase.auth.onAuthStateChange((event, session) => {
       _session = session;
       if (event === 'SIGNED_IN')  _onSignedIn();
-      if (event === 'SIGNED_OUT') _session = null;
+      if (event === 'SIGNED_OUT') {
+        _session = null;
+        // signOut()/deleteAccount() below both set this right before their
+        // own explicit signOut() call, then reload() immediately after —
+        // this event still fires either way, but only an UNEXPECTED one
+        // (token revoked/expired server-side, not the user tapping "Sign
+        // out") should ever show the session-expired screen.
+        if (!_explicitSignOut && window.showSessionExpiredScreen) {
+          window.showSessionExpiredScreen();
+        }
+        _explicitSignOut = false;
+      }
     });
   }
 
@@ -116,6 +129,55 @@ const AUTH = (() => {
     _pending = { destination, cb };
     sessionStorage.setItem('zelo_auth_dest', destination); // survive OAuth redirect
     showEmailScreen('signup');
+  }
+
+  // "Already have an account? Sign in": open the sign-in sheet and run cb once a
+  // session exists (the caller decides where to go — see cineShowcaseSignIn).
+  // onNoAccount runs instead when the person turns out not to have an account
+  // (they tap "New to Zelo? Get started", or a fresh Apple/Google sign-in has no
+  // Zelo profile yet) — the caller sends them through onboarding.
+  // Already signed in when onboarding reaches its sign-up step (they signed in first,
+  // then had to go through onboarding): _onSignedIn won't fire again, so write the
+  // profile from the onboarding answers here.
+  async function _insertProfileFromOnboarding() {
+    const userId = _session?.user?.id;
+    const name = localStorage.getItem('zelo_display_name');
+    const age  = localStorage.getItem('zelo_user_age');
+    if (!userId || !name || !age) return;
+    await zeloSupabase.from('profiles').insert({ id: userId, display_name: name, age: Number(age) }).then(() => {}, () => {});
+    localStorage.setItem('zelo_setup_done', '1');
+  }
+
+  function startSignIn(cb, onNoAccount) {
+    if (!_initialized) { setTimeout(() => startSignIn(cb, onNoAccount), 50); return; }
+    // Deliberately NO "already signed in -> skip" shortcut: tapping Sign in must always show
+    // the sign-in page, even when a session from an earlier run is still saved on the device.
+    _pending = { destination: 'signin', cb, onNoAccount };
+    showEmailScreen('signin');
+  }
+
+  // Onboarding's "Save your progress" step (script.js cineProviderTap) —
+  // runs the REAL account creation for whichever provider was tapped and
+  // calls cb once a session exists, so onboarding only moves on for a
+  // genuinely signed-in user. Opens the same sheet as requireAuth() so any
+  // provider error (Apple/Google unavailable, bad password…) has somewhere
+  // visible to show; the terms box is pre-ticked because onboarding's own
+  // terms checkbox already had to be ticked to get here.
+  function startFromOnboarding(provider, cb) {
+    if (!_initialized) { setTimeout(() => startFromOnboarding(provider, cb), 50); return; }
+    // Apple/Google are one-shot native flows — if a session is already open there's nothing
+    // left to show, just attach this onboarding's answers and move on. Email is different:
+    // "Continue with email" must always show the real fill-in form, never silently skip it
+    // just because some earlier session (e.g. from testing) happens to still be open — it is
+    // also how you sign IN to a different/existing account from here, not only sign up.
+    if (signedIn() && provider !== 'email') { _insertProfileFromOnboarding().finally(cb); return; }
+    _pending = { destination: 'onboarding', cb };
+    showEmailScreen('signup');
+    const termsCheck = document.getElementById('auth-terms-checkbox');
+    if (termsCheck) termsCheck.checked = true;
+    if (provider === 'email')       showEmailStep();
+    else if (provider === 'apple')  signInWithApple();
+    else if (provider === 'google') signInWithGoogle();
   }
 
   // ── Sign in / create account screen ─────────────────────────────
@@ -153,7 +215,7 @@ const AUTH = (() => {
     el.querySelector('#auth-submit-btn').textContent = isSignup ? 'Create account' : 'Sign in';
     el.querySelector('#auth-toggle-btn').textContent = isSignup
       ? 'Already have an account? Sign in'
-      : "Don't have an account? Sign up";
+      : (_pending && _pending.onNoAccount ? 'New to Zelo? Get started' : "Don't have an account? Sign up");
     el.querySelector('#auth-apple-btn-label').textContent  = isSignup ? 'Sign up with Apple'  : 'Sign in with Apple';
     el.querySelector('#auth-google-btn-label').textContent = isSignup ? 'Sign up with Google' : 'Sign in with Google';
     el.querySelector('#auth-email-btn-label').textContent  = 'Continue with email';
@@ -193,14 +255,17 @@ const AUTH = (() => {
       if (errEl) errEl.textContent = 'Please fill in all fields.';
       return;
     }
+    if (!_looksLikeEmail(email)) {
+      if (errEl) errEl.textContent = "That doesn't look like a valid email address. Check for typos.";
+      return;
+    }
 
     if (_emailMode === 'signup') {
-      if (!document.getElementById('auth-terms-checkbox')?.checked) {
-        if (errEl) errEl.textContent = 'Please agree to the Terms & Conditions to continue.';
-        return;
-      }
+      _pendingIsOnboardingSignIn = false;
+      // Signing up IS the agreement (stated on the form): that is the consent moment.
+      if (typeof ZeloRecords !== 'undefined') ZeloRecords.recordConsent('terms_and_privacy', true);
       const { data, error } = await zeloSupabase.auth.signUp({ email, password });
-      if (error) { if (errEl) errEl.textContent = error.message; return; }
+      if (error) { if (errEl) errEl.textContent = await _friendlyAuthError(error, email, 'signup'); return; }
 
       if (!data?.session) {
         // Email confirmation is required before a session is issued —
@@ -210,14 +275,23 @@ const AUTH = (() => {
       // else: confirmation is disabled on this project, session issued
       // immediately, onAuthStateChange fires SIGNED_IN → _onSignedIn()
     } else {
+      // Signing IN (not up) from the email step reached mid-onboarding
+      // (onboarding's step 14 "Continue with email" → toggle to "Sign in"):
+      // this is exactly the front-of-onboarding "Sign in" case (an existing
+      // account), not a new signup — _onSignedIn() reads this flag once to
+      // route the same way (restore the real profile, skip straight into
+      // the app) instead of treating the onboarding answers as a fresh
+      // signup and walking the rest of onboarding.
+      _pendingIsOnboardingSignIn = !!(_pending && _pending.destination === 'onboarding');
       const { error } = await zeloSupabase.auth.signInWithPassword({ email, password });
       if (error) {
+        _pendingIsOnboardingSignIn = false;
         if (_isUnconfirmedEmailError(error)) {
           await zeloSupabase.auth.resend({ type: 'signup', email }).catch(() => {});
           _showVerifyScreen(email);
           return;
         }
-        if (errEl) errEl.textContent = error.message;
+        if (errEl) errEl.textContent = await _friendlyAuthError(error, email, 'signin');
         return;
       }
     }
@@ -229,21 +303,116 @@ const AUTH = (() => {
     return /not confirmed/i.test(error?.message || '');
   }
 
-  async function handleForgotPassword() {
-    const email = (document.getElementById('auth-email-input')?.value || '').trim();
-    const errEl = document.getElementById('auth-email-error');
-    if (!email) {
-      if (errEl) errEl.textContent = 'Enter your email address first.';
+  // ── Specific, human error messages ───────────────────────────────
+  function _looksLikeEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
+
+  // true / false / null (couldn't find out). Backed by public.email_exists() — migration …170000.
+  async function _emailExists(email) {
+    try {
+      const { data, error } = await zeloSupabase.rpc('email_exists', { p_email: email });
+      if (error || typeof data !== 'boolean') return null;
+      return data;
+    } catch (_) { return null; }
+  }
+
+  async function _friendlyAuthError(error, email, mode) {
+    const msg  = String(error?.message || '');
+    const code = error?.code || '';
+    if (!navigator.onLine || /failed to fetch|network|load failed/i.test(msg)) {
+      return "Can't reach Zelo. Check your internet connection and try again.";
+    }
+    if (error?.status === 429 || /rate limit|too many/i.test(msg + code)) {
+      return 'Too many attempts. Wait a minute and try again.';
+    }
+    if (mode === 'signin' && (code === 'invalid_credentials' || /invalid login credentials/i.test(msg))) {
+      const exists = await _emailExists(email);
+      if (exists === false) return 'No account found with this email. Check the spelling, or create an account.';
+      if (exists === true)  return 'Wrong password. Try again, or tap "Forgot password?".';
+      return 'Email or password is incorrect.';
+    }
+    if (mode === 'signup' && (code === 'user_already_exists' || /already registered|already exists/i.test(msg))) {
+      return 'An account with this email already exists. Sign in instead.';
+    }
+    if (code === 'weak_password' || /password.*(short|weak|at least)/i.test(msg)) {
+      return 'That password is too weak. Use at least 8 characters with letters and numbers.';
+    }
+    if (code === 'email_address_invalid' || /invalid.*email|email.*invalid/i.test(msg)) {
+      return "That doesn't look like a valid email address. Check for typos.";
+    }
+    return msg || 'Something went wrong. Try again.';
+  }
+
+  // ── Forgot password: its own page (form -> "link sent" with a resend timer) ──
+  let _forgotTimer = null;
+
+  function handleForgotPassword() {
+    const step = document.getElementById('auth-forgot-step');
+    if (!step) return;
+    const typed = (document.getElementById('auth-email-input')?.value || '').trim();
+    document.getElementById('auth-forgot-email').value = typed;
+    document.getElementById('auth-forgot-error').textContent = '';
+    document.getElementById('auth-forgot-form').hidden = false;
+    document.getElementById('auth-forgot-sent').hidden = true;
+    document.getElementById('auth-forgot-send').hidden = false;
+    step.classList.add('auth-email-step--show');
+    setTimeout(() => document.getElementById('auth-forgot-email')?.focus(), 320);
+  }
+
+  function closeForgot() {
+    clearInterval(_forgotTimer);
+    document.getElementById('auth-forgot-step')?.classList.remove('auth-email-step--show');
+  }
+
+  function _forgotCountdown() {
+    clearInterval(_forgotTimer);
+    let remaining = 60;
+    const btn = document.getElementById('auth-forgot-resend');
+    const sub = document.getElementById('auth-forgot-resend-sub');
+    if (btn) btn.disabled = true;
+    const tick = () => {
+      if (remaining <= 0) {
+        clearInterval(_forgotTimer);
+        if (btn) btn.disabled = false;
+        if (sub) sub.textContent = "Didn't get it? Check your spam folder.";
+        return;
+      }
+      if (sub) sub.textContent = `You can resend the link in ${remaining} second${remaining === 1 ? '' : 's'}.`;
+      remaining--;
+    };
+    tick();
+    _forgotTimer = setInterval(tick, 1000);
+  }
+
+  async function sendForgot(isResend) {
+    const errEl = document.getElementById('auth-forgot-error');
+    const email = isResend
+      ? (document.getElementById('auth-forgot-sent-email')?.textContent || '')
+      : (document.getElementById('auth-forgot-email')?.value || '').trim();
+    if (errEl) errEl.textContent = '';
+    if (!email) { if (errEl) errEl.textContent = 'Enter your email address.'; return; }
+    if (!_looksLikeEmail(email)) { if (errEl) errEl.textContent = "That doesn't look like a valid email address. Check for typos."; return; }
+    if (await _emailExists(email) === false) {
+      if (errEl) errEl.textContent = 'No account found with this email. Check the spelling, or create an account.';
       return;
     }
     const { error } = await zeloSupabase.auth.resetPasswordForEmail(email);
-    if (errEl) {
-      errEl.textContent = error ? error.message : 'Check your email for a reset link.';
-      errEl.style.color = error ? '' : '#22c55e';
-    }
+    if (error) { if (errEl) errEl.textContent = await _friendlyAuthError(error, email, 'reset'); return; }
+    document.getElementById('auth-forgot-sent-email').textContent = email;
+    document.getElementById('auth-forgot-form').hidden = true;
+    document.getElementById('auth-forgot-sent').hidden = false;
+    document.getElementById('auth-forgot-send').hidden = true;
+    _forgotCountdown();
   }
 
   function toggleEmailMode() {
+    // Opened from the first screen's "Sign in": "no account" means onboarding, not an
+    // in-sheet sign-up form.
+    if (_emailMode === 'signin' && _pending && _pending.destination === 'signin' && _pending.onNoAccount) {
+      const goOnboard = _pending.onNoAccount;
+      dismiss();
+      goOnboard();
+      return;
+    }
     _emailMode = _emailMode === 'signup' ? 'signin' : 'signup';
     _renderEmailScreen();
   }
@@ -400,16 +569,36 @@ const AUTH = (() => {
 
   // ── Post sign-in ───────────────────────────────────────────────
 
+  // Set only for the moment between submitting the EMAIL sign-in form reached from inside
+  // onboarding and _onSignedIn() consuming it once (see handleEmailSubmit) — lets _onSignedIn
+  // tell "signing into an existing account, met mid-onboarding" apart from "signing up".
+  let _pendingIsOnboardingSignIn = false;
+
+  // Same destination as the front-of-onboarding "Sign in": drop the onboarding overlay and
+  // land straight in the app, instead of resolving `_pending.cb` (which would just advance
+  // onboarding by one step, as if this had been a signup).
+  function _finishAsOnboardingSignIn() {
+    _pending = null;
+    sessionStorage.removeItem('zelo_auth_dest');
+    if (typeof window.cineEnterAppAfterSignIn === 'function') window.cineEnterAppAfterSignIn();
+  }
+
   function _onSignedIn() {
+    // Consent given before there was an account (onboarding) gets written now.
+    if (typeof ZeloRecords !== 'undefined') ZeloRecords.flushConsents().then(() => ZeloRecords.syncPracticeConsent());
+    const isOnboardingSignIn = _pendingIsOnboardingSignIn;
+    _pendingIsOnboardingSignIn = false; // consume once
     // Onboarding (script.js's cine flow) already collected display name +
     // exact age before ever reaching sign-up — asking again here on the
     // setup screen would be a redundant second ask. Only skip when both are
     // actually present (e.g. a user who signed in directly from Showcase's
     // "Already have an account", without running onboarding first, still
-    // gets the normal setup screen below).
+    // gets the normal setup screen below) AND this was actually a signup —
+    // an existing account signing IN mid-onboarding must never have a new
+    // profile inserted from the onboarding answers (see isOnboardingSignIn).
     const onboardingName = localStorage.getItem('zelo_display_name');
     const onboardingAge  = localStorage.getItem('zelo_user_age');
-    if (!localStorage.getItem('zelo_setup_done') && onboardingName && onboardingAge) {
+    if (!isOnboardingSignIn && !localStorage.getItem('zelo_setup_done') && onboardingName && onboardingAge) {
       localStorage.setItem('zelo_setup_done', '1');
       const userId = _session?.user?.id;
       const insert = userId
@@ -419,12 +608,38 @@ const AUTH = (() => {
       return;
     }
     if (!localStorage.getItem('zelo_setup_done')) {
-      _showSetupScreen();
+      // Signing in to an account that already has a profile (fresh install, another
+      // device, cleared storage, or an existing account met mid-onboarding): restore
+      // it and skip the name/age setup screen.
+      _loadProfileIntoLocalStorage().then(() => {
+        if (localStorage.getItem('zelo_display_name') && localStorage.getItem('zelo_user_age')) {
+          localStorage.setItem('zelo_setup_done', '1');
+          _hideAll();
+          if (isOnboardingSignIn) _finishAsOnboardingSignIn();
+          else _resolvePending();
+        } else if (isOnboardingSignIn) {
+          // Existing account, but no profile row (rare in practice — the onboarding name/age
+          // answered a moment ago are already sitting in local storage regardless): ask for
+          // name/age directly rather than looping back into the onboarding this came from.
+          _showSetupScreen();
+        } else if (_pending && _pending.destination === 'signin' && _pending.onNoAccount) {
+          // Signed in (e.g. a brand-new Apple/Google account) but there is no Zelo
+          // profile: this person has not been through onboarding yet — send them there.
+          const goOnboard = _pending.onNoAccount;
+          _pending = null;
+          sessionStorage.removeItem('zelo_auth_dest');
+          _hideAll();
+          goOnboard();
+        } else {
+          _showSetupScreen();
+        }
+      });
     } else {
       // Returning user — sync profile from Supabase into localStorage then navigate
       _loadProfileIntoLocalStorage().then(() => {
         _hideAll();
-        _resolvePending();
+        if (isOnboardingSignIn) _finishAsOnboardingSignIn();
+        else _resolvePending();
       });
     }
   }
@@ -549,6 +764,7 @@ const AUTH = (() => {
     if      (dest === 'practice')        showTab('practice');
     else if (dest === 'chats')           showTab('chats');
     else if (dest === 'save-thread')     openThreadPicker();
+    else if (dest === 'download-data')   { openDownloadData(); ddRequestData(); }
   }
 
   function _resolvePending() {
@@ -582,6 +798,7 @@ const AUTH = (() => {
     // Force onboarding to replay after sign-out, independent of the
     // dev-mode wipe in script.js's DOMContentLoaded handler.
     localStorage.removeItem('zelo_onboarding_done');
+    _explicitSignOut = true;
     await zeloSupabase.auth.signOut();
     location.reload();
   }
@@ -592,13 +809,43 @@ const AUTH = (() => {
     return _session?.user?.email || '';
   }
 
-  async function changeEmail(newEmail) {
-    const { error } = await zeloSupabase.auth.updateUser({ email: newEmail });
+  function currentUserId() {
+    return _session?.user?.id || '';
+  }
+
+  // ── Forgot password (Profile & Login) ─────────────────────────────
+  // Plain email-link reset, same real API the sign-in screen's own
+  // handleForgotPassword() already uses — just reusable with any email
+  // string instead of reading a specific DOM input, since Profile & Login
+  // has its own separate form/screens for this.
+  async function sendPasswordReset(email) {
+    const { error } = await zeloSupabase.auth.resetPasswordForEmail(email);
     return { error: error ? error.message : null };
   }
 
-  async function changePassword(newPassword) {
-    const { error } = await zeloSupabase.auth.updateUser({ password: newPassword });
+  // ── Link a new email/password identity (Profile & Login → Sign-in
+  // methods → Email → "Add Your Email") ─────────────────────────────
+  // updateUser({email, password}) on an authenticated session with no
+  // matching email yet routes through Supabase's real email-change
+  // confirmation — same verifyOtp/resend surface as signup, just with
+  // type: 'email_change' instead of 'signup'.
+  let _pendingEmailChange = '';
+
+  async function linkEmail(email, password) {
+    const { error } = await zeloSupabase.auth.updateUser({ email, password });
+    if (!error) _pendingEmailChange = email;
+    return { error: error ? error.message : null };
+  }
+
+  async function verifyEmailChange(code) {
+    const { error } = await zeloSupabase.auth.verifyOtp({ email: _pendingEmailChange, token: code, type: 'email_change' });
+    if (!error) _pendingEmailChange = '';
+    return { error: error ? error.message : null };
+  }
+
+  async function resendEmailChange() {
+    if (!_pendingEmailChange) return { error: 'No pending email change.' };
+    const { error } = await zeloSupabase.auth.resend({ type: 'email_change', email: _pendingEmailChange });
     return { error: error ? error.message : null };
   }
 
@@ -609,14 +856,20 @@ const AUTH = (() => {
   // client with only the anon key can safely do. That backend job is what
   // actually fulfills the "deleted within 30 days" promise in the
   // confirmation modal.
+  // Real deletion happens server-side in one call (delete_my_account(): every table holding this
+  // user's rows, then the sign-in identity itself — see supabase/migrations/…160000). If that
+  // fails we must NOT wipe the phone and act as if it worked: report the error and stay signed in.
   async function deleteAccount() {
-    const userId = _session?.user?.id;
-    if (userId) {
-      try { await zeloSupabase.from('profiles').delete().eq('id', userId); } catch (_) { /* best effort */ }
+    if (_session?.user?.id) {
+      let error = null;
+      try { ({ error } = await zeloSupabase.rpc('delete_my_account')); } catch (e) { error = e; }
+      if (error) return { error: error.message || String(error) };
     }
     localStorage.clear();
-    await zeloSupabase.auth.signOut();
+    _explicitSignOut = true;
+    try { await zeloSupabase.auth.signOut({ scope: 'local' }); } catch (_) { /* the auth user is gone server-side */ }
     location.reload();
+    return { error: null };
   }
 
   // ── Public API ─────────────────────────────────────────────────
@@ -625,11 +878,15 @@ const AUTH = (() => {
     init,
     signedIn,
     requireAuth,
+    startFromOnboarding,
+    startSignIn,
     showEmailScreen,
     showEmailStep,
     backToPicker,
     handleEmailSubmit,
     handleForgotPassword,
+    closeForgot,
+    sendForgot,
     toggleEmailMode,
     rememberAuthState,
     backFromVerify,
@@ -643,8 +900,11 @@ const AUTH = (() => {
     signOut,
     dismiss,
     currentEmail,
-    changeEmail,
-    changePassword,
+    currentUserId,
+    sendPasswordReset,
+    linkEmail,
+    verifyEmailChange,
+    resendEmailChange,
     deleteAccount
   };
 })();

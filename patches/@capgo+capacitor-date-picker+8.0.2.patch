@@ -1,6 +1,4 @@
 diff --git a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DateParser.swift b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DateParser.swift
-old mode 100644
-new mode 100755
 index c413b92..cb605a4
 --- a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DateParser.swift
 +++ b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DateParser.swift
@@ -29,9 +27,7 @@ index c413b92..cb605a4
          return formatter.date(from: value)
      }
 diff --git a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
-old mode 100644
-new mode 100755
-index 2a2a677..4630590
+index 2a2a677..c553ed9
 --- a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
 +++ b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePicker.swift
 @@ -18,8 +18,15 @@ final class DatePickerView: UIView {
@@ -52,7 +48,19 @@ index 2a2a677..4630590
      private lazy var centerConstraint = panel.centerYAnchor.constraint(equalTo: centerYAnchor)
  
      init(options: DatePickerOptions) {
-@@ -95,7 +102,14 @@ final class DatePickerView: UIView {
+@@ -83,7 +90,10 @@ final class DatePickerView: UIView {
+             blur.bottomAnchor.constraint(equalTo: bottomAnchor)
+         ])
+ 
+-        let tap = UITapGestureRecognizer(target: self, action: #selector(cancelTapped))
++        // ZELO PATCH: tapping the dim commits the wheel's current value
++        // instead of discarding it, so scrolling to a date and tapping
++        // outside behaves like Done. Cancel is still available as a button.
++        let tap = UITapGestureRecognizer(target: self, action: #selector(dimTapped))
+         blur.addGestureRecognizer(tap)
+ 
+         configurePanel()
+@@ -95,7 +105,14 @@ final class DatePickerView: UIView {
  
      private func configurePanel() {
          panel.translatesAutoresizingMaskIntoConstraints = false
@@ -68,7 +76,7 @@ index 2a2a677..4630590
          panel.layer.masksToBounds = true
          addSubview(panel)
  
-@@ -159,33 +173,36 @@ final class DatePickerView: UIView {
+@@ -159,33 +176,36 @@ final class DatePickerView: UIView {
      }
  
      private func configureButtons() {
@@ -119,7 +127,7 @@ index 2a2a677..4630590
          ])
      }
  
-@@ -194,8 +211,17 @@ final class DatePickerView: UIView {
+@@ -194,8 +214,17 @@ final class DatePickerView: UIView {
          let titleFont = UIColor(hex: options.titleFontColor) ?? (dark ? .white : .label)
          let titleBackground = UIColor(hex: options.titleBgColor) ?? (dark ? UIColor(white: 0.08, alpha: 1) : .systemBackground)
          let panelBackground = UIColor(hex: options.bgColor) ?? titleBackground
@@ -138,7 +146,7 @@ index 2a2a677..4630590
  
          overrideUserInterfaceStyle = dark ? .dark : .light
          picker.overrideUserInterfaceStyle = dark ? .dark : .light
-@@ -206,10 +232,26 @@ final class DatePickerView: UIView {
+@@ -206,10 +235,26 @@ final class DatePickerView: UIView {
          panel.backgroundColor = panelBackground
          titleLabel.textColor = titleFont
          titleLabel.backgroundColor = titleBackground
@@ -168,7 +176,21 @@ index 2a2a677..4630590
      }
  
      private func applyMode() {
-@@ -306,14 +348,17 @@ private extension UIColor {
+@@ -293,6 +338,13 @@ final class DatePickerView: UIView {
+         onDone?(picker.date)
+     }
+ 
++    // ZELO PATCH: deliberately NOT doneTapped — in dateAndTime mode that
++    // advances the wheel to its time stage rather than resolving, and a tap
++    // outside should finish rather than move on.
++    @objc private func dimTapped() {
++        onDone?(picker.date)
++    }
++
+     @objc private func cancelTapped() {
+         onCancel?()
+     }
+@@ -306,14 +358,17 @@ private extension UIColor {
          if hex.hasPrefix("#") {
              hex.removeFirst()
          }
@@ -192,8 +214,6 @@ index 2a2a677..4630590
      }
  }
 diff --git a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePickerOptions.swift b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePickerOptions.swift
-old mode 100644
-new mode 100755
 index b358beb..ea4cef5
 --- a/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePickerOptions.swift
 +++ b/node_modules/@capgo/capacitor-date-picker/ios/Sources/DatePickerPlugin/DatePickerOptions.swift

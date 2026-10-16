@@ -366,7 +366,10 @@ const STYLE_LABELS = {
   funny: "Funny",
   warmer: "Warmer",
   bolder: "Bold",
-  longer: "Longer"
+  longer: "Longer",
+  // Demo-only style (DEMO_SCAN_STYLES in script.js) — not in STYLE_ELIGIBILITY,
+  // so it never appears from a real scan, only the scripted screen-recording one.
+  playful: "Playful"
 };
 
 // Per-style color theme for the reply carousel — soft background tint +
@@ -384,7 +387,8 @@ const STYLE_COLORS = {
   direct:  { bg: "#f4f7fd", accent: "#4488f6" },
   warmer:  { bg: "#fcf2f6", accent: "#f36fa6" },
   shorter: { bg: "#f4f9f5", accent: "#48cba2" },
-  longer:  { bg: "#f4f2fc", accent: "#936cec" }
+  longer:  { bg: "#f4f2fc", accent: "#936cec" },
+  playful: { bg: "#fefaf0", accent: "#f5b400" }
 };
 
 const STYLE_ELIGIBILITY = {
@@ -538,12 +542,147 @@ const LEADERBOARD_DATA = {
     alltime: _ext100(_mkEntries([["Liam P.", 9800], ["Tyler M.", 8400], ["Mason D.", 7200], ["Kai V.", 6400], ["Ethan R.", 5100], ["Jared S.", 4400], ["Noah B.", 3700], ["Aiden C.", 3100], ["Logan F.", 2500], ["Jackson H.", 1900]]),
       i => Math.max(100, Math.round(1650 * Math.pow(0.973, i))))
   },
-  cold: {
-    weekly:  _ext100(_mkEntries([["Jared S.", 5], ["Ethan R.", 4], ["Noah B.", 3], ["Logan F.", 3], ["Tyler M.", 2], ["Kai V.", 2], ["Liam P.", 1], ["Mason D.", 1], ["Aiden C.", 1], ["Jackson H.", 0]]),
-      _i => 0),
-    monthly: _ext100(_mkEntries([["Noah B.", 18], ["Jared S.", 15], ["Ethan R.", 13], ["Logan F.", 11], ["Tyler M.", 9], ["Kai V.", 8], ["Aiden C.", 7], ["Liam P.", 6], ["Mason D.", 5], ["Jackson H.", 3]]),
-      i => i < 8 ? 2 : i < 22 ? 1 : 0),
-    alltime: _ext100(_mkEntries([["Ethan R.", 74], ["Noah B.", 68], ["Jared S.", 61], ["Tyler M.", 55], ["Logan F.", 48], ["Kai V.", 42], ["Liam P.", 37], ["Mason D.", 31], ["Aiden C.", 28], ["Jackson H.", 20]]),
-      i => Math.max(1, Math.round(17 * Math.pow(0.94, i))))
+  // "Most Level" — ranks by the same account Level shown everywhere else
+  // in Zelo (see getLevelForXP()/XP_MAX_LEVEL=20 in script.js), so unlike
+  // the other two categories this one isn't really period-scoped — a
+  // player's level doesn't reset weekly/monthly. Same entries reused
+  // across all three time filters on purpose.
+  level: {
+    weekly:  _ext100(_mkEntries([["Aiden C.", 18], ["Kai V.", 16], ["Tyler M.", 15], ["Jared S.", 14], ["Liam P.", 13], ["Ethan R.", 12], ["Mason D.", 11], ["Noah B.", 10], ["Logan F.", 8], ["Jackson H.", 6]]),
+      i => Math.max(1, Math.round(6 * Math.pow(0.965, i)))),
+    monthly: _ext100(_mkEntries([["Aiden C.", 18], ["Kai V.", 16], ["Tyler M.", 15], ["Jared S.", 14], ["Liam P.", 13], ["Ethan R.", 12], ["Mason D.", 11], ["Noah B.", 10], ["Logan F.", 8], ["Jackson H.", 6]]),
+      i => Math.max(1, Math.round(6 * Math.pow(0.965, i)))),
+    alltime: _ext100(_mkEntries([["Aiden C.", 18], ["Kai V.", 16], ["Tyler M.", 15], ["Jared S.", 14], ["Liam P.", 13], ["Ethan R.", 12], ["Mason D.", 11], ["Noah B.", 10], ["Logan F.", 8], ["Jackson H.", 6]]),
+      i => Math.max(1, Math.round(6 * Math.pow(0.965, i))))
   }
 };
+
+
+// ================================================================
+// MILESTONES  (Achievement badge system)
+// 10 categories x 5 badges = 50 achievement badges. Separate from the
+// Streak page's own 12-milestone streak progression (Your Journey /
+// script.js) — that system is NOT counted here, per spec.
+//
+// All progress is seeded at 0 for now — visual system + data
+// architecture first, real per-category metric wiring comes later
+// (see MILESTONE_BADGES comment below). isBadgeUnlocked()/
+// getCategoryUnlockedCount()/getTotalUnlockedCount() (script.js) are
+// what the UI actually reads, so plugging in real numbers later never
+// requires touching the screens themselves.
+// ================================================================
+
+const MILESTONE_CATEGORIES = [
+  {
+    id: 'streak', name: 'Streak', icon: 'flame',
+    accent: '#ec4899', bgTint: '#fdf2f8',
+    description: 'Keep your streak alive. Every day counts!',
+  },
+  {
+    id: 'conversation', name: 'Conversation', icon: 'chat',
+    accent: '#8b5cf6', bgTint: '#f5f3ff',
+    description: 'Every convo counts. Build deeper connections!',
+  },
+  {
+    id: 'progress', name: 'Progress', icon: 'trending-up',
+    accent: '#22c55e', bgTint: '#f0fdf4',
+    description: 'Level up your rizz. See the results.',
+  },
+  {
+    id: 'explorer', name: 'Explorer', icon: 'compass',
+    accent: '#06b6d4', bgTint: '#ecfeff',
+    description: 'Explore more. Discover everything.',
+  },
+  {
+    id: 'comeback', name: 'Comeback', icon: 'refresh',
+    accent: '#ec4899', bgTint: '#fdf2f8',
+    description: 'Every setback is a setup for a comeback.',
+  },
+  {
+    id: 'social', name: 'Social', icon: 'people',
+    accent: '#8b5cf6', bgTint: '#f5f3ff',
+    description: 'Refer friends. Grow your circle.',
+  },
+  {
+    id: 'special', name: 'Special', icon: 'crown',
+    accent: '#f59e0b', bgTint: '#fffbeb',
+    description: 'Exclusive milestones for dedicated users.',
+  },
+  {
+    id: 'texting', name: 'Texting', icon: 'chat-dots',
+    accent: '#ec4899', bgTint: '#fdf2f8',
+    description: 'Master the chat. Keep the vibe alive.',
+  }
+];
+
+// Every badge starts progress:0 — real metrics (streak length, scan
+// count, message count, etc.) get wired in category-by-category later.
+// `binary:true` badges (checklist/rank-threshold requirements with no
+// natural running number) skip the numeric progress bar and just show
+// locked/unlocked off `progress >= target`.
+const MILESTONE_BADGES = [
+  // ---- Streak ---- (thresholds match the 1/7/14/30/100 art on the badges)
+  { id: 'first-spark',  category: 'streak', name: 'First Spark',  description: 'Keep a streak for 1 day',    requirement: '1 day',    target: 1,   progress: 0, icon: 'streak-1' },
+  { id: 'on-fire',      category: 'streak', name: 'On Fire',      description: 'Keep a streak for 7 days',   requirement: '7 days',   target: 7,   progress: 0, icon: 'streak-2' },
+  { id: 'week-warrior', category: 'streak', name: 'Week Warrior', description: 'Keep a streak for 14 days',  requirement: '14 days',  target: 14,  progress: 0, icon: 'streak-3' },
+  { id: 'hot-streak',   category: 'streak', name: 'Hot Streak',   description: 'Keep a streak for 30 days',  requirement: '30 days',  target: 30,  progress: 0, icon: 'streak-4' },
+  { id: 'century',      category: 'streak', name: 'Century',      description: 'Keep a streak for 100 days', requirement: '100 days', target: 100, progress: 0, icon: 'streak-5' },
+
+  // ---- Conversation ---- (Long Haul/Conversation Pro are measured within
+  // a single conversation/thread, never summed across separate ones)
+  { id: 'first-chat',       category: 'conversation', name: 'First Chat',       description: 'Start your first conversation',       requirement: '1 conversation',   target: 1,   progress: 0, icon: 'conversation-1' },
+  { id: 'smooth-talker',    category: 'conversation', name: 'Smooth Talker',    description: 'Have 10 conversations',                requirement: '10 conversations', target: 10,  progress: 0, icon: 'conversation-2' },
+  { id: 'deep-connector',   category: 'conversation', name: 'Deep Connector',   description: 'Reach 50 messages',                    requirement: '50 messages',      target: 50,  progress: 0, icon: 'conversation-3' },
+  { id: 'long-haul',        category: 'conversation', name: 'Long Haul',        description: 'Reach 100 messages in a conversation', requirement: '100 messages',     target: 100, progress: 0, icon: 'conversation-4' },
+  { id: 'conversation-pro', category: 'conversation', name: 'Conversation Pro', description: 'Reach 250 messages in a conversation', requirement: '250 messages',     target: 250, progress: 0, icon: 'conversation-5' },
+
+  // ---- Progress ---- (reads the same centralized level used elsewhere
+  // in Zelo — never a separate score invented just for badges)
+  { id: 'rising-star',     category: 'progress', name: 'Rising Star',     description: 'Reach Level 2',  requirement: 'Level 2',  target: 2,  progress: 0, icon: 'progress-1' },
+  { id: 'improving',       category: 'progress', name: 'Improving',       description: 'Reach Level 5',  requirement: 'Level 5',  target: 5,  progress: 0, icon: 'progress-2' },
+  { id: 'rizz-master',     category: 'progress', name: 'Rizz Master',     description: 'Reach Level 10', requirement: 'Level 10', target: 10, progress: 0, icon: 'progress-3' },
+  { id: 'top-performer',   category: 'progress', name: 'Top Performer',   description: 'Reach Level 15', requirement: 'Level 15', target: 15, progress: 0, icon: 'progress-4' },
+  { id: 'elite-performer', category: 'progress', name: 'Elite Performer', description: 'Reach Level 20', requirement: 'Level 20', target: 20, progress: 0, icon: 'progress-5' },
+
+  // ---- Explorer ---- ("Everything" only unlocks off the real defined
+  // feature checklist, never just from opening the app)
+  { id: 'first-scan', category: 'explorer', name: 'First Scan', description: 'Complete your first scan', requirement: '1 scan',    target: 1,   progress: 0, icon: 'explorer-1' },
+  { id: 'scanner',    category: 'explorer', name: 'Scanner',    description: 'Complete 10 scans',        requirement: '10 scans',  target: 10,  progress: 0, icon: 'explorer-2' },
+  { id: 'explorer',   category: 'explorer', name: 'Explorer',   description: 'Complete 50 scans',        requirement: '50 scans',  target: 50,  progress: 0, icon: 'explorer-3' },
+  { id: 'adventurer', category: 'explorer', name: 'Adventurer', description: 'Complete 100 scans',       requirement: '100 scans', target: 100, progress: 0, icon: 'explorer-4' },
+  { id: 'everything', category: 'explorer', name: 'Everything', description: 'Try all major Zelo features', requirement: 'All features', target: 1, progress: 0, binary: true, icon: 'explorer-5' },
+
+  // ---- Comeback ---- ("break" is defined centrally — see COMEBACK_
+  // BREAK_DAYS below, so no other part of the app invents its own definition)
+  { id: 'back-in-action', category: 'comeback', name: 'Back in Action', description: 'Return after a break',  requirement: '1 comeback',   target: 1,  progress: 0, binary: true, icon: 'comeback-1' },
+  { id: 'never-quit',     category: 'comeback', name: 'Never Quit',     description: 'Complete 2 comebacks',  requirement: '2 comebacks',  target: 2,  progress: 0, icon: 'comeback-2' },
+  { id: 'resilient',      category: 'comeback', name: 'Resilient',      description: 'Complete 5 comebacks',  requirement: '5 comebacks',  target: 5,  progress: 0, icon: 'comeback-3' },
+  { id: 'comeback-king',  category: 'comeback', name: 'Comeback King',  description: 'Complete 10 comebacks', requirement: '10 comebacks', target: 10, progress: 0, icon: 'comeback-4' },
+  { id: 'unbreakable',    category: 'comeback', name: 'Unbreakable',    description: 'Complete 25 comebacks', requirement: '25 comebacks', target: 25, progress: 0, icon: 'comeback-5' },
+
+  // ---- Social ---- (backed by the real Refer Friends feature —
+  // openReferFriends() in script.js — progress:0 until referral counts
+  // are actually tracked server-side)
+  { id: 'social-starter', category: 'social', name: 'Social Starter', description: 'Refer 1 friend',   requirement: '1 friend',   target: 1,  progress: 0, icon: 'social-1' },
+  { id: 'friendly',       category: 'social', name: 'Friendly',       description: 'Refer 5 friends',  requirement: '5 friends',  target: 5,  progress: 0, icon: 'social-2' },
+  { id: 'popular',        category: 'social', name: 'Popular',        description: 'Refer 10 friends', requirement: '10 friends', target: 10, progress: 0, icon: 'social-3' },
+  { id: 'influential',    category: 'social', name: 'Influential',    description: 'Refer 25 friends', requirement: '25 friends', target: 25, progress: 0, icon: 'social-4' },
+  { id: 'legendary',      category: 'social', name: 'Legendary',      description: 'Refer 50 friends', requirement: '50 friends', target: 50, progress: 0, icon: 'social-5' },
+
+  // ---- Special ---- ("Zelo Legend" depends dynamically on the real
+  // total-unlocked count — see isBadgeUnlocked() in script.js, not a
+  // static progress/target comparison like every other badge here)
+  { id: 'early-bird',  category: 'special', name: 'Early Bird',  description: 'Joined early',         requirement: 'Joined early',  target: 1,  progress: 0, binary: true, icon: 'special-1' },
+  { id: 'zelo-fan',    category: 'special', name: 'Zelo Fan',    description: 'Use Zelo for 7 days',  requirement: '7 days',        target: 7,  progress: 0, icon: 'special-2' },
+  { id: 'vip',         category: 'special', name: 'VIP',         description: 'Use Zelo for 30 days', requirement: '30 days',       target: 30, progress: 0, icon: 'special-3' },
+  { id: 'day-one',     category: 'special', name: 'Day One',     description: 'Active since launch',  requirement: 'Since launch',  target: 1,  progress: 0, binary: true, icon: 'special-4' },
+  { id: 'zelo-legend', category: 'special', name: 'Zelo Legend', description: 'Unlock every achievement badge', requirement: 'All badges', target: 1, progress: 0, binary: true, dynamic: 'all-badges', icon: 'special-5' },
+
+  // ---- Texting ---- ("successful conversation" definition is centralized
+  // — not yet wired to a real metric, seeded at 0 like everything else)
+  { id: 'first-reply',         category: 'texting', name: 'First Reply',         description: 'Send your first Zelo-generated reply', requirement: '1 reply',    target: 1,  progress: 0, icon: 'texting-1' },
+  { id: 'quick-thinker',       category: 'texting', name: 'Quick Thinker',       description: 'Generate 10 replies',                  requirement: '10 replies', target: 10, progress: 0, icon: 'texting-2' },
+  { id: 'smooth-operator',     category: 'texting', name: 'Smooth Operator',     description: 'Send 50 improved replies',             requirement: '50 replies', target: 50, progress: 0, icon: 'texting-3' },
+  { id: 'conversation-keeper', category: 'texting', name: 'Conversation Keeper', description: 'Keep 10 conversations going',          requirement: '10 convos',  target: 10, progress: 0, icon: 'texting-4' },
+  { id: 'natural-rizz',        category: 'texting', name: 'Natural Rizz',        description: 'Complete 25 successful conversations', requirement: '25 convos',  target: 25, progress: 0, icon: 'texting-5' }
+];

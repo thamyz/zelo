@@ -4,3 +4,132 @@ autopush.sh
 .claude/skills/
 .claude/best-practices/
 node_modules/
+supabase/.temp/
+dev-credentials.js
+www/dev-credentials.js
+ios/App/App/public/dev-credentials.js
+
+# ---------------------------------------------------------------------------
+# Added 2026-10-17. The repo is PUBLIC, so it carries the source only: code,
+# docs and the cropped icons the app actually ships. Three kinds of large
+# artwork stay out (~585 MB), and none of it is needed to read or edit the code.
+# ---------------------------------------------------------------------------
+
+# 1. Generated copies of the web app. autopush.sh (and the manual sync step)
+#    rebuilds both from the root files, so committing them just stores the
+#    same bytes two more times.
+www/
+ios/App/App/public/
+
+# 2. Persona photos (500 card images + 135 profile pictures, ~141 MB) and the
+#    design-reference archive (~86 MB). Keep your local copies: a fresh clone
+#    will run, but the swipe deck will have no artwork until these are restored.
+assets/characters/
+design-refs/
+
+# 3. Raw reference sheets the icons were cropped from — source material, never
+#    loaded by the app. The cropped results next to them ARE committed.
+EXPO_SIZES_DATA.json
+assets/icons/Chats page/Chat icon 1.png
+assets/icons/Chats page/Chat icon 2.png
+assets/icons/Chats page/Chat reference 1-2.png
+assets/icons/Chats page/Glossy Blue Chat Bubble Icon.png
+assets/icons/Chats page/Glossy Blue Chat Bubble on Black.png
+assets/icons/Chats page/Glossy Orange Chat Bubble Icon.png
+assets/icons/Chats page/Glossy Orange Chat Mascot Icon.png
+assets/icons/Chats page/Glossy Purple Chat Bubble Icon (1).png
+assets/icons/Chats page/Glossy Purple Chat Bubble Icon.png
+assets/icons/Chats page/Light mode.png
+assets/icons/Chats page/New icons.png
+assets/icons/Chats page/New send button for crop.png
+assets/icons/Chats page/New send button.png
+assets/icons/Chats page/Overall layout.png
+assets/icons/Chats page/Settings in chat.png
+assets/icons/Chats page/Small message icon.png
+assets/icons/Chats page/Zelo Ai mascot.png
+assets/icons/Chats page/Zelo ai mascot dark.png
+assets/icons/Chats page/inside the ai coach in chat page.png
+assets/icons/Mascots/Main mascot.jpeg
+assets/icons/Mascots/Mini mascot.jpeg
+assets/icons/Streaks milestones/Badge new dark icon.png
+assets/icons/Streaks milestones/Badge new icon.png
+assets/icons/Streaks milestones/Comeback dark.png
+assets/icons/Streaks milestones/Comeback new icin.png
+assets/icons/Streaks milestones/Conversation Dark.png
+assets/icons/Streaks milestones/Conversation new icon.png
+assets/icons/Streaks milestones/Each badge press when unlock.png
+assets/icons/Streaks milestones/Explorer Dark.png
+assets/icons/Streaks milestones/Explorer new icon.png
+assets/icons/Streaks milestones/Layout where to put the badges icon.png
+assets/icons/Streaks milestones/New layout streak and milestone.png
+assets/icons/Streaks milestones/Number for streak dark.png
+assets/icons/Streaks milestones/Numbers for streak.png
+assets/icons/Streaks milestones/Progress dark.png
+assets/icons/Streaks milestones/Progress new icon.png
+assets/icons/Streaks milestones/Social Dark.png
+assets/icons/Streaks milestones/Social new icon.png
+assets/icons/Streaks milestones/Special Dark.png
+assets/icons/Streaks milestones/Special new icon.png
+assets/icons/Streaks milestones/Streak dark.png
+assets/icons/Streaks milestones/Streak icon new dark.png
+assets/icons/Streaks milestones/Streak icon new look.png
+assets/icons/Streaks milestones/Streak new icon.png
+assets/icons/Streaks milestones/Streak, Mission control, icons change dark.png
+assets/icons/Streaks milestones/Streak, Mission control, icons change.png
+assets/icons/Streaks milestones/Streaks shared.png
+assets/icons/Streaks milestones/Texting Dark.png
+assets/icons/Streaks milestones/Texting new icon.png
+assets/icons/_source/Ai coach history icosn.png
+assets/icons/_source/ai caoch icon.png
+assets/icons/chats-page/Minimal UI Icon Collection_ Add, Reply, Copy, Delete, Report.png
+assets/icons/chats-page/Minimalist Messaging Toolbar Icons.png
+assets/icons/chats-page/Original reference of holding reply.png
+assets/icons/chats-page/Reference for zelo hold reply.png
+assets/icons/leaderboard/Leaderboard icon.png
+assets/icons/leaderboard/Leaderboard new layout.png
+assets/icons/leaderboard/Most messages, longest streak, most level full icon.png
+assets/icons/leaderboard/Reference podium.png
+assets/icons/leaderboard/Try this new podium.png
+assets/icons/leaderboard/Use this for podium.png
+assets/icons/leaderboard/hero-podium-blank2.png
+assets/icons/leaderboard/hero-podium-noface.png
+assets/icons/leaderboard/lb-cat-level-card.png
+assets/icons/leaderboard/lb-cat-messages-card.png
+assets/icons/leaderboard/lb-cat-streak-card.png
+assets/icons/leaderboard/try-this-new-podium-stripped.png
+assets/icons/misc/Crash screen 1 icon dark.png
+assets/icons/misc/Crash screen 1 icon.png
+assets/icons/misc/Crash screen 2 icon dark.png
+assets/icons/misc/Crash screen 2 icon.png
+assets/icons/misc/Session expired 3 dark.png
+assets/icons/misc/Session expired 3.png
+assets/icons/onboarding/New ver onb 1.png
+assets/icons/onboarding/New ver onb 2.png
+assets/icons/onboarding/Notif change icon.png
+assets/icons/onboarding/Notif dark icon.png
+assets/icons/onboarding/Onboarding reference.png
+assets/icons/onboarding/Plan dark mode icon.png
+assets/icons/onboarding/Result icons.png
+assets/icons/onboarding/Thanks for trusting us icon dark.png
+assets/icons/onboarding/Thanks for trusting us icon.png
+assets/icons/onboarding/What would you like zelo to help with.png
+assets/icons/onboarding/icons in onboarding.png
+assets/icons/onboarding/onb-trial-phone.png
+assets/icons/onboarding/what you can achieve icon dark.png
+assets/icons/onboarding/what you can achieve icon.png
+assets/icons/settings/After data.png
+assets/icons/settings/Age preferences.png
+assets/icons/settings/Change email.png
+assets/icons/settings/Chat ref help.png
+assets/icons/settings/Complete flow reference.png
+assets/icons/settings/Dont have to care about the top two things of the back icon and the profile icon other than that do everything else.png
+assets/icons/settings/Email vertification and password.png
+assets/icons/settings/Forgot your password.png
+assets/icons/settings/Help improve chat ref.png
+assets/icons/settings/Home settings skipped profiles.png
+assets/icons/settings/Pastel Pink Slider Settings Icon.png
+assets/icons/settings/Pastel Pink Sliders Icon.png
+assets/icons/settings/Reference not for cropting, data.png
+assets/icons/settings/Settings icon.png
+assets/icons/settings/profile picture.png
+assets/video/Onboarding actual video.MP4

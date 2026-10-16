@@ -1068,3 +1068,36 @@ Confident, playful, opinionated, socially fluent, warm underneath but takes time
   }
 
 ];
+
+// ================================================================
+// PILOT PHOTO SETS — batch 01 (Z001-Z010)
+// ================================================================
+// Four images per persona, matching SWIPE_PHOTO_SLOTS. The T01 anchor is
+// slot 1; the MASTER_REFERENCE_DO_NOT_IMPORT source file is deliberately
+// not shipped.
+//
+// Paired by eye from the QA contact sheet against each persona's own
+// name/city, not by file order — change the Z-id on a line here to re-pair
+// a persona, nothing else needs touching.
+//
+// Two are a deliberate compromise, because this batch has no set that
+// matches them: Isha (Mumbai) and Hana (LA, East-Asian-coded name) got the
+// two remaining sets. Worth revisiting when later batches land.
+const PERSONA_PHOTO_SET = {
+  emily:    '001', // brunette, café/baking, soft — San Diego barista
+  victoria: '002', // auburn, hiking/mountains — Vancouver, travelling
+  sumiko:   '003', // East Asian, bookshop/arcade/coast — Osaka
+  tiara:    '004', // Black, boardwalk/skates, youthful — Atlanta, 19
+  zoe:      '005', // city rooftop + beach — Miami
+  isha:     '006', // COMPROMISE: no South-Asian set in this batch
+  camila:   '007', // Mediterranean, flowers/pottery — Barcelona
+  madison:  '008', // nightlife/city/food — Austin, makeup artist
+  sophia:   '009', // East Asian, gallery/dog/coffee — Manila
+  hana:     '010', // COMPROMISE: name reads East Asian, set doesn't
+};
+
+GIRL_PROFILES.forEach(p => {
+  const z = PERSONA_PHOTO_SET[p.id];
+  if (z) p.photos = [1, 2, 3, 4].map(n => `assets/characters/z${z}-${n}.jpg`);
+  if (z) p.avatar = `assets/characters/z${z}-pfp.jpg`;
+});
