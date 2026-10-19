@@ -6,8 +6,11 @@
 // wrapped, and if the tables don't exist yet (migration not applied) or the
 // user isn't signed in, it simply does nothing / keeps the record queued.
 //
-// NOT stored, ever: the pasted text, the screenshot, the conversation. Only the
+// NOT stored: the pasted text, the screenshot, or a Scan conversation. Only the
 // AI output (generated_text) plus its tone and input *source* (text|screenshot).
+// ONE deliberate exception: when a user taps "Send report" on a practice chat, that
+// chat's messages are sent with the report (submitChatReport). It is an explicit
+// action behind a sheet that says so, never automatic.
 const ZeloRecords = (() => {
   // Bump whenever the Terms / Privacy Policy text changes, so a consent row
   // proves WHICH version was accepted. PLACEHOLDER value — set it to whatever
@@ -19,6 +22,8 @@ const ZeloRecords = (() => {
   const SAVE_GENERATED_REPLIES = true;
 
   const CONSENT_QUEUE_KEY = 'zelo_pending_consents';
+  const REPORT_QUEUE_KEY  = 'zelo_pending_reports';
+  const REPORT_QUEUE_CAP  = 20;           // conversations are big; localStorage is ~5 MB
   const QUEUE_CAP = 50;
   let _flushing = false;
 
@@ -57,7 +62,7 @@ const ZeloRecords = (() => {
       const userId = _uid();
       const q = _queue();
       if (!userId && q.length) _status('consent queued (signed out)');
-      if (userId) flushOnboarding();
+      if (userId) { flushOnboarding(); flushReports(); if (typeof ZeloSupport !== 'undefined') ZeloSupport.flush(); if (typeof ZeloActivity !== 'undefined') ZeloActivity.sync(); }
       if (!userId || _flushing || typeof zeloSupabase === 'undefined') return;
       if (!q.length) return;
       _flushing = true;
@@ -100,7 +105,10 @@ const ZeloRecords = (() => {
   // written (upsert, one row per user+question) as soon as there is a session. NOT uploaded: `attracted`
   // — it is effectively sexual orientation, a special category of personal data that needs explicit
   // consent first (the analytics/sensitive-data consent screen), and `referral` is a code, not an answer.
-  const ONBOARDING_KEYS = ['gender', 'source', 'overthink', 'help', 'tone'];
+  // 'style_variant' is the onboarding A/B arm the account was shown — kept
+  // here as well as in PostHog so a signed-up user's arm survives on our own
+  // side (PostHog is what captures the people who never sign up at all).
+  const ONBOARDING_KEYS = ['gender', 'source', 'overthink', 'help', 'tone', 'style_variant'];
   const ONBOARDING_KEY = 'zelo_pending_onboarding';
   function queueOnboarding(answers) {
     try {
@@ -191,6 +199,53 @@ const ZeloRecords = (() => {
     } catch (e) { /* best effort */ }
   }
 
+
+  // ---- Reports about the AI ------------------------------------------------
+  // The user reported a reply or a whole practice chat. The conversation travels with
+  // it (capped) so the report can be understood. Queued locally when signed out or
+  // offline, or when the table still lacks the new columns (migration
+  // 20261018230000_chat_reports.sql not applied yet), and retried on sign-in/launch.
+  function _reportQueue() { try { return JSON.parse(localStorage.getItem(REPORT_QUEUE_KEY) || '[]'); } catch (e) { return []; } }
+  function _saveReportQueue(q) {
+    try { localStorage.setItem(REPORT_QUEUE_KEY, JSON.stringify(q.slice(-REPORT_QUEUE_CAP))); }
+    catch (e) { try { localStorage.setItem(REPORT_QUEUE_KEY, JSON.stringify(q.slice(-3))); } catch (e2) {} }
+  }
+  async function _sendReport(row) {
+    const uid = _uid();
+    if (!uid || typeof zeloSupabase === 'undefined') return false;
+    const { error } = await zeloSupabase.from('content_reports').insert(Object.assign({}, row, { user_id: uid }));
+    if (error) { _status('report not sent: ' + (error.message || error.code)); return false; }
+    _status('report sent');
+    return true;
+  }
+  async function flushReports() {
+    try {
+      const q = _reportQueue(); if (!q.length || !_uid()) return;
+      const left = [];
+      for (const row of q) { if (!(await _sendReport(row))) left.push(row); }
+      _saveReportQueue(left);
+    } catch (e) { /* stays queued */ }
+  }
+  // payload: { scope: 'message'|'chat', reason, note, personaId, messageId, messageText, conversation:[{id,sender,text,time}], build }
+  async function submitChatReport(payload) {
+    const row = {
+      id: _newId(),
+      reported_content_type: payload.scope === 'message' ? 'chat_message' : 'chat',
+      reported_content_id: payload.messageId || payload.personaId || null,
+      reason: String(payload.reason || 'other').slice(0, 60),
+      note: payload.note ? String(payload.note).slice(0, 500) : null,
+      persona_id: payload.personaId || null,
+      message_id: payload.messageId || null,
+      message_text: payload.messageText ? String(payload.messageText).slice(0, 4000) : null,
+      conversation: (payload.conversation || []).slice(-120).map(m => ({ id: m.id || null, sender: m.sender, text: String(m.text || '').slice(0, 4000), time: m.time })),
+      app_build: payload.build || null,
+      created_at: new Date().toISOString(),
+    };
+    try { if (await _sendReport(row)) return 'sent'; } catch (e) {}
+    const q = _reportQueue(); q.push(row); _saveReportQueue(q);
+    return 'queued';
+  }
+
   function markReplyCopied(id) {
     try {
       if (!id || !_uid() || typeof zeloSupabase === 'undefined') return;
@@ -198,5 +253,31 @@ const ZeloRecords = (() => {
     } catch (e) {}
   }
 
-  return { POLICY_VERSION, recordConsent, flushConsents, syncPracticeConsent, queueOnboarding, flushOnboarding, setReplyOutcome, logAiRequest, saveGeneratedReply, markReplyCopied, savePracticeSession, status: _status };
+  // Referrals — schema: supabase/migrations/20261019150000_referral_codes.sql (not yet applied as of
+  // writing). The code is server-issued and persisted on profiles.referral_code, not invented client-side,
+  // so a different account can actually resolve it back to this one. null = not signed in / not applied yet.
+  let _myReferralCode = null;
+  async function getMyReferralCode() {
+    if (_myReferralCode) return _myReferralCode;
+    if (!_uid() || typeof zeloSupabase === 'undefined') return null;
+    try {
+      const { data, error } = await zeloSupabase.rpc('my_referral_code');
+      if (error || !data) return null;
+      _myReferralCode = data;
+      return data;
+    } catch (e) { return null; }
+  }
+  // Called once, right after a NEW account is created, with whatever code the person typed in during
+  // onboarding (if any). Silently does nothing for an empty/invalid/own/already-used code — never
+  // reveals which case it was, so this can't be used to probe which codes are real.
+  async function redeemReferralCode(code) {
+    const c = String(code || '').trim();
+    if (!c || !_uid() || typeof zeloSupabase === 'undefined') return false;
+    try {
+      const { data, error } = await zeloSupabase.rpc('redeem_referral_code', { p_code: c });
+      return !error && data === true;
+    } catch (e) { return false; }
+  }
+
+  return { POLICY_VERSION, submitChatReport, flushReports, recordConsent, flushConsents, syncPracticeConsent, queueOnboarding, flushOnboarding, setReplyOutcome, logAiRequest, saveGeneratedReply, markReplyCopied, savePracticeSession, getMyReferralCode, redeemReferralCode, status: _status };
 })();

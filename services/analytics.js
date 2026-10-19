@@ -15,21 +15,40 @@
 const ZeloAnalytics = (() => {
   const EVENTS = {
     // Onboarding
-    step_completed:            ['step'],
-    step_abandoned:            ['step', 'time_spent_s'],
-    onboarding_finished:       [],
+    // 'style_variant' is the onboarding A/B arm (see _styleDemoVariant() in
+    // script.js). It is auto-filled by setGlobal() on every event that
+    // allow-lists it, so the funnel can be split by arm without each call
+    // site remembering to pass it. It is a single letter, never content.
+    step_completed:            ['step', 'style_variant'],
+    step_abandoned:            ['step', 'time_spent_s', 'style_variant'],
+    onboarding_finished:       ['style_variant'],
+    style_demo_shown:          ['style_variant'],
+    style_demo_picked:         ['style_variant', 'tone', 'position', 'repicked'],
     // Core feature usage
-    scan_started:              ['source'],
-    scan_completed:            ['source'],
-    tone_selected:             ['tone'],
+    scan_started:              ['source', 'style_variant'],
+    scan_completed:            ['source', 'style_variant'],
+    tone_selected:             ['tone', 'style_variant'],
     reply_regenerated:         ['tone'],
     reply_favorited:           ['tone'],
     reply_shared:              ['tone'],
     reply_reported:            ['tone'],
     // Practice mode
     persona_selected:          ['persona_id'],
-    practice_session_started:  ['mode', 'difficulty', 'resumed'],
-    practice_session_ended:    ['duration_s', 'outcome'],
+    // 'drive_arm' (low|mid|high) is how much a medium/hard persona carries a
+    // dying conversation — see DRIVE_LEVELS in script.js. 'left_after' is what
+    // the chat was waiting on when the user left (a short fixed set of codes),
+    // the counts are numbers; nothing here is message content.
+    // boundary_warning / chat_blocked: a girl set a limit (1st, 2nd) / blocked the chat (3rd); nudge_sent: she texted after a quiet spell. Counts and the difficulty only.
+    boundary_warning:          ['n', 'difficulty'],
+    chat_blocked:              ['difficulty', 'user_msgs', 'drive_arm'],
+    nudge_sent:                ['n', 'difficulty', 'drive_arm'],
+    // chat_reported: the user reported an AI reply or a conversation. Reason code, scope and difficulty only; the conversation itself goes to Supabase, never to PostHog.
+    chat_reported:             ['reason', 'scope', 'difficulty', 'drive_arm'],
+    // support_sent: counts only (which form, and whether it was sent or queued). feature_requested: whether the request was held for review. Never any text.
+    support_sent:              ['kind', 'result'],
+    feature_requested:         ['held'],
+    practice_session_started:  ['mode', 'difficulty', 'resumed', 'drive_arm'],
+    practice_session_ended:    ['duration_s', 'outcome', 'drive_arm', 'difficulty', 'user_msgs', 'left_after', 'ack_turns', 'carried'],
     // Gamification
     xp_earned:                 ['source', 'amount'],
     level_up:                  ['level'],
@@ -37,9 +56,9 @@ const ZeloAnalytics = (() => {
     streak_broken:             ['days'],
     badge_earned:              ['badge_id'],
     // Monetization
-    paywall_viewed:            ['screen', 'plan', 'price'],
-    trial_started:             ['plan', 'price'],
-    subscription_started:      ['plan', 'price'],
+    paywall_viewed:            ['screen', 'plan', 'price', 'style_variant'],
+    trial_started:             ['plan', 'price', 'style_variant'],
+    subscription_started:      ['plan', 'price', 'style_variant'],
     restore_purchase_tapped:   [],
     payment_failed:            ['reason'],
     // Ads
@@ -50,9 +69,9 @@ const ZeloAnalytics = (() => {
     reply_feedback:            ['outcome'],
     app_error:                 ['kind', 'name', 'where'],
     // App lifecycle
-    app_opened:                [],
+    app_opened:                ['drive_arm'],
     app_backgrounded:          [],
-    session_length:            ['duration_s'],
+    session_length:            ['duration_s', 'drive_arm'],
     // Referral
     referral_link_shared:      [],
     referral_signup_completed: [],
@@ -67,12 +86,21 @@ const ZeloAnalytics = (() => {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Posthog) || null;
   }
 
+  // Properties attached to every event that allow-lists them (experiment arm
+  // and the like). They go through the exact same allow-list + type checks as
+  // a passed-in property, so this can't be used to smuggle content through.
+  const _globals = {};
+  function setGlobal(key, value) {
+    if (value == null || value === '') delete _globals[key];
+    else _globals[key] = value;
+  }
+
   function _clean(event, props) {
     const allowed = EVENTS[event];
     const out = {};
-    if (!props) return out;
+    const merged = Object.assign({}, _globals, props || {});
     for (const k of allowed) {
-      const v = props[k];
+      const v = merged[k];
       if (typeof v === 'boolean') out[k] = v;
       else if (typeof v === 'number' && isFinite(v)) out[k] = Math.round(v * 100) / 100;
       else if (typeof v === 'string' && v.length > 0 && v.length <= MAX_STRING && !/[\r\n]/.test(v)) out[k] = v;
@@ -120,6 +148,10 @@ const ZeloAnalytics = (() => {
       surveys: false,
     }).then(() => true, () => false);
 
+    // The arm is assigned in script.js (after this runs on a first launch), so
+    // pick up one saved on an earlier launch now, or this launch's app_opened
+    // would be the one event retention is measured from and it would lack it.
+    try { const arm = localStorage.getItem('zelo_drive_arm'); if (arm) setGlobal('drive_arm', arm); } catch (e) {}
     track('app_opened');
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
@@ -135,5 +167,5 @@ const ZeloAnalytics = (() => {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  return { track, setOptOut, EVENTS };
+  return { track, setOptOut, setGlobal, EVENTS };
 })();

@@ -146,6 +146,7 @@ const AUTH = (() => {
     if (!userId || !name || !age) return;
     await zeloSupabase.from('profiles').insert({ id: userId, display_name: name, age: Number(age) }).then(() => {}, () => {});
     localStorage.setItem('zelo_setup_done', '1');
+    if (typeof window._redeemPendingReferralIfAny === 'function') window._redeemPendingReferralIfAny();
   }
 
   function startSignIn(cb, onNoAccount) {
@@ -213,6 +214,7 @@ const AUTH = (() => {
     if (termsWrap) termsWrap.hidden = !isSignup;
 
     el.querySelector('#auth-submit-btn').textContent = isSignup ? 'Create account' : 'Sign in';
+    { const b = el.querySelector('#auth-submit-btn'); b.disabled = false; b.classList.remove('auth-submit-btn--busy'); }
     el.querySelector('#auth-toggle-btn').textContent = isSignup
       ? 'Already have an account? Sign in'
       : (_pending && _pending.onNoAccount ? 'New to Zelo? Get started' : "Don't have an account? Sign up");
@@ -245,7 +247,28 @@ const AUTH = (() => {
     document.getElementById('auth-email-step')?.classList.remove('auth-email-step--show');
   }
 
+  // Instant feedback on the submit button. Signing in is two network round trips
+  // (the sign-in, then loading the profile) before the sheet closes; with nothing
+  // changing on screen in the meantime the press looked like it had not registered.
+  function _setSubmitBusy(busy) {
+    const btn = document.getElementById('auth-submit-btn');
+    if (!btn) return;
+    btn.disabled = !!busy;
+    btn.classList.toggle('auth-submit-btn--busy', !!busy);
+    const signup = _emailMode === 'signup';
+    btn.textContent = busy ? (signup ? 'Creating account\u2026' : 'Signing in\u2026') : (signup ? 'Create account' : 'Sign in');
+  }
+
   async function handleEmailSubmit() {
+    try { await _handleEmailSubmit(); }
+    catch (e) {
+      _setSubmitBusy(false);
+      const errEl = document.getElementById('auth-email-error');
+      if (errEl) errEl.textContent = "Can't reach Zelo. Check your internet connection and try again.";
+    }
+  }
+
+  async function _handleEmailSubmit() {
     const email    = (document.getElementById('auth-email-input')?.value    || '').trim();
     const password =  document.getElementById('auth-password-input')?.value || '';
     const errEl    =  document.getElementById('auth-email-error');
@@ -260,16 +283,18 @@ const AUTH = (() => {
       return;
     }
 
+    _setSubmitBusy(true);
     if (_emailMode === 'signup') {
       _pendingIsOnboardingSignIn = false;
       // Signing up IS the agreement (stated on the form): that is the consent moment.
       if (typeof ZeloRecords !== 'undefined') ZeloRecords.recordConsent('terms_and_privacy', true);
       const { data, error } = await zeloSupabase.auth.signUp({ email, password });
-      if (error) { if (errEl) errEl.textContent = await _friendlyAuthError(error, email, 'signup'); return; }
+      if (error) { _setSubmitBusy(false); if (errEl) errEl.textContent = await _friendlyAuthError(error, email, 'signup'); return; }
 
       if (!data?.session) {
         // Email confirmation is required before a session is issued —
         // send the user to the verification-code screen.
+        _setSubmitBusy(false);
         _showVerifyScreen(email);
       }
       // else: confirmation is disabled on this project, session issued
@@ -288,9 +313,11 @@ const AUTH = (() => {
         _pendingIsOnboardingSignIn = false;
         if (_isUnconfirmedEmailError(error)) {
           await zeloSupabase.auth.resend({ type: 'signup', email }).catch(() => {});
+          _setSubmitBusy(false);
           _showVerifyScreen(email);
           return;
         }
+        _setSubmitBusy(false);
         if (errEl) errEl.textContent = await _friendlyAuthError(error, email, 'signin');
         return;
       }
@@ -604,16 +631,27 @@ const AUTH = (() => {
       const insert = userId
         ? zeloSupabase.from('profiles').insert({ id: userId, display_name: onboardingName, age: Number(onboardingAge) }).then(() => {}, () => {})
         : Promise.resolve();
-      insert.finally(() => { _hideAll(); _resolvePending(); });
+      insert.finally(() => {
+        if (typeof window._redeemPendingReferralIfAny === 'function') window._redeemPendingReferralIfAny();
+        _hideAll(); _resolvePending();
+      });
       return;
     }
     if (!localStorage.getItem('zelo_setup_done')) {
       // Signing in to an account that already has a profile (fresh install, another
       // device, cleared storage, or an existing account met mid-onboarding): restore
       // it and skip the name/age setup screen.
-      _loadProfileIntoLocalStorage().then(() => {
+      _loadProfileIntoLocalStorage().then(status => {
         if (localStorage.getItem('zelo_display_name') && localStorage.getItem('zelo_user_age')) {
           localStorage.setItem('zelo_setup_done', '1');
+          _hideAll();
+          if (isOnboardingSignIn) _finishAsOnboardingSignIn();
+          else _resolvePending();
+        } else if (status === 'error') {
+          // The profile could not be READ (network, or the table's permissions), which says
+          // nothing about whether one exists. Asking a returning user for their name and age
+          // again was the unexplained screen after signing in, so carry on without it and
+          // retry next time (setup_done stays unset).
           _hideAll();
           if (isOnboardingSignIn) _finishAsOnboardingSignIn();
           else _resolvePending();
@@ -635,27 +673,34 @@ const AUTH = (() => {
         }
       });
     } else {
-      // Returning user — sync profile from Supabase into localStorage then navigate
-      _loadProfileIntoLocalStorage().then(() => {
-        _hideAll();
-        if (isOnboardingSignIn) _finishAsOnboardingSignIn();
-        else _resolvePending();
-      });
+      // Returning user: the profile is already on this device, so the sheet does not
+      // wait for another round trip to refresh it (that wait was most of what made
+      // Continue feel slow). Only the onboarding sign-in path still needs it first.
+      const refresh = _loadProfileIntoLocalStorage();
+      if (isOnboardingSignIn) refresh.then(() => { _hideAll(); _finishAsOnboardingSignIn(); });
+      else { _hideAll(); _resolvePending(); }
     }
   }
 
+  // Resolves 'found', 'none' (the account genuinely has no profile row) or 'error'
+  // (could not read it). .single() reports "no rows" as PGRST116; anything else is a
+  // failure to read, not proof that there is no profile.
   async function _loadProfileIntoLocalStorage() {
     const userId = _session?.user?.id;
-    if (!userId) return;
-    const { data, error } = await zeloSupabase
-      .from('profiles')
-      .select('display_name, age')
-      .eq('id', userId)
-      .single();
-    if (data && !error) {
-      if (data.display_name) localStorage.setItem('zelo_display_name', data.display_name);
-      if (data.age != null)  localStorage.setItem('zelo_user_age', String(data.age));
-    }
+    if (!userId) return 'error';
+    try {
+      const { data, error } = await zeloSupabase
+        .from('profiles')
+        .select('display_name, age')
+        .eq('id', userId)
+        .single();
+      if (data && !error) {
+        if (data.display_name) localStorage.setItem('zelo_display_name', data.display_name);
+        if (data.age != null)  localStorage.setItem('zelo_user_age', String(data.age));
+        return 'found';
+      }
+      return error && error.code !== 'PGRST116' ? 'error' : 'none';
+    } catch (_) { return 'error'; }
   }
 
   // ── Setup screen ───────────────────────────────────────────────

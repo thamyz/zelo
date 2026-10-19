@@ -50,7 +50,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
           media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" /></noscript>
-    <link rel="stylesheet" href="style.css?v=20261017b" />
+    <link rel="stylesheet" href="style.css?v=20261019ay" />
     <style>
       /* Guards against a flash of the main app tab (visible by default in
          the raw HTML below) before script.js has run far enough to hide it
@@ -84,6 +84,8 @@
       <h1 class="fallback-title" id="no-connection-title">Connection issue</h1>
       <p class="fallback-sub fallback-sub--1">We couldn't load this right now.</p>
       <p class="fallback-sub fallback-sub--2">Check your internet and try again.</p>
+      <p class="fallback-status" id="no-connection-status" role="status" hidden></p>
+      <span class="retry-bar" id="no-connection-bar" hidden><span></span></span>
       <button type="button" class="fallback-btn-primary" onclick="retryConnectivityCheck()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 21v-5h5"/></svg>
         Try again
@@ -97,7 +99,8 @@
       <h1 class="fallback-title">Oops!</h1>
       <p class="fallback-sub fallback-sub--1">Something went wrong on our end.</p>
       <p class="fallback-sub fallback-sub--2">Don't worry, it's not you.</p>
-      <button type="button" class="fallback-btn-primary" onclick="location.reload()">
+      <span class="retry-bar" id="crash-bar" hidden><span></span></span>
+      <button type="button" class="fallback-btn-primary" onclick="retryCrashScreen()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 21v-5h5"/></svg>
         Try again
       </button>
@@ -127,12 +130,13 @@
         <!-- Fixed header — stays at top, does not scroll -->
         <header class="app-header app-header--pad">
           <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+            <svg class="profile-btn-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="1.8"
                  stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
             </svg>
+            <img class="profile-btn-photo" hidden alt="" />
             <span class="online-dot" aria-hidden="true"></span>
           </button>
           <h1 class="scan-page-brand">
@@ -194,17 +198,17 @@
               <div class="widget-card widget-card--streak" data-widget-index="1" onclick="openJourney()">
                 <div class="widget-card-left">
                   <h3 class="widget-card-title">Your Streak</h3>
-                  <p class="widget-card-sub">Great job! You're building consistency.</p>
+                  <p class="widget-card-sub" id="streak-sub">Use Zelo today to start one.</p>
                   <span class="widget-pill widget-pill--pink">
                     <img class="widget-pill-icon" src="assets/icons/streak/widget-streak-flame-small.png" alt="" aria-hidden="true">
-                    Keep it going!
+                    <span id="streak-widget-pill">Start today</span>
                   </span>
                 </div>
                 <div class="widget-card-right">
                   <div class="widget-streak-orb">
                     <img class="widget-streak-flame" src="assets/icons/streak/widget-streak-flame.png" alt="" aria-hidden="true">
-                    <span class="widget-streak-num">0</span>
-                    <span class="widget-streak-label">days in a row</span>
+                    <span class="widget-streak-num" id="streak-num">0</span>
+                    <span class="widget-streak-label" id="streak-label">days in a row</span>
                   </div>
                 </div>
               </div>
@@ -217,28 +221,28 @@
                 </div>
                 <div class="widget-card-right widget-card-right--activity">
                   <div class="widget-activity-hero">
-                    <span class="widget-activity-num">0</span>
+                    <span class="widget-activity-num" id="act-replies">0</span>
                     <span class="widget-activity-num-label">Replies generated</span>
                   </div>
                   <div class="widget-activity-stats">
                     <div class="widget-activity-stat widget-activity-stat--purple">
                       <span class="widget-activity-stat-row">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="#7c3aed" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                        <b>0</b>
+                        <b id="act-scans">0</b>
                       </span>
                       <span class="widget-activity-stat-label">Scans</span>
                     </div>
                     <div class="widget-activity-stat">
                       <span class="widget-activity-stat-row">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="#EC4899" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                        <b>0</b>
+                        <b id="act-likes">0</b>
                       </span>
-                      <span class="widget-activity-stat-label">Favorites</span>
+                      <span class="widget-activity-stat-label">Likes</span>
                     </div>
                   </div>
-                  <div class="widget-banner widget-banner--purple">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="17" y1="17" x2="7" y2="7"/><polyline points="8 7 17 7 17 16"/></svg>
-                    You're improving!
+                  <div class="widget-banner widget-banner--orange">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="8 7 17 7 17 16"/></svg>
+                    <span id="act-banner">Keep going!</span>
                   </div>
                 </div>
               </div>
@@ -249,30 +253,14 @@
                   <p class="widget-card-sub">See how you rank among Zelo users.</p>
                   <span class="widget-pill widget-pill--pink">
                     <img class="widget-pill-icon" src="assets/icons/leaderboard/widget-leaderboard-trophy.png" alt="" aria-hidden="true">
-                    Keep climbing!
+                    Get ranked
                   </span>
                 </div>
                 <div class="widget-card-right widget-card-right--leaderboard">
-                  <span class="widget-pill widget-pill--pink widget-top3-badge">Top 3</span>
-                  <div class="widget-lb-row">
-                    <span class="widget-lb-rank widget-lb-rank--gold">1</span>
-                    <span class="widget-lb-avatar"></span>
-                    <span class="widget-lb-name">Luna</span>
-                    <span class="widget-lb-score">0</span>
+                  <div class="widget-lb-empty">
+                    <b>No rankings yet</b>
+                    <span>Be the first on the board.</span>
                   </div>
-                  <div class="widget-lb-row">
-                    <span class="widget-lb-rank widget-lb-rank--silver">2</span>
-                    <span class="widget-lb-avatar"></span>
-                    <span class="widget-lb-name">Zack</span>
-                    <span class="widget-lb-score">0</span>
-                  </div>
-                  <div class="widget-lb-row">
-                    <span class="widget-lb-rank widget-lb-rank--bronze">3</span>
-                    <span class="widget-lb-avatar"></span>
-                    <span class="widget-lb-name">Mia</span>
-                    <span class="widget-lb-score">0</span>
-                  </div>
-                  <div class="widget-banner widget-banner--pink">Your rank: #0</div>
                 </div>
               </div>
 
@@ -435,12 +423,13 @@
 
         <header class="app-header app-header--pad">
           <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+            <svg class="profile-btn-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="1.8"
                  stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
             </svg>
+            <img class="profile-btn-photo" hidden alt="" />
             <span class="online-dot" aria-hidden="true"></span>
           </button>
           <h1 class="home-brand">
@@ -495,12 +484,13 @@
         <!-- Fixed header — stays at top, does not scroll -->
         <header class="app-header app-header--pad">
           <button class="profile-btn profile-btn--avatar" onclick="openDashboard()" aria-label="Profile">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+            <svg class="profile-btn-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="1.8"
                  stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
             </svg>
+            <img class="profile-btn-photo" hidden alt="" />
             <span class="online-dot" aria-hidden="true"></span>
           </button>
           <h1 class="home-brand">
@@ -559,6 +549,7 @@
                label — tapping opens Profile & Login (see Settings 2.0) -->
           <button class="dash-profile-card" onclick="openSettingsProfileLogin()">
             <div class="dash-avatar" id="dash-avatar">Y</div>
+            <img class="dash-avatar-photo" id="dash-avatar-photo" hidden alt="" />
             <div class="dash-profile-info">
               <span class="dash-name" id="dash-name">You</span>
               <span class="dash-sub">Zelo member</span>
@@ -708,10 +699,10 @@
           <p class="refer-sub">Share Zelo with your friends and you'll earn rewards when they join.</p>
 
           <div class="refer-link-box">
-            <p class="refer-link-label">Your referral link</p>
+            <p class="refer-link-label">Your referral code</p>
             <div class="refer-link-row">
               <span class="refer-link-text" id="refer-link-text"></span>
-              <button type="button" class="refer-link-copy" onclick="copyReferralLink()" aria-label="Copy link">
+              <button type="button" class="refer-link-copy" onclick="copyReferralLink()" aria-label="Copy code">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </button>
             </div>
@@ -721,25 +712,6 @@
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
             Share with friends
           </button>
-
-          <div class="refer-share-row">
-            <button type="button" class="refer-share-app" onclick="shareReferral()">
-              <img loading="lazy" data-src="assets/icons/referral/refer-share-messages.png" alt="">
-              <span>Messages</span>
-            </button>
-            <button type="button" class="refer-share-app" onclick="shareReferral()">
-              <img loading="lazy" data-src="assets/icons/referral/refer-share-whatsapp.png" alt="">
-              <span>WhatsApp</span>
-            </button>
-            <button type="button" class="refer-share-app" onclick="shareReferral()">
-              <img loading="lazy" data-src="assets/icons/referral/refer-share-instagram.png" alt="">
-              <span>Instagram</span>
-            </button>
-            <button type="button" class="refer-share-app" onclick="shareReferral()">
-              <img loading="lazy" data-src="assets/icons/referral/refer-share-more.png" alt="">
-              <span>More</span>
-            </button>
-          </div>
 
           <div class="refer-howitworks">
             <h2 class="refer-howitworks-title">How it works</h2>
@@ -767,10 +739,12 @@
       <!-- 02 — PROFILE & LOGIN (rebuilt against Profile setting page.png —
            see openSettingsProfileLogin()/pl*() functions in script.js) -->
       <div class="screen" id="screen-settings-profile-login">
+        <div class="pl-hero-extend" aria-hidden="true"></div>
+        <img class="pl-mascot-peek" id="pl-mascot-peek" src="assets/icons/settings/pl-mascot-peek.png" alt="" aria-hidden="true">
         <div class="pl-hero">
           <img loading="lazy" class="pl-hero-bg" data-src="assets/icons/settings/Background icon.png" alt="" />
-          <button type="button" class="pl-hero-back" onclick="popScreen()" aria-label="Back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <button type="button" class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
           <h1 class="pl-hero-title">Profile &amp; Login</h1>
           <p class="pl-hero-sub">Manage your account and sign-in details.</p>
@@ -778,7 +752,9 @@
         <div class="settings2-layout">
           <div class="pl-avatar-wrap">
             <button type="button" class="pl-avatar-btn" onclick="plPickPhoto()" aria-label="Change profile photo">
-              <span class="settings2-avatar pl-avatar" id="pl-avatar">P</span>
+              <span class="pl-avatar pl-avatar--placeholder" id="pl-avatar">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8.2" r="3.6"/><path d="M12 13.2c-4.1 0-7.4 2.4-7.4 5.4 0 .7.5 1.2 1.2 1.2h12.4c.7 0 1.2-.5 1.2-1.2 0-3-3.3-5.4-7.4-5.4z"/></svg>
+              </span>
               <img loading="lazy" class="pl-avatar-photo" id="pl-avatar-photo" hidden alt="" />
               <span class="pl-camera-badge" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3l-1.5 2H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.5L15 3H9zm3 5.5A4.5 4.5 0 1 1 7.5 13 4.5 4.5 0 0 1 12 8.5z"/></svg>
@@ -786,7 +762,26 @@
             </button>
             <input type="file" id="pl-photo-input" accept="image/*" hidden onchange="plPhotoSelected(event)" />
             <p class="pl-avatar-label">Profile photo</p>
-            <p class="pl-avatar-sub">Tap to change your photo</p>
+            <p class="pl-avatar-sub" id="pl-avatar-sub">Tap to change your photo</p>
+            <button type="button" class="pl-avatar-remove" id="pl-avatar-remove" onclick="plRemovePhoto()" hidden>Remove photo</button>
+          </div>
+
+          <!-- Crop/reposition sheet — opened right after a photo is picked, before it's ever saved.
+               Drag to reposition, slider to zoom; Use Photo renders exactly what's inside the circle
+               onto a canvas at a fixed output size. Nothing is written to zelo_profile_photo until
+               confirmed, so Cancel genuinely discards the pick. -->
+          <div class="pl-crop-overlay" id="pl-crop-overlay" hidden>
+            <div class="pl-crop-sheet">
+              <div class="pl-crop-bar">
+                <button type="button" class="pl-crop-cancel" onclick="plCropCancel()">Cancel</button>
+                <b>Move and Scale</b>
+                <button type="button" class="pl-crop-use" onclick="plCropConfirm()">Use Photo</button>
+              </div>
+              <div class="pl-crop-stage" id="pl-crop-stage">
+                <img id="pl-crop-img" alt="" draggable="false" />
+              </div>
+              <input type="range" class="pl-crop-zoom" id="pl-crop-zoom" min="1" max="3" step="0.01" value="1" oninput="plCropZoom(this.value)">
+            </div>
           </div>
 
           <div class="settings2-section">
@@ -1280,7 +1275,7 @@
       <div class="screen" id="screen-settings-skipped-profiles">
         <div class="settings2-layout skipped-layout">
           <div class="skipped-top-row">
-            <button class="back-btn back-btn--pink" onclick="popScreen()" aria-label="Back">
+            <button class="back-btn" onclick="popScreen()" aria-label="Back">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
             </button>
             <h1 class="skipped-title">Skipped Profiles</h1>
@@ -1799,36 +1794,92 @@
 
           <p class="settings2-section-label">Need more help?</p>
           <div class="settings2-card">
-            <a class="settings2-row" href="mailto:support@zelo.app?subject=Report%20a%20problem">
+            <button class="settings2-row" onclick="openFeatureRequests()">
+              <span class="settings2-icon settings2-icon--glyph" aria-hidden="true"><img loading="lazy" data-src="assets/icons/settings/settings2-icon-feature-request.png" alt=""></span>
+              <span class="settings2-row-text"><b>Request a feature</b><span>See what others want, vote, add yours</span></span>
+              <span class="settings2-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="settings2-row" onclick="openSupport('problem')">
               <img loading="lazy" class="settings2-icon" data-src="assets/icons/settings/settings2-icon-report.png" alt="" aria-hidden="true">
               <span class="settings2-row-text"><b>Report a problem</b><span>Let us know what went wrong</span></span>
               <span class="settings2-chevron" aria-hidden="true">›</span>
-            </a>
-            <button class="settings2-row" onclick="pushScreen('settings-contact-support')">
+            </button>
+            <button class="settings2-row" onclick="openSupport('contact')">
               <img loading="lazy" class="settings2-icon" data-src="assets/icons/settings/settings2-icon-contact.png" alt="" aria-hidden="true">
-              <span class="settings2-row-text"><b>Contact support</b><span>We'll get back to you</span></span>
+              <span class="settings2-row-text"><b>Contact support</b><span>Ask us anything</span></span>
               <span class="settings2-chevron" aria-hidden="true">›</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- CONTACT SUPPORT -->
-      <div class="screen" id="screen-settings-contact-support">
+      <!-- FEATURE REQUESTS (board) -->
+      <div class="screen" id="screen-settings-feature-requests">
         <div class="screen-header">
           <button class="back-btn" onclick="popScreen()" aria-label="Back">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
-          <span class="screen-title">Contact Support</span>
         </div>
-        <div class="settings2-layout">
-          <p class="settings2-lede">Send us a message and we'll get back to you.</p>
-          <div class="settings2-field">
-            <label class="settings2-field-label">Your message</label>
-            <textarea id="settings2-support-message" class="settings2-textarea" rows="5" placeholder="Describe your issue..."></textarea>
+        <div class="fr-layout">
+          <div class="fr-titlebar">
+            <h1 class="fr-title">Feature Requests</h1>
+            <button type="button" class="fr-new" onclick="openFeatureNew()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New
+            </button>
           </div>
-          <button class="btn2 btn2-primary" onclick="sendSettingsSupportMessage()">Send Message</button>
-          <p class="settings2-footnote">We typically reply within 24 hours.</p>
+          <label class="fr-search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.5" y2="16.5"/></svg>
+            <input id="fr-search" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="none" placeholder="Search requests" oninput="frSearchInput()">
+          </label>
+          <div class="fr-seg" id="fr-seg" role="tablist">
+            <span class="fr-seg-pill" aria-hidden="true"></span>
+            <button type="button" role="tab" class="active" data-sort="top" onclick="frSetSort('top')">Most voted</button>
+            <button type="button" role="tab" data-sort="new" onclick="frSetSort('new')">Newest</button>
+          </div>
+          <div class="fr-list" id="fr-list" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- FEATURE REQUEST (one request + comments) -->
+      <div class="screen" id="screen-settings-feature-detail">
+        <div class="screen-header">
+          <button class="back-btn" onclick="frDetailBack()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="fr-layout fr-detail">
+          <div class="fr-titlebar"><h1 class="fr-title">Request</h1></div>
+          <div class="fr-detail-card" id="frd-card"></div>
+          <p class="fr-comments-label" id="frd-count"></p>
+          <div class="fr-comments" id="frd-comments" aria-live="polite"></div>
+        </div>
+        <form class="fr-composer" id="frd-composer" onsubmit="frdSendComment(); return false;">
+          <input id="frd-input" type="text" maxlength="1000" autocomplete="off" enterkeyhint="send" placeholder="Add a comment…" oninput="frdInput()">
+          <button type="submit" id="frd-send" class="fr-composer-send" aria-label="Send comment" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- NEW FEATURE REQUEST -->
+      <div class="screen" id="screen-settings-feature-new">
+        <div class="screen-header">
+          <button class="back-btn" onclick="popScreen()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="fr-layout">
+          <div class="fr-titlebar"><h1 class="fr-title" id="fr-new-heading">New request</h1></div>
+          <div class="fr-form-card">
+            <div class="fr-form-row"><label for="fr-new-title">Title</label><span><b id="fr-new-title-n">0</b>/120</span></div>
+            <input id="fr-new-title" class="fr-form-input" type="text" maxlength="120" autocomplete="off" placeholder="What should Zelo do?" oninput="frNewInput()">
+            <div class="fr-form-row fr-form-row--gap"><label for="fr-new-body">Details</label><span><b id="fr-new-body-n">0</b>/2000</span></div>
+            <textarea id="fr-new-body" class="fr-form-input fr-form-area" rows="6" maxlength="2000" placeholder="Describe the feature and why it would help you." oninput="frNewInput()"></textarea>
+          </div>
+          <p class="fr-form-note" id="fr-new-note">Search first in case someone already asked. Requests are checked automatically before they go live.</p>
+          <p class="fr-form-error" id="fr-new-error" hidden></p>
+          <button type="button" class="fr-submit" id="fr-new-send" disabled onclick="frSubmitNew()">Submit request</button>
         </div>
       </div>
 
@@ -2037,6 +2088,15 @@
             </button>
           </div>
           <div class="chat-chips" id="chat-chips" hidden></div>
+          <!-- Shown instead of the composer once she has blocked you (see _blockChat / _syncBlockedUI). -->
+          <div class="chat-blocked" id="chat-blocked" hidden>
+            <p class="chat-blocked-title" id="chat-blocked-title">Blocked</p>
+            <p class="chat-blocked-sub">She stopped replying after repeated messages that crossed the line. You can start the chat over, or delete it.</p>
+            <div class="chat-blocked-actions">
+              <button type="button" class="chat-blocked-btn chat-blocked-btn--primary" onclick="chatBlockedReset()">Reset chat</button>
+              <button type="button" class="chat-blocked-btn chat-blocked-btn--danger" onclick="chatBlockedDelete()">Delete chat</button>
+            </div>
+          </div>
           <div class="chat-input-row">
             <button class="aicoach-entry-btn" id="chat-aicoach-entry-btn" onclick="openAiCoachFromChat()" aria-label="Ask AI Coach">
               <img loading="lazy" data-src="assets/icons/chats-page/chat-aicoach-icon.png" alt="" aria-hidden="true">
@@ -2114,6 +2174,12 @@
               <span class="chat-settings-chevron" aria-hidden="true">›</span>
             </button>
             <div class="chat-settings-divider"></div>
+            <button class="chat-settings-row" onclick="chatSettingsReport()">
+              <svg class="chat-settings-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
+              <span class="chat-settings-row-text">Report a Problem</span>
+              <span class="chat-settings-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="chat-settings-divider"></div>
             <button class="chat-settings-row" onclick="confirmChatSettingsReset()">
               <svg class="chat-settings-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
               <span class="chat-settings-row-text">Reset Chat</span>
@@ -2134,6 +2200,52 @@
                 <span class="settings2-toggle-slider"></span>
               </span>
             </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact support / Report a problem: a mail-style sheet that slides up inside the app. Filled by openSupport(); sent by mailSend(). -->
+      <div class="chat-settings-sheet mail-sheet" id="mail-sheet" hidden>
+        <div class="chat-settings-backdrop" onclick="mailCancel()"></div>
+        <div class="chat-settings-sheet-wrap">
+          <div class="chat-settings-panel mail-panel" id="mail-panel">
+            <div class="mail-bar">
+              <button type="button" class="mail-cancel" onclick="mailCancel()">Cancel</button>
+              <b class="mail-title" id="mail-title">Contact Support</b>
+              <button type="button" class="mail-send" id="mail-send" onclick="mailSend()" aria-label="Send" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              </button>
+            </div>
+            <div class="mail-row"><span>To:</span><b>Zelo Support</b></div>
+            <div class="mail-row"><span>Subject:</span><b id="mail-subject">Contact support</b></div>
+            <textarea class="mail-text" id="mail-text" maxlength="4000" aria-label="Your message" oninput="mailInput()"></textarea>
+            <p class="mail-hint">Please describe your issue above this line.</p>
+            <div class="mail-attach">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>
+              <span class="mail-attach-text"><b id="mail-file">zelo-contact-log.txt</b><span id="mail-size">1 KB</span></span>
+            </div>
+            <button type="button" class="mail-open-native" onclick="mailOpenNative()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z" opacity="0"/><path d="M4 7l8 6 8-6M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/></svg>
+              Open in Mail instead
+            </button>
+            <p class="mail-error" id="mail-error" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report a problem with the AI (from a held message or the chat settings). Filled and sent by openReportSheet()/submitReport(). -->
+      <div class="chat-settings-sheet report-sheet" id="report-sheet" hidden>
+        <div class="chat-settings-backdrop" onclick="closeReportSheet()"></div>
+        <div class="chat-settings-sheet-wrap">
+          <div class="chat-settings-panel report-panel" id="report-panel">
+            <div class="chat-settings-handle" aria-hidden="true"></div>
+            <h3 class="report-title" id="report-title">Report a problem</h3>
+            <p class="report-sub" id="report-sub">What went wrong?</p>
+            <div class="report-reasons" id="report-reasons" role="radiogroup" aria-label="Reason"></div>
+            <textarea class="report-note" id="report-note" rows="2" maxlength="500" placeholder="Anything else we should know? (optional)"></textarea>
+            <p class="report-consent">Sending shares <b>this whole chat</b> with Zelo so we can review it. <span hidden id="report-name">her</span></p>
+            <button type="button" class="report-send" id="report-send" onclick="submitReport()" disabled>Send report</button>
+            <button type="button" class="report-cancel" onclick="closeReportSheet()">Cancel</button>
           </div>
         </div>
       </div>
@@ -2558,7 +2670,7 @@
           <div class="tz-options" id="tz-options"></div>
           <span class="tz-spacer"></span>
           <button class="generate-btn tz-next" id="tz-next" onclick="tellZeloNext()">
-            <span id="tz-next-label">Next</span>
+            <span class="tz-next-label" id="tz-next-label">Next</span>
             <svg class="tz-next-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
@@ -2628,7 +2740,7 @@
                      playback is driven entirely by _armCineShowcaseCycle() in
                      script.js, in lockstep with .cine-phone's fly-in/hold/fly-out
                      animation (see that CSS rule). -->
-                <video class="cine-phone-video" id="cine-showcase-video" muted playsinline preload="auto">
+                <video class="cine-phone-video" id="cine-showcase-video" muted playsinline preload="auto" poster="assets/video/onboarding-showcase-poster.jpg">
                   <source src="assets/video/onboarding-showcase-demo.mp4" type="video/mp4">
                 </video>
               </div>
@@ -2866,27 +2978,36 @@
           </div>
         </section>
 
-        <!-- ============ Step 7 — Tone (single-select, with descriptions) ============ -->
-        <section class="cine-screen cine-screen--q" data-screen="7">
+        <!-- ============ Step 7 — Which reply sounds like you ============
+             A scripted demo of the real Scan feature: a persona texts, the
+             user picks the reply they'd actually send, and the style behind
+             that reply (STYLE_LABELS, the same seven Scan uses) becomes the
+             one Zelo leads with. The thread, the choices and the result are
+             all built by cineRunStyleEntrance() (script.js) so the copy and
+             the style ids live in one place. No AI call — the user isn't
+             signed in yet at this step, so every line here is scripted. -->
+        <section class="cine-screen cine-screen--q cine-screen--style" data-screen="7">
           <div class="cine-scroll">
-            <h2 class="cine-title">Let's make Zelo<br>sound like <span class="hl">you.</span></h2>
-            <p class="cine-lede">Which tone fits you best?</p>
-            <div class="cine-opts" id="cine-opts-tone">
-              <button type="button" class="cine-opt cine-opt--desc" onclick="cinePickOne('tone','playful',this)">
-                <span class="cine-opt-tile cine-opt-tile--emoji">🥰</span>
-                <span class="cine-opt-textcol"><span class="cine-opt-name">Playful</span><span class="cine-opt-desc">Light, fun and flirty replies that keep it interesting.</span></span>
-                <span class="cine-radio"></span>
-              </button>
-              <button type="button" class="cine-opt cine-opt--desc" onclick="cinePickOne('tone','chill',this)">
-                <span class="cine-opt-tile cine-opt-tile--emoji">😎</span>
-                <span class="cine-opt-textcol"><span class="cine-opt-name">Chill</span><span class="cine-opt-desc">Relaxed and casual like a natural conversation.</span></span>
-                <span class="cine-radio"></span>
-              </button>
-              <button type="button" class="cine-opt cine-opt--desc" onclick="cinePickOne('tone','direct',this)">
-                <span class="cine-opt-tile cine-opt-tile--emoji">💬</span>
-                <span class="cine-opt-textcol"><span class="cine-opt-name">Direct</span><span class="cine-opt-desc">Straight to the point and confident.</span></span>
-                <span class="cine-radio"></span>
-              </button>
+            <h2 class="cine-title">Which one would<br>you actually <span class="hl">send?</span></h2>
+            <p class="cine-lede">She just texted this.</p>
+
+            <div class="sty-chat">
+              <div class="sty-chat-head">
+                <img class="sty-chat-pfp" src="assets/characters/z019-pfp.jpg" alt="" />
+                <span class="sty-chat-who">
+                  <span class="sty-chat-name">Kendra, 24</span>
+                  <span class="sty-chat-sub">Practice conversation</span>
+                </span>
+              </div>
+              <div class="sty-thread" id="cine-style-thread"></div>
+            </div>
+
+            <div class="sty-opts" id="cine-style-opts"></div>
+
+            <div class="sty-result" id="cine-style-result" hidden>
+              <p class="sty-result-label" id="cine-style-result-label"></p>
+              <p class="sty-result-sub" id="cine-style-result-sub"></p>
+              <button type="button" class="sty-result-again" onclick="cineStylePickAgain()">Pick a different one</button>
             </div>
           </div>
         </section>
@@ -2894,9 +3015,11 @@
         <!-- ============ Step 8 — Referral code (optional) ============
              No shared bottom CTA (noCta:true) — Continue and Skip are both
              just cineReferralContinue(); the code is optional, so either
-             button advances the same way. Apply only stores the code
-             locally (zelo_onb_referral) — there's no redemption backend to
-             validate it against yet. -->
+             button advances the same way. Apply stores the code locally
+             (zelo_onb_referral) — actual redemption (crediting the real
+             referrer) happens once an account exists: script.js
+             _redeemPendingReferralIfAny(), called from services/auth.js
+             right after a brand-new profile is created. -->
         <section class="cine-screen cine-screen--referral" data-screen="8">
           <div class="cine-scroll">
             <h2 class="cine-title">Enter referral code<br><span class="hl">(optional)</span></h2>
@@ -2993,79 +3116,37 @@
           </div>
         </section>
 
-        <!-- ============ Step 13 — Your Zelo Plan is ready ============
-             Real personalization: cineRunPlanEntrance() (script.js) reads
-             cineAnswers (collected in steps 4-7) and fills in the tone
-             icon/label/description, the focus bullets, and the challenge
-             description live — see that function for the exact mapping.
-             The reference mock is assets/icons/onboarding/Reference results.png. -->
-        <section class="cine-screen cine-screen--hero" data-screen="13">
+        <!-- ============ Step 13 — You're all set ============
+             Replaces the old four-card recap of the user's own answers (which
+             restated what they'd just typed and ended in nothing). This names
+             the goal they picked and then shows the three things they'll
+             actually do first, in order. cineRunPlanEntrance() fills the name,
+             the goal line and the reply style from cineAnswers. -->
+        <section class="cine-screen cine-screen--hero cine-screen--ready" data-screen="13">
           <div class="cine-scroll">
-            <img class="cine-hero-img cine-hero-img--sm" src="assets/icons/onboarding/onb-plan.png" alt="" />
-            <h2 class="cine-title">Your Zelo Plan<br><span class="hl">is ready.</span></h2>
-            <p class="cine-lede">Built around your goals.</p>
+            <img class="cine-hero-img cine-ready-hero" src="assets/icons/aicoach-topics/mascot-brand.png" alt="" />
+            <h2 class="cine-title">Okay, here's<br>your <span class="hl">setup.</span></h2>
+            <p class="cine-lede">Based on what you picked.</p>
 
-            <!-- Card 1 — Your style (from cineAnswers.tone) -->
-            <div class="cine-plan2-card">
-              <span class="cine-plan2-ic"><img id="cine-plan-style-icon" src="assets/icons/onboarding/onb-plan-tone-playful.png" alt="" /></span>
-              <div class="cine-plan2-body">
-                <div class="cine-plan2-toprow">
-                  <p class="cine-plan2-eyebrow">Your style</p>
-                  <span class="cine-plan2-badge">That's you</span>
-                </div>
-                <p class="cine-plan2-value" id="cine-plan-style-value">Playful</p>
-                <p class="cine-plan2-desc" id="cine-plan-style-desc">Light, fun and easygoing conversations.</p>
+            <div class="cine-ready-card">
+              <div class="cine-ready-step">
+                <span class="cine-ready-eyebrow">Your reply style</span>
+                <span class="cine-ready-value" id="cine-ready-style">Smooth</span>
+                <span class="cine-ready-note">We'll start with replies like the one you picked.</span>
+              </div>
+              <div class="cine-ready-step">
+                <span class="cine-ready-eyebrow">What you're working on</span>
+                <span class="cine-ready-value" id="cine-ready-goal">Keeping conversations going</span>
+                <span class="cine-ready-note" id="cine-ready-goal-note">Getting past the awkward "what do i say now" moments.</span>
+              </div>
+              <div class="cine-ready-step">
+                <span class="cine-ready-eyebrow">What you'll get</span>
+                <span class="cine-ready-value">Replies + practice chats</span>
+                <span class="cine-ready-note">Get help with real texts, and practice without the pressure.</span>
               </div>
             </div>
 
-            <!-- Card 2 — Your focus (from cineAnswers.help, up to 2 shown) -->
-            <div class="cine-plan2-card">
-              <span class="cine-plan2-ic cine-plan2-ic--flat"><img src="assets/icons/onboarding/onb-plan-focus-target.png" alt="" /></span>
-              <div class="cine-plan2-body">
-                <p class="cine-plan2-eyebrow">Your focus</p>
-                <ul class="cine-plan2-bullets" id="cine-plan-focus-list">
-                  <li><span class="cine-plan2-dot"></span>Knowing what to say</li>
-                  <li><span class="cine-plan2-dot"></span>Keeping conversations going</li>
-                </ul>
-              </div>
-            </div>
-
-            <!-- Card 3 — Your challenge (from cineAnswers.overthink + cineAnswers.help) -->
-            <div class="cine-plan2-card">
-              <span class="cine-plan2-ic" id="cine-plan-challenge-ic"><img id="cine-plan-challenge-icon" src="assets/icons/onboarding/onb-plan-brain.png" alt="" /></span>
-              <div class="cine-plan2-body">
-                <p class="cine-plan2-eyebrow">Your challenge</p>
-                <p class="cine-plan2-value" id="cine-plan-challenge-value">Overthinking</p>
-                <p class="cine-plan2-desc" id="cine-plan-challenge-desc">We'll help you respond without getting stuck on every word.</p>
-              </div>
-            </div>
-
-            <!-- Card 4 — Zelo will adapt to (static — describes what adapts, not a value) -->
-            <div class="cine-plan2-card">
-              <span class="cine-plan2-ic cine-plan2-ic--bare"><img src="assets/icons/aicoach-topics/mascot-brand.png" alt="" /></span>
-              <div class="cine-plan2-body">
-                <p class="cine-plan2-eyebrow">Zelo will adapt to</p>
-                <div class="cine-plan2-adapt">
-                  <span class="cine-plan2-adapt-col">
-                    <span class="cine-plan2-adapt-ic cine-plan2-adapt-ic--bleed"><img src="assets/icons/onboarding/onb-setup-chat.png" alt="" /></span>
-                    Your tone
-                  </span>
-                  <span class="cine-plan2-adapt-col">
-                    <span class="cine-plan2-adapt-ic"><img src="assets/icons/onboarding/onb-plan-adapt-goals.png" alt="" /></span>
-                    Your goals
-                  </span>
-                  <span class="cine-plan2-adapt-col">
-                    <span class="cine-plan2-adapt-ic"><img src="assets/icons/onboarding/onb-plan-adapt-practice.png" alt="" /></span>
-                    Your practice level
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="cine-plan2-banner">
-              <span class="cine-plan2-banner-ic"><img src="assets/icons/onboarding/onb-plan-banner-heart.png" alt="" /></span>
-              <p>The more you use Zelo, the better it gets at suggesting replies that feel like you.</p>
-            </div>
+            <p class="cine-ready-foot">You can change any of this later in Settings.</p>
           </div>
         </section>
 
@@ -4006,7 +4087,7 @@
             <button class="lb-tab" id="lb-time-alltime" onclick="setLbTimeFilter('alltime')">All Time</button>
           </div>
 
-          <p class="lb-timer"><span aria-hidden="true">&#9201;&#65039;</span> This week ends in <span class="lb-timer-value">2d 14h 32m</span></p>
+          <p class="lb-timer" id="lb-timer"><span aria-hidden="true">&#9201;&#65039;</span> <span id="lb-timer-label">This week ends in</span> <span class="lb-timer-value" id="lb-timer-value"></span></p>
 
           <!-- Everything from here down scrolls together (cards/tabs/timer
                above stay fixed). Podium illustration is a real crop, not
@@ -4017,6 +4098,11 @@
                renderLeaderboard() (see .lb-podium-badge/-name/-score/-unit
                in CSS for the exact per-rank % coordinates). -->
           <div class="lb-scroll-area">
+            <div class="lb-empty" id="lb-empty" hidden>
+              <img class="lb-empty-ic" src="assets/icons/leaderboard/widget-leaderboard-trophy.png" alt="" aria-hidden="true">
+              <h3 class="lb-empty-title">No rankings yet</h3>
+              <p class="lb-empty-text" id="lb-empty-text"></p>
+            </div>
             <div class="lb-podium-wrap">
               <img loading="lazy" class="lb-podium-img" data-src="assets/icons/leaderboard/hero-podium-blank.png" alt="">
               <div class="lb-podium" id="lb-podium"></div>
@@ -4085,33 +4171,33 @@
           <div class="journey-hero">
             <img loading="lazy" class="journey-hero-img" data-src="assets/icons/misc/hero-mountain.png" alt="" aria-hidden="true">
             <div class="journey-hero-stat">
-              <span class="journey-hero-num">0</span>
-              <span class="journey-hero-label">days in a row</span>
+              <span class="journey-hero-num" id="journey-num">0</span>
+              <span class="journey-hero-label" id="journey-label">days in a row</span>
             </div>
           </div>
 
           <div class="journey-progress-card">
             <div class="journey-dots" id="journey-dots"></div>
-            <p class="journey-progress-msg">You're on the right path!</p>
+            <p class="journey-progress-msg" id="journey-msg">Use Zelo today to start your streak.</p>
           </div>
 
           <div class="journey-stats-card">
             <button class="journey-stat-row" type="button">
               <img loading="lazy" class="journey-stat-icon" data-src="assets/icons/streak/stat-best-streak.png" alt="" aria-hidden="true">
               <span class="journey-stat-label">Best Streak</span>
-              <span class="journey-stat-value">0 days</span>
+              <span class="journey-stat-value" id="journey-best">0 days</span>
               <svg class="journey-stat-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
             <button class="journey-stat-row" type="button">
               <img loading="lazy" class="journey-stat-icon" data-src="assets/icons/misc/stat-total-days.png" alt="" aria-hidden="true">
               <span class="journey-stat-label">Total Days</span>
-              <span class="journey-stat-value">0 days</span>
+              <span class="journey-stat-value" id="journey-total">0 days</span>
               <svg class="journey-stat-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
             <button class="journey-stat-row" type="button">
               <img loading="lazy" class="journey-stat-icon" data-src="assets/icons/misc/stat-this-week.png" alt="" aria-hidden="true">
               <span class="journey-stat-label">This Week</span>
-              <span class="journey-stat-value">0 days</span>
+              <span class="journey-stat-value" id="journey-week">0 days</span>
               <svg class="journey-stat-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
@@ -4243,13 +4329,13 @@
             <div class="mission-bottom-card">
               <img loading="lazy" class="mission-bottom-ic" data-src="assets/icons/milestones/hero-streak-flame.png" alt="" aria-hidden="true">
               <span class="mission-bottom-label">Streak</span>
-              <span class="mission-bottom-value">0 days</span>
+              <span class="mission-bottom-value" id="mission-streak">0 days</span>
             </div>
             <div class="mission-bottom-card">
               <img loading="lazy" class="mission-bottom-ic" data-src="assets/icons/mission/mission-trophy.png" alt="" aria-hidden="true">
               <span class="mission-bottom-label">Rank</span>
-              <span class="mission-bottom-value">#0</span>
-              <span class="mission-bottom-sub">Top 100%</span>
+              <span class="mission-bottom-value">None yet</span>
+              <span class="mission-bottom-sub">No rankings yet</span>
             </div>
           </div>
         </div>
@@ -4341,11 +4427,11 @@
             <p class="ms-share-sub" id="badge-share-sub"></p>
           </div>
           <div class="ms-share-row">
-            <button class="ms-share-btn" type="button" onclick="shareSheetNatively()">
+            <button class="ms-share-btn" type="button" onclick="shareSheetInstagram()">
               <img loading="lazy" class="ms-share-ic" data-src="assets/icons/milestones/share-instagram.png" alt="">
               <span>Instagram</span>
             </button>
-            <button class="ms-share-btn" type="button" onclick="shareSheetNatively()">
+            <button class="ms-share-btn" type="button" onclick="shareSheetMessages()">
               <img loading="lazy" class="ms-share-ic" data-src="assets/icons/milestones/share-messages.png" alt="">
               <span>Messages</span>
             </button>
@@ -4809,6 +4895,16 @@
         </button>
       </div>
 
+      <!-- In-app message banner: shown when a girl replies while you are anywhere except her chat
+           (showMsgBanner() in script.js). Same top-banner geometry as the other toasts. -->
+      <div class="msg-banner" id="msg-banner" hidden role="status" onclick="msgBannerOpen()">
+        <span class="msg-banner-pfp" id="msg-banner-pfp" aria-hidden="true"></span>
+        <span class="msg-banner-text">
+          <span class="msg-banner-name" id="msg-banner-name"></span>
+          <span class="msg-banner-body" id="msg-banner-body"></span>
+        </span>
+      </div>
+
       <!-- Copy confirmation toast (reply generator) — see showCopyToast()/
            hideCopyToast() in script.js. Last child of #app so it paints
            above every tab/screen/modal. -->
@@ -4842,17 +4938,21 @@
          no npm dependency on it (there isn't one; it's CDN/vendored-only). -->
     <script src="services/vendor/supabase-js.js?v=20260923a"></script>
     <script src="config.js"></script>
-    <script src="personas.js?v=20261011h"></script>
-    <script src="personas-roster.js?v=20261017b"></script>
+    <script src="personas.js?v=20261017s"></script>
+    <script src="personas-roster.js?v=20261018r"></script>
     <script src="personas-posts.js?v=20261013e"></script>
     <script src="personas-about.js?v=20261013g"></script>
-    <script src="data.js?v=20261007b"></script>
+    <script src="personas-men.js?v=20261018r"></script>
+    <script src="personas-threads.js?v=20261018y"></script>
+    <script src="data.js?v=20261019a"></script>
     <script src="services/supabase.js"></script>
-    <script src="services/auth.js?v=20261011v"></script>
-    <script src="services/analytics.js"></script>
-    <script src="services/records.js"></script>
+    <script src="services/auth.js?v=20261017l"></script>
+    <script src="services/analytics.js?v=20261019a"></script>
+    <script src="services/records.js?v=20261019b"></script>
+    <script src="services/textguard.js?v=20261019i"></script>
+    <script src="services/support.js?v=20261019i"></script>
     <script src="archive/legacy-onboarding.js"></script>
     <script src="dev-credentials.js"></script>
-    <script src="script.js?v=20261017b"></script>
+    <script src="script.js?v=20261019ay"></script>
   </body>
 </html>

@@ -152,19 +152,6 @@ const DIFFICULTY_CONFIG = {
 
 
 // ================================================================
-// OPENING MESSAGES
-// First message the character sends, per difficulty level.
-// ================================================================
-
-const OPENINGS = {
-  easy:    "Hey! I was hoping you'd message first, how's your day going?",
-  medium:  "Hey! What's up?",
-  hard:    "hey",
-  expert:  "oh hey"
-};
-
-
-// ================================================================
 // REPLY POOLS
 // Pre-written replies per difficulty. The app cycles through them
 // in order to avoid immediate repeats. Designed to feel like real
@@ -277,6 +264,12 @@ const REPLIES = {
 // ================================================================
 
 const PROFILES = GIRL_PROFILES;
+
+// Women + men. PROFILES deliberately stays women-only: the onboarding swipe
+// demo and the practice tutorial walk it by index and must not deal a man to
+// someone who never asked for one. The deck is the only thing that should see
+// the whole library, and it filters by the "practice with" preference itself.
+const ALL_PROFILES = GIRL_PROFILES.concat(typeof MAN_PROFILES !== 'undefined' ? MAN_PROFILES : []);
 
 // ================================================================
 // ASSISTANT REPLY SETS
@@ -438,7 +431,8 @@ const STYLE_ELIGIBILITY = {
     "Ask Them Out":      ["warmer", "direct"],
     "Fix Things":        ["warmer", "direct", "shorter", "longer"],
     "Be Funny":          [],   // not offered — see hard safety rule in getEligibleStyles()
-    "Be Direct":         ["direct", "shorter"]
+    "Be Direct":         ["direct", "shorter"],
+    "Set a Boundary":    ["direct", "warmer", "shorter"]
   },
   "Toxic Relationship": {
     "Get a Reply":       ["direct", "shorter"],
@@ -446,7 +440,39 @@ const STYLE_ELIGIBILITY = {
     "Ask Them Out":      ["warmer", "direct"],
     "Fix Things":        ["warmer", "direct", "longer"],
     "Be Funny":          [],   // not offered — see hard safety rule in getEligibleStyles()
-    "Be Direct":         ["direct", "shorter"]
+    "Be Direct":         ["direct", "shorter"],
+    "Set a Boundary":    ["direct", "shorter", "warmer"],
+    "Let Them Down Easy": ["warmer", "direct", "shorter"]
+  },
+  "Dry Replies": {
+    "Keep Things Going":  ["funny", "warmer", "smooth"],
+    "Get a Reply":        ["smooth", "funny", "shorter"],
+    "Be Funny":           ["funny", "smooth"],
+    "Be Direct":          ["direct", "shorter"],
+    "Let Them Down Easy": ["warmer", "direct", "shorter"]
+  },
+  "Gone Quiet": {
+    "Get a Reply":        ["funny", "smooth", "shorter"],
+    "Be Funny":           ["funny", "smooth"],
+    "Be Direct":          ["direct", "shorter", "warmer"]
+  },
+  "After a Date": {
+    "Keep Things Going":  ["warmer", "smooth", "funny"],
+    "Ask Them Out":       ["smooth", "bolder", "direct"],
+    "Be Direct":          ["direct", "warmer"],
+    "Be Funny":           ["funny", "warmer"],
+    "Let Them Down Easy": ["warmer", "direct", "shorter"]
+  },
+  "Mixed Signals": {
+    "Define Things":      ["direct", "warmer", "shorter"],
+    "Be Direct":          ["direct", "shorter"],
+    "Get a Reply":        ["direct", "smooth", "shorter"],
+    "Keep Things Going":  ["smooth", "warmer", "funny"]
+  },
+  "I Messed Up": {
+    "Fix Things":         ["warmer", "direct", "longer", "shorter"],
+    "Get a Reply":        ["warmer", "direct", "shorter"],
+    "Be Direct":          ["direct", "warmer"]
   }
 };
 
@@ -502,59 +528,12 @@ const MOCK_CHATS = [
   }
 ];
 
-// Feature 9 — Leaderboard mock data (100 entries per category/filter)
-const _mkEntries = (scores) => scores.map((s, i) => ({ rank: i + 1, name: s[0], score: s[1] }));
-
-// 90 extra names for ranks 11-100 (shared across all datasets)
-const _LB_EXTRA = [
-  "Owen K.","Lucas T.","Ryan B.","Caleb M.","Hunter S.","Dylan W.","Carter L.","Brayden H.","Austin J.","Chase P.",
-  "Blake N.","Gavin R.","Adrian C.","Eli T.","Connor M.","Easton B.","Nolan W.","Bryce S.","Zachary L.","Colton K.",
-  "Wyatt H.","Dominic R.","Hudson C.","Parker M.","Xavier B.","Landon W.","Jordan S.","Cameron L.","Tristan S.","Nathan H.",
-  "Isaiah R.","Brandon C.","Jaxon M.","Elijah B.","Marcus W.","Derek L.","Spencer K.","Brendan H.","Miles R.","Ian C.",
-  "Patrick M.","Vincent B.","Julian W.","Marco S.","Derrick L.","Travis K.","Shane H.","Kyle R.","Curtis C.","Warren M.",
-  "Damon B.","Felix W.","Santos S.","Emilio L.","Cyrus K.","Lance H.","Nate R.","Drew C.","Quinn M.","Rex B.",
-  "Abel W.","Finn S.","Gage L.","Heath K.","Ivan H.","Jay R.","Kade C.","Levi M.","Max B.","Nash W.",
-  "Omar S.","Pace L.","Rio K.","Slade H.","Tanner R.","Vance M.","Wade B.","Xander W.","Yuri S.","Zack L.",
-  "Ace K.","Blaine H.","Cruz R.","Dane C.","Earl M.","Ford B.","Grey W.","Holt S.","Ike R.","Joel C."
-];
-
-// Extends a top-10 _mkEntries array to 100 using a score generator (i = 0..89 → ranks 11-100)
-function _ext100(top10arr, scoreFn) {
-  const out = [...top10arr];
-  for (let i = 0; i < 90; i++) out.push({ rank: 11 + i, name: _LB_EXTRA[i], score: scoreFn(i) });
-  return out;
-}
-
+// Leaderboard data. Empty until there is a real ranking source (each entry: { rank, name, score }). The screens
+// show an honest empty state instead of made-up people.
 const LEADERBOARD_DATA = {
-  streak: {
-    weekly:  _ext100(_mkEntries([["Tyler M.", 12], ["Kai V.", 9], ["Jared S.", 8], ["Noah B.", 7], ["Ethan R.", 6], ["Liam P.", 5], ["Aiden C.", 4], ["Mason D.", 4], ["Logan F.", 3], ["Jackson H.", 2]]),
-      i => i < 14 ? 1 : 0),
-    monthly: _ext100(_mkEntries([["Kai V.", 31], ["Tyler M.", 28], ["Aiden C.", 24], ["Noah B.", 20], ["Liam P.", 18], ["Jared S.", 16], ["Ethan R.", 14], ["Mason D.", 12], ["Logan F.", 10], ["Jackson H.", 8]]),
-      i => Math.max(0, Math.round(7 * Math.pow(0.91, i)))),
-    alltime: _ext100(_mkEntries([["Aiden C.", 214], ["Kai V.", 198], ["Tyler M.", 177], ["Jared S.", 143], ["Ethan R.", 121], ["Noah B.", 110], ["Liam P.", 98], ["Mason D.", 87], ["Logan F.", 72], ["Jackson H.", 61]]),
-      i => Math.max(1, Math.round(52 * Math.pow(0.95, i))))
-  },
-  messages: {
-    weekly:  _ext100(_mkEntries([["Mason D.", 340], ["Liam P.", 290], ["Tyler M.", 260], ["Kai V.", 241], ["Ethan R.", 210], ["Aiden C.", 185], ["Jared S.", 160], ["Noah B.", 140], ["Logan F.", 110], ["Jackson H.", 80]]),
-      i => Math.max(5, Math.round(72 * Math.pow(0.973, i)))),
-    monthly: _ext100(_mkEntries([["Liam P.", 1240], ["Mason D.", 1100], ["Tyler M.", 980], ["Kai V.", 850], ["Ethan R.", 720], ["Jared S.", 600], ["Aiden C.", 540], ["Noah B.", 480], ["Logan F.", 390], ["Jackson H.", 300]]),
-      i => Math.max(10, Math.round(265 * Math.pow(0.973, i)))),
-    alltime: _ext100(_mkEntries([["Liam P.", 9800], ["Tyler M.", 8400], ["Mason D.", 7200], ["Kai V.", 6400], ["Ethan R.", 5100], ["Jared S.", 4400], ["Noah B.", 3700], ["Aiden C.", 3100], ["Logan F.", 2500], ["Jackson H.", 1900]]),
-      i => Math.max(100, Math.round(1650 * Math.pow(0.973, i))))
-  },
-  // "Most Level" — ranks by the same account Level shown everywhere else
-  // in Zelo (see getLevelForXP()/XP_MAX_LEVEL=20 in script.js), so unlike
-  // the other two categories this one isn't really period-scoped — a
-  // player's level doesn't reset weekly/monthly. Same entries reused
-  // across all three time filters on purpose.
-  level: {
-    weekly:  _ext100(_mkEntries([["Aiden C.", 18], ["Kai V.", 16], ["Tyler M.", 15], ["Jared S.", 14], ["Liam P.", 13], ["Ethan R.", 12], ["Mason D.", 11], ["Noah B.", 10], ["Logan F.", 8], ["Jackson H.", 6]]),
-      i => Math.max(1, Math.round(6 * Math.pow(0.965, i)))),
-    monthly: _ext100(_mkEntries([["Aiden C.", 18], ["Kai V.", 16], ["Tyler M.", 15], ["Jared S.", 14], ["Liam P.", 13], ["Ethan R.", 12], ["Mason D.", 11], ["Noah B.", 10], ["Logan F.", 8], ["Jackson H.", 6]]),
-      i => Math.max(1, Math.round(6 * Math.pow(0.965, i)))),
-    alltime: _ext100(_mkEntries([["Aiden C.", 18], ["Kai V.", 16], ["Tyler M.", 15], ["Jared S.", 14], ["Liam P.", 13], ["Ethan R.", 12], ["Mason D.", 11], ["Noah B.", 10], ["Logan F.", 8], ["Jackson H.", 6]]),
-      i => Math.max(1, Math.round(6 * Math.pow(0.965, i))))
-  }
+  streak:   { weekly: [], monthly: [], alltime: [] },
+  messages: { weekly: [], monthly: [], alltime: [] },
+  level:    { weekly: [], monthly: [], alltime: [] },
 };
 
 

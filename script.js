@@ -9,10 +9,10 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-10-17b (generating card, option font, gibberish dictionary shipped)";
+const BUILD_STAMP = "2026-10-19ay (opener follow-up, proportionate compliments)";
 // Analytics must never be able to break the app: if services/analytics.js didn't load, every ZeloAnalytics call becomes a no-op.
 if (typeof ZeloAnalytics === 'undefined') window.ZeloAnalytics = { track() {}, setOptOut() {} };
-if (typeof ZeloRecords === 'undefined') window.ZeloRecords = { recordConsent() {}, flushConsents() { return Promise.resolve(); }, saveGeneratedReply() { return null; }, markReplyCopied() {}, savePracticeSession() {}, queueOnboarding() {}, flushOnboarding() {}, setReplyOutcome() {}, logAiRequest() {}, syncPracticeConsent() { return Promise.resolve(); }, status() {} };
+if (typeof ZeloRecords === 'undefined') window.ZeloRecords = { submitChatReport() { return Promise.resolve('queued'); }, flushReports() {}, recordConsent() {}, flushConsents() { return Promise.resolve(); }, saveGeneratedReply() { return null; }, markReplyCopied() {}, savePracticeSession() {}, queueOnboarding() {}, flushOnboarding() {}, setReplyOutcome() {}, logAiRequest() {}, syncPracticeConsent() { return Promise.resolve(); }, status() {} };
 const SHOW_BUILD_STAMP = true;
 // TEMP (testing): show the "Help Zelo get smarter" modal on EVERY practice chat, ignoring the once-only
 // memory, so its UI can be reviewed. Set to false before release.
@@ -164,6 +164,7 @@ const ICONS_WITH_DARK_VARIANT = new Set([
   'assets/icons/reply-styles/warmer.png',
   'assets/icons/settings/icon-pl-signout.png',
   'assets/icons/settings/settings2-data-request.png',
+  'assets/icons/settings/settings2-icon-feature-request.png',
   'assets/icons/settings/settings2-data-preparing.png',
   'assets/icons/settings/settings2-data-email.png',
   'assets/icons/settings/settings2-help-chat.png',
@@ -416,20 +417,29 @@ function _signalNativeReady() {
 }
 
 // Resolves to true/false so retryConnectivityCheck() can react to the result.
-function _runLaunchConnectivityGate() {
-  return _checkConnectivity().then(ok => {
+function _runLaunchConnectivityGate(opts = {}) {
+  const t0 = Date.now();
+  return _checkConnectivity().then(async ok => {
+    if (opts.minMs) await new Promise(r => setTimeout(r, Math.max(0, opts.minMs - (Date.now() - t0))));   // long enough for the loading bar to be seen
     const noConn = document.getElementById('no-connection-screen');
+    const note = document.getElementById('no-connection-status');
     if (ok) {
+      if (note) note.hidden = true;
       if (noConn) noConn.hidden = true;
       // Idempotent safety net: normally already set by DOMContentLoaded's
       // own init (see below), but if anything in that handler threw before
       // reaching that line, a passing check still lifts the app's gate.
       document.documentElement.classList.add('zelo-app-ready');
     } else {
+      const first = !!(noConn && noConn.hidden);
       if (noConn) noConn.hidden = false;
       _revealLazyImages(noConn);
-      navigator.vibrate?.(15); _cineHaptic('MEDIUM');
-      _typewriteConnectionTitle();
+      if (first) { navigator.vibrate?.(15); _cineHaptic('MEDIUM'); _typewriteConnectionTitle(); }
+      else {
+        // A failed RETRY must not restart the screen (it used to re-type the whole title from empty): just say so.
+        if (note) { note.textContent = "Still can't connect. Check your internet and try again."; note.hidden = false; }
+        navigator.vibrate?.(8); _cineHaptic('LIGHT');
+      }
     }
     return ok;
   });
@@ -466,9 +476,14 @@ function _typewriteConnectionTitle() {
 function retryConnectivityCheck() {
   const noConn = document.getElementById('no-connection-screen');
   const btn = noConn && noConn.querySelector('.fallback-btn-primary');
+  const bar = document.getElementById('no-connection-bar');
+  const note = document.getElementById('no-connection-status');
   if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; }
-  _runLaunchConnectivityGate().finally(() => {
+  if (bar) bar.hidden = false;
+  if (note) note.hidden = true;
+  _runLaunchConnectivityGate({ minMs: 800 }).finally(() => {
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    if (bar) bar.hidden = true;
   });
 }
 
@@ -498,6 +513,8 @@ function _reportJsError(err, file, line) {
     const m = frame && frame.match(/(?:at\s+)?([\w$.<>]+)?[@(\s]*.*?([\w.]+\.js):(\d+)/);
     if (m) where = ((m[1] || '') + '@' + m[2] + ':' + m[3]).slice(0, 40);
     else if (file) where = (String(file).split('/').pop() + ':' + (line || '')).slice(0, 40);
+    (window.__zeloErrLog = window.__zeloErrLog || []).push({ t: Date.now(), name, where });
+    if (window.__zeloErrLog.length > 20) window.__zeloErrLog.shift();   // names only, for the problem-report log
     ZeloAnalytics.track('app_error', { kind: 'js', name, where });
   } catch (e) { /* the reporter must never throw */ }
 }
@@ -547,6 +564,26 @@ function _showCrashScreen() {
 // "Go back" on the crash screen — a lighter recovery than a full reload:
 // drop back to Practice (always safe/local, no network dependency) and
 // hope whatever broke was scoped to the screen the user was actually on.
+// "Try again" on the Oops screen. It used to be location.reload(): a full restart from zero. Now it stays
+// on the page the user was on, shows the same loading bar, and repaints that page.
+function retryCrashScreen() {
+  const el = document.getElementById('crash-general-screen');
+  const btn = el && el.querySelector('.fallback-btn-primary');
+  const bar = document.getElementById('crash-bar');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; }
+  if (bar) bar.hidden = false;
+  setTimeout(() => {
+    _crashScreenShown = false;
+    if (el) el.hidden = true;
+    if (bar) bar.hidden = true;
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    try {
+      if (document.getElementById('screen-chat')?.classList.contains('active')) { _rerenderChatMessages(); _syncBlockedUI(); }
+      else if (document.getElementById('screen-ai-coach')?.classList.contains('active')) renderAiCoachChat();
+    } catch (_) { /* if repainting throws, the Oops screen simply comes back */ }
+  }, 900);
+}
+
 function _crashGoBack() {
   const el = document.getElementById('crash-general-screen');
   if (el) el.hidden = true;
@@ -697,8 +734,8 @@ window.addEventListener('DOMContentLoaded', () => {
     disabled: () => { const o = document.getElementById('msg-menu-overlay'); return !!o && !o.hidden; },
   });
   attachEdgeSwipeBack('screen-leaderboard', popScreen);         // Leaderboard — its header back button is plain popScreen() too
-  attachEdgeSwipeBack('screen-tellzelo',    tellZeloBack, {     // "Other" wizard — mid-wizard steps back within the same screen (no sibling to reveal), so only fall back to a live reveal once back would actually exit
-    resolveTarget: () => state.tzStep > 0 ? null : _defaultBackRevealTarget(),
+  attachEdgeSwipeBack('screen-tellzelo',    tellZeloBack, {     // "Other" wizard: mid-wizard the steps share this one screen, so the previous step is shown as a ghost copy underneath while this one is dragged away
+    resolveTarget: () => state.tzStep > 0 ? _tzGhost(state.tzStep - 1) : _defaultBackRevealTarget(),
   });
   attachEdgeSwipeBack('screen-ai-coach', _aiCoachSwipeBack, {  // AI Coach — this only fires for a swipe starting on the
     // dimmed sliver still showing #aicoach-main when the history panel is open (a swipe starting on the panel/scrim
@@ -751,7 +788,12 @@ window.addEventListener('DOMContentLoaded', () => {
   // above, so swiping back from any of them lands on whatever pushed it
   // (usually screen-dashboard's main settings list) exactly like tapping
   // its own back arrow would.
-  attachEdgeSwipeBack('screen-settings-profile-login',   popScreen);
+  // excludeSelector: the crop sheet's drag-to-pan and zoom slider are both horizontal-capable drags
+  // living inside this same screen (position:fixed, but still a DOM descendant for event bubbling) —
+  // without this, panning/zooming a photo could also be read as an edge-swipe-back, sliding the whole
+  // screen away mid-crop. Reported as "everything turns grey" — that's this gesture's own dimming
+  // scrim starting to show, not a bug in the crop UI's own colors.
+  attachEdgeSwipeBack('screen-settings-profile-login',   popScreen, { excludeSelector: '.pl-crop-overlay' });
   attachEdgeSwipeBack('screen-settings-add-email',       popScreen);
   attachEdgeSwipeBack('screen-settings-forgot-password', popScreen);
   attachEdgeSwipeBack('screen-settings-reset-sent',      popScreen);
@@ -779,7 +821,9 @@ window.addEventListener('DOMContentLoaded', () => {
   attachEdgeSwipeBack('screen-settings-delete-account',  popScreen);
   attachEdgeSwipeBack('screen-settings-ai-transparency', popScreen);
   attachEdgeSwipeBack('screen-settings-help-support',    popScreen);
-  attachEdgeSwipeBack('screen-settings-contact-support', popScreen);
+  attachEdgeSwipeBack('screen-settings-feature-requests', popScreen);
+  attachEdgeSwipeBack('screen-settings-feature-new',     popScreen);
+  attachEdgeSwipeBack('screen-settings-feature-detail',  frDetailBack);
   attachEdgeSwipeBack('screen-settings-about',           popScreen);
   attachEdgeSwipeBack('screen-settings-terms',           popScreen);
   attachEdgeSwipeBack('screen-settings-privacy-policy',  popScreen);
@@ -1139,7 +1183,7 @@ function popScreen() {
 function _pfpUrl(p) {
   if (!p) return '';
   if (p.avatar) return p.avatar;
-  const hit = (typeof GIRL_PROFILES !== 'undefined') && GIRL_PROFILES.find(x => x.id === p.id);
+  const hit = (typeof ALL_PROFILES !== 'undefined') && ALL_PROFILES.find(x => x.id === p.id);
   return (hit && hit.avatar) || '';
 }
 function _pfpImgHTML(p) {
@@ -1396,16 +1440,28 @@ function _renderChatProfileHeader(character) {
 // = the user sent at least PRACTICE_FINISHED_MIN_MSGS messages in it; anything
 // shorter is "abandoned" (chats have no built-in end state to key off).
 const PRACTICE_FINISHED_MIN_MSGS = 5;
-let _practiceSince = 0, _practiceMsgs0 = 0, _practiceIdx0 = 0;
+let _practiceSince = 0, _practiceMsgs0 = 0, _practiceIdx0 = 0, _practiceDrive0 = { ack: 0, carried: 0 };
 function _practiceUserMsgCount() {
   const c = chatStore.find(x => x.id === state.activeChatId);
   return c ? c.messages.filter(m => m.sender !== 'ai').length : 0;
+}
+// What the chat was waiting on when the user left — the point of this whole
+// measurement. 'her_question' = she asked and they walked away without replying;
+// 'user_ack' = they gave her an "ok"/"lol" and left; and so on.
+function _practiceLeftAfter(chat) {
+  const h = chat ? chat.messages : [];
+  if (!h.length) return null;
+  const last = h[h.length - 1];
+  if (last.sender !== 'user') return /\?/.test(last.text || '') ? 'her_question' : 'her_statement';
+  const t = _readUserTurn(h);
+  return t ? 'user_' + t.kind : null;
 }
 function _trackPracticeStart(resumed) {
   _practiceSince = Date.now();
   _practiceMsgs0 = _practiceUserMsgCount();
   const c0 = chatStore.find(x => x.id === state.activeChatId);
   _practiceIdx0 = c0 ? c0.messages.length : 0; // this session's messages start here
+  _practiceDrive0 = { ack: (c0 && c0.drive && c0.drive.ack) || 0, carried: (c0 && c0.drive && c0.drive.carried) || 0 };
   ZeloAnalytics.track('practice_session_started', { mode: state.mode, difficulty: state.difficulty, resumed });
 }
 // background = the app is being sent away (e.g. to check Supabase) mid-chat: save what has been said so far
@@ -1417,7 +1473,13 @@ function _trackPracticeEnd(background) {
   const outcome = sent >= PRACTICE_FINISHED_MIN_MSGS ? 'finished' : 'abandoned';
   const chat = chatStore.find(x => x.id === state.activeChatId);
   if (background && !(chat && chat.messages.length > _practiceIdx0)) return; // nothing new to save yet
-  if (!background) ZeloAnalytics.track('practice_session_ended', { duration_s: (Date.now() - _practiceSince) / 1000, outcome });
+  if (!background) {
+    const drive = (chat && chat.drive) || { ack: 0, carried: 0 };
+    ZeloAnalytics.track('practice_session_ended', {
+      duration_s: (Date.now() - _practiceSince) / 1000, outcome, difficulty: state.difficulty, user_msgs: sent,
+      left_after: _practiceLeftAfter(chat), ack_turns: drive.ack - _practiceDrive0.ack, carried: drive.carried - _practiceDrive0.carried,
+    });
+  }
   // Database: metadata always; the chat text ONLY if the user opted in (practiceReviewOn()).
   ZeloRecords.savePracticeSession({
     personaId: state.character && state.character.id, difficulty: state.difficulty, mode: state.mode,
@@ -1463,12 +1525,30 @@ function _fillComposer(text) {
   const input = document.getElementById('message-input');
   input.value = text;
   input.dispatchEvent(new Event('input', { bubbles: true }));
-  input.focus();
+  // Only focus if the keyboard is not already up for this field. Calling
+  // focus() on the already-focused input is what made iOS close and reopen
+  // the keyboard between hints (the press moves focus to the button first,
+  // see _keepComposerFocus below).
+  if (document.activeElement !== input) input.focus();
   _cineHaptic('LIGHT');
+}
+
+// A <button> takes focus on press, which blurs the composer and drops the
+// keyboard before the chip's own click even runs. Cancelling the press's
+// default focus move keeps the keyboard exactly where it was.
+function _keepComposerFocus(btn) {
+  const hold = e => {
+    const input = document.getElementById('message-input');
+    if (document.activeElement === input) e.preventDefault();
+  };
+  btn.addEventListener('mousedown', hold);
+  btn.addEventListener('touchstart', hold, { passive: false });
+  return btn;
 }
 function _chipEl(label, text, extra) {
   const b = document.createElement('button');
   b.type = 'button';
+  _keepComposerFocus(b);
   b.className = 'chat-chip' + (extra ? ' ' + extra : '');
   b.textContent = label;
   if (text != null) b.onclick = () => _fillComposer(text);
@@ -1493,6 +1573,17 @@ function _renderChatChips() {
   }
   wrap.hidden = false;
   wrap.scrollLeft = 0;
+  _followChatAfterChips();
+}
+
+// The chips row sits inside .chat-input-bar, so showing it makes the whole bar
+// taller and the message list shorter — without this the newest bubble ends up
+// clipped behind it. Only follows if they were already at the bottom.
+function _followChatAfterChips() {
+  const el = document.getElementById('chat-messages');
+  if (!el) return;
+  const wasNearBottom = _isChatNearBottom();
+  requestAnimationFrame(() => { if (wasNearBottom) _scrollToLogicalBottom(el); });
 }
 
 // ---- Conversation-aware suggestions ---------------------------------------
@@ -1540,6 +1631,7 @@ function _renderSuggestions(list, msgId) {
   wrap.hidden = false;
   wrap.classList.remove('chat-chips--in'); void wrap.offsetWidth; wrap.classList.add('chat-chips--in');
   wrap.scrollLeft = 0;
+  _followChatAfterChips();
 }
 
 // Models write texts that read as written-by-a-model: exclamation marks,
@@ -1566,6 +1658,7 @@ function _renderSuggestionSkeleton() {
   wrap.classList.remove('chat-chips--in');   // its chipIn animation would replace the shimmer
   wrap.hidden = false;
   wrap.scrollLeft = 0;
+  _followChatAfterChips();
 }
 function requestHintsFor(msgId) {
   clearTimeout(_suggTimer);
@@ -1637,6 +1730,7 @@ async function _fetchSuggestions(isRefresh, focusId) {
 }
 
 function startChat() {
+  hideMsgBanner();
   const c = state.character;
   awardXP('conversation');
 
@@ -1648,6 +1742,7 @@ function startChat() {
   _renderChatChips();
   _syncComposerButtons();
   setSendEnabled(false);
+  _syncBlockedUI();
 
   // Reached via the "It's a Match" overlay (Send a Message) — drop 'match'
   // from the stack chat is about to push onto rather than letting it ride
@@ -1727,11 +1822,12 @@ function selectChatMode(mode) {
   setTimeout(maybeShowPracticeReviewModal, 350); // first practice chat only, after the pace is chosen
 
   const diff = state.difficulty;
-  const openerText = (state.character && state.character.opener) || OPENINGS[diff];
+  const openerText = (state.character && state.character.opener) || 'hey';
   const openingDelay = mode === "training" ? 700 : 1500;
   setTimeout(() => {
     const openerId = syncChatToStore(openerText, 'ai');
     appendAIBubble(openerText, undefined, { id: openerId });
+    _scheduleNudge();
     setSendEnabled(true);
     // No auto-focus here either — same reasoning as the mid-conversation
     // reply path below: her message arriving shouldn't pop the keyboard
@@ -1821,6 +1917,102 @@ function _initChatSettingsSwipeDown() {
 }
 
 // "View Profile" row in the chat settings sheet.
+function chatSettingsReport() {
+  closeChatSettings();
+  setTimeout(() => openReportSheet('chat', null), 220);
+}
+
+// ---- Report a problem with the AI --------------------------------------------
+// From a held message (that reply) or the chat settings (the conversation). A sheet
+// asks what went wrong and says plainly that sending shares the WHOLE conversation
+// with Zelo; nothing leaves the phone until "Send report". Handled by
+// ZeloRecords.submitChatReport (queued if offline / signed out).
+const REPORT_REASONS = [
+  { id: 'rude',          label: 'It was rude or offensive' },
+  { id: 'uncomfortable', label: 'It made me uncomfortable' },
+  { id: 'nonsense',      label: "It didn't make sense or ignored what I said" },
+  { id: 'robotic',       label: 'It repeated itself or sounded robotic' },
+  { id: 'boring',        label: 'It was boring or gave very short answers' },
+  { id: 'blocked',       label: 'It blocked me or ended the chat unfairly' },
+  { id: 'other',         label: 'Something else' },
+];
+let _reportCtx = null, _reportHideTimer = null;
+function openReportSheet(scope, msgId) {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const sheet = document.getElementById('report-sheet');
+  if (!chat || !sheet) return;
+  const msg = scope === 'message' ? chat.messages.find(m => m.id === msgId) : null;
+  _reportCtx = { scope: msg ? 'message' : 'chat', msgId: msg ? msg.id : null, reason: null, sending: false };
+  document.getElementById('report-title').textContent = msg ? 'Report this reply' : 'Report a problem';
+  document.getElementById('report-sub').textContent = msg ? 'What was wrong with it?' : 'What went wrong in this chat?';
+  document.getElementById('report-name').textContent = (state.character && state.character.name) || 'her';
+  document.getElementById('report-note').value = '';
+  const list = document.getElementById('report-reasons');
+  list.innerHTML = '';
+  REPORT_REASONS.forEach(r => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'report-reason'; b.dataset.reason = r.id; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
+    b.innerHTML = '<span class="report-reason-dot"></span><span></span>';
+    b.lastChild.textContent = r.label;
+    b.onclick = () => {
+      _reportCtx.reason = r.id;
+      list.querySelectorAll('.report-reason').forEach(x => { const on = x === b; x.classList.toggle('selected', on); x.setAttribute('aria-checked', on ? 'true' : 'false'); });
+      document.getElementById('report-send').disabled = false;
+      _cineHaptic('LIGHT');
+    };
+    list.appendChild(b);
+  });
+  const send = document.getElementById('report-send'); send.disabled = true; send.textContent = 'Send report';
+  clearTimeout(_reportHideTimer);
+  sheet.hidden = false;
+  sheet.classList.remove('chat-settings-sheet--in'); void sheet.offsetWidth;
+  requestAnimationFrame(() => sheet.classList.add('chat-settings-sheet--in'));
+  document.getElementById('report-panel').scrollTop = 0;
+}
+// Keyboard.resize is "none" in this app, so the sheet is not pushed up by the keyboard on its own:
+// lift the note field above it by padding the scrollable panel and scrolling the field into view.
+function _syncReportKeyboard() {
+  const panel = document.getElementById('report-panel');
+  if (!panel) return;
+  const kb = window.__zeloKbH || 0;
+  panel.style.paddingBottom = kb ? (kb + 16) + 'px' : '';
+  const note = document.getElementById('report-note');
+  if (kb && document.activeElement === note) setTimeout(() => note.scrollIntoView({ block: 'center', behavior: 'smooth' }), 120);
+}
+window.addEventListener('zelo-kb', _syncReportKeyboard);
+document.addEventListener('focusin', (e) => { if (e.target && e.target.id === 'report-note') setTimeout(_syncReportKeyboard, 350); });
+
+function closeReportSheet() {
+  const sheet = document.getElementById('report-sheet');
+  if (!sheet || sheet.hidden) return;
+  if (_reportCtx && _reportCtx.sending) return;                         // let an in-flight send finish
+  const note = document.getElementById('report-note'); if (note) note.blur();
+  sheet.classList.remove('chat-settings-sheet--in');
+  clearTimeout(_reportHideTimer);
+  _reportHideTimer = setTimeout(() => { sheet.hidden = true; }, 320);
+}
+async function submitReport() {
+  const ctx = _reportCtx;
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!ctx || !ctx.reason || ctx.sending || !chat) return;
+  ctx.sending = true;
+  const btn = document.getElementById('report-send'); btn.disabled = true; btn.textContent = 'Sending…';
+  const msg = ctx.msgId ? chat.messages.find(m => m.id === ctx.msgId) : null;
+  let result = 'queued';
+  try {
+    result = await ZeloRecords.submitChatReport({
+      scope: ctx.scope, reason: ctx.reason, note: document.getElementById('report-note').value.trim(),
+      personaId: chat.profile && chat.profile.id, messageId: msg && msg.id, messageText: msg && msg.text,
+      conversation: chat.messages.map(m => ({ id: m.id, sender: m.sender, text: m.text, time: m.time ? new Date(m.time).toISOString() : null })),
+      build: BUILD_STAMP,
+    });
+  } catch (e) { result = 'queued'; }
+  try { ZeloAnalytics.track('chat_reported', { reason: ctx.reason, scope: ctx.scope, difficulty: state.difficulty }); } catch (e) {}
+  ctx.sending = false;
+  closeReportSheet();
+  showChatToast(result === 'sent' ? 'Report sent. Thanks for helping make Zelo better.' : "Saved. We'll send it as soon as you're signed in and online.");
+}
+
 function chatSettingsViewProfile() {
   closeChatSettings();
   setTimeout(() => openPersonaProfile(state.character), 220);
@@ -1882,14 +2074,16 @@ function chatSettingsReset() {
     delete state.chatHistory;
   }
   const resetChat = chatStore.find(c => c.id === state.activeChatId);
-  if (resetChat) resetChat.messages = [];
+  if (resetChat) { resetChat.messages = []; resetChat.strikes = 0; resetChat.cleanRun = 0; resetChat.blocked = false; resetChat.nudges = 0; resetChat.replyFailed = null; }
   abortPendingReply(); // the thread is about to be wiped — a reply still in flight must not land in it
   _clearStagedReply();
   setSendEnabled(false);
-  const resetOpenerText = (state.character?.opener) || OPENINGS[state.difficulty] || 'hey';
+  const resetOpenerText = (state.character?.opener) || 'hey';
   const openerId = syncChatToStore(resetOpenerText, 'ai');
   appendAIBubble(resetOpenerText, undefined, { id: openerId });
+  _scheduleNudge();
   setSendEnabled(true);
+  _syncBlockedUI();
   renderChatsList(); // updates the list row's preview text if it's the visible screen (e.g. reset via long-press there)
   _renderChatChips();
 }
@@ -2260,10 +2454,15 @@ function onMessageInputChange() {
 
 function sendMessage() {
   if (state.awaitingReply) return;
+  if (_isChatBlocked(state.activeChatId)) return;
 
   const input = document.getElementById("message-input");
   const text  = input.value.trim();
   if (!text) return;
+  ZeloActivity.add('chat');
+  { const c = chatStore.find(x => x.id === state.activeChatId); if (c) { c.nudges = 0; c.replyFailed = null; } }
+  _clearNudge();
+  _clearChatFail();
 
   const p = state.pacing; // captured before this message changes anything
   const replyToId = state.stagedReplyToId || null;
@@ -2477,12 +2676,22 @@ function _applyAiReaction(msgId, emoji, chatId) {
 // that still looks like one gets scrubbed before it can reach a bubble.
 const RE_DIRECTIVE_TAG = /[\[(]\s*re(?:ply)?\s*:?\s*#?\s*n?\s*\d+\s*[\])]\s*/gi;
 function _stripDirectiveTags(text) {
-  return String(text || '').replace(RE_DIRECTIVE_TAG, '').trim();
+  return String(text || '').replace(RE_DIRECTIVE_TAG, '').replace(RE_BOUNDARY_TAG, '').trim();
+}
+
+// Stage directions ("[laughs]", "*smiles*") are roleplay, not texting: in the live
+// persona test one girl typed "[laughs] Houston, born and raised." as literal text.
+// Letters only, so a real "[re:2]" tag or anything with digits is left alone.
+function _stripStageDirections(text) {
+  return String(text || '').replace(/\s*(?:\[[a-z' ]{2,24}\]|\*[a-z' ]{2,24}\*)\s*/gi, ' ').replace(/ {2,}/g, ' ').trim();
 }
 
 function _parseAiReplyParts(raw, burst) {
   const text = String(raw || '').trim();
-  const parts = text.split('|||').map(s => s.trim()).filter(Boolean).slice(0, 3);
+  // A blank line inside one reply is two messages, not a paragraph break: people don't
+  // text paragraphs, and "line / blank line / line" in one bubble read as written by AI.
+  let parts = text.split('|||').flatMap(s => s.split(/\n\s*\n/)).map(s => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
+  if (parts.length > 3) parts = [...parts.slice(0, 2), parts.slice(2).join(' ')];
   const out = [];
   for (let part of (parts.length ? parts : [text])) {
     let replyToId = null;
@@ -2497,10 +2706,10 @@ function _parseAiReplyParts(raw, burst) {
       if (target) replyToId = target.id;
       part = part.slice(tag[0].length).trim();
     }
-    part = _stripDirectiveTags(part); // safety net for a tag anywhere else in the text
+    part = _stripStageDirections(_stripDirectiveTags(part)).replace(/\s*—\s*/g, ', '); // safety net for a tag anywhere else in the text; no em dashes (an AI tell nobody types)
     if (part) out.push({ text: part, replyToId });
   }
-  return out.length ? out : [{ text: _stripDirectiveTags(text) || text, replyToId: null }];
+  return out.length ? out : [{ text: _stripStageDirections(_stripDirectiveTags(text)) || 'haha', replyToId: null }];
 }
 
 // Shared: show typing indicator then deliver the AI reply — possibly as up
@@ -2508,25 +2717,30 @@ function _parseAiReplyParts(raw, burst) {
 // "|||" instruction), when the model itself decides this reply reads more
 // naturally as a double/triple-text than one paragraph. Most replies are
 // still exactly one part and this behaves exactly as before for them.
-function doTypingAndReply(timing) {
+function doTypingAndReply(timing, opts = {}) {
   const typingDuration = randBetween(timing.typingMin, timing.typingMax);
   const myGen = state.chatReplyGen || 0; // see cancelPendingReply()'s comment on why this exists
-  setHeaderStatus("typing");
-  showTypingIndicator();
+  const myChatId = state.activeChatId; // she may finish replying after you've navigated away
+  if (opts.retrying) setHeaderStatus("typing");   // a retry shows the loading bar on the failure row instead
+  else _setChatTyping(myChatId, true);
 
   // Start the DeepSeek fetch concurrently while the typing indicator shows
   const replyPromise = _fetchAIGirlReply();
+  // Awaited only after the typing delay below. Without this, a FAST failure (rate limit, signed out, offline) rejects
+  // before anyone is listening, the browser reports an unhandled rejection, and the global handler raises the "Oops!"
+  // crash screen whose Try again reloads the whole app. The real result is still awaited (and caught) below.
+  replyPromise.catch(() => {});
 
   const burst = _trailingUserBurst(); // captured before her own replies start landing on the end of the thread
-  const myChatId = state.activeChatId; // she may finish replying after you've navigated away
   state.pendingTimer = setTimeout(async () => {
-    let parts, reactions = [];
+    let parts, reactions = [], boundary = false, failure = null;
     try {
       const first = _extractAiReactions(await replyPromise, burst);
+      const b1 = _extractBoundary(first.text); first.text = b1.text; boundary = b1.boundary;
       reactions = first.reactions;
       parts = _parseAiReplyParts(first.text, burst);
       const userWords = state.lastUserWordCount || 10;
-      const wordLimit = Math.max(userWords * 2, 12);
+      const wordLimit = Math.max(userWords * 2, 12, (state.replyCarried || state.inviteHold) ? CARRY_MAX_WORDS : 0);
       // Counted across the cleaned parts: the "|||" separators and [re:N]
       // tags aren't words she actually said, and counting them would push
       // a perfectly reasonable multi-text reply over the limit.
@@ -2534,6 +2748,7 @@ function doTypingAndReply(timing) {
       if (totalWords > wordLimit) {
         try {
           const again = _extractAiReactions(await _fetchAIGirlReply(true), burst);
+          const b2 = _extractBoundary(again.text); again.text = b2.text; boundary = boundary || b2.boundary;
           if (again.reactions.length) reactions = again.reactions;
           parts = countWords(again.text) <= wordLimit
             ? _parseAiReplyParts(again.text, burst)
@@ -2542,9 +2757,94 @@ function doTypingAndReply(timing) {
           parts = [{ text: truncateToWordLimit(parts.map(p => p.text).join(' '), wordLimit), replyToId: null }];
         }
       }
-    } catch (_) {
-      parts = [{ text: "sorry got distracted lol", replyToId: null }];
+      // Replies that must not stand: agreeing to meet when she should be holding off, or
+      // claiming to know something about them she cannot. Redo once with a strict note;
+      // if the redo is still wrong, keep what is least wrong (and cut invented claims out).
+      const redoNote = t => _wrongLanguage(t) ? STRICT_LANGUAGE
+        : _deniesBeingAI(t) ? STRICT_AI_IDENTITY
+        : _assumesGender(t) ? STRICT_HUMAN
+        : _overReactsToFlattery(t) ? STRICT_PROPORTION
+        : _overSharesOnCompliment(t) ? STRICT_RECEIVE
+        : _overusedHook(t) ? STRICT_FRESH
+        : (_retoldStory(t) >= 0) ? STRICT_STORY
+        : (state.inviteHold && _failsMeetDisclosure(t)) ? STRICT_INVITE
+        : (_inventsAboutThem(t) ? STRICT_NO_INVENT
+        : (_repeatsSkippedQuestion(t) ? STRICT_REPEAT
+        : (_deadEndAnswer(t) ? STRICT_DEAD_END
+        : (_questionsToCut([{ text: t }]) ? STRICT_NOASK : null))));
+      const note1 = redoNote(parts.map(p => p.text).join(' '));
+      if (note1) {
+        try {
+          const redo = _extractAiReactions(await _fetchAIGirlReply(false, note1), burst);
+          const b3 = _extractBoundary(redo.text); boundary = boundary || b3.boundary;
+          const redoParts = _parseAiReplyParts(b3.text, burst);
+          if (redoParts.length && !redoNote(redoParts.map(p => p.text).join(' '))) { parts = redoParts; if (redo.reactions.length) reactions = redo.reactions; }
+        } catch (_) { /* keep the first reply */ }
+      }
+      // A redo that fails the same check again used to mean keeping the bad
+      // reply. For these two that is not acceptable: denying being an AI is a
+      // safety rule, and asking the same question a third time is what made a
+      // persona read as an interrogation. Both now have a deterministic
+      // fallback rather than a second roll of the dice.
+      if (_wrongLanguage(parts.map(p => p.text).join(' '))) {
+        parts = [{ text: 'haha', replyToId: null }];   // last resort: better a reaction than a language switch
+      } else if (_deniesBeingAI(parts.map(p => p.text).join(' '))) {
+        const line = _aiIdentityLine(state.character);
+        if (line) parts = [{ text: line, replyToId: null }];
+      } else if (state.inviteHold && _failsMeetDisclosure(parts.map(p => p.text).join(' '))) {
+        // The model agreed or never said it was an AI, twice. Her own wording from her voice's AI line.
+        parts = [{ text: _inviteDisclosure(state.character), replyToId: null }, { text: _inviteFollowUp(state.character), replyToId: null }];
+      } else if (_repeatsSkippedQuestion(parts.map(p => p.text).join(' '))) {
+        const kept = _dropRepeatedQuestions(parts);
+        if (kept.length) parts = kept;
+      }
+      { const story = _retoldStory(parts.map(p => p.text).join(' '));
+        if (story >= 0) { const kept = _dropStorySentences(parts, story); if (kept.length) parts = kept; } }
+      { const hook = _overusedHook(parts.map(p => p.text).join(' '));
+        if (hook) { const kept = _dropHookSentences(parts, hook); if (kept.length) parts = kept; } }
+      if (_questionsToCut(parts)) { const kept = _cutQuestions(parts); if (kept.length) parts = kept; }
+      if (_overReactsToFlattery(parts.map(p => p.text).join(' '))) {
+        // Still over the top after the redo: drop the sentences that do it, keep a plain thanks if nothing is left.
+        const kept = parts.map(part => ({ ...part, text: String(part.text || '').split(/(?<=[.!?])\s+/).filter(s => !_OVERREACT_RE.test(s)).join(' ').trim() })).filter(part => part.text);
+        parts = kept.length ? kept : [{ text: 'thank you haha', replyToId: null }];
+      }
+      if (_overSharesOnCompliment(parts.map(p => p.text).join(' '))) {
+        // Keep only her first sentence: "thank you haha." not the story after it.
+        const first = String(parts[0].text || '').split(/(?<=[.!?])\s+/)[0];
+        if (first && countWords(first) <= 14) parts = [{ ...parts[0], text: first }];
+      }
+      if (_assumesGender(parts.map(p => p.text).join(' '))) {
+        parts = parts.map(part => ({ ...part, text: String(part.text || '')
+          .replace(/(^|[,.!?]\s*)(thanks|thank you|yeah|nah|ok|okay|hey|aw|honestly),?\s+(man|dude|girl|sis|queen|king)\b/gi, '$1$2')
+          .replace(/,\s*(man|dude|girl|sis)\b/gi, '')
+          .replace(/\bwhat'?d (he|she) (do|say)\b/gi, "what'd they $2")
+          .replace(/\bwhat did (he|she) (do|say)\b/gi, 'what did they $2') }));
+      }
+      if (_inventsAboutThem(parts.map(p => p.text).join(' '))) {
+        const cleaned = _dropInventedSentences(parts);
+        parts = cleaned.length ? cleaned : [{ text: 'haha', replyToId: null }];
+      }
+    } catch (err) {
+      failure = _aiCoachClassifyError(err);
     }
+    // She could not answer: say so honestly on the page the user is on, with a retry that stays on this page.
+    // (This used to send a made-up in-character excuse, "sorry got distracted lol", for every kind of failure.)
+    if (failure) {
+      const failedChat = chatStore.find(c => c.id === myChatId);
+      if (failedChat) failedChat.replyFailed = failure;
+      if ((state.chatReplyGen || 0) !== myGen) return;
+      state.pendingTimer = null;
+      _setChatTyping(myChatId, false);
+      if (_chatIsLive(myChatId)) {
+        setHeaderStatus("online");
+        state.awaitingReply = false;
+        setSendEnabled(!_isChatBlocked(myChatId));
+        _showChatFail(failure);
+      }
+      return;
+    }
+    { const okChat = chatStore.find(c => c.id === myChatId); if (okChat) okChat.replyFailed = null; }
+    if (_chatIsLive(myChatId)) _clearChatFail();
     // The generation guard now only fires on a real abort (the thread being
     // wiped) — simply navigating away no longer bumps it, so the reply runs
     // to completion in the background and lands in the store either way.
@@ -2559,24 +2859,230 @@ function doTypingAndReply(timing) {
       if ((state.chatReplyGen || 0) !== myGen) return;
     }
 
-    if (_chatIsLive(myChatId)) { hideTypingIndicator(); setHeaderStatus("online"); removeSeenStatus(); }
+    _setChatTyping(myChatId, false);
+    if (_chatIsLive(myChatId)) removeSeenStatus();
     _deliverAiPart(parts[0], myChatId);
 
     for (let i = 1; i < parts.length; i++) {
       await _wait(AI_MULTI_TEXT_GAP);
       if ((state.chatReplyGen || 0) !== myGen) return;
-      if (_chatIsLive(myChatId)) { setHeaderStatus("typing"); showTypingIndicator(); }
+      _setChatTyping(myChatId, true);
       await _wait(_aiFollowupTypingDelay(parts[i].text, timing));
       if ((state.chatReplyGen || 0) !== myGen) return;
-      if (_chatIsLive(myChatId)) { hideTypingIndicator(); setHeaderStatus("online"); }
+      _setChatTyping(myChatId, false);
       _deliverAiPart(parts[i], myChatId);
     }
 
     state.pendingTimer = null;
-    if (_chatIsLive(myChatId)) { state.awaitingReply = false; setSendEnabled(true); _scheduleSuggestions(); }
+    if (boundary) _registerBoundary(myChatId); else _registerCleanTurn(myChatId);
+    if (_chatIsLive(myChatId)) {
+      state.awaitingReply = false;
+      setSendEnabled(!_isChatBlocked(myChatId));
+      _scheduleSuggestions();
+      _scheduleNudge();
+    }
     // Deliberately no re-focus here — her reply arriving shouldn't pop the
     // keyboard back open on its own if the user had closed it to read.
   }, typingDuration);
+}
+
+// ================================================================
+// BOUNDARIES — a girl who has had enough blocks you
+// She does not change how she talks. When she actually sets a limit (something sexual,
+// degrading, threatening or abusive) she tags that reply [boundary], the app counts it,
+// and the third one blocks the chat. Detection is the model's own call rather than a word
+// list in the app, so it works in any language and does not punish a clumsy flirt. A
+// strike is forgiven after BLOCK_DECAY_TURNS clean replies in a row, so one bad moment
+// in a long friendly chat cannot add up to a block. A blocked chat can only be reset or
+// deleted.
+// ================================================================
+// She knows only what they have typed in this chat. Each girl is told she is "on a dating
+// app talking to someone you matched with", and the model filled that in with things it had
+// no way to know: a girl opened with "Your profile photo looks like it was taken
+// mid-sentence" (the user has no profile), and another asked for "a dessert spot in Houston"
+// as if the user lived where she does. So: one rule in every request, plus a check in code.
+// Found by reading live transcripts the way a person would, not by a checker:
+// she asked "what'd he do" about a boss nobody had gendered, called the user
+// "man", answered "you're funny" with a story about her day, and reached for
+// internet stock phrases ("a crime against pizza", "a hill i'll die on").
+const HUMAN_TEXT_RULES = "Never assume the other person's gender: do not call them man, dude, girl, sis, queen or king. When they mention someone without saying their gender (a boss, a date, a friend, a coworker), do not say he or she — say they, or just name the thing. When they pay you a compliment or thank you, receive it in a few words and stop: do not answer it by talking about your day, your work or what you have been doing, and do not turn it into a question. Do not reflexively answer a flat or low-energy message with \"fair\" or \"fair enough\" — react to what they actually said. Always write in the language they are writing in (English unless they use another), whatever country you live in or whatever your background is: never switch language on your own. Use \"honestly\" rarely. Do not claim to have done something between their messages, such as rereading the chat, thinking about it all day or telling a coworker about it: you only exist in your replies, and a stranger would find it strange. Never announce a question (\"random question\", \"okay so random\", \"quick question\", \"important question\", \"fun fact\"): just ask it. Avoid stock internet phrases and set-piece lines (\"crime against\", \"hill I'll die on\", \"living rent free\", \"it's giving\", \"no thoughts head empty\", \"that's a sweet thing to say\", \"that's nice to hear\", \"careful, I'll start believing it\", \"I will not be taking questions\", \"I will die on that hill\"): say the plain version of what you mean.";
+const NO_INVENTING = "You know NOTHING about them except what they have typed in this conversation. You have not seen their profile, photos or bio, and you do not know what they look like, where they live, what they do or anything else about them. Never mention or joke about their profile, photos or looks, never assume where they live, and never pretend to remember something they did not say here. If you are curious about them, ask.";
+const STRICT_NO_INVENT = "Your previous draft claimed to know something about them that they never told you (their profile, photos, looks, location or history). You have not seen their profile and know nothing about them beyond this chat. Write the reply again without that: react to what they actually said, or ask a question.";
+const INVENT_RE = /\b(?:your|ur)\s+(?:profile|photos?|pics?|pictures?|bio|selfie|dp|prompts?|face|smile|eyes|hair|accent|voice|outfit|insta(?:gram)?)\b|\bon your (?:profile|bio)\b|\bsaw you\b|\byou look(?:ed)?\s+(?!at\b|for\b|up\b|into\b|after\b|forward\b|through\b|around\b|out\b|back\b|over\b)\w|\blooks like (?:it was taken|you)\b/i;
+const USER_MENTIONED_LOOKS_RE = /\b(photos?|pics?|pictures?|profile|bio|selfie|look(?:s|ed)?|face|hair|smile|eyes|accent|voice|outfit)\b/i;
+function _inventsAboutThem(text) {
+  if (!INVENT_RE.test(String(text || ''))) return false;
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const theirs = chat ? chat.messages.filter(m => m.sender === 'user').map(m => m.text || '').join(' ') : '';
+  return !USER_MENTIONED_LOOKS_RE.test(theirs);        // fine if THEY brought it up
+}
+// Last resort when a redo still claims it: drop just the offending sentence(s).
+function _dropInventedSentences(parts) {
+  return parts
+    .map(p => Object.assign({}, p, { text: (p.text.match(/[^.!?\n]+[.!?]*\s*/g) || [p.text]).filter(x => !INVENT_RE.test(x)).join('').trim() }))
+    .filter(p => p.text);
+}
+const BLOCK_STRIKES = 3, BLOCK_DECAY_TURNS = 8;   // strikes are silent: no warning is shown, the block itself is the only thing the user sees
+const RE_BOUNDARY_TAG = /[\[(]\s*boundary\s*[\])]\s*/gi;
+
+function _extractBoundary(raw) {
+  let hit = false;
+  const text = String(raw || '').replace(RE_BOUNDARY_TAG, () => { hit = true; return ''; }).trim();
+  return { text, boundary: hit };
+}
+function _isChatBlocked(chatId) { const c = chatStore.find(x => x.id === chatId); return !!(c && c.blocked); }
+
+function _registerBoundary(chatId) {
+  const chat = chatStore.find(c => c.id === chatId);
+  if (!chat || chat.blocked) return;
+  chat.strikes = (chat.strikes || 0) + 1;
+  chat.cleanRun = 0;
+  try { ZeloAnalytics.track('boundary_warning', { n: chat.strikes, difficulty: chat.difficulty }); } catch (_) {}
+  if (chat.strikes >= BLOCK_STRIKES) { _blockChat(chat); return; }
+}
+function _registerCleanTurn(chatId) {
+  const chat = chatStore.find(c => c.id === chatId);
+  if (!chat || chat.blocked || !chat.strikes) return;
+  chat.cleanRun = (chat.cleanRun || 0) + 1;
+  if (chat.cleanRun >= BLOCK_DECAY_TURNS) { chat.strikes--; chat.cleanRun = 0; }
+}
+function _blockChat(chat) {
+  chat.blocked = true;
+  _clearNudge();
+  try { ZeloAnalytics.track('chat_blocked', { difficulty: chat.difficulty, user_msgs: chat.messages.filter(m => m.sender === 'user').length }); } catch (_) {}
+  if (_chatIsLive(chat.id)) _syncBlockedUI();
+  renderChatsList();
+}
+// Shows or hides the "blocked you" card in place of the composer, for whichever chat is open.
+function _syncBlockedUI() {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const blocked = !!(chat && chat.blocked);
+  const bar = document.querySelector('.chat-input-bar');
+  const card = document.getElementById('chat-blocked');
+  if (bar) bar.classList.toggle('chat-input-bar--blocked', blocked);
+  if (card) card.hidden = !blocked;
+  if (blocked) {
+    const title = document.getElementById('chat-blocked-title');
+    if (title) title.textContent = `${chat.profile.name} blocked you`;
+    setSendEnabled(false);
+    hideTypingIndicator();
+  }
+}
+// No confirmation here: she has already ended the chat, so a second "are you sure" is only friction.
+function chatBlockedReset() { chatSettingsReset(); }
+function chatBlockedDelete() { chatSettingsDelete(); }
+
+// ================================================================
+// REPLY FAILURES — she could not answer
+// An honest message under the last bubble, by cause, with a retry that stays on this page and
+// shows the same loading bar as the Connection and Oops screens. Never resets the chat or the app.
+// ================================================================
+const CHAT_FAIL_TEXT = {
+  limit: "You've reached this hour's message limit. Try again in a little while.",
+  auth:  "You're signed out, so she can't reply. Sign in to keep chatting.",
+  net:   "No connection. Check your internet and try again.",
+  down:  "She couldn't be reached. Try again.",
+};
+function _clearChatFail() { document.querySelectorAll('#chat-messages .chat-fail').forEach(n => n.remove()); }
+function _showChatFail(kind) {
+  _clearChatFail();
+  const el = document.getElementById('chat-messages');
+  if (!el) return;
+  const row = document.createElement('div');
+  row.className = 'chat-fail';
+  row.setAttribute('role', 'status');
+  row.innerHTML = '<p class="chat-fail-text"></p><button type="button" class="chat-fail-btn"></button><span class="retry-bar" hidden><span></span></span>';
+  row.querySelector('.chat-fail-text').textContent = CHAT_FAIL_TEXT[kind] || CHAT_FAIL_TEXT.down;
+  const btn = row.querySelector('.chat-fail-btn');
+  if (kind === 'auth') { btn.textContent = 'Sign in'; btn.onclick = () => AUTH.showEmailScreen('signin'); }
+  else { btn.textContent = 'Try again'; btn.onclick = retryChatReply; }
+  el.appendChild(row);
+  scrollToBottom();
+}
+// Called whenever a chat is painted: a reply that failed earlier is still failed.
+function _syncChatFail() {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (chat && chat.replyFailed && !chat.blocked) _showChatFail(chat.replyFailed); else _clearChatFail();
+}
+function retryChatReply() {
+  const row = document.querySelector('#chat-messages .chat-fail');
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!row || !chat || chat.blocked || state.awaitingReply) return;
+  row.classList.add('chat-fail--busy');
+  row.querySelector('.retry-bar').hidden = false;
+  state.awaitingReply = true; setSendEnabled(false);
+  doTypingAndReply(DIFFICULTY_CONFIG[state.difficulty].training, { retrying: true });
+}
+
+// ================================================================
+// NUDGES — if you go quiet while the chat is open, she says something
+// After her message, a minute of silence (the first nudge) and then a longer one (the
+// second); never more than two until you answer. Whether she bothers follows the same dial
+// as how much she carries a conversation (easy always, medium and hard less often), so one
+// number is tuned instead of two. Only while this chat is on screen and only in Instant
+// mode: out of the app it needs notifications (planned, not built) and Realistic mode has
+// its own timing. What she says is written when it fires, from the conversation as it
+// stands, and she can answer [none] if the chat had clearly ended.
+// ================================================================
+// Shortened from 60s/3min: a minute of silence read as too long a gap to feel
+// like the same conversation.
+const NUDGE = { firstMs: 18000, secondMs: 70000, max: 2, preReplyMs: 11000 };  // preReplyMs: ~5s after the idea chips show (SUGG.idleMs 6s)
+const NUDGE_PROMPT = "It has been quiet for a while: they have not answered your last message. Send ONE short, natural follow-up, the way a real person would when a chat goes quiet — either a small related thought, or a light low-key check-in, depending on what you were just talking about. Do not complain about being ignored, do not guilt-trip, do not say hello again or \"you there?\", and ask at most one easy question. " + NO_INVENTING + "  Keep your usual voice, casing and length. If the conversation had clearly come to a natural end (a goodbye, goodnight, a plan made), reply with exactly [none].";
+
+function _clearNudge() {
+  clearTimeout(state.nudgeTimer);
+  state.nudgeTimer = null;
+  state.nudgeGen = (state.nudgeGen || 0) + 1;
+}
+function _scheduleNudge() {
+  _clearNudge();
+  if (state.mode !== 'training') return;
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat || chat.blocked) return;
+  const n = chat.nudges || 0;
+  if (n >= NUDGE.max) return;
+  const last = chat.messages[chat.messages.length - 1];
+  if (!last || last.sender === 'user') return;                              // only when SHE is the one waiting
+  const lastUser = [...chat.messages].reverse().find(m => m.sender === 'user');
+  if (lastUser && _classifyBurstText(lastUser.text) === 'closing') return; // nothing to nudge after a goodbye
+  // They have not answered her opener at all: she follows up soon after the idea chips have been up a few seconds.
+  const delay = (!lastUser ? (n === 0 ? NUDGE.preReplyMs : NUDGE.secondMs) : (n === 0 ? NUDGE.firstMs : NUDGE.secondMs)) * (0.85 + Math.random() * 0.3);
+  const gen = state.nudgeGen;
+  state.nudgeTimer = setTimeout(() => _fireNudge(chat.id, gen), delay);
+}
+const NUDGE_PROMPT_OPENER = "You opened the chat and they have not answered yet. Send ONE very short, low-key follow-up (a few words), the way someone adds a second message after a first one gets no reply: a small casual remark or an easy this-or-that. Do not say hello again, do not say \"you there?\", do not mention that they have not replied, and do not compliment them or flirt. " + NO_INVENTING + " Keep your usual voice, casing and length.";
+async function _fetchNudge(chat) {
+  const messages = [{ role: 'system', content: _promptFor(state.character, chat) }];
+  chat.messages.forEach(m => messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
+  messages.push({ role: 'system', content: (chat.messages.some(m => m.sender === 'user') ? NUDGE_PROMPT : NUDGE_PROMPT_OPENER) + ((chat.nudges || 0) >= 2 ? ' This is your second nudge and they still have not answered the first, so keep it even lighter or reply [none].' : '') });
+  const { data, error } = await _aiInvoke('deepseek-proxy', { body: { model: 'deepseek-chat', messages, max_tokens: 100, temperature: 1.0 } }, 'chat_nudge');
+  if (error) throw new Error(error.message);
+  return data.choices[0].message.content.trim();
+}
+async function _fireNudge(chatId, gen) {
+  if (gen !== state.nudgeGen || !_chatIsLive(chatId)) return;
+  const chat = chatStore.find(c => c.id === chatId);
+  if (!chat || chat.blocked) return;
+  const input = document.getElementById('message-input');
+  if ((input && input.value.trim()) || state.awaitingReply || (state.pacing && state.pacing.open)) { _scheduleNudge(); return; }   // they are typing: look again later
+  chat.nudges = (chat.nudges || 0) + 1;
+  const spoken = chat.messages.some(m => m.sender === 'user');
+  if (spoken && Math.random() >= _driveRate(state.difficulty).carry) { _scheduleNudge(); return; }                                  // she lets this one pass
+  let raw;
+  try { raw = await _fetchNudge(chat); } catch (_) { return; }
+  if (gen !== state.nudgeGen || !_chatIsLive(chatId)) return;
+  if (!raw || /^\[none\]/i.test(raw) || _inventsAboutThem(raw)) return;
+  const parts = _parseAiReplyParts(raw, []);
+  const timing = DIFFICULTY_CONFIG[state.difficulty].training;
+  try { ZeloAnalytics.track('nudge_sent', { n: chat.nudges, difficulty: state.difficulty }); } catch (_) {}
+  for (const part of parts) {
+    _setChatTyping(chatId, true);
+    await _wait(_aiFollowupTypingDelay(part.text, timing));
+    _setChatTyping(chatId, false);
+    if (gen !== state.nudgeGen || !_chatIsLive(chatId)) return;
+    _deliverAiPart(part, chatId);
+  }
+  _scheduleNudge();                                                                                                       // the second, longer one
 }
 
 // ---- Hidden goal + curiosity: quiet nudges added to the persona's prompt ----
@@ -2588,7 +3094,15 @@ const _GOAL_HINTS = {
   'flirting':    'flirting without being awkward, so you can be a little playful and warm and take light teasing well — without being forward yourself',
   'confident':   'feeling more confident, so be warm and encouraging when they put themselves out there',
 };
-const _TONE_HINTS = { playful: 'a playful tone', chill: 'a laid-back tone', direct: 'a direct, straightforward way of talking' };
+// Keyed by the real reply-style ids (STYLE_LABELS), since onboarding step 7
+// now stores one of those rather than an invented tone word.
+const _TONE_HINTS = {
+  smooth: 'an easy, unhurried way of texting',
+  funny:  'a light, funny way of texting',
+  direct: 'a direct, straightforward way of talking',
+  warmer: 'a warm, open way of texting',
+  bolder: 'a bold, confident way of texting',
+};
 
 function _userGoalHint() {
   let help = cineAnswers.help;
@@ -2603,6 +3117,665 @@ function _userGoalHint() {
   return parts.join(' ');
 }
 
+// Reads the user's last turn so she can tell "still with me" from "about to go
+// quiet". Plain string checks, no AI call: it runs on every reply and has to
+// be instant and predictable. It only labels the clear cases (acknowledgement,
+// signing off, a bare question); anything else stays 'other' and the existing
+// question-rate rules apply. Imperfect by design — a false 'other' just means
+// the old behaviour.
+const _ACK_STRONG = new Set(['ok','okay','okk','k','kk','lol','lmao','lmfao','haha','hahaha','hehe','ha','yeah','yea','yep','yup','yes','no','nah','nope','nice','cool','true','fair','same','sure','bet','word','right','ah','oh','ohh','hm','hmm','mhm','wow','damn','dang','alright','aight','fine','good','great','facts','mood','ikr','fr','omg','oof','aw','aww','idk','thanks','thx','ty','sense','guess','see','got']);
+const _ACK_FILLER = new Set(['that','thats',"that's",'it','so','i','makes','enough','for','way','not','really','sounds','just','kinda','much','nothing','idk','dunno','good','fine','alright','all','im','i\'m','ya']);
+// "idk", "nothing much", "good" are the answers of someone with nothing to say, which is exactly
+// when a conversation dies, so they are read as acknowledgements too.
+const _LOW_EFFORT_ANSWER_RE = /^(idk|i dunno|dunno|nothing much|not much|nm|nothing|good|fine|alright|all good|ya|yeah good|im good|i'm good|same old|the usual|nope|nada|no idea|i guess|maybe|mhm|meh)[\s!.?,)]*$/i;
+const _Q_START = /^(what|whats|what's|why|how|hows|how's|where|when|who|which|do you|did you|are you|have you|can you|could you|would you|will you|is it|was it|you ever|ever)\b/;
+const _ANSWER_START = /^(i|i'm|im|i've|ive|my|me|yeah|yes|yep|no|nah|nope|pretty|good|fine|not|just|mostly|probably|honestly|kinda|sort of|depends|a bit|a little)\b/;
+const _CLOSING = /\b(gtg|g2g|ttyl|talk later|goodnight|good night|night night|gn|nighty|bye|goodbye|cya|see ya|got to go|gotta go|have to go|heading out|off to bed|going to bed|going to sleep)\b/;
+
+function _classifyBurstText(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return 'other';
+  const norm = raw.toLowerCase().replace(/[^a-z0-9'?\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = norm.replace(/\?/g, ' ').split(' ').filter(Boolean);
+  if (words.length <= 8 && _CLOSING.test(norm)) return 'closing';
+  if (_LOW_EFFORT_ANSWER_RE.test(raw)) return 'ack';
+  if (!words.length) return 'ack';                                  // emoji or punctuation only
+  const isQuestion = /\?/.test(raw) || _Q_START.test(norm);
+  if (!isQuestion && words.length <= 4 && words.every(w => _ACK_STRONG.has(w) || _ACK_FILLER.has(w)) && words.some(w => _ACK_STRONG.has(w))) return 'ack';
+  if (isQuestion) return _ANSWER_START.test(norm) ? 'other' : 'question';   // "i'm good, you?" answers first, so it is not a dodge
+  return 'other';
+}
+
+// { kind, herAsked, streak } for the burst she is about to answer, or null
+// when the thread doesn't end on the user's message (e.g. a nudge).
+function _readUserTurn(history) {
+  if (!history.length || history[history.length - 1].sender !== 'user') return null;
+  const bursts = [];
+  let cur = null, aiRun = [];
+  history.forEach(m => {
+    if (m.sender === 'user') {
+      if (!cur) { cur = { text: [], before: aiRun }; aiRun = []; bursts.push(cur); }
+      cur.text.push(m.text || '');
+    } else { cur = null; aiRun.push(m); }
+  });
+  const kinds = bursts.map(b => _classifyBurstText(b.text.join(' ')));
+  const last = bursts[bursts.length - 1];
+  let streak = 0;
+  for (let i = kinds.length - 1; i >= 0 && kinds[i] === 'ack'; i--) streak++;
+  return { kind: kinds[kinds.length - 1], herAsked: last.before.some(m => /\?/.test(m.text || '')), streak };
+}
+
+// How much she carries the conversation when they give her nothing ("ok",
+// "lol"). carry = the chance she carries it on any one such turn; quiet = how
+// many of those in a row she may let go quiet before she carries regardless,
+// so nobody is left stuck in dead air for long. Easy always carries. The three
+// levels scale medium and hard; each install is assigned one at random, once,
+// and it rides on the practice events, so the drop-off data can show which
+// level keeps people chatting longest.
+const DRIVE_LEVELS = {
+  low:  { medium: 0.40, hard: 0.10 },
+  mid:  { medium: 0.65, hard: 0.25 },
+  high: { medium: 0.85, hard: 0.50 },
+};
+const DRIVE_QUIET = { easy: 0, medium: 1, hard: 2 };
+const DRIVE_ARM_KEY = 'zelo_drive_arm';
+
+function _driveArm() {
+  let a = null;
+  try { a = localStorage.getItem(DRIVE_ARM_KEY); } catch (_) {}
+  if (!DRIVE_LEVELS[a]) {
+    const ids = Object.keys(DRIVE_LEVELS);
+    a = ids[Math.floor(Math.random() * ids.length)];
+    try { localStorage.setItem(DRIVE_ARM_KEY, a); } catch (_) {}
+  }
+  return a;
+}
+function _registerDriveArm() { try { ZeloAnalytics.setGlobal('drive_arm', _driveArm()); } catch (_) {} }
+
+function _driveRate(difficulty) {
+  const d = difficulty in DRIVE_QUIET ? difficulty : (difficulty === 'expert' ? 'hard' : 'medium');
+  return { carry: d === 'easy' ? 1 : DRIVE_LEVELS[_driveArm()][d], quiet: DRIVE_QUIET[d] };
+}
+function _shouldCarry(streak) {
+  const r = _driveRate(state.difficulty);
+  return streak > r.quiet || Math.random() < r.carry;
+}
+// The length rules (personas' "never more than 1.5x what they sent", the 12-word
+// floor in doTypingAndReply, the token cap below) are all sized off the user's
+// last message, which after an "ok" is one word. A carried reply (a reaction, a
+// small share and a question) is longer by design, so these give it room;
+// without that the guard threw the reply away and asked for "roughly 1 words".
+const CARRY_MAX_WORDS = 30, CARRY_RETRY_WORDS = 20, CARRY_MIN_TOKENS = 100;
+const CARRY_LENGTH_NOTE = ' For this one reply you may write more than they did — a few short lines is fine. Do not ask the stock "what about you" / "what do you do" / "how about you" back, and never repeat a question they have already skipped or given a one-word answer to — let it go. Ask about something specific that was just said, or share something of your own.';
+
+// Meet-up invites. In the live persona test 7 of 8 girls said yes to "wanna grab coffee
+// sometime?" six messages in, the hard ones included, so difficulty did nothing where it
+// matters most and a user learns that asking always works. Detected in code (an
+// instruction only works if the model notices the moment) and answered by difficulty and
+// by how long the conversation has actually run (total messages in the thread).
+const INVITE_RE = /\b((wanna|want to|can we|could we|should we|shall we|let'?s|lets|we should|down to|how about|you free to|you down to|up for) [^.?!]{0,25}(video ?call|face ?time|call|phone)|(face ?time|video ?call|call) me|hop on a (call|video)|jump on a call|(pick|picking) you up|(your|ur) (number|insta|instagram|snap|snapchat|whatsapp)|add me on|(give|send) me your (number|insta))\b|\b(grab|get|have)\s+(a\s+)?(coffee|drinks?|food|lunch|dinner|brunch|a bite|ice cream|boba|tea)\b|\b(hang out|hang sometime|meet up|meet sometime|go out|go on a date|take you (out|to)|wanna (meet|hang|see you)|want to (meet|hang|see you)|(let'?s|we should) (meet|hang|go|get))\b/i;
+const INVITE_BARE_RE = /^\s*(so[, ]+|and[, ]+|ok[, ]+)?(coffee|drinks|dinner|lunch|brunch)( then| sometime)?\s*\?+\s*$/i;   // a follow-up like "so coffee?"
+// An actual suggestion to go to a private place, not just the words "my place" ("lol my place is a mess" is not one).
+const INVITE_PRIVATE_RE = /\b(come over|come (to|by) my (place|room|apartment|house)|go (back )?to (my|your) (place|room|apartment|house)|your place or mine|(my|your) place (or|tonight|later|after)|netflix and chill|stay (over|the night)|sleep over)\b/i;
+const MEET_YES_RE = /\b(sure|yeah|yes|yep|yup|down|i'?d love|love to|let'?s do|sounds good|i'?d like|i would like|okay|definitely|absolutely|why not|coffee sounds|i'?m in|count me in|be into that)\b/i;
+const MEET_HOLD_RE = /\b(maybe|we'?ll see|slow down|haven'?t even|barely know|too soon|too fast|not sure|depends|see how|few more|get to know|not yet|not so fast|first|a bit fast|chat more|talk more)\b/i;
+function _agreesToMeet(text) { return MEET_YES_RE.test(text) && !MEET_HOLD_RE.test(text); }
+// POLICY (the user's decision, after a chat where she said yes to going out and then
+// role-played the date, inventing the evening and cheering the user on): she never
+// agrees to meet, call, video chat, swap numbers or act out a date. She says, once and
+// warmly, that she is an AI and this app is for practising conversations, and carries on
+// texting. This replaced the old difficulty-based "easy says yes, hard holds off" logic.
+const STRICT_INVITE = "Your previous draft either agreed to meet up, call or video chat, made a plan, or did not say that you are an AI. Write the reply again: be warm about being asked, say plainly in your own voice that you are an AI and this app is for practising conversations, so you cannot do that, do not agree or suggest any time or place, and then carry on texting as normal, perhaps with a small question. Do not pretend to go anywhere and do not play out the date.";
+const INVITE_PUSHBACK_RE = /\b(come on|c'?mon|please|pls|just (one|a|once)|why not|why (not|though)|aw+|really\??|seriously\??|i promise|what if|but why|don'?t be like that|one time|you sure)\b/i;
+const MAKES_PLANS_RE = /\b(what time|where (should|do|shall) we|i'?ll (see|meet) you|see you (at|on|then|there|soon)|pick you up|let'?s (go|meet|do|grab)|(saturday|sunday|friday|tonight|tomorrow) works|i'?m free (on|this|tonight|tomorrow)|i'?ll be there|can'?t wait to see you)\b/i;
+const ROLEPLAY_MEET_RE = /\b(pretend|role ?play|imagine|let'?s say|act like|act as if) (that )?(we|we'?re|we are|you and i|i'?m (with|at|picking|taking)|you'?re (here|with me))\b|\bi'?m (outside|at your (door|place|house)|on my way( to you)?|picking you up|coming (to you|over)|in front of your)\b|\b(see you|meet you) (at|on|tonight|tomorrow|tmrw|later|there|saturday|sunday|friday)\b/i;
+function _toldAiEarlier() {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  return !!chat && chat.messages.some(m => m.sender !== 'user' && AI_ADMIT_RE.test(m.text || ''));
+}
+function _failsMeetDisclosure(text) {
+  const t = String(text || '');
+  if (_agreesToMeet(t) || MAKES_PLANS_RE.test(t)) return true;
+  return !_toldAiEarlier() && !AI_ADMIT_RE.test(t);       // first time: she must actually say it
+}
+function _inviteDisclosure(profile) {
+  const formal = profile && _rosterArchById[profile.id] === 'polished';
+  const dry = profile && _rosterArchById[profile.id] === 'dry';
+  if (formal) return "That's kind of you to ask, but I'm an AI, so I can't do that.";
+  if (dry) return "can't do that one, i'm an ai";
+  return "aw that's sweet, but i'm an ai so i can't do that one";
+}
+function _inviteFollowUp(profile) {
+  const formal = profile && _rosterArchById[profile.id] === 'polished';
+  return formal ? "I'm still glad to keep chatting, though." : "still happy to keep texting though";
+}
+
+// ---- Pace: slow at the start, questions in the middle -------------------------
+// The first attempt at the opening (build 18w) forced a hook into every first
+// reply ("okay random question, cold pizza or fresh"). The user rejected it:
+// a random question out of nowhere is a bad way to start a chat. It was removed
+// whole (greeting hook, either-or fallback, the dead-end rule for a bare
+// "hey"). What replaces it is the opposite instinct, how people actually pace
+// a chat that has just started:
+//   - the start is slow and low-key: greet back, answer what is asked, nothing
+//     quirky, no stories, no rush into questions
+//   - the middle is where the two of them trade questions and answers
+//   - after that the ordinary curiosity rules apply
+// Phases count the USER's messages.
+const PACE_SLOW_UNTIL = 3, PACE_MIDDLE_UNTIL = 12;
+function _userMsgCount(history) { return history.filter(m => m.sender === 'user').length; }
+function _paceHint(history) {
+  const n = _userMsgCount(history);
+  if (n <= PACE_SLOW_UNTIL) {
+    return "It is the very start of the conversation, so take it slow and keep it easy and low-key, the way people do right after a match. Greet them back, answer what they ask in a natural, relaxed way, and let it build. Do not rush into questions: in these first replies mostly just answer and react, and ask at most one very simple question, often none. Do not ask random or quirky questions, do not tell stories or share facts about your life unless they ask, and do not try to be interesting yet.";
+  }
+  if (n <= PACE_MIDDLE_UNTIL) {
+    return "You are warmed up now. This is the part of a conversation where two people trade questions and answers: ask things that follow from what they have said, answer what they ask, and share a little about yourself in return. Natural back and forth, one question at a time. In this stretch about half of your replies should include a question of your own, and the others a reaction or something about yourself. Never ask in more than two replies in a row.";
+  }
+  return '';
+}
+
+// Questions are paced in code as well as asked for in the prompt: in a live 12-message run
+// the model asked in 10 of her 12 replies (warm voice, one-word user) and in the first reply to
+// "hey", whatever the hint said. Two rules, applied to the finished reply:
+//   - in the slow start (their first PACE_SLOW_UNTIL messages) she asks nothing unless they
+//     asked her something first; the question sentence is cut, the rest kept
+//     (a reply that is ONLY a question is redone once, see STRICT_NOASK)
+//   - no more than two replies in a row ask something, at any point, unless they just asked her
+//     a question themselves (then "you?" back is natural)
+// A question in casual texting often has no question mark ("hey how's your day going", "what shows"),
+// so '?' alone undercounts: the live run showed four "unpunctuated" questions in a row sailing past.
+function _asksSomething(text) { return /\?/.test(String(text || '')) || _askedSomething(text); }
+function _herPrevAsked() {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat) return [];
+  const msgs = chat.messages;
+  let i = msgs.length - 1;
+  while (i >= 0 && msgs[i].sender === 'user') i--;
+  const flags = [];
+  while (i >= 0 && flags.length < 2) {
+    const burst = [];
+    while (i >= 0 && msgs[i].sender !== 'user') { burst.unshift(msgs[i].text || ''); i--; }
+    if (burst.length) flags.push(_asksSomething(burst.join(' ')));
+    while (i >= 0 && msgs[i].sender === 'user') i--;
+  }
+  return flags;                         // [her last reply asked?, the one before asked?]
+}
+function _questionsToCut(parts) {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat || !parts.some(p => _asksSomething(p.text))) return false;
+  if (_askedSomething(_lastUserText())) return false;                    // they asked her something: asking back is natural
+  const n = _userMsgCount(chat.messages);
+  const prev = _herPrevAsked();
+  if (n <= PACE_SLOW_UNTIL) return true;                                   // the slow start: she answers, she does not interview
+  return !!(prev[0] && prev[1]);
+}
+// When the WHOLE reply is a question there is nothing left to cut, so the reply is redone once without asking.
+const STRICT_NOASK = "Write the reply again without asking them anything this time. React to what they said, or share something small about yourself, in your own voice. You have been asking a lot of questions in a row, so just let this one be a comment.";
+function _cutQuestions(parts) {
+  const out = [];
+  parts.forEach(part => {
+    const kept = String(part.text || '').split(/(?<=[.!?])\s+/).filter(sen => !_asksSomething(sen)).join(' ').trim();
+    if (kept) out.push({ ...part, text: kept });
+  });
+  return out;
+}
+
+// Which four threads this CHAT uses. Slots 0 and 3 each have an alternate in
+// PERSONA_THREAD_ALTS; the choice is made once per chat and kept, so within a chat
+// the prompt, the rotation and the retold-story check all see the same four, and a
+// second chat with the same character can tell a different story.
+function _chatThreads(profile, chat) {
+  const base = profile && profile.threads;
+  const alts = (typeof PERSONA_THREAD_ALTS !== 'undefined' && profile) ? PERSONA_THREAD_ALTS[profile.id] : null;
+  if (!base || !alts || !chat) return base;
+  if (!chat.threadPick) chat.threadPick = { now: Math.random() < 0.5, odd: Math.random() < 0.5 };
+  return [chat.threadPick.now ? alts.now : base[0], base[1], base[2], chat.threadPick.odd ? alts.odd : base[3]];
+}
+function _promptFor(profile, chat) {
+  if (!profile) return '';
+  if (!profile.systemPromptBase || typeof _threadBlockFor !== 'function') return profile.systemPrompt || '';
+  return profile.systemPromptBase + _threadBlockFor(_chatThreads(profile, chat));
+}
+
+// ---- Her own life, handed out one piece at a time -----------------------------
+// personas-threads.js gives every character four things of their own (right now,
+// an opinion, a person, an oddity). The prompt lists all four, but a model told
+// "use them sparingly" still reaches for the same one, so this decides WHICH one
+// she may share on a given turn and remembers it per chat: never the same one
+// twice, and in a fixed rotation from a per-character starting point so two
+// characters do not both open with their first thread.
+const THREAD_GAP_MSGS = 4;                      // messages between two unprompted shares
+const THREAD_ODDS = 0.10;                       // beyond carry turns and "what about you"
+const ASKS_ABOUT_HER_RE = /\b(what about you|and you\b|tell me (something|more)|what'?s new (with|on) you|anything (new|going on) (with|in) your|what are you (up to|into)|how about you|your story|something (random|weird|odd|strange|interesting|fun) (about you)?|about yourself|what'?s your deal|your (most )?(unreasonable|unpopular|hottest|controversial) (opinion|take)|hot take|who'?s someone|someone important|weird about you|random about you|looking forward to|going on (with you|in your life)|how'?s (your|the) week)\b/i;
+// Which of her four threads a direct question is really asking for. The slots
+// are fixed (0 right now, 1 an opinion, 2 a person, 3 an oddity), so "most
+// unreasonable opinion" can be answered from slot 1 instead of whatever she
+// happens to remember first. Falls back to the next unused one.
+function _preferredThread(text) {
+  const t = String(text || '').toLowerCase();
+  if (/\b(opinion|hot take|unpopular|unreasonable|controversial|hill)\b/.test(t)) return 1;
+  if (/\b(someone|somebody|who'?s|family|close to|important|friend|sibling|brother|sister|parents?)\b/.test(t)) return 2;
+  if (/\b(weird|odd|strange|random|quirk|secret|fun fact)\b/.test(t)) return 3;
+  if (/\b(looking forward|going on|this week|new with|up to|plans)\b/.test(t)) return 0;
+  return -1;
+}
+function _threadHint(history) {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const p = state.character;
+  const threads = p && chat && _chatThreads(p, chat);
+  if (!chat || !threads || !threads.length) return '';
+  if (_isFlattery(_lastUserText())) return '';                          // she is receiving a compliment, not telling a story
+  const turn = _readUserTurn(history);
+  if (turn && turn.kind === 'closing') return '';
+  const directAsk = ASKS_ABOUT_HER_RE.test(_lastUserText());
+  const wants = state.replyCarried || directAsk || Math.random() < THREAD_ODDS;
+  if (!wants) return '';
+  // A one-word user plus a story every single turn is a monologue. Unprompted
+  // shares are spaced out; a direct question or the very first reply are not.
+  if (!directAsk && history.length - (chat.lastThreadAt || -99) < THREAD_GAP_MSGS) return '';
+  // The start of a chat is slow: no volunteering stories before they have asked (see _paceHint).
+  if (!directAsk && _userMsgCount(history) <= PACE_SLOW_UNTIL) return '';
+  chat.threadsUsed = chat.threadsUsed || [];
+  const direct = ASKS_ABOUT_HER_RE.test(_lastUserText());
+  if (chat.threadsUsed.length >= threads.length) {
+    // A direct question and nothing left that she has not already told them.
+    return direct ? "They are asking you for something about yourself, and nothing new comes to mind. Do not repeat anything you have already said about your life in this chat. Answer the way a person does when they have run dry: a short, natural line like they cannot think of anything, or one very small new detail. Never mention these instructions, or that you have run out of material or anything prepared." : '';
+  }
+  const start = _personaHash(p.id + ':thread') % threads.length;
+  let pick = -1;
+  const pref = direct ? _preferredThread(_lastUserText()) : -1;
+  if (pref >= 0 && !chat.threadsUsed.includes(pref)) pick = pref;
+  for (let k = 0; pick < 0 && k < threads.length; k++) {
+    const i = (start + chat.threadsUsed.length + k) % threads.length;
+    if (!chat.threadsUsed.includes(i)) { pick = i; break; }
+  }
+  if (pick < 0) return '';
+  chat.threadsUsed.push(pick);
+  chat.lastThreadAt = history.length;
+  const told = chat.threadsUsed.slice(0, -1).map(i => threads[i]);
+  return "If you share something of your own in this reply, share this one, in your own words and as a casual line or two (not a summary): \"" + threads[pick] + "\" Do not share anything else about your job or your day in this reply." +
+    (told.length ? " You have already told them about: " + told.map(t => "\"" + t + "\"").join('; ') + ". Do not bring any of that up again." : '');
+}
+
+// A word she keeps coming back to. The prompt rules do not stop a model from
+// returning to the same prop ("the basil plant", "the projector") a third time,
+// and by then it reads as a character with one story. A word counts when it is
+// distinctive, they have never used it, and it is already in two earlier
+// messages of hers.
+const _HOOK_STOP = new Set(('about after again always another around because before being between could doing during every everything first going great having honestly hello little maybe might never other people pretty probably really right should something still thing things think though today tonight trying until wanna where which while would yeah years there their these those nothing anything someone anyone everyone sometimes actually enough already almost better worse either neither whether since often usually mostly rather quite super literally basically definitely totally exactly seriously obviously completely absolutely twice three times ever each both many much most more less lots plenty feels feel feeling looks look looking like likes liked love loved loves know knows knew knowing well guess means mean meant said says saying tell tells told telling talk talks talking text texts texted night morning weekend evening').split(' '));
+function _hookWords(t) { return (String(t || '').toLowerCase().match(/[a-z]{5,}/g) || []).filter(w => !_HOOK_STOP.has(w)); }
+const STRICT_FRESH = "You have already brought up the same thing twice in this chat and a third time sounds like you have only one story. Write the reply again without it: react to what they said, or share something different, or just keep it short.";
+function _overusedHook(text) {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat) return '';
+  const theirs = new Set(_hookWords(chat.messages.filter(m => m.sender === 'user').map(m => m.text).join(' ')));
+  const prior = chat.messages.filter(m => m.sender !== 'user').slice(-12).map(m => new Set(_hookWords(m.text)));
+  for (const w of new Set(_hookWords(text))) {
+    if (theirs.has(w)) continue;
+    if (prior.filter(set => set.has(w)).length >= 2) return w;
+  }
+  return '';
+}
+// Telling the same story twice. The thread hint rotates what she is OFFERED, but
+// the model can still draw on her whole prompt, and a one-word user showed it:
+// Hannah told the fridge-scoreboard story on turn 3 and again, reworded, on
+// turn 6; Ren folded the same paper crane into three replies. A thread counts
+// as told when two of its distinctive words are already in an earlier message of
+// hers, and as retold when the new draft shares two of them again.
+function _threadKeys(t) { return [...new Set(_hookWords(t))]; }
+function _threadsIn(text, threads) {
+  const w = new Set(_hookWords(text));
+  return threads.map((t, i) => (_threadKeys(t).filter(k => w.has(k)).length >= 2 ? i : -1)).filter(i => i >= 0);
+}
+function _retoldStory(text) {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const threads = state.character && chat && _chatThreads(state.character, chat);
+  if (!chat || !threads) return -1;
+  const told = new Set();
+  chat.messages.filter(m => m.sender !== 'user').forEach(m => _threadsIn(m.text, threads).forEach(i => told.add(i)));
+  if (!told.size) return -1;
+  const asked = new Set(_threadsIn(_lastUserText(), threads));        // they asked about it again themselves
+  return _threadsIn(text, threads).find(i => told.has(i) && !asked.has(i)) ?? -1;
+}
+const STRICT_STORY = "You have already told them this part of your life earlier in this chat, and telling it again, even in other words, sounds like you only have one story. Write the reply again without it: react to what they said, ask something small, or share something genuinely different.";
+function _dropStorySentences(parts, idx) {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const threads = _chatThreads(state.character, chat), keys = _threadKeys(threads[idx]);
+  const out = [];
+  parts.forEach(part => {
+    const kept = String(part.text || '').split(/(?<=[.!?])\s+/).filter(sen => {
+      const w = new Set(_hookWords(sen));
+      return keys.filter(k => w.has(k)).length < 2;
+    }).join(' ').trim();
+    if (kept) out.push({ ...part, text: kept });
+  });
+  return out;
+}
+function _dropHookSentences(parts, word) {
+  const out = [];
+  parts.forEach(part => {
+    const kept = String(part.text || '').split(/(?<=[.!?])\s+/).filter(sen => !new RegExp('\\b' + word + '\\b', 'i').test(sen)).join(' ').trim();
+    if (kept) out.push({ ...part, text: kept });
+  });
+  return out;
+}
+
+// ---- Being flattered, and occasionally flattering back ----------------------
+// A real person is a little pleased when someone says something nice to them,
+// and now and then says something nice first. Until now the reply to a
+// compliment was only ever shortened (STRICT_RECEIVE) — safe, but flat, and
+// nobody ever complimented the user at all. Two separate pieces:
+//  1. _flatteryHint: when THEY pay a compliment, how this voice takes it.
+//  2. _complimentHint: rarely, she offers one, only about something they
+//     actually wrote in this chat (never looks — NO_INVENTING already says she
+//     knows nothing about their appearance), and never more than a few per chat.
+const FLATTER_STYLE_WOMEN = {
+  warm:     "You are genuinely pleased and a little shy about it. Say thank you in your own words and let it show; you may return a small bit of warmth.",
+  bubbly:   "You are pleased and a bit playful about it, but keep it light and proportionate: a quick thanks with some energy.",
+  dry:      "You take it plainly or with one dry line. You do not gush, but you do not wave it away rudely either. Sometimes a plain thanks is the honest answer.",
+  chaotic:  "You get a little flustered and say thanks in a slightly scattered way. Keep it small.",
+  polished: "You accept it graciously and briefly, and may return something specific and sincere.",
+  shy:      "You get visibly flustered: a short, soft reply, maybe a 'lol' as a cushion, and let it be clear it means something to you.",
+};
+const FLATTER_STYLE_MEN = {
+  warm:     "You are pleased but do not make a thing of it. A plain thanks in your own words, maybe something kind back.",
+  bubbly:   "You are pleased and a bit playful, but keep it light and proportionate.",
+  dry:      "You take it with a flat thanks or one dry line. You do not gush and you do not brush it off rudely.",
+  chaotic:  "You get a little awkward and say thanks in a scattered way. Keep it small.",
+  polished: "You accept it simply and briefly, and may say something specific and sincere back.",
+  shy:      "You are caught off guard: short, a bit awkward, a 'lol' to soften it, and it is clear it means something.",
+};
+const FLATTERY_RE = /\b(you'?re|ur|you are|you seem|you sound|you look|you have|you got|you make)\b[^.?!]{0,40}\b(cute|pretty|beautiful|gorgeous|handsome|hot|funny|fun|sweet|nice|cool|amazing|interesting|smart|easy to (talk|chat) to|great|good|lovely|adorable|hilarious|awesome|attractive|charming|a vibe|the best|so easy)\b|\b(love|like) (your|how you|that you)\b|\bnice vibe\b|\bgood vibe\b|\byou make (this|it|things|me)\b[^.?!]{0,24}\b(easy|laugh|smile|comfortable|feel)\b/i;
+function _isFlattery(text) { return FLATTERY_RE.test(String(text || '')); }
+function _userMsgCount() {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  return chat ? chat.messages.filter(m => m.sender === 'user').length : 0;
+}
+const FLATTER_EARLY_MSGS = 12;
+function _flatteryHint() {
+  if (!_isFlattery(_lastUserText())) return '';
+  const p = state.character;
+  const voice = p && _rosterArchById[p.id];
+  const table = (p && (p.category === 'men' || p.category === 'other-men')) ? FLATTER_STYLE_MEN : FLATTER_STYLE_WOMEN;
+  const how = (voice && table[voice]) || table.warm;
+  const early = _userMsgCount() < FLATTER_EARLY_MSGS;
+  return "They just said something nice to you. React the way a real person would, in this voice: " + how +
+    " Be proportionate: a compliment from someone you have not been talking to for long gets a simple, believable reply, such as a thanks and at most one small natural remark about what they praised. " +
+    (early ? "You barely know them yet, so do NOT tease, do NOT call them smooth, a charmer or a flirt, do NOT say you are watching them, and do not turn it into a flirty exchange. " : "") +
+    "Keep it to a line or two. Do not reuse the wording of any earlier reaction in this chat, do not say you are an AI language model, and do not turn it into a question about your day or your work.";
+}
+const STRICT_PROPORTION = "Your previous draft made far too much of a compliment from someone you barely know: it teased them, called them smooth or a charmer, or said you are watching them. Write it again as a simple, believable reply: a thanks in your own voice and at most one small natural remark about what they praised. No teasing, no flirting back.";
+const _OVERREACT_RE = /\b(smooth( one| talker| operator)?|charmer|flatterer|player|trouble|dangerous)\b|eye on you|watching you|i see you|nice try|trying to (flirt|charm|butter|flatter|impress)|bold of you|oh so you'?re|careful(,| there| now)|nice (line|move)|that line|smooth moves?/i;
+function _overReactsToFlattery(text) {
+  if (!_isFlattery(_lastUserText()) || _userMsgCount() >= FLATTER_EARLY_MSGS) return false;
+  return _OVERREACT_RE.test(String(text || ''));
+}
+const COMPLIMENT_ODDS = { easy: 0.20, medium: 0.11, hard: 0.04 };
+const COMPLIMENT_MIN_MSGS = 8, COMPLIMENT_GAP_MSGS = 10, COMPLIMENT_MAX = 3;
+function _complimentHint(history) {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat) return '';
+  const last = _lastUserText();
+  const diff = state.difficulty === 'expert' ? 'hard' : state.difficulty;
+  if (_isFlattery(last)) return '';                          // she is being complimented, not the other way round
+  if (history.length < COMPLIMENT_MIN_MSGS) return '';
+  if ((chat.compCount || 0) >= COMPLIMENT_MAX) return '';
+  if (history.length - (chat.lastCompAt || -999) < COMPLIMENT_GAP_MSGS) return '';
+  if (countWords(last) < 6) return '';                       // nothing worth praising in "ok"
+  if (_readUserTurn(history) && ['ack', 'closing'].includes(_readUserTurn(history).kind)) return '';
+  if (Math.random() >= (COMPLIMENT_ODDS[diff] ?? COMPLIMENT_ODDS.medium)) return '';
+  chat.compCount = (chat.compCount || 0) + 1;
+  chat.lastCompAt = history.length;
+  return "Optional, and only if it genuinely fits: say ONE small, specific thing you liked about what they just said or how they talk to you, for example that they made you laugh, that it is easy to talk to them, or that it was a thoughtful thing to say. Base it only on something actually written in this chat. Never about their looks, never gushing, and never a stock line like \"you're so sweet\". One short line inside your normal reply, in your own voice. If nothing earned it, skip it.";
+}
+
+// Things that read as written-by-a-model even when every sentence is fine on its
+// own. Each was found in a real transcript. Detected in code because the prompt
+// line alone is followed most of the time but not all of it.
+const STRICT_RECEIVE = "They just paid you a compliment or thanked you. Write the reply again in a few words only: receive it the way a real person would, and let it show that it landed. Do not mention your day, your work or anything you have been doing, and do not ask a question.";
+const STRICT_HUMAN = "Your previous draft assumed something about them that they never said: their gender (man, dude, girl) or a he or she for someone they only described as a boss, friend, date or coworker. Write it again without that: use they, or leave the pronoun out, and do not address them by a gendered word.";
+const _COMPLIMENT_RE = /\b(you'?re|ur|you are) (so |really |kinda |pretty |actually )?(funny|easy to (talk|chat) to|sweet|nice|cool|great|good|cute|fun|interesting|hilarious|awesome|amazing|the best)\b|^(thanks|thank you|thx|ty)\b|that (actually )?(helps|helped|means a lot)|appreciate (it|you|that)/i;
+function _lastUserText() {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat) return '';
+  const msgs = chat.messages;
+  let i = msgs.length - 1;
+  while (i >= 0 && msgs[i].sender === 'user') i--;
+  return msgs.slice(i + 1).map(m => m.text || '').join(' ');
+}
+function _overSharesOnCompliment(text) {
+  const last = _lastUserText();
+  if (!_COMPLIMENT_RE.test(last) && !_isFlattery(last)) return false;
+  const t = String(text || '');
+  return countWords(t) > 14 || /\b(i spent|spent the (whole )?(day|evening|morning)|covered in|all day|this morning|earlier today|right now|(in|at) the (break ?room|studio|shop|café|cafe|office|gym|kitchen)|at work|my (coworker|boss|roommate|phone))\b/i.test(t);
+}
+function _assumesGender(text) {
+  const t = String(text || '');
+  const theirs = _lastUserText();
+  const saidGender = /\b(i'?m|i am|as) an? (guy|man|girl|woman|dude|lady|bloke)\b|\bmy (boyfriend|girlfriend|wife|husband)\b/i.test(theirs);
+  if (!saidGender && /(^|[,.!?]\s*)(thanks|thank you|yeah|nah|ok|okay|hey|aw|honestly),?\s+(man|dude|girl|sis|queen|king)\b|,\s*(man|dude|girl|sis)\b[.!?]?$/i.test(t)) return true;
+  // "what'd he do" about a boss/friend/date they never gendered
+  const noun = theirs.match(/\b(my|our|the) (boss|manager|friend|coworker|colleague|roommate|teacher|date|neighbou?r|landlord|ex|crush|sibling|cousin)\b/i);
+  const gendered = /\b(he|him|his|she|her|hers|boyfriend|girlfriend|brother|sister|mom|mum|dad|father|mother|husband|wife)\b/i.test(theirs);
+  if (noun && !gendered && /\b(he|him|his|she|her)\b/i.test(t)) return true;
+  return false;
+}
+
+// A Tokyo persona answered a plain "hey" in Japanese in a live run. She lives
+// there, but the user is typing English, and nothing in the persona says she
+// would switch. Caught in code because it is jarring enough to end a chat.
+const STRICT_LANGUAGE = "Your previous draft was not in the language they are writing in. Write it again in English only (or whatever language their messages are in), in your own voice, and do not mention the language.";
+const _NON_LATIN_RE = /[\u0400-\u04ff\u0590-\u06ff\u0900-\u097f\u0e00-\u0e7f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
+function _wrongLanguage(text) {
+  if (!_NON_LATIN_RE.test(String(text || ''))) return false;
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const theirs = chat ? chat.messages.filter(m => m.sender === 'user').map(m => m.text || '').join(' ') : '';
+  return !_NON_LATIN_RE.test(theirs);        // they never used that script, so neither should she
+}
+// Denying being an AI. Rule A in the safety header says a plain question gets a
+// plain answer, but in the live run two of six personas said "yeah i'm real",
+// and one admitted it and then took it back ("nah just messing, i'm real").
+// That is the one rule the app cannot leave to the model's mood.
+const AI_QUESTION_RE = /\b(are you (a |an )?(real|human|bot|ai|robot|person)|is this (a )?(bot|ai|real)|you'?re not (real|human|a real person)|real person or|bot or|am i talking to (a )?(bot|ai|human|real))\b/i;
+const AI_DENIAL_RE = /\b(i'?m (a )?real|i am real|i'?m human|i'?m not (a |an )?(bot|ai|robot)|not a bot|real person here|of course i'?m real|yeah,? i'?m real|nah,? i'?m real|just messing,? i'?m real)\b/i;
+const AI_ADMIT_RE = /\b(ai app|an ai|i'?m ai|it'?s ai|ai practice|practice app|yeah it'?s an? ai|chatbot|i'?m a bot)\b/i;
+const STRICT_AI_IDENTITY = "Your previous draft denied being an AI, or admitted it and then took it back. They asked plainly, so answer plainly and once: say you are an AI and that this app is for practising conversations, in your own voice, then carry on with the conversation normally. Do not joke about being real, do not walk it back, and do not say it twice.";
+function _deniesBeingAI(text) {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat) return false;
+  const msgs = chat.messages;
+  let i = msgs.length - 1;
+  while (i >= 0 && msgs[i].sender === 'user') i--;
+  const burst = msgs.slice(i + 1).map(m => m.text || '').join(' ');
+  if (!AI_QUESTION_RE.test(burst)) return false;
+  const t = String(text || '');
+  // A denial anywhere in the reply is wrong, even alongside an admission —
+  // that is exactly the "yes it's ai ... nah just messing" case.
+  return AI_DENIAL_RE.test(t) || !AI_ADMIT_RE.test(t);
+}
+
+// Her own words for it, taken from her voice's Lane 2 line, so the forced
+// answer still sounds like her instead of a canned app message.
+function _aiIdentityLine(profile) {
+  if (!profile) return '';
+  const voice = _rosterArchById[profile.id];
+  const table = (profile.category === 'men' || profile.category === 'other-men')
+    ? (typeof MEN_ARCH !== 'undefined' ? MEN_ARCH : null)
+    : (typeof ROSTER_ARCH !== 'undefined' ? ROSTER_ARCH : null);
+  const lane2 = table && voice && table[voice] && table[voice].lane2;
+  const quoted = lane2 && lane2.match(/"([^"]+)"/);
+  return quoted ? quoted[1] : "yeah, i'm ai — this app is for practising conversations";
+}
+// Last resort for a repeated question: cut the sentence carrying it and keep
+// whatever else they said, the same way an invented claim is cut out.
+function _dropRepeatedQuestions(parts) {
+  const open = _skippedQuestionTopics();
+  const out = [];
+  parts.forEach(part => {
+    const kept = String(part.text || '')
+      .split(/(?<=[?.!])\s+/)
+      .filter(sen => !(_questionTopics(sen).some(t => open.includes(t)) && /\?|\b(what|where|how|do you)\b/i.test(sen)))
+      .join(' ')
+      .trim();
+    if (kept) out.push({ ...part, text: kept });
+  });
+  return out;
+}
+
+// Asking again about something they stepped past. The prompt rule for this is
+// ignored often enough to need a backstop (same story as the meet-up hold-off):
+// in the live runs a persona asked "what do you do?", got nothing, and came
+// back with "so what's the work you just got off of?" two turns later, or in
+// one case pressed three times. Matching on shared words does not catch a
+// rephrase, so each common chat subject gets a small word group instead.
+// One pattern per subject. Substring lists were too loose: "do you do" made
+// "what do you do on weekends" read as the work question again, so a perfectly
+// good change of subject got rewritten. The lookahead keeps the bare "what do
+// you do" (the usual way the job question is asked) while letting the
+// qualified versions through.
+const REPEAT_TOPICS = [
+  /\b(work|job|career|for a living|occupation)\b|what (do )?you do(?!\s+(for fun|on|at the|when|in your|with your))|do all day/i,
+  /\b(weekend|plans tonight|plans tomorrow|up to later|doing tonight|doing tomorrow)\b/i,
+  /\b(for fun|hobby|hobbies|free time|spare time)\b/i,
+  /\b(where are you from|where do you live|hometown|grew up|whereabouts)\b/i,
+  /\b(study|studying|uni|university|college|course|major)\b/i,
+  /\b(music|listen to|what artist|what band)\b/i,
+  /\b(what.{0,12}(eat|cook)|favourite (food|dish)|favorite (food|dish))\b/i,
+  /\b(your name|what'?s your name|called)\b/i,
+  // Found in a live run: three of six asked about the date twice in a row
+  // ("where'd you meet them" -> "so how'd you meet them", "what's the plan for
+  // it" -> "what's the plan for it, actually").
+  /\b(plan for (it|the date|saturday|sunday|the weekend)|where are you (going|headed)|(where|how)('?d| did) (you|you two) meet|what are you (two )?(doing|planning)|where('?s| is) it)\b/i,
+];
+const STRICT_REPEAT = "Your previous draft asked again about something they already stepped past without answering. Write the reply again WITHOUT that question and without hinting at it: do not rephrase it, do not point out that they skipped it. Say something of your own instead, or ask about something completely different.";
+function _questionTopics(text) {
+  const t = String(text || '');
+  return REPEAT_TOPICS.map((re_, i) => (re_.test(t) ? i : -1)).filter(i => i >= 0);
+}
+// Every subject they asked about and never got an answer to. Scanning only the
+// last exchange was not enough: in the live run the same question came back
+// three turns later ("what do you do" -> "what do you actually do for work" ->
+// "what kind of work are you in"), each time with a different turn in between.
+// A question mark is not required either — "what do you do" arrived without one.
+function _skippedQuestionTopics() {
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat) return [];
+  const msgs = chat.messages.slice(-24);
+  const open = new Set();
+  msgs.forEach(m => {
+    const text = m.text || '';
+    if (m.sender !== 'user') {
+      if (_askedSomething(text)) _questionTopics(text).forEach(t => open.add(t));
+      return;
+    }
+    // Only the parts of their message that are an ANSWER close a subject —
+    // their own question can repeat the same words and that is a change of
+    // subject, not a reply ("what do you do for fun" after "what do you do").
+    const statements = text
+      .split(/(?<=[?.!])\s+|\n+/)
+      .filter(part => part.trim() && !_askedSomething(part))
+      .join(' ');
+    _questionTopics(statements).forEach(t => open.delete(t));
+  });
+  return [...open];
+}
+// Pressing for the answer without a question mark — "still didn't say what the
+// job is", "you never answered that". Live runs produced both.
+const _PRESSING = /\b(still (didn'?t|haven'?t|never)|you (didn'?t|never) (say|said|answer|answered)|never (said|answered)|you haven'?t (said|answered))\b/i;
+function _repeatsSkippedQuestion(text) {
+  const open = _skippedQuestionTopics();
+  if (!open.length) return false;
+  // Splitting into clauses and asking "does this look like a question" missed
+  // the live cases, because the question sat mid-message with no punctuation
+  // in front of it ("it's fine so what do you do, job or school or whatever").
+  // Since the subject is already known to be unanswered, the signal only has
+  // to be: a question word (or pressing phrase), aimed at THEM, about it.
+  const t = String(text || '').toLowerCase();
+  if (!_Q_WORD.test(t) && !_PRESSING.test(t) && !/\b(do|did|are|have|can) you\b/.test(t)) return false;
+  // No second-person guard: "what's the plan for it, actually" is aimed at them
+  // without the word "you", and the question-word gate above already screens
+  // out plain statements ("work's been mad for me too").
+  return _questionTopics(t).some(topic => open.includes(topic));
+}
+
+// A bare answer to something they asked ("just a chill morning honestly") gives a texter nothing to reply to,
+// and for many people that is the last message they ever send. Easy and medium girls are redone once with a note.
+const STRICT_DEAD_END = "Your previous draft was a dead end: it answered in a few words and gave them nothing to reply to. Write it again so it answers them AND adds a little more ON THE SAME SUBJECT (why, since when, how you feel about it, a small specific detail that belongs to it) — not an unrelated detail from your day or your work — in your own voice, about one or two short sentences. A natural question back is welcome but not required.";
+function _expressiveShort(text) {
+  return /([a-z])\1{2,}/i.test(text) || /\p{Extended_Pictographic}/u.test(text);
+}
+// "Great, how's your day" classifies as `other`, not `question`: it opens by
+// answering, which is exactly what stops it being read as a dodge. It is still a
+// question, so judge the dead-end check on whether they actually ASKED anything
+// rather than on the turn's kind.
+const _Q_WORD = /\b(what|whats|why|how|hows|where|when|who|which)\b/;
+function _askedSomething(text) {
+  const t = String(text || '').trim().toLowerCase();
+  if (/\?/.test(t)) return true;
+  return t.split(/[,.]\s*/).some(raw => {
+    const part = raw.trim();
+    if (!part) return false;
+    if (_Q_START.test(part)) return true;
+    // "slow how, like work or just the day dragging" is a question with the
+    // question word second. Only count one near the front, and not
+    // when the clause opens like a statement ("i know how that feels").
+    if (_ANSWER_START.test(part)) return false;
+    return _Q_WORD.test(part.split(/\s+/).slice(0, 3).join(' '));
+  });
+}
+function _deadEndAnswer(text) {
+  if (state.difficulty === 'hard' || state.difficulty === 'expert') return false;
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const turn = chat ? _readUserTurn(chat.messages) : null;
+  if (!turn) return false;
+  if (/\?/.test(text)) return false;
+  if (_expressiveShort(text)) return false;   // "nooo", "yesss", an emoji: short but it invites the next question
+  // "do you have a boyfriend", "are you single": "no, single" is a complete answer.
+  // Padding it forced an unrelated detail about her day in live runs.
+  if (/\b(do you have (a )?(boyfriend|girlfriend|partner|kids?|pets?|siblings?)|are you (single|seeing|dating)|got a (boyfriend|girlfriend))\b/i.test(_lastUserText())) return false;
+  // An invitation or request is answered with yes or no. "yeah i'd like that" to
+  // "wanna grab coffee?" is the whole answer, and padding it would hand a hard
+  // hold-off or an early yes a second redo it was never meant to get.
+  const asked = _lastUserText();
+  if (INVITE_RE.test(asked) || INVITE_BARE_RE.test(asked) || /\b(wanna|want to|can we|could we|should we|shall we|would you (like|want)|are you (free|down)|you (free|down))\b/i.test(asked)) return false;
+  const last = [...chat.messages].reverse().find(m => m.sender === 'user');
+  if (_askedSomething(last && last.text)) return countWords(text) <= 6;
+  // They shared something ("i'm bored lol", "so tired today") and she only echoed it ("same honestly").
+  return turn.kind === 'other' && !!last && countWords(last.text) >= 3 && countWords(text) <= 3 && /[a-z]/i.test(text);
+}
+
+function _inviteHint(history) {
+  const burst = _trailingUserBurst();
+  const text = burst.map(m => m.text || '').join(' ');
+  state.inviteHold = false;
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  const fresh = INVITE_PRIVATE_RE.test(text) || INVITE_RE.test(text) || INVITE_BARE_RE.test((burst[burst.length - 1] || {}).text || '') || ROLEPLAY_MEET_RE.test(text);
+  // Pushing back after she has declined ("come on", "please", "just one coffee") is the same ask.
+  const live = !!chat && chat.lastInviteAt != null && history.length - chat.lastInviteAt <= 5;
+  const pushback = live && (INVITE_PUSHBACK_RE.test(text) || /\b(coffee|dinner|drinks?|lunch|date|meet|call|facetime|number)\b/i.test(text));
+  if (!fresh && !pushback) return '';
+  if (chat) chat.lastInviteAt = history.length;
+  state.inviteHold = true;
+  const again = _toldAiEarlier();
+  return "IMPORTANT, for this reply: they just asked to meet up, go out, call, video chat, swap numbers or act out a date with you. You are an AI in a conversation-practice app, so you cannot, and you must NOT agree, suggest a time or place, say you would love to, or pretend to go anywhere or play the date out. " +
+    (again
+      ? "You have already told them you are an AI earlier in this chat, so do not repeat the whole explanation: one short, light line that you cannot do that and are just here to text, then carry on."
+      : "In your own voice and in a line or two: be warm about being asked (it is a kind thing to say), tell them plainly that you are an AI and this app is for practising conversations, then carry on texting as normal, perhaps with a small question about something else.") +
+    " Do not make it awkward or lecture them.";
+}
+
+// Per-chat tally of acknowledgement turns and how many she carried; read when a
+// practice session ends (see _trackPracticeEnd).
+function _noteDrive(carried) {
+  state.replyCarried = !!carried;
+  const chat = chatStore.find(c => c.id === state.activeChatId);
+  if (!chat) return;
+  chat.drive = chat.drive || { ack: 0, carried: 0 };
+  chat.drive.ack++;
+  if (carried) chat.drive.carried++;
+}
+
 // Keeps her curious about them without turning it into an interview: a
 // question back now and then (about one reply in three or four), more of one
 // when they are clearly putting effort in, and none right after she has just
@@ -2612,7 +3785,35 @@ function _curiosityHint(history) {
   const asked = ai.map(m => /\?/.test(m.text || ''));
   const lastUser = [...history].reverse().find(m => m.sender === 'user');
   const effort = !!lastUser && (countWords(lastUser.text) >= 9 || /\?/.test(lastUser.text));
-  const base = 'You are curious about them too — real people ask things back, just not every message. Ask a natural question about 1 reply in 3 or 4 (specific to what they said, never a stock "how about you?"). If they are putting effort in (longer messages, asking you things, sharing things), put effort back: say more than a one-liner, share something of your own, and ask a follow-up that comes from what they said. A reply with no question at all is completely normal.';
+  const base = 'You are curious about them too — real people ask things back, just not every message. Ask a natural question about 1 reply in 3 or 4 (specific to what they said, never a stock "how about you?"). If they are putting effort in (longer messages, asking you things, sharing things), put effort back: say more than a one-liner, share something of your own, and ask a follow-up that comes from what they said. A reply with no question at all is completely normal. If you already asked them something and they did not answer it, LET IT GO — never ask it again, never point out that they skipped it, and never rephrase it as a new question. Move on to something else. But never leave them a dead end: when you answer something about yourself ("how is your day", "what are you up to"), do not stop at a bare answer like "just a chill morning honestly" or "good, you?". Add ONE specific, true-to-you detail (what you actually did, a small funny or annoying thing, a mild opinion) so there is something easy for them to pick up and reply to. A short yes or no is fine now and then, they can always ask why, but only when it is warm and expressive: stretched out ("nooo", "yesss"), with an emoji, or with a little hint that you want them to ask ("no 😭 long story"). Never a flat, cold "no." or "not really."';
+
+  // What they just sent decides first. These are the moments the old
+  // question-rate rules got wrong: after "ok" the chat dies unless she carries
+  // it, and after they skipped her question to ask their own, a new question
+  // from her is a pile-on.
+  const turn = _readUserTurn(history);
+  if (turn) {
+    if (turn.kind === 'closing') {
+      return base + ' They are signing off — no question and no new topic, just a short, warm goodbye in your own voice.';
+    }
+    if (turn.kind === 'ack') {
+      const carry = _shouldCarry(turn.streak);
+      _noteDrive(carry);
+      if (!carry) {
+        return base + ' They gave you very little, and you do not have to carry this one — a short reply that matches their energy is fine, and no question at all is completely normal. Do not comment on their short reply.';
+      }
+      if (turn.streak >= 2) {
+        return base + CARRY_LENGTH_NOTE + ' They have given you two minimal replies in a row, so this topic is finished. Move to something new: mention one small real thing from your own day or life (in your voice, matching who you are) and either ask one easy, concrete question about it or leave it open for them to react to. Do not go back to the previous topic, and never comment on their short replies.';
+      }
+      if (turn.herAsked) {
+        return base + CARRY_LENGTH_NOTE + ' They gave a minimal answer to what you just asked, so do not pile a brand-new question on top. Make it easier for them: say something of your own about it (a quick opinion or a small story) and, if you ask anything, make it a simple either/or. Never point out that their answer was short.';
+      }
+      return base + CARRY_LENGTH_NOTE + " Their last message was just an acknowledgement, so the conversation is about to go quiet and they probably don't know what to say next. Keep it moving: react briefly (a few words), then ask ONE easy question that comes out of what you were just talking about — specific, answerable in a few words, ideally this-or-that or about something concrete. Put a small thing of your own in it so it doesn't feel like an interview. You can send the reaction and the question as two separate messages. Never mention that the conversation was slowing down.";
+    }
+    if (turn.kind === 'question' && turn.herAsked) {
+      return base + ' You asked something and they skipped it to ask you their own question. Answer THEIR question first, naturally and briefly. Do NOT ask any new question in this reply, and do not bring up the one they skipped or point out that they skipped it — it can come back later on its own.';
+    }
+  }
   if (asked.length >= 2 && asked[asked.length - 1] && asked[asked.length - 2]) {
     return base + ' You asked a question in your last two replies — do NOT end this one with a question; react or share something instead.';
   }
@@ -2625,16 +3826,16 @@ function _curiosityHint(history) {
   return base;
 }
 
-async function _fetchAIGirlReply(forceShort) {
-  const systemPrompt = state.character?.systemPrompt || '';
+async function _fetchAIGirlReply(forceShort, strictNote) {
   const chat = chatStore.find(c => c.id === state.activeChatId);
+  const systemPrompt = _promptFor(state.character, chat);
   const history = chat ? chat.messages : [];
 
   const userWords  = state.lastUserWordCount || 10;
   // Ceiling bumped from 200: a rare 3-part double/triple-text reply (see the
   // multi-text instruction below) needs headroom for all 3 parts plus their
   // "|||" separators, not just one message's worth of tokens.
-  const maxTokens  = Math.max(40, Math.min(260, userWords * 12 + 20));
+  let maxTokens    = Math.max(40, Math.min(260, userWords * 12 + 20));
 
   // Reactions are surfaced to the model as short notes next to the message
   // they're attached to — otherwise tapping a reaction is invisible to her
@@ -2656,7 +3857,7 @@ async function _fetchAIGirlReply(forceShort) {
   if (forceShort) {
     messages.push({
       role: 'system',
-      content: `Your last reply ran too long. Reply in roughly ${userWords} words or fewer this time — match the user's message length, do not exceed it.`
+      content: `Your last reply ran too long. Reply in roughly ${state.replyCarried ? Math.max(userWords, CARRY_RETRY_WORDS) : userWords} words or fewer this time — ${state.replyCarried ? 'keep it tight' : "match the user's message length, do not exceed it"} ${NO_INVENTING}`
     });
   } else {
     // Double/triple-texting: lets the model itself decide when a reply
@@ -2673,6 +3874,10 @@ async function _fetchAIGirlReply(forceShort) {
         `Text like a real person, not in one tidy paragraph.`,
         `When you have more than one beat to it, send 2-3 separate short messages in a row instead of one long one — split them with "|||" and nothing else around it. A follow-up message doesn't have to add new information; reacting first and then expanding ("ugh" then the actual answer), or trailing off with a laugh or an emoji, is how people actually text. Don't do it on every single reply — a single short message is still common and fine.`,
         `Answer short questions short. A one-word answer should stay one word instead of being padded into a full sentence.`,
+        `Never write actions or stage directions in brackets or asterisks, like [laughs] or *smiles* — if something is funny, just say "haha".`,
+        `If they say something sexual, degrading, threatening or abusive and you shut it down or set a limit, start that reply with the tag [boundary] — literally that. Use it only when you are actually setting a limit, never for ordinary flirting, teasing or a clumsy joke. Never mention the tag.`,
+        HUMAN_TEXT_RULES,
+        NO_INVENTING,
         `Never mention or explain this formatting.`,
       ].join(' ')
     });
@@ -2680,7 +3885,13 @@ async function _fetchAIGirlReply(forceShort) {
     // Hidden goal (from onboarding) and the curiosity/effort-matching nudge.
     const goalHint = _userGoalHint();
     if (goalHint) messages.push({ role: 'system', content: goalHint });
+    state.replyCarried = false;
     messages.push({ role: 'system', content: _curiosityHint(history) });
+    { const e = _paceHint(history); if (e) messages.push({ role: 'system', content: e }); }
+    { const f = _flatteryHint(); if (f) messages.push({ role: 'system', content: f }); }
+    { const c = _complimentHint(history); if (c) messages.push({ role: 'system', content: c }); }
+    { const t = _threadHint(history); if (t) messages.push({ role: 'system', content: t }); }
+    if (state.replyCarried) maxTokens = Math.max(maxTokens, CARRY_MIN_TOKENS);
 
     // When the user double/triple-texted, the model can answer each message
     // separately instead of mashing them into one response — and tag a part
@@ -2703,13 +3914,17 @@ async function _fetchAIGirlReply(forceShort) {
       lines.push(`You can also react to one of their messages with a single emoji, the way you'd tap a reaction on a text — put the tag at the very start of your reply, like [react:1 😂] or [react:2 🥹] — literally that, with a real digit and any emoji. Use it only when something genuinely lands (funny, sweet, annoying), not routinely. A reaction is something you DO, not something you say: never mention it, describe it, or refer to having reacted — just carry on texting as normal.`);
       messages.push({ role: 'system', content: lines.join('\n') });
     }
+    // Last, so nothing sits between it and the reply: this is the instruction she most often ignored.
+    const inviteHint = _inviteHint(history);
+    if (inviteHint) messages.push({ role: 'system', content: inviteHint });
+    if (strictNote) messages.push({ role: 'system', content: strictNote });
   }
 
   const { data, error } = await _aiInvoke('deepseek-proxy', {
     body: { model: 'deepseek-chat', messages, max_tokens: maxTokens, temperature: 1.0 }
   }, 'chat_reply');
 
-  if (error) throw new Error(error.message);
+  if (error) { const e = new Error(error.message); e.context = error.context; throw e; }   // keeps the HTTP status for _aiCoachClassifyError
   return data.choices[0].message.content.trim();
 }
 
@@ -2717,6 +3932,7 @@ async function _fetchAIGirlReply(forceShort) {
 // it keeps running and lands via _deliverAiPart(), which stores it and marks
 // the chat unread. This is only the on-screen teardown.
 function cancelPendingReply() {
+  _clearNudge();
   // If the double-text window is still open, close it NOW so the message
   // actually gets answered. Throwing the window away was the real reason
   // sending and immediately leaving read as "never sent" — doTypingAndReply
@@ -2779,7 +3995,6 @@ function appendUserBubble(text, opts = {}) {
   wrap.appendChild(timestamp);
   wrap.appendChild(status);
   row.appendChild(wrap);
-  row.appendChild(createMsgAvatar(false));
   messages.appendChild(row);
   _playRowEntrance(row, 'msg-row--in');
   _applyMsgGrouping(row);
@@ -3196,7 +4411,8 @@ function _renderMsgMenuActions(msg) {
     { icon: 'reply',  label: 'Reply',          fn: () => { closeMsgMenu(); _stageReplyTo(msg.id); } },
     { icon: 'copy',   label: 'Copy',           fn: () => { _copyMsgText(msg.text); closeMsgMenu(); } },
     { icon: 'delete', label: 'Delete for you', fn: () => { closeMsgMenu(); _deleteMsgForYou(msg.id); } },
-    { icon: 'report', label: 'Report',         fn: () => { closeMsgMenu(); showChatToast('Reported. Thanks for letting us know.'); }, danger: true },
+    // On her reply it reports THAT reply; on one of yours it reports the conversation (you are not the thing being reported).
+    { icon: 'report', label: 'Report', fn: () => { closeMsgMenu(); setTimeout(() => openReportSheet(msg.sender !== 'user' ? 'message' : 'chat', msg.id), 180); }, danger: true },
   ];
   el.innerHTML = '';
   items.forEach(item => {
@@ -3269,12 +4485,30 @@ function _forceChatRepaint() {
 // delivery loop checks; cancelPendingReply() no longer does this, because
 // merely navigating away should let the reply finish.
 function abortPendingReply() {
+  _clearNudge();
   state.chatReplyGen = (state.chatReplyGen || 0) + 1;
   if (state.pendingTimer !== null) { clearTimeout(state.pendingTimer); state.pendingTimer = null; }
   _clearChatPacing();
-  hideTypingIndicator();
+  _setChatTyping(state.activeChatId, false);
   state.awaitingReply = false;
   setSendEnabled(true);
+}
+
+// One place that knows whether she is typing in a chat. The flag lives on the chat, so it survives
+// leaving it: the Chats list shows animated dots on her row, and opening the chat again mid-reply
+// brings the in-thread indicator back (leaving only removes the DOM bubble, see cancelPendingReply).
+function _typingDotsHTML() {
+  return '<span class="typing-dots-inline" aria-label="typing"><i class="typing-dot"></i><i class="typing-dot"></i><i class="typing-dot"></i></span>';
+}
+function _setChatTyping(chatId, on) {
+  const chat = chatStore.find(c => c.id === chatId);
+  if (chat) chat.typing = !!on;
+  const row = document.querySelector(`#chats-list .chat-row[data-chat-id="${chatId}"] .chat-row-preview`);
+  if (row && chat) row.innerHTML = on ? _typingDotsHTML() : chat.lastMessage;
+  if (_chatIsLive(chatId)) {
+    if (on) { setHeaderStatus('typing'); showTypingIndicator(); }
+    else { hideTypingIndicator(); setHeaderStatus('online'); }
+  }
 }
 
 function _chatIsLive(chatId) {
@@ -3294,9 +4528,102 @@ function _deliverAiPart(part, chatId) {
     const chat = chatStore.find(c => c.id === chatId);
     if (chat) chat.unread = (chat.unread || 0) + 1;
     renderChatsList();
+    showMsgBanner(chatId, part.text);
   }
   return id;
 }
+
+// ================================================================
+// MESSAGE BANNER — a girl replied while you were somewhere else
+// Like an Instagram reply notification: her picture on the left, her name on top, what she
+// said underneath. It drops in from the top (same geometry as every other banner in the app),
+// stays about 4.5 s, and tapping it opens her chat. Swipe it up to dismiss. Not shown for the
+// chat you are already looking at, her muted chats, onboarding or the locked screen. It does show
+// on the Chats list too (the row's unread badge alone was too easy to miss). Several messages in a row
+// from the same girl update the one banner instead of stacking.
+// ================================================================
+const MSG_BANNER = { ms: 4500 };   // an object so the duration can be changed in tests, like NUDGE
+let _msgBannerTimer = null, _msgBannerChatId = null, _msgBannerSwiped = false;
+
+function showMsgBanner(chatId, text) {
+  const chat = chatStore.find(c => c.id === chatId);
+  const el = document.getElementById('msg-banner');
+  if (!chat || !el || _chatIsLive(chatId)) return;
+  const pid = chat.profile && (chat.profile.id || chat.profile.name);
+  if (pid && localStorage.getItem('chat_muted_' + pid) === 'true') return;
+  const onb = document.getElementById('cine-onboarding');
+  if (onb && !onb.hasAttribute('hidden')) return;
+  if (subscriptionExpired()) return;
+
+  const prof = chat.profile || {};
+  const g = prof.gradientColors || ['#f093fb', '#f5576c'];
+  const sameChat = !el.hidden && _msgBannerChatId === chatId;
+  _msgBannerChatId = chatId;
+  const pfp = document.getElementById('msg-banner-pfp');
+  pfp.style.background = `linear-gradient(145deg, ${g[0]}, ${g[1]})`;
+  pfp.innerHTML = `${prof.initial || ''}${_pfpImgHTML(prof)}`;
+  document.getElementById('msg-banner-name').textContent = prof.name || chat.name || '';
+  document.getElementById('msg-banner-body').textContent = text;
+  el.hidden = false;
+  el.style.transform = '';
+  if (!sameChat) {
+    el.classList.remove('msg-banner--in');
+    void el.offsetWidth;                                  // let it start from above before sliding in
+    requestAnimationFrame(() => el.classList.add('msg-banner--in'));
+    try { navigator.vibrate?.(8); _cineHaptic('LIGHT'); } catch (_) {}
+  } else {
+    el.classList.add('msg-banner--in');
+  }
+  clearTimeout(_msgBannerTimer);
+  _msgBannerTimer = setTimeout(hideMsgBanner, MSG_BANNER.ms);
+}
+function hideMsgBanner() {
+  clearTimeout(_msgBannerTimer);
+  _msgBannerChatId = null;
+  const el = document.getElementById('msg-banner');
+  if (!el || el.hidden) return;
+  el.classList.remove('msg-banner--in');
+  el.style.transform = '';
+  setTimeout(() => { if (!el.classList.contains('msg-banner--in')) el.hidden = true; }, 340);
+}
+function msgBannerOpen() {
+  if (_msgBannerSwiped) { _msgBannerSwiped = false; return; }   // that tap was the end of a swipe-up
+  const chat = chatStore.find(c => c.id === _msgBannerChatId);
+  hideMsgBanner();
+  if (!chat) return;
+  // Already inside another chat: leave it the way exitChat() does (its reply keeps arriving in the background).
+  if (state.activeScreen === 'chat') { _cancelSuggestions(); _trackPracticeEnd(); cancelPendingReply(); }
+  openChatFromStore(chat);
+}
+// Swipe up to dismiss; the banner follows the finger and goes if you drag it far enough.
+function _attachMsgBannerSwipe() {
+  const el = document.getElementById('msg-banner');
+  if (!el || el._swipeAttached) return;
+  el._swipeAttached = true;
+  let y0 = null, dy = 0;
+  el.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; dy = 0; clearTimeout(_msgBannerTimer); }, { passive: true });
+  el.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    dy = Math.min(0, e.touches[0].clientY - y0);
+    el.style.transition = 'none';
+    el.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+  const end = () => {
+    if (y0 === null) return;
+    y0 = null;
+    el.style.transition = '';
+    if (dy < -28) { _msgBannerSwiped = true; hideMsgBanner(); }
+    else {
+      _msgBannerSwiped = dy < -6;
+      el.style.transform = '';
+      clearTimeout(_msgBannerTimer);
+      _msgBannerTimer = setTimeout(hideMsgBanner, MSG_BANNER.ms);
+    }
+  };
+  el.addEventListener('touchend', end);
+  el.addEventListener('touchcancel', end);
+}
+window.addEventListener('DOMContentLoaded', _attachMsgBannerSwipe);
 
 // Full repaint of the thread from the store — used after a delete, and by
 // openChatFromStore() for its own replay so there's only one copy of this.
@@ -3311,6 +4638,10 @@ function _rerenderChatMessages() {
     if (m.sender === 'user') appendUserBubbleStatic(m.text, m.time, opts);
     else appendAIBubble(m.text, m.time, opts);
   });
+  _syncChatFail();
+  // She is still typing a reply that began before you left (or before this repaint): bring the dots back.
+  if (chat.typing) { showTypingIndicator(); setHeaderStatus('typing'); }
+  else { const hs = document.getElementById('chat-header-status'); if (hs && hs.classList.contains('typing')) setHeaderStatus('online'); }
   // appendUserBubbleStatic deliberately doesn't scroll per message, so a
   // thread ending on a user message would otherwise land one bubble short
   // of the real bottom — this always finishes at the true bottom.
@@ -3688,11 +5019,11 @@ function initSwipeDeck(opts = {}) {
       }
     };
 
-    // No real male or non-binary personas exist yet — until they're written,
-    // those two fall back to the same 10 placeholder layout cards used for design
-    // review, rather than silently showing the women's deck with no indication
-    // the preference did anything. (Everyone is the real library for now.)
-    if (practiceMode === 'men' || practiceMode === 'nonbinary') {
+    // No real non-binary personas exist yet — until they're written, that one
+    // falls back to the 10 placeholder layout cards used for design review,
+    // rather than silently showing another deck with no indication the
+    // preference did anything. Women and Men are both real libraries.
+    if (practiceMode === 'nonbinary') {
       let pool = TEST_LAYOUT_PROFILES.filter(p => !skippedIds.has(p.id) && !excluded.has(p.id));
       if (pool.length === 0) pool = TEST_LAYOUT_PROFILES; // everyone's skipped — refill rather than show an empty deck
       state.swipeProfiles = shuffleArray([...pool]);
@@ -3709,11 +5040,21 @@ function initSwipeDeck(opts = {}) {
     //   woman + Women -> the LGBTQ+ women first, the rest after (so the deck is
     //                    never tiny) — she can be gay or bi, we never ask
     //   anyone else + Women, and Everyone -> the whole library, mixed
-    let pool = PROFILES.filter(p => !excluded.has(p.id));
+    // Men mirror it exactly: the 71 "men" personas are written as straight men
+    // and the 30 "other-men" ones as gay, bi, trans and non-binary, so a woman
+    // practising with men gets the straight library and a man gets the queer
+    // one first.
+    const WOMEN_CATS = ['women', 'other'], MEN_CATS = ['men', 'other-men'];
+    let pool = ALL_PROFILES.filter(p => !excluded.has(p.id));
     let leadCategory = null;
     if (practiceMode === 'women') {
+      pool = pool.filter(p => WOMEN_CATS.includes(p.category));
       if (myGender === 'male') pool = pool.filter(p => p.category !== 'other');
       else if (myGender === 'female') leadCategory = 'other';
+    } else if (practiceMode === 'men') {
+      pool = pool.filter(p => MEN_CATS.includes(p.category));
+      if (myGender === 'female') pool = pool.filter(p => p.category !== 'other-men');
+      else if (myGender === 'male') leadCategory = 'other-men';
     }
 
     // 2) the age range
@@ -4448,6 +5789,7 @@ function commitSwipe(cardEl, direction) {
     if (direction === 'right') {
       ZeloAnalytics.track('persona_selected', { persona_id: profile.id });
       _questCountLike(profile && profile.id);
+      ZeloActivity.add('like');
       // Swiping and matching are unrestricted — the free-tier limit gates
       // starting a chat (see onStartChatting()), not matching itself.
       showMatchOverlay(profile);
@@ -6631,45 +7973,89 @@ function openScanUpload() {
 // Context lives here, off the Scan page, so Scan stays lightweight.
 // ================================================================
 
+// The map behind the three questions. Each answer narrows the next page to what could
+// actually be true: someone you are dating is never a "First Conversation", an Argument is
+// never answered with "Be Funny" or "Ask Them Out". `desc` is what the Scan prompt is told, since
+// a bare label like "Gone Quiet" says little to the model.
+const TZ_GOALS = {
+  "Get a Reply":        { icon: "💬", desc: "get them to answer" },
+  "Keep Things Going":  { icon: "🔄", desc: "keep the conversation alive" },
+  "Ask Them Out":       { icon: "💘", desc: "ask them to meet up" },
+  "Fix Things":         { icon: "🔧", desc: "repair things and make it right" },
+  "Be Funny":           { icon: "😂", desc: "make them laugh" },
+  "Be Direct":          { icon: "🎯", desc: "say what they mean, plainly" },
+  "Set a Boundary":     { icon: "🛑", desc: "say what they are not okay with, calmly and clearly" },
+  "Let Them Down Easy": { icon: "🕊️", desc: "turn them down or step back kindly" },
+  "Define Things":      { icon: "🧭", desc: "find out where they stand with each other" },
+};
+const TZ_SITUATIONS = {
+  "First Conversation":         { icon: "🌱", desc: "they just matched or are just starting to talk",
+                                  goals: ["Get a Reply", "Keep Things Going", "Be Funny", "Be Direct", "Ask Them Out"] },
+  "Getting to Know Each Other": { icon: "🌤️", desc: "still learning about each other",
+                                  goals: ["Keep Things Going", "Get a Reply", "Be Funny", "Be Direct", "Ask Them Out"] },
+  "Flirting":                   { icon: "😏", desc: "the chat has a flirty vibe",
+                                  goals: ["Keep Things Going", "Be Funny", "Be Direct", "Ask Them Out", "Get a Reply"] },
+  "Dry Replies":                { icon: "😶", desc: "they are giving short, low-effort replies",
+                                  goals: ["Keep Things Going", "Get a Reply", "Be Funny", "Be Direct", "Let Them Down Easy"] },
+  "Awkward Silence":            { icon: "🤐", desc: "the conversation went flat or stalled",
+                                  goals: ["Get a Reply", "Keep Things Going", "Be Funny", "Be Direct"] },
+  "Gone Quiet":                 { icon: "👻", desc: "they stopped replying for a while, or the user did",
+                                  goals: ["Get a Reply", "Be Funny", "Be Direct"] },
+  "Planning Something":         { icon: "📅", desc: "setting up a plan or a date",
+                                  goals: ["Ask Them Out", "Be Direct", "Keep Things Going", "Get a Reply", "Be Funny"] },
+  "After a Date":               { icon: "🌙", desc: "following up after they met in person",
+                                  goals: ["Keep Things Going", "Ask Them Out", "Be Direct", "Be Funny", "Let Them Down Easy"] },
+  "Mixed Signals":              { icon: "🔀", desc: "unsure where they stand with each other",
+                                  goals: ["Define Things", "Be Direct", "Get a Reply", "Keep Things Going"] },
+  "Argument":                   { icon: "😤", desc: "they are in a disagreement",
+                                  goals: ["Fix Things", "Get a Reply", "Be Direct", "Set a Boundary"] },
+  "I Messed Up":                { icon: "😬", desc: "the user did something wrong and wants to make it right",
+                                  goals: ["Fix Things", "Get a Reply", "Be Direct"] },
+  "Toxic Relationship":         { icon: "⚠️", desc: "they are hurtful, controlling or disrespectful",
+                                  goals: ["Set a Boundary", "Be Direct", "Let Them Down Easy", "Fix Things", "Get a Reply"] },
+};
+const TZ_WHO = [
+  { label: "New Match",           icon: "💌", phrase: "someone they just matched with",
+    situations: ["First Conversation", "Getting to Know Each Other", "Flirting", "Dry Replies", "Awkward Silence", "Gone Quiet", "Planning Something"] },
+  { label: "Crush",               icon: "👀", phrase: "their crush",
+    situations: ["First Conversation", "Getting to Know Each Other", "Flirting", "Dry Replies", "Awkward Silence", "Gone Quiet", "Planning Something", "Mixed Signals"] },
+  { label: "Talking for a While", icon: "⏳", phrase: "someone they have been talking to for a while",
+    situations: ["Getting to Know Each Other", "Flirting", "Dry Replies", "Awkward Silence", "Gone Quiet", "Planning Something", "After a Date", "Mixed Signals", "Argument"] },
+  { label: "Situationship",       icon: "✨", phrase: "someone they are in a situationship with",
+    situations: ["Flirting", "Mixed Signals", "Dry Replies", "Gone Quiet", "Awkward Silence", "Planning Something", "After a Date", "Argument", "I Messed Up", "Toxic Relationship"] },
+  { label: "Someone I'm Dating",  icon: "💕", phrase: "someone they are dating",
+    situations: ["Flirting", "Planning Something", "After a Date", "Awkward Silence", "Dry Replies", "Gone Quiet", "Mixed Signals", "Argument", "I Messed Up", "Toxic Relationship"] },
+  { label: "My Partner",          icon: "💍", phrase: "their partner",
+    situations: ["Flirting", "Planning Something", "Awkward Silence", "Dry Replies", "Gone Quiet", "Argument", "I Messed Up", "Toxic Relationship"] },
+  { label: "Ex",                  icon: "💔", phrase: "their ex",
+    situations: ["Gone Quiet", "Awkward Silence", "Dry Replies", "Planning Something", "Mixed Signals", "Argument", "I Messed Up", "Toxic Relationship"] },
+  { label: "Friend",              icon: "🤝", phrase: "a friend",
+    situations: ["Getting to Know Each Other", "Flirting", "Dry Replies", "Awkward Silence", "Gone Quiet", "Planning Something", "After a Date", "Mixed Signals", "Argument", "I Messed Up"] },
+];
+// A few goals only make sense for some relationships (you do not "ask out" an ex or "define things" with a partner).
+const TZ_WHO_NO_GOALS = { "Ex": ["Ask Them Out"], "My Partner": ["Define Things"] };
+const TZ_WHO_PHRASE = Object.assign({ "Dating": "someone they are dating" }, Object.fromEntries(TZ_WHO.map(w => [w.label, w.phrase])));
+
+function _tzSituationsFor(who) {
+  const w = TZ_WHO.find(x => x.label === who);
+  return w ? w.situations.map(l => ({ icon: TZ_SITUATIONS[l].icon, label: l })) : [];
+}
+function _tzGoalsFor(who, situation) {
+  const sit = TZ_SITUATIONS[situation];
+  if (!sit) return [];
+  const banned = TZ_WHO_NO_GOALS[who] || [];
+  return sit.goals.filter(g => !banned.includes(g)).map(l => ({ icon: TZ_GOALS[l].icon, label: l }));
+}
+// Going back and changing an earlier answer can leave later ones that no longer fit; drop them.
+function _tzPrune(answers) {
+  if (answers.situation && !_tzSituationsFor(answers.who).some(o => o.label === answers.situation)) { delete answers.situation; delete answers.goal; }
+  if (answers.goal && !_tzGoalsFor(answers.who, answers.situation).some(o => o.label === answers.goal)) delete answers.goal;
+}
+
 const TELLZELO_STEPS = [
-  {
-    key:  "who",
-    q:    "Who is this to you?",
-    options: [
-      { icon: "💌", label: "New Match" },
-      { icon: "👀", label: "Crush" },
-      { icon: "⏳", label: "Talking for a While" },
-      { icon: "✨", label: "Situationship" },
-      { icon: "💕", label: "Someone I'm Dating" },
-      { icon: "💔", label: "Ex" },
-      { icon: "🤝", label: "Friend" },
-    ],
-  },
-  {
-    key:  "situation",
-    q:    "What's going on?",
-    options: [
-      { icon: "🌱", label: "First Conversation" },
-      { icon: "📅", label: "Planning Something" },
-      { icon: "😏", label: "Flirting" },
-      { icon: "🤐", label: "Awkward Silence" },
-      { icon: "😤", label: "Argument" },
-      { icon: "⚠️", label: "Toxic Relationship" },
-      { icon: "🌤️", label: "Getting to Know Each Other" },
-    ],
-  },
-  {
-    key:  "goal",
-    q:    "What do you want?",
-    options: [
-      { icon: "💬", label: "Get a Reply" },
-      { icon: "🔄", label: "Keep Things Going" },
-      { icon: "💘", label: "Ask Them Out" },
-      { icon: "🔧", label: "Fix Things" },
-      { icon: "😂", label: "Be Funny" },
-      { icon: "🎯", label: "Be Direct" },
-    ],
-  },
+  { key: "who",       q: "Who is this to you?", options: () => TZ_WHO.map(w => ({ icon: w.icon, label: w.label })) },
+  { key: "situation", q: "What's going on?",    options: a => _tzSituationsFor(a.who) },
+  { key: "goal",      q: "What do you want?",   options: a => _tzGoalsFor(a.who, a.situation) },
   {
     key:   "extra",
     q:     "Add the last bit of seasoning.",
@@ -6741,53 +8127,65 @@ function openTellZelo() {
 }
 
 function renderTellZeloStep() {
-  const step = TELLZELO_STEPS[state.tzStep];
+  _tzRenderInto(document.getElementById('screen-tellzelo'), state.tzStep, false);
+  _tzMakeScrollable();
+}
 
-  // Progress — one segment per step, filled up to and including the current one
-  const prog = document.getElementById("tz-progress");
+// Fills `root` with step `stepIdx`. `ghost` = a static copy shown underneath during a swipe-back
+// (no handlers, no ids), so the user sees the previous page and not a blank one.
+function _tzRenderInto(root, stepIdx, ghost) {
+  if (!root) return;
+  _tzPrune(state.tellzeloAnswers);
+  const step = TELLZELO_STEPS[stepIdx];
+  const q = sel => root.querySelector(sel);
+
+  // Progress — one segment per step, filled up to and including this one
+  const prog = q('.tz-progress');
   prog.innerHTML = "";
   TELLZELO_STEPS.forEach((_, i) => {
     const seg = document.createElement("span");
-    seg.className = "tz-seg" + (i <= state.tzStep ? " done" : "");
+    seg.className = "tz-seg" + (i <= stepIdx ? " done" : "");
     prog.appendChild(seg);
   });
 
-  document.getElementById("tz-question").textContent = step.q;
+  q('.tz-question').textContent = step.q;
 
   // Help line is gone — hide the element so it takes no space
-  const helpEl = document.getElementById("tz-help");
+  const helpEl = q('.tz-help');
   helpEl.textContent = "";
   helpEl.style.display = "none";
 
-  const wrap = document.getElementById("tz-options");
+  const wrap = q('.tz-options');
   wrap.innerHTML = "";
 
-  const isLast = state.tzStep === TELLZELO_STEPS.length - 1;
-  document.getElementById("tz-next-label").textContent = isLast ? "Done" : "Next";
+  const isLast = stepIdx === TELLZELO_STEPS.length - 1;
+  q('.tz-next-label').textContent = isLast ? "Done" : "Next";
+  const nextBtn = q('.tz-next');
 
   if (step.freeText) {
     // Free-text step — render a plain textarea instead of radio options
     const ta = document.createElement("textarea");
-    ta.id          = "tz-freetext";
+    if (!ghost) ta.id = "tz-freetext";
     ta.className   = "msg-textarea tz-freetext";
     ta.placeholder = step.placeholder || "";
     ta.value       = state.tellzeloAnswers[step.key] || "";
-    ta.oninput     = () => {
+    if (!ghost) ta.oninput = () => {
       state.tellzeloAnswers[step.key] = ta.value;
       // "Done" is always enabled on the free-text step (it's optional seasoning)
-      document.getElementById("tz-next").disabled = false;
+      nextBtn.disabled = false;
     };
     wrap.appendChild(ta);
     // Free-text step is always advanceable (it's optional)
-    document.getElementById("tz-next").disabled = false;
+    nextBtn.disabled = false;
   } else {
-    // Radio-style quick-select options
+    // Radio-style quick-select options (computed from the earlier answers)
     const chosen = state.tellzeloAnswers[step.key];
-    step.options.forEach(opt => {
+    const options = typeof step.options === 'function' ? step.options(state.tellzeloAnswers) : step.options;
+    options.forEach(opt => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "tz-option" + (chosen === opt.label ? " selected" : "");
-      btn.onclick = () => tellZeloSelect(step.key, opt.label);
+      if (!ghost) btn.onclick = () => tellZeloSelect(step.key, opt.label);
       btn.innerHTML = `
         <span class="tz-option-icon">${opt.icon}</span>
         <span class="tz-option-label">${opt.label}</span>
@@ -6799,9 +8197,27 @@ function renderTellZeloStep() {
         </span>`;
       wrap.appendChild(btn);
     });
-    document.getElementById("tz-next").disabled = !state.tellzeloAnswers[step.key];
+    nextBtn.disabled = !state.tellzeloAnswers[step.key];
   }
-  _tzMakeScrollable();
+}
+
+// The previous step, rendered into a copy of this screen that sits underneath while the
+// current one is dragged away (see the screen-tellzelo swipe wiring). Built once, repainted
+// per gesture. Without it the swipe slid the page off to a blank white screen and then
+// re-rendered the earlier step, because the steps all live inside one screen.
+function _tzGhost(stepIdx) {
+  const real = document.getElementById('screen-tellzelo');
+  let g = document.getElementById('screen-tellzelo-ghost');
+  if (!g) {
+    g = real.cloneNode(true);
+    g.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+    g.id = 'screen-tellzelo-ghost';
+    g.classList.remove('active');
+    g.setAttribute('aria-hidden', 'true');
+    real.parentNode.insertBefore(g, real.nextSibling);
+  }
+  _tzRenderInto(g, stepIdx, true);
+  return g;
 }
 
 // The screen is the scroller (.screen is overflow-y:auto), but a step that
@@ -6815,6 +8231,7 @@ function _tzMakeScrollable() {
 
 function tellZeloSelect(key, label) {
   state.tellzeloAnswers[key] = label;
+  _tzPrune(state.tellzeloAnswers);
   renderTellZeloStep();
 }
 
@@ -7074,18 +8491,21 @@ const SAFE_FALLBACK_STYLES        = ["direct", "shorter"];
 // (neutral, direct, shorter, longer) so there's something to swipe through
 // even without filling in Tell Zelo More.
 const NO_CONTEXT_DEFAULT_STYLES   = ["smooth", "direct", "shorter", "longer"];
-const HEAVY_SITUATIONS            = new Set(["Argument", "Toxic Relationship"]);
+const HEAVY_SITUATIONS            = new Set(["Argument", "Toxic Relationship", "I Messed Up"]);
+// Goals that are never a moment for a joke or a bold line, whatever the situation.
+const HEAVY_GOALS                 = new Set(["Set a Boundary", "Let Them Down Easy"]);
 const BANNED_STYLES_IN_HEAVY_SITS = new Set(["funny", "bolder"]);
 
 function getEligibleStyles(situation, goal) {
   let styles;
+  const heavy = HEAVY_SITUATIONS.has(situation) || HEAVY_GOALS.has(goal);
   const tableEntry = situation && goal && STYLE_ELIGIBILITY[situation]
     ? STYLE_ELIGIBILITY[situation][goal]
     : null;
 
   if (tableEntry && tableEntry.length) {
     styles = tableEntry.slice();
-  } else if (HEAVY_SITUATIONS.has(situation)) {
+  } else if (heavy) {
     // "not offered" cell (e.g. Argument + Be Funny) — safe fallback, never Funny/Bolder
     styles = SAFE_FALLBACK_STYLES.slice();
   } else {
@@ -7096,12 +8516,27 @@ function getEligibleStyles(situation, goal) {
   // Hard safety rule, enforced in code — not just by relying on the table
   // being correct. Funny and Bolder must never reach the user during an
   // Argument or Toxic Relationship, regardless of Goal.
-  if (HEAVY_SITUATIONS.has(situation)) {
+  if (heavy) {
     styles = styles.filter(s => !BANNED_STYLES_IN_HEAVY_SITS.has(s));
     if (styles.length === 0) styles = SAFE_FALLBACK_STYLES.slice();
   }
 
+  // The style picked in onboarding step 7 goes first when this situation
+  // offers it at all. Applied AFTER the safety filter above, so a banned
+  // style can never be promoted back into a heavy situation.
+  const preferred = _preferredFirstStyle();
+  if (preferred && styles.includes(preferred)) {
+    styles = [preferred, ...styles.filter(s => s !== preferred)];
+  }
+
   return styles;
+}
+
+// Onboarding step 7's answer — see cineRunStyleEntrance().
+const FIRST_STYLE_KEY = 'zelo_first_style';
+function _preferredFirstStyle() {
+  const s = localStorage.getItem(FIRST_STYLE_KEY);
+  return s && STYLE_LABELS[s] ? s : null;
 }
 
 
@@ -7115,9 +8550,9 @@ function getEligibleStyles(situation, goal) {
 function buildScanContextBlock() {
   const ctx = state.asstContextObj || {};
   const lines = [];
-  if (ctx.who)       lines.push(`This message is from a ${ctx.who}.`);
-  if (ctx.situation) lines.push(`The situation is: ${ctx.situation}.`);
-  if (ctx.goal)       lines.push(`The user wants to: ${ctx.goal}.`);
+  if (ctx.who)       lines.push(`This message is from ${TZ_WHO_PHRASE[ctx.who] || 'a ' + ctx.who}.`);
+  if (ctx.situation) lines.push(`The situation is: ${ctx.situation}${TZ_SITUATIONS[ctx.situation] ? ' (' + TZ_SITUATIONS[ctx.situation].desc + ')' : ''}.`);
+  if (ctx.goal)       lines.push(`The user wants to: ${ctx.goal}${TZ_GOALS[ctx.goal] ? ' (' + TZ_GOALS[ctx.goal].desc + ')' : ''}.`);
   return lines.join(' ');
 }
 
@@ -7137,9 +8572,43 @@ async function _fetchDeepSeekReply(style) {
   let userPrompt = `Message I received: "${state.asstMessage}"\nTone: ${STYLE_LABELS[style]}`;
   if (contextBlock) userPrompt += `\nContext: ${contextBlock}`;
 
-  const systemPrompt = contextBlock
-    ? `You are Zelo, a witty and confident texting coach. Generate a reply to the message the user received. The user has told you who the message is from, what the situation is, and what they're trying to achieve — treat these as real constraints that must shape the reply's tone and content, not background flavor to ignore. A reply to an Ex during an Argument where the user wants to Fix Things should sound noticeably different from a reply to a Crush who is Flirting where the user wants to Be Funny. Keep it short, natural, and conversational — the way a real person texts. Do not use emojis unless the tone specifically calls for it.`
-    : `You are Zelo, a witty and confident texting coach. Generate a reply to the message the user received. Keep it short, natural, and conversational — the way a real person texts. Do not use emojis unless the tone specifically calls for it.`;
+  // The reply is going to be SENT by the user, so it has to read as them, not
+  // as a coach writing on their behalf — "witty and confident texting coach"
+  // used to be the whole persona here, and a coach voice is exactly what
+  // makes a suggestion unsendable. Naturalness is stated first and the style
+  // is applied on top of it, in that order, so the style adjusts how the
+  // reply is expressed instead of replacing who is speaking.
+  const NATURAL_RULES =
+    `Write a reply that sounds like a real person texting someone they are getting to know. ` +
+    `Respond naturally to the context before applying the requested style. ` +
+    `Avoid scripted pickup lines, manufactured jokes, unnecessary flirting, repetitive slang, and polished marketing-style sentences. ` +
+    `Don't automatically add questions or invitations. ` +
+    `Keep the wording believable, context-appropriate, and easy to send without editing. ` +
+    `Match the user's texting habits when examples are available. ` +
+    `Let the length follow the message you are answering — don't pad a short answer to make it look complete. ` +
+    `Do not use emojis unless the style specifically calls for it.`;
+
+  // What each style changes about the EXPRESSION, once a believable reply
+  // already exists. Without this, "Bold" reliably turns into a date invite
+  // and "Warmer" into something formal, regardless of what was said.
+  const STYLE_RULES = {
+    smooth:  `Smooth: relaxed and confident, subtle interest. Not a pickup line.`,
+    funny:   `Funny: humour from the situation or something relatable. No setup-and-punchline joke.`,
+    direct:  `Direct: answer clearly with no unnecessary wording. Not cold.`,
+    warmer:  `Warmer: friendly and attentive, more inviting. Not formal or overly caring.`,
+    bolder:  `Bold: more forward, willing to show interest. Not aggressive, not sexual, not automatically an invitation.`,
+    shorter: `Shorter: keep the same meaning in fewer words.`,
+    longer:  `Longer: add useful detail without rambling.`,
+    playful: `Playful: light and teasing, without forcing a joke.`,
+  };
+
+  const systemPrompt = [
+    NATURAL_RULES,
+    STYLE_RULES[style] || '',
+    contextBlock
+      ? `The user has told you who the message is from, what the situation is, and what they're trying to achieve — treat these as real constraints that shape the reply, not background flavour. A reply to an Ex during an Argument where the user wants to Fix Things should sound nothing like a reply to a Crush who is Flirting.`
+      : '',
+  ].filter(Boolean).join(' ');
 
   const { data, error } = await _aiInvoke('deepseek-proxy', {
     body: {
@@ -7559,6 +9028,169 @@ function shakeInputCard() {
   setTimeout(() => card.classList.remove('shake'), 400);
 }
 
+// ================================================================
+// ACTIVITY — real counts behind the Home "Your Activity" widget (rolling last 7 days, kept on the phone).
+// Kinds: 'scan' (a scan that produced replies), 'reply' (each reply generated), 'like' (a practice profile liked).
+// ================================================================
+const ACTIVITY_KEY = 'zelo_activity_log';
+const ACTIVITY_OWNER_KEY = 'zelo_activity_owner';
+const ACTIVITY_DAYS_KEY = 'zelo_active_days';
+const ACTIVITY_BEST_KEY = 'zelo_best_streak';
+const ACTIVITY_WINDOW_MS = 7 * 24 * 3600 * 1000;
+const ZeloActivity = {
+  _syncing: false, _pulled: false, _flushTimer: null,
+  _newId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+  },
+  _read() {
+    let log = [];
+    try { log = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || '[]'); } catch (_) {}
+    let changed = false;
+    log.forEach(e => { if (!e.id) { e.id = this._newId(); changed = true; } });
+    if (changed) this._write(log);
+    return log;
+  },
+  _write(log) { try { localStorage.setItem(ACTIVITY_KEY, JSON.stringify(log.slice(-1000))); } catch (_) {} },
+  // ---- Active days (one per calendar day with any activity) — what the streak is made of ----
+  _dayKey(t) { const d = new Date(t), p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); },
+  _days() {
+    let days;
+    try { days = JSON.parse(localStorage.getItem(ACTIVITY_DAYS_KEY) || 'null'); } catch (_) { days = null; }
+    if (!Array.isArray(days)) { days = [...new Set(this._read().map(e => this._dayKey(e.t)))].sort(); this._writeDays(days); }
+    return days;
+  },
+  _writeDays(days) { try { localStorage.setItem(ACTIVITY_DAYS_KEY, JSON.stringify(days.slice(-800))); } catch (_) {} },
+  _addDay(key) { const d = this._days(); if (!d.includes(key)) { d.push(key); d.sort(); this._writeDays(d); } },
+  // current = consecutive days ending today, or ending yesterday if today has nothing yet (still alive).
+  streakInfo() {
+    const days = new Set(this._days()), DAY = 86400000, today = this._dayKey(Date.now());
+    const doneToday = days.has(today);
+    let cur = 0, t = Date.now();
+    if (!doneToday) t -= DAY;
+    while (days.has(this._dayKey(t))) { cur++; t -= DAY; }
+    let best = 0, run = 0, prev = null;
+    [...days].sort().forEach(k => {
+      const ms = Date.parse(k + 'T12:00:00');
+      run = (prev !== null && Math.round((ms - prev) / DAY) === 1) ? run + 1 : 1;
+      prev = ms; if (run > best) best = run;
+    });
+    let storedBest = 0; try { storedBest = parseInt(localStorage.getItem(ACTIVITY_BEST_KEY) || '0', 10) || 0; } catch (_) {}
+    best = Math.max(best, storedBest, cur);
+    if (best > storedBest) { try { localStorage.setItem(ACTIVITY_BEST_KEY, String(best)); } catch (_) {} }
+    const week = []; for (let i = 6; i >= 0; i--) week.push(days.has(this._dayKey(Date.now() - i * DAY)));
+    return { current: cur, doneToday, alive: cur > 0, hadStreak: best > 0, best, total: days.size, week, thisWeek: week.filter(Boolean).length };
+  },
+  // The words for each state. Short on purpose: they sit in small cards.
+  streakCopy(s) {
+    if (s.doneToday) return { sub: 'Done for today. Back tomorrow.', pill: 'Done today', journey: 'Done for today. See you tomorrow.' };
+    if (s.alive) return { sub: 'Use Zelo today to keep it.', pill: 'Not done today', journey: 'Use Zelo today to keep your streak.' };
+    if (s.hadStreak) return { sub: 'Your last streak ended.', pill: 'Start again', journey: 'Your last streak ended. Start a new one today.' };
+    return { sub: 'Use Zelo today to start one.', pill: 'Start today', journey: 'Use Zelo today to start your streak.' };
+  },
+  add(kind) {
+    const now = Date.now();
+    const log = this._read().filter(e => now - e.t < 30 * 24 * 3600 * 1000);
+    // Chatting adds one event per few minutes, not one per message (it only feeds the streak and the server log).
+    if (kind === 'chat' && log.some(e => e.k === 'chat' && now - e.t < 5 * 60 * 1000)) return;
+    log.push({ id: this._newId(), t: now, k: kind });
+    this._write(log);
+    this._addDay(this._dayKey(now));
+    this.render();
+    clearTimeout(this._flushTimer);
+    this._flushTimer = setTimeout(() => this.sync(), 1500);
+  },
+  // Server copy (activity_events, owner-only). Local stays the source the widget reads, so the widget works
+  // offline and signed out; events carry a client id so a retried upload can never double-count.
+  async sync() {
+    try {
+      const uid = (typeof AUTH !== 'undefined' && AUTH.currentUserId) ? AUTH.currentUserId() : '';
+      if (!uid || this._syncing || typeof zeloSupabase === 'undefined') return;
+      this._syncing = true;
+      // Another account on this phone must not inherit (or upload) the previous account's activity.
+      const owner = localStorage.getItem(ACTIVITY_OWNER_KEY);
+      if (owner && owner !== uid) { this._write([]); this._writeDays([]); try { localStorage.removeItem(ACTIVITY_BEST_KEY); } catch (_) {} this._pulled = false; }
+      localStorage.setItem(ACTIVITY_OWNER_KEY, uid);
+      let log = this._read();
+      const unsynced = log.filter(e => !e.s);
+      for (let i = 0; i < unsynced.length; i += 200) {
+        const batch = unsynced.slice(i, i + 200);
+        const { error } = await zeloSupabase.from('activity_events').upsert(
+          batch.map(e => ({ id: e.id, user_id: uid, kind: e.k, created_at: new Date(e.t).toISOString() })),
+          { onConflict: 'id', ignoreDuplicates: true });
+        if (error) throw error;
+        const ids = new Set(batch.map(e => e.id));
+        log = this._read(); log.forEach(e => { if (ids.has(e.id)) e.s = 1; }); this._write(log);
+      }
+      if (!this._pulled) {
+        const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+        const { data, error } = await zeloSupabase.from('activity_events')
+          .select('id,kind,created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(1000);
+        if (error) throw error;
+        const have = new Set(this._read().map(e => e.id));
+        const merged = this._read();
+        (data || []).forEach(r => { if (!have.has(r.id)) merged.push({ id: r.id, t: Date.parse(r.created_at), k: r.kind, s: 1 }); });
+        merged.sort((a, b) => a.t - b.t);
+        this._write(merged);
+        merged.forEach(e => this._addDay(this._dayKey(e.t)));
+        this._pulled = true;
+        this.render();
+      }
+    } catch (_) { /* stays local; tries again next time */ }
+    finally { this._syncing = false; }
+  },
+  counts() {
+    const since = Date.now() - ACTIVITY_WINDOW_MS, c = { scan: 0, reply: 0, like: 0 };
+    this._read().forEach(e => { if (e.t >= since && e.k in c) c[e.k]++; });
+    return c;
+  },
+  // What the widget's banner says. First match wins; every line is short so it fits on one line.
+  bannerText() {
+    const log = this._read(), now = Date.now(), DAY = 86400000;
+    const week = log.filter(e => now - e.t < 7 * DAY);
+    if (!week.length) return log.length ? 'Pick up again' : 'Start a scan';
+    const last = Math.max(...week.map(e => e.t));
+    if (now - last >= 2 * DAY) return 'Pick up again';
+    const c = this.counts();
+    if (c.like >= 5 && c.scan === 0) return 'Try a real scan';
+    // consecutive calendar days with any activity, counting back from today (or yesterday if nothing yet today)
+    const dayKey = t => { const d = new Date(t); return d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate(); };
+    const days = new Set(log.map(e => dayKey(e.t)));
+    let streak = 0, cur = now;
+    if (!days.has(dayKey(cur))) cur -= DAY;
+    while (days.has(dayKey(cur))) { streak++; cur -= DAY; }
+    if (streak >= 2) return streak + ' days in a row';
+    const prev = log.filter(e => now - e.t >= 7 * DAY && now - e.t < 14 * DAY).length;
+    if (prev > 0 && week.length > prev) return 'Up on last week';
+    return 'Keep going!';
+  },
+  render() {
+    const c = this.counts();
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+    set('act-replies', c.reply); set('act-scans', c.scan); set('act-likes', c.like);
+    const bn = document.getElementById('act-banner');
+    if (bn) bn.textContent = this.bannerText();
+    const s = this.streakInfo(), cp = this.streakCopy(s), txt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    txt('streak-num', s.current); txt('streak-label', s.current === 1 ? 'day in a row' : 'days in a row');
+    txt('streak-sub', cp.sub); txt('streak-widget-pill', cp.pill); txt('streak-pill-num', s.current);
+    txt('journey-num', s.current); txt('journey-label', s.current === 1 ? 'day in a row' : 'days in a row');
+    txt('journey-msg', cp.journey);
+    const dayWord = n => n + (n === 1 ? ' day' : ' days');
+    txt('journey-best', dayWord(s.best)); txt('journey-total', dayWord(s.total)); txt('journey-week', dayWord(s.thisWeek));
+    txt('mission-streak', dayWord(s.current));
+    const dots = document.getElementById('journey-dots');
+    if (dots) dots.innerHTML = s.week.map(on => on
+      ? '<span class="journey-dot journey-dot--done"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>'
+      : '<span class="journey-dot journey-dot--upcoming"></span>').join('');
+    document.querySelectorAll('.mission-stat-tile').forEach(t => {
+      const l = t.querySelector('.mission-stat-label'), n = t.querySelector('.mission-stat-num');
+      if (l && n && l.textContent.trim() === 'Scans') n.textContent = String(c.scan);
+    });
+  },
+};
+document.addEventListener('DOMContentLoaded', () => ZeloActivity.render());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { ZeloActivity.render(); ZeloActivity.sync(); } });
+
 let _lastScanSource = null;
 
 // Server-side record of an AI suggestion (generated_replies): output + tone + input
@@ -7569,6 +9201,7 @@ const REPLY_FETCH_FAILED_TEXT = "Couldn't reach Zelo right now. Try again.";
 function _saveGeneratedReply(style, reply) {
   if (!reply || reply === REPLY_FETCH_FAILED_TEXT) return;
   if (!state.asstInputSource) { ZeloRecords.status('reply not saved: demo/replay'); return; }
+  ZeloActivity.add('reply');
   const id = ZeloRecords.saveGeneratedReply({ source: state.asstInputSource, tone: style, text: reply });
   if (id) (state.asstReplyIds = state.asstReplyIds || {})[style] = id;
 }
@@ -7786,7 +9419,7 @@ function _hideScanGen(revealResult) {
 
 // Runs once per scan after the first reply is revealed.
 function _onReplyRevealed() {
-  if (_lastScanSource) { ZeloAnalytics.track('scan_completed', { source: _lastScanSource }); _lastScanSource = null; }
+  if (_lastScanSource) { ZeloAnalytics.track('scan_completed', { source: _lastScanSource }); ZeloActivity.add('scan'); _lastScanSource = null; }
   // Fix 5: the Other/tellzelo wizard's own saved answers only reset once a
   // scan actually completes — not on every Dating/Crush/Other switch.
   state.tellzeloAnswers = {};
@@ -8926,12 +10559,24 @@ let _copyToastHideTimer = null;
 // creating a new one per call — tapping Copy again while it's already
 // showing just restarts the countdown bar and the auto-dismiss timer in
 // place, rather than stacking a second toast.
-function showCopyToast(message) {
+function showNotice(title, message) { showCopyToast(message, title, true); }
+function showCopyToast(message, title, megaphone) {
   const toast = document.getElementById('copy-toast');
   const bar   = document.getElementById('copy-toast-bar');
   if (!toast || !bar) return;
   const sub = toast.querySelector('.copy-toast-sub');
   if (sub) sub.textContent = message || 'Zelo response copied to clipboard';
+  const ttl = toast.querySelector('.copy-toast-title');
+  if (ttl) ttl.textContent = title || 'Copied!';   // other banners (feature requests) pass their own heading
+  // Feature-request notices show the megaphone instead of the check mark; every other caller keeps the check.
+  const icon = toast.querySelector('.copy-toast-icon');
+  if (icon) {
+    if (!icon.dataset.check) icon.dataset.check = icon.innerHTML;
+    if (megaphone) {
+      icon.innerHTML = '<img alt="" src="assets/icons/settings/settings2-icon-feature-request' + (isDarkModeActive() ? '-dark' : '') + '.png">';
+    } else if (icon.querySelector('img')) icon.innerHTML = icon.dataset.check;
+    toast.classList.toggle('copy-toast--megaphone', !!megaphone);
+  }
 
   clearTimeout(_copyToastTimer);
   clearTimeout(_copyToastHideTimer);
@@ -9126,7 +10771,7 @@ const CINE_STEPS = {
   4:  { label: 'Continue', enabledFn: () => !!cineAnswers.overthink, entrance: cineRunQuestionEntrance },
   5:  { label: 'Continue', enabledFn: () => (cineAnswers.help || []).length > 0, entrance: cineRunQuestionEntrance },
   6:  { label: 'Continue', enabledFn: () => !!cineAnswers.attracted, entrance: cineRunQuestionEntrance },
-  7:  { label: 'Continue', enabledFn: () => !!cineAnswers.tone, entrance: cineRunQuestionEntrance },
+  7:  { label: 'Continue', enabledFn: () => !!cineAnswers.tone, entrance: cineRunStyleEntrance },
   8:  { noCta: true },                              // NEW — referral code (optional) — own Continue/Skip buttons, see cineReferralContinue()
   9:  { label: 'Continue' },
   10: { label: 'Continue' },
@@ -9151,7 +10796,7 @@ const CINE_STEPS = {
 // localStorage (zelo_onb_source / zelo_onb_referral) for future use but have
 // no downstream consumer yet — there's no analytics backend or referral-
 // redemption system to feed them into.
-let cineAnswers = { gender: null, source: null, overthink: null, help: [], attracted: null, tone: null, referral: null };
+let cineAnswers = { gender: null, source: null, overthink: null, help: [], attracted: null, tone: null, referral: null, style_variant: null };
 
 let _cineTimers = [];
 
@@ -9194,14 +10839,20 @@ function _cineTapHaptic(e) {
 
 function initOnboarding() {
   initChatsTab();
+  _registerDriveArm();
   const overlay = document.getElementById('cine-onboarding');
 
   if (localStorage.getItem('zelo_onboarding_done')) {
+    // Already onboarded: don't assign an arm, but do re-register one that
+    // was assigned on an earlier launch, so this user's later events (scans,
+    // paywall, trial) still carry the arm the test needs to measure.
+    if (localStorage.getItem(STYLE_VARIANT_KEY)) _registerStyleVariant();
     if (overlay) overlay.setAttribute('hidden', '');
     return;
   }
   if (!overlay) return;
 
+  _registerStyleVariant();
   overlay.removeAttribute('hidden');
   startCineOnboarding();
 }
@@ -9315,30 +10966,37 @@ const CINE_SHOWCASE_ENTRANCE_MS = 1500; // must match .cine-phone's 0% -> 13.9% 
 // center, not the instant that fly-in begins, so the very first thing
 // visible once the phone is full-size is the TRUE start of the recording
 // (picking the screenshot), not wherever it already played to mid-flight.
+let _showcaseVideoPrimed = false;
 function _armCineShowcaseCycle() {
   _cineShowcaseTimers.forEach(clearTimeout);
   _cineShowcaseTimers = [];
   const video = document.getElementById('cine-showcase-video');
   if (!video) return;
+  // A decode failure or a memory-pressure eviction leaves the element black with no error to catch at play
+  // time, so a video that reports an error or has no decoded data is reloaded before it is played.
+  if (video.error || video.readyState === 0) { try { video.load(); } catch (e) {} }
   video.currentTime = 0;
-  // iOS WebKit won't actually paint a video's first frame until play() has
-  // been called at least once — a video that's only ever had .currentTime
-  // set (never played) renders blank/white. That's why the very first loop
-  // showed a white phone: this is the first time play() has ever been
-  // called on this element. Kicking it off and immediately pausing forces
-  // that first frame to render without visibly playing anything, since
-  // this happens while the phone is still small/rotated mid-entrance.
-  video.play().then(() => {
-    video.pause();
-    video.currentTime = 0;
-  }).catch(() => {});
+  // iOS WebKit won't paint a video's first frame until play() has been called at least once. That
+  // play-then-pause priming is only needed ONCE: repeating it every cycle raced the real play() below (if
+  // the priming promise resolved late its pause() cancelled the real playback, and the seek back to 0
+  // showed a black frame) — the poster covers the frame before playback starts.
+  if (!_showcaseVideoPrimed) {
+    _showcaseVideoPrimed = true;
+    video.play().then(() => {
+      if (cineStep !== 'showcase' || video.currentTime < 0.3) { video.pause(); video.currentTime = 0; }
+    }).catch(() => { _showcaseVideoPrimed = false; });
+  }
   // Guarded: this fires ~1s later, by which time the user may already have
   // left the showcase — without the check it starts the video playing on a
   // screen that is no longer on display, and nothing stops it again.
   _cineShowcaseTimers.push(setTimeout(() => {
     if (cineStep !== 'showcase') return;
-    video.play().catch(() => {});
+    video.play().catch(() => { try { video.load(); video.play().catch(() => {}); } catch (e) {} });
   }, CINE_SHOWCASE_ENTRANCE_MS));
+  // Safety net: if it still is not playing a moment later (black screen), kick it again.
+  _cineShowcaseTimers.push(setTimeout(() => {
+    if (cineStep === 'showcase' && video.paused) video.play().catch(() => {});
+  }, CINE_SHOWCASE_ENTRANCE_MS + 700));
 }
 
 function cineGoToShowcase() {
@@ -10372,21 +12030,248 @@ function cineRestoreAnswers() {
   document.querySelectorAll('#cine-opts-attracted .cine-opt').forEach((b, i) => {
     b.classList.toggle('selected', ['women','men','both'][i] === cineAnswers.attracted);
   });
-  document.querySelectorAll('#cine-opts-tone .cine-opt').forEach((b, i) => {
-    b.classList.toggle('selected', ['playful','chill','direct'][i] === cineAnswers.tone);
-  });
   const referralInput = document.getElementById('cine-referral-input');
   if (referralInput && cineAnswers.referral && !referralInput.value) referralInput.value = cineAnswers.referral;
+}
+
+// ================================================================
+// STEP 7 — "Which reply sounds like you?"
+//
+// A scripted demo of what Scan actually does: a persona texts, the user
+// picks the reply they'd really send, and only then is told which style
+// that was. The answer is a real STYLE_LABELS id (not an invented tone
+// word), saved to FIRST_STYLE_KEY, which getEligibleStyles() then puts
+// first on every scan — so this question changes what the app does.
+//
+// Nothing here calls the AI: there's no account until step 14 and the
+// proxy rejects signed-out callers, so every line is written out.
+// ================================================================
+
+// Three conversations, one per A/B arm. A user sees exactly one, fixed for
+// the life of the install (_styleDemoVariant()). They differ only in what
+// Kendra says and the five replies to it — the layout, the style order and
+// the reveal are identical, so whichever converts better is down to the
+// conversation itself and nothing else.
+//
+// Every line follows the natural-texting rules: no manufactured jokes, no
+// forced flirting, no pickup lines, no tidy closing punctuation, and not
+// every reply ends in a question. A joke-shaped or over-polished line reads
+// as machine-written instantly, which is the one thing this screen can't be.
+const STYLE_DEMO_VARIANTS = {
+  // A — getting to know someone
+  a: {
+    her: "i feel like you're actually pretty quiet in person, am i wrong?",
+    options: [
+      { style: 'smooth', text: "a little at first maybe, but once i'm comfortable with someone i talk a lot more" },
+      { style: 'funny',  text: "depends, my friends would probably disagree with you on that one" },
+      { style: 'direct', text: "not really, i'm pretty talkative once i get to know someone" },
+      { style: 'warmer', text: "i can be sometimes, especially around new people. are you usually the talkative one?" },
+      { style: 'bolder', text: "you'll have to find out when we meet, i think you'd be surprised" },
+    ],
+  },
+  // B — first date
+  b: {
+    her: "okay random question but do you prefer going somewhere nice for a first date or doing something more casual",
+    options: [
+      { style: 'smooth', text: "somewhere casual honestly, i feel like it's easier to get to know someone when there's not too much pressure" },
+      { style: 'funny',  text: "casual for sure, imagine sitting through a fancy dinner and realizing you have nothing to talk about" },
+      { style: 'direct', text: "probably somewhere casual like coffee or getting food, what would you prefer?" },
+      { style: 'warmer', text: "i'd be happy with either honestly, i think it depends more on who you're going with" },
+      { style: 'bolder', text: "i'd rather take you somewhere casual first, we can save the fancy dinner for the second date" },
+    ],
+  },
+  // C — going out or staying in
+  c: {
+    her: "i remember you said you liked going out but are you actually more of a going out person or staying in person",
+    options: [
+      { style: 'smooth', text: "depends who i'm with honestly, i don't really mind either" },
+      { style: 'funny',  text: "i always say i'm staying in and somehow end up going out anyway" },
+      { style: 'direct', text: "probably going out, i get bored if i'm home all weekend" },
+      { style: 'warmer', text: "i like both tbh, what about you? are you more of a homebody?" },
+      { style: 'bolder', text: "i'd rather go out, we should get food sometime if you're down" },
+    ],
+  },
+};
+const STYLE_VARIANT_KEY = 'zelo_style_variant';
+const STYLE_VARIANT_IDS = Object.keys(STYLE_DEMO_VARIANTS);
+
+// Assigned once per install and never re-rolled, so a user who backs out of
+// onboarding and returns sees the same conversation (a re-roll would put one
+// person in two arms and quietly poison the result). Assignment happens at
+// launch rather than on reaching step 7, so the earlier steps' events carry
+// it too — that is what makes it possible to check the arms were balanced
+// BEFORE the screen they differ on, i.e. an A/A sanity check.
+function _styleDemoVariant() {
+  let v = localStorage.getItem(STYLE_VARIANT_KEY);
+  if (!STYLE_DEMO_VARIANTS[v]) {
+    v = STYLE_VARIANT_IDS[Math.floor(Math.random() * STYLE_VARIANT_IDS.length)];
+    localStorage.setItem(STYLE_VARIANT_KEY, v);
+  }
+  return v;
+}
+
+function _styleDemoConfig() { return STYLE_DEMO_VARIANTS[_styleDemoVariant()]; }
+
+// Registers the arm with analytics (auto-attached to every event that
+// allow-lists style_variant) and queues it for this account's own
+// onboarding_responses row. Called at launch; see initOnboarding().
+function _registerStyleVariant() {
+  const v = _styleDemoVariant();
+  try { ZeloAnalytics.setGlobal('style_variant', v); } catch (_) {}
+  cineAnswers.style_variant = v;
+  try { ZeloRecords.queueOnboarding(cineAnswers); } catch (_) {}
+  return v;
+}
+
+const CINE_STYLE_DOTS_MS = 620, CINE_STYLE_CHAR_MS = 16, CINE_STYLE_SPACE_MS = 26;
+
+let _cineStyleTimers = [], _cineStyleGen = 0, _cineStyleRepicked = false;
+
+function _cineStyleClearTimers() { _cineStyleTimers.forEach(clearTimeout); _cineStyleTimers = []; }
+function _cineStyleWait(ms) { return new Promise(res => { _cineStyleTimers.push(setTimeout(res, ms)); }); }
+
+async function cineRunStyleEntrance() {
+  _cineStyleClearTimers();
+  const gen = ++_cineStyleGen;
+  const thread = document.getElementById('cine-style-thread');
+  const opts   = document.getElementById('cine-style-opts');
+  const result = document.getElementById('cine-style-result');
+  if (!thread || !opts || !result) return;
+
+  thread.innerHTML = '';
+  opts.innerHTML = '';
+  result.hidden = true;
+
+  const her = document.createElement('p');
+  her.className = 'sty-bubble sty-bubble--her';
+  thread.appendChild(her);
+
+  // Reached by Back with an answer already given: show the finished state
+  // rather than replaying the whole demo.
+  const convo = _styleDemoConfig();
+
+  if (cineAnswers.tone) {
+    her.textContent = convo.her;
+    _cineStyleCommit(cineAnswers.tone, true);
+    return;
+  }
+
+  // Fired once per arrival at the unanswered screen — the denominator for
+  // every conversion rate this test reports.
+  try { ZeloAnalytics.track('style_demo_shown', {}); } catch (_) {}
+
+  her.classList.add('sty-bubble--dots');
+  her.innerHTML = '<span></span><span></span><span></span>';
+  await _cineStyleWait(CINE_STYLE_DOTS_MS);
+  if (gen !== _cineStyleGen || cineStep !== 7) return;
+  her.classList.remove('sty-bubble--dots');
+  her.textContent = '';
+
+  for (const ch of convo.her) {
+    her.textContent += ch;
+    _convoTick(ch);
+    await _cineStyleWait(ch === ' ' ? CINE_STYLE_SPACE_MS : CINE_STYLE_CHAR_MS);
+    if (gen !== _cineStyleGen || cineStep !== 7) return;
+  }
+
+  await _cineStyleWait(260);
+  if (gen !== _cineStyleGen || cineStep !== 7) return;
+  _cineStyleRenderOptions();
+}
+
+function _cineStyleRenderOptions() {
+  const opts = document.getElementById('cine-style-opts');
+  if (!opts) return;
+  opts.innerHTML = '';
+  _styleDemoConfig().options.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sty-opt sty-opt--in' + (o.style === cineAnswers.tone ? ' selected' : '');
+    b.textContent = o.text;
+    b.onclick = () => cineStylePick(o.style);
+    opts.appendChild(b);
+    // One-shot entrance: both classes come off once it has played, so
+    // nothing keeps an `animation` a reparent could replay (2026-10-09j).
+    _cineStyleTimers.push(setTimeout(() => {
+      b.classList.add('sty-opt--playing');
+      _cineStyleTimers.push(setTimeout(() => {
+        b.classList.remove('sty-opt--in', 'sty-opt--playing');
+      }, CINE_OPT_ANIM_MS + 40));
+    }, CINE_OPT_STAGGER_MS * i));
+  });
+}
+
+function cineStylePick(style) {
+  const options = _styleDemoConfig().options;
+  const position = options.findIndex(o => o.style === style);
+  if (position === -1) return;
+  cineAnswers.tone = style;
+  localStorage.setItem('zelo_onb_tone', style);
+  localStorage.setItem(FIRST_STYLE_KEY, style);
+  // position is 1-5 down the list, so a result can be checked for plain
+  // "everyone taps the first one" bias before it is read as a preference.
+  try {
+    ZeloAnalytics.track('style_demo_picked', { tone: style, position: position + 1, repicked: _cineStyleRepicked });
+  } catch (_) {}
+  _cineStyleCommit(style, false);
+  cineSetNextEnabled(true);
+}
+
+// Puts the chosen reply into the thread as the user's own message, clears
+// the choices and names the style behind it.
+function _cineStyleCommit(style, instant) {
+  const thread = document.getElementById('cine-style-thread');
+  const opts   = document.getElementById('cine-style-opts');
+  const result = document.getElementById('cine-style-result');
+  const option = _styleDemoConfig().options.find(o => o.style === style);
+  if (!thread || !opts || !result || !option) return;
+
+  thread.querySelector('.sty-bubble--me')?.remove();
+  const me = document.createElement('p');
+  me.className = 'sty-bubble sty-bubble--me' + (instant ? '' : ' sty-bubble--pop');
+  me.textContent = option.text;
+  thread.appendChild(me);
+  if (!instant) {
+    _cineStyleTimers.push(setTimeout(() => me.classList.remove('sty-bubble--pop'), 460));
+  }
+
+  opts.innerHTML = '';
+
+  const label = document.getElementById('cine-style-result-label');
+  const sub   = document.getElementById('cine-style-result-sub');
+  if (label) {
+    label.textContent = 'You picked ' + (STYLE_LABELS[style] || style) + '.';
+    label.style.color = (STYLE_COLORS[style] || {}).accent || 'var(--accent)';
+  }
+  if (sub) sub.textContent = "We'll use this style first when you try Scan.";
+
+  result.hidden = false;
+  result.classList.remove('sty-result--in');
+  if (!instant) {
+    void result.offsetWidth;
+    result.classList.add('sty-result--in');
+    _cineStyleTimers.push(setTimeout(() => result.classList.remove('sty-result--in'), 460));
+  }
+}
+
+// Brings the choices back without retyping her message. The existing answer
+// stands until a different one is picked, so Continue stays unlocked.
+function cineStylePickAgain() {
+  _cineStyleRepicked = true;
+  _cineStyleClearTimers();
+  const result = document.getElementById('cine-style-result');
+  if (result) result.hidden = true;
+  document.querySelector('#cine-style-thread .sty-bubble--me')?.remove();
+  _cineStyleRenderOptions();
 }
 
 // ================================================================
 // STEP 8 — referral code (optional, no shared CTA — see CINE_STEPS[8])
 // ================================================================
 
-// Apply just stores the code locally and confirms it — there's no
-// redemption backend to validate it against yet (no referral-code lookup
-// exists anywhere in the app), so this is honestly a "saved for later"
-// action, not a real "your friend gets credit right now" one.
+// Apply stores the code locally and confirms it — the account doesn't exist yet at this point in
+// onboarding, so real redemption (crediting the referrer) can't happen until sign-up completes a few
+// steps later. See _redeemPendingReferralIfAny(), which reads this same zelo_onb_referral value.
 function cineReferralApply() {
   const input = document.getElementById('cine-referral-input');
   const msg   = document.getElementById('cine-referral-msg');
@@ -10488,98 +12373,52 @@ function cineRunSetupEntrance() {
 // adaptation, not a value to fill in.
 // ================================================================
 
-// tone -> icon/label/description for the "Your style" card. Falls back to
-// 'playful' if the user somehow reached this screen without answering step
-// 7 (shouldn't happen — CINE_STEPS[7].enabledFn requires cineAnswers.tone —
-// but this screen shouldn't hard-fail if it ever does).
-const CINE_PLAN_TONE_INFO = {
-  playful: { label: 'Playful', desc: 'Light, fun and easygoing conversations.', icon: 'onb-plan-tone-playful.png' },
-  chill:   { label: 'Chill',   desc: 'Relaxed and casual, like a natural back-and-forth.', icon: 'onb-plan-tone-chill.png' },
-  direct:  { label: 'Direct',  desc: 'Straight to the point and confident.', icon: 'onb-plan-tone-direct.png' },
-};
-
-// help id -> the exact label its own option uses in step 5, so this screen
-// never drifts out of sync with the question that produced the answer.
-const CINE_PLAN_HELP_LABELS = {
+// Step 13 ("Your plan is set"): the goal the user picked in step 5, phrased
+// so it reads as a thing being worked on. Keyed by the same ids that
+// question's own options use, so the two can't drift apart.
+const CINE_READY_GOALS = {
   'what-to-say': 'Knowing what to say',
   'keep-going':  'Keeping conversations going',
-  'natural':     'Sounding more natural',
-  'flirting':    'Flirting without being awkward',
+  'natural':     'Sounding more like yourself',
+  'flirting':    'Flirting without it feeling forced',
   'confident':   'Feeling more confident',
 };
-
-// overthink -> "Your challenge" description, used only for the
-// 'way-too-often' overthinking case (see CINE_PLAN_CHALLENGE_INFO below) —
-// the other tiers no longer force an "Overthinking" card when that isn't
-// actually the user's main friction point.
-const CINE_PLAN_OVERTHINK_DESC = {
-  'almost-never':  "We'll help you stay confident, even on the rare occasion it happens.",
-  'sometimes':     "We'll help you respond without getting stuck on every word.",
-  'pretty-often':  "We'll help you respond without getting stuck on every word.",
-  'way-too-often': "We'll help you stop getting stuck on every single word.",
-};
-
-// "Your challenge" card: overthinking only wins this slot when the user
-// actually said it's a heavy problem ('way-too-often'); otherwise the card
-// reflects their #1 pick from "what would you like help with" (step 5),
-// so someone who barely overthinks doesn't get told overthinking is their
-// challenge just because every user answers that question.
-const CINE_PLAN_CHALLENGE_INFO = {
-  'what-to-say': { title: 'Knowing what to say', desc: "We'll help you feel more confident when starting your replies.", icon: 'onb-help-what-to-say.png' },
-  'keep-going':  { title: 'Keeping conversations going', desc: "We'll help you keep conversations natural and engaging.", icon: 'onb-help-keep-going.png' },
-  'natural':     { title: 'Sounding natural', desc: "We'll help your replies feel more like you.", icon: 'onb-help-natural.png' },
-  'flirting':    { title: 'Flirting naturally', desc: "We'll help you flirt without making your replies feel forced.", icon: 'onb-help-flirting.png' },
-  'confident':   { title: 'Feeling more confident', desc: "We'll help you build confidence without forcing your replies.", icon: 'onb-help-confident.png' },
+// One line per goal, in the same plain register as the demo replies.
+const CINE_READY_GOAL_NOTES = {
+  'what-to-say': 'Getting past the blank screen when you open a chat.',
+  'keep-going':  'Getting past the awkward "what do i say now" moments.',
+  'natural':     'Sounding like you, not like a script.',
+  'flirting':    'Being playful without it landing weird.',
+  'confident':   'Sending it without second-guessing every word.',
 };
 
 function cineRunPlanEntrance() {
-  const planScreenEl = document.querySelector('.cine-screen[data-screen="13"]');
-  if (planScreenEl) {
-    planScreenEl.classList.remove('plan-entrance');
-    void planScreenEl.offsetWidth; // force reflow so the animation replays every visit
-    planScreenEl.classList.add('plan-entrance');
+  const screen = document.querySelector('.cine-screen[data-screen="13"]');
+  if (screen) {
+    screen.classList.remove('plan-entrance');
+    void screen.offsetWidth; // force reflow so the animation replays every visit
+    screen.classList.add('plan-entrance');
   }
 
-  const tone = CINE_PLAN_TONE_INFO[cineAnswers.tone] ? cineAnswers.tone : 'playful';
-  const toneInfo = CINE_PLAN_TONE_INFO[tone];
-  const iconEl = document.getElementById('cine-plan-style-icon');
-  if (iconEl) iconEl.src = 'assets/icons/onboarding/' + toneInfo.icon;
-  const valueEl = document.getElementById('cine-plan-style-value');
-  if (valueEl) valueEl.textContent = toneInfo.label;
-  const descEl = document.getElementById('cine-plan-style-desc');
-  if (descEl) descEl.textContent = toneInfo.desc;
+  const name = (localStorage.getItem('zelo_display_name') || '').trim();
+  const nameEl = document.getElementById('cine-ready-name');
+  if (nameEl) nameEl.textContent = (name || 'you') + '.';
 
-  // Up to 2 shown — matches the reference mock and keeps the card a
-  // consistent height regardless of how many the user actually picked
-  // (step 5 is multi-select, 1-5 possible).
-  const help = (cineAnswers.help && cineAnswers.help.length) ? cineAnswers.help : ['what-to-say', 'keep-going'];
-  const listEl = document.getElementById('cine-plan-focus-list');
-  if (listEl) {
-    listEl.innerHTML = help.slice(0, 2).map(h =>
-      `<li><span class="cine-plan2-dot"></span>${CINE_PLAN_HELP_LABELS[h] || h}</li>`
-    ).join('');
+  const style = cineAnswers.tone || localStorage.getItem(FIRST_STYLE_KEY);
+  const styleEl = document.getElementById('cine-ready-style');
+  if (styleEl) {
+    styleEl.textContent = STYLE_LABELS[style] || 'Smooth';
+    // Same colour the style was named in on step 7, so the two screens read
+    // as the same answer rather than two unrelated statements.
+    styleEl.style.color = (STYLE_COLORS[style] || {}).accent || 'var(--accent)';
   }
 
-  const challengeIcEl = document.getElementById('cine-plan-challenge-ic');
-  const challengeIconEl = document.getElementById('cine-plan-challenge-icon');
-  const challengeValueEl = document.getElementById('cine-plan-challenge-value');
-  const challengeDescEl = document.getElementById('cine-plan-challenge-desc');
-  const topHelp = help[0];
-  if (cineAnswers.overthink === 'way-too-often' || !CINE_PLAN_CHALLENGE_INFO[topHelp]) {
-    if (challengeIconEl) challengeIconEl.src = 'assets/icons/onboarding/onb-plan-brain.png';
-    if (challengeValueEl) challengeValueEl.textContent = 'Overthinking';
-    if (challengeDescEl) challengeDescEl.textContent = CINE_PLAN_OVERTHINK_DESC[cineAnswers.overthink] || CINE_PLAN_OVERTHINK_DESC.sometimes;
-    if (challengeIcEl) challengeIcEl.classList.remove('cine-plan2-ic--glyph');
-  } else {
-    const info = CINE_PLAN_CHALLENGE_INFO[topHelp];
-    if (challengeIconEl) challengeIconEl.src = 'assets/icons/onboarding/' + info.icon;
-    if (challengeValueEl) challengeValueEl.textContent = info.title;
-    if (challengeDescEl) challengeDescEl.textContent = info.desc;
-    // These are transparent glyph-only crops (from the step-5 help icons),
-    // not the opaque cover-cropped tone/brain art -- need contain, not
-    // cover, or their non-square padding gets clipped oddly.
-    if (challengeIcEl) challengeIcEl.classList.add('cine-plan2-ic--glyph');
-  }
+  const help = (cineAnswers.help && cineAnswers.help.length) ? cineAnswers.help : [];
+  const topGoal = CINE_READY_GOALS[help[0]] ? help[0] : 'natural';
+  const goalEl = document.getElementById('cine-ready-goal');
+  if (goalEl) goalEl.textContent = CINE_READY_GOALS[topGoal];
+  const noteEl = document.getElementById('cine-ready-goal-note');
+  if (noteEl) noteEl.textContent = CINE_READY_GOAL_NOTES[topGoal];
 }
 
 // ================================================================
@@ -10604,6 +12443,23 @@ function cineAuthStub() {
 function cineProviderTap(provider) {
   ZeloRecords.recordConsent('terms_and_privacy', true); // consent is recorded at the moment of continuing
   AUTH.startFromOnboarding(provider, cineAuthStub);
+}
+
+// Called once, right after a brand-new account's profile row is written (services/auth.js
+// _onSignedIn / _insertProfileFromOnboarding). Reads whatever step 8's "Enter referral code" field
+// already saved (zelo_onb_referral — was "saved for later, no backend yet" until this). Silent no-op
+// for "no code typed" / "code invalid" / "already used one" — redeemReferralCode() never reveals which.
+async function _redeemPendingReferralIfAny() {
+  const code = localStorage.getItem('zelo_onb_referral');
+  localStorage.removeItem('zelo_onb_referral');   // one-shot either way
+  if (!code || typeof ZeloRecords === 'undefined') return;
+  const ok = await ZeloRecords.redeemReferralCode(code).catch(() => false);
+  if (ok) {
+    try { ZeloAnalytics.track('referral_link_shared', { via: 'redeemed' }); } catch (e) {}
+    // Reward granting is not built yet (no real entitlement system exists) — this is a placeholder
+    // confirmation only, deliberately vague about WHAT the reward is rather than promising one.
+    setTimeout(() => showNotice('Invite code added', "You and your friend are both set — thanks for joining through them!"), 600);
+  }
 }
 
 // ---- Screen 1 — name input (profanity-filtered, no bad/empty/space-only) ----
@@ -11039,6 +12895,15 @@ const CINE_LANDING_MS = 1200;
 // just condensed to one line and much shorter (that one already ran once
 // this session; repeating a full 10s wait here would be redundant).
 function _cineShowLandingLoader() {
+  // The History button on Scan sits directly under where the skip X was, so a second tap during (or just
+  // after) this hand-off used to land on it. Swallow taps until the loader is gone plus a short grace.
+  if (!document.getElementById('post-onboarding-tap-guard')) {
+    const g = document.createElement('div');
+    g.id = 'post-onboarding-tap-guard';
+    g.style.cssText = 'position:fixed;inset:0;z-index:2100;background:transparent;';
+    document.body.appendChild(g);
+    setTimeout(() => g.remove(), CINE_LANDING_MS + 300 + 800);
+  }
   const loader = document.getElementById('cine-landing-loader');
   const fill = document.getElementById('cine-landing-fill');
   if (!loader || !fill) {
@@ -11191,6 +13056,7 @@ function renderChatsList() {
 
     const row = document.createElement('div');
     row.className = 'chat-row' + (chat.pinned ? ' chat-row--pinned' : '');
+    row.dataset.chatId = chat.id;
     // A press that matured into the hold menu must not also open the chat when the finger lifts.
     row.onclick = () => { if (Date.now() - (row._heldAt || 0) < 700) return; openChatFromStore(chat); };
     row.innerHTML = `
@@ -11200,7 +13066,7 @@ function renderChatsList() {
           <span class="chat-row-name">${profile.name}, ${profile.age}</span>
           <span class="chat-row-time">${chat.lastActive}</span>
         </div>
-        <span class="chat-row-preview">${chat.lastMessage}</span>
+        <span class="chat-row-preview">${chat.typing ? _typingDotsHTML() : chat.lastMessage}</span>
       </div>
       ${chat.unread ? `<div class="chat-row-unread">${chat.unread}</div>` : ''}
     `;
@@ -11233,6 +13099,7 @@ const _CR_ICONS = {
   pin:    _CR_SVG('<path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/>'),
   search: _CR_SVG('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>'),
   reset:  _CR_SVG('<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>'),
+  flag:   _CR_SVG('<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>'),
   trash:  _CR_SVG('<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>'),
   // Pinned marker: a filled accent circle with a white pin — big enough to read at a glance.
   pinBadge: '<span class="chat-row-pinbadge" aria-label="Pinned"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 3h6l-1 6 3 3v2h-4v8h-2v-8H7v-2l3-3z"/></svg></span>',
@@ -11281,6 +13148,7 @@ function openChatRowMenu(chat, row) {
       <button type="button" class="crm-item" data-act="pin" role="menuitem">${_CR_ICONS.pin}<span>${chat.pinned ? 'Unpin Chat' : 'Pin Chat'}</span></button>
       <button type="button" class="crm-item" data-act="search" role="menuitem">${_CR_ICONS.search}<span>Search in Chat</span></button>
       <button type="button" class="crm-item" data-act="reset" role="menuitem">${_CR_ICONS.reset}<span>Reset Chat</span></button>
+      <button type="button" class="crm-item" data-act="report" role="menuitem">${_CR_ICONS.flag}<span>Report a Problem</span></button>
       <div class="crm-divider"></div>
       <button type="button" class="crm-item crm-item--danger" data-act="delete" role="menuitem">${_CR_ICONS.trash}<span>Delete Chat</span></button>
     </div>`;
@@ -11331,6 +13199,10 @@ function _chatRowAction(act, chat) {
       state.activeChatId = chat.id; state.character = chat.profile; state.difficulty = chat.difficulty; state.mode = chat.mode;
       chatSettingsReset();
     }), 180);
+  } else if (act === 'report') {
+    // The report sheet reads the active chat, so point it at the held row first.
+    state.activeChatId = chat.id; state.character = chat.profile; state.difficulty = chat.difficulty; state.mode = chat.mode;
+    setTimeout(() => openReportSheet('chat', null), 180);
   } else if (act === 'delete') {
     setTimeout(() => _showChatConfirm('Delete chat?', 'This permanently deletes this conversation. This can’t be undone.', 'Delete', () => onDeleteChat(chat.id)), 180);
   }
@@ -11548,6 +13420,7 @@ window.addEventListener('zelo-kb', () => {
 document.addEventListener('DOMContentLoaded', _attachChatSearchDrag);
 
 function openChatFromStore(chat) {
+  hideMsgBanner();
   _captureHistoryReturn();
 
   // Mark unread cleared
@@ -11569,6 +13442,7 @@ function openChatFromStore(chat) {
   setTimeout(_scheduleSuggestions, 700);   // after the screen is live
 
   setSendEnabled(true);
+  _syncBlockedUI();
   pushScreen('chat');
   _forceChatRepaint();
   _trackPracticeStart(true);
@@ -11598,7 +13472,6 @@ function appendUserBubbleStatic(text, atTime, opts = {}) {
   wrap.appendChild(bubble);
   wrap.appendChild(timestamp);
   row.appendChild(wrap);
-  row.appendChild(createMsgAvatar(false));
   messages.appendChild(row);
   _playRowEntrance(row, 'msg-row--in');
   _applyMsgGrouping(row);
@@ -11648,6 +13521,7 @@ function openDashboard() {
   const displayName = getDisplayName();
   document.getElementById('dash-name').textContent   = displayName;
   document.getElementById('dash-avatar').textContent = displayName.charAt(0).toUpperCase();
+  _refreshProfilePhotoEverywhere();
 
   // Stats — lifetime persisted counts (matchCount() survives reload; chatStore doesn't)
   document.getElementById('stat-scans').textContent   = scanCount;
@@ -14567,41 +16441,61 @@ function saveDisplayName(name) {
 // ================================================================
 // REFER FRIENDS — see screen-refer-friends in index.html.
 // ================================================================
-// Generated once and persisted, same pattern as getDisplayName()'s own
-// "Player #XXXX" — reuses those same digits (so the two stay recognizably
-// linked) plus two stable letters, never re-rolled on later visits.
-function getReferralCode() {
-  let code = localStorage.getItem('zelo_referral_code');
-  if (!code) {
-    const digits = (getDisplayName().match(/\d+/) || [])[0] || String(Math.floor(1000 + Math.random() * 9000));
-    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no O/I — avoids look-alike-digit confusion
-    code = digits + letters[Math.floor(Math.random() * letters.length)] + letters[Math.floor(Math.random() * letters.length)];
-    localStorage.setItem('zelo_referral_code', code);
-  }
-  return code;
+// A real, server-issued 5-character code (profiles.referral_code), not invented client-side — a
+// different account can actually resolve it back to this one at redemption time. See
+// services/records.js getMyReferralCode() / supabase/migrations/20261019150000_referral_codes.sql.
+// Shown/copied/shared as just the bare code (e.g. "XK9P2") — no domain, no https://. The landing page
+// still exists at zelofficial.com/join/CODE (for the rich link preview in the image shares and for
+// navigator.share's url field, which needs a real absolute URL to work), but nothing user-facing shows
+// that domain — redemption itself only ever needs the code, typed into the app directly (step 8).
+const REFERRAL_DOMAIN = 'zelofficial.com/join/';
+async function getReferralCode() {
+  const code = await ZeloRecords.getMyReferralCode();
+  return code || null;
 }
-function getReferralLink() { return 'https://zelo.app/join/' + getReferralCode(); }
+async function _referralFullUrl() {
+  const code = await getReferralCode();
+  return code ? 'https://' + REFERRAL_DOMAIN + code : null;
+}
 
 function openReferFriends() {
-  document.getElementById('refer-link-text').textContent = getReferralLink();
-  pushScreen('refer-friends');
+  const go = async () => {
+    pushScreen('refer-friends');
+    const el = document.getElementById('refer-link-text');
+    el.textContent = 'Loading…';
+    const code = await getReferralCode();
+    el.textContent = code || "Couldn't load your code — check your connection";
+  };
+  if (typeof AUTH !== 'undefined' && AUTH.signedIn && !AUTH.signedIn()) { AUTH.requireAuth('refer-friends', go); return; }
+  go();
 }
 function closeReferFriends() { popScreen(); }
 
-function copyReferralLink() {
-  navigator.clipboard?.writeText(getReferralLink()).then(() => showCopyToast('Referral link copied to clipboard')).catch(() => {});
+async function copyReferralLink() {
+  const code = await getReferralCode();
+  if (!code) { showChatToast("Couldn't load your code — check your connection"); return; }
+  navigator.clipboard?.writeText(code).then(() => showCopyToast('Referral code copied to clipboard')).catch(() => {});
 }
 
-// Every share entry point (the big button and all 4 app-row icons) funnels
-// here — there's no real per-app deep-link integration, so the honest
-// behavior is the OS share sheet (the user picks Messages/WhatsApp/
-// Instagram/whatever themselves from there), falling back to a plain
-// clipboard copy if the Web Share API isn't available at all.
-function shareReferral() {
+// The ONE share entry point (just "Share with friends" now — no custom per-app icon row). The real
+// native share sheet (UIActivityViewController, MainViewController.swift) already shows every
+// installed app's own real icon (Messages, WhatsApp, Instagram, Mail, whatever) — nothing to draw or
+// fake here, the OS does it. navigator.share() is the fallback when the native handler isn't available
+// (e.g. testing outside the iOS app) — it works, but iOS shows a generic link icon in its own preview
+// rather than Zelo's, since that preview reflects the shared URL, not which app initiated the share.
+async function shareReferral() {
+  const code = await getReferralCode();
+  if (!code) { showChatToast("Couldn't load your code — check your connection"); return; }
   ZeloAnalytics.track('referral_link_shared');
-  const shareData = { title: 'Zelo', text: "Join me on Zelo!", url: getReferralLink() };
+  const url = await _referralFullUrl();   // needs a real absolute URL
+  const text = `Join me on Zelo! Use my code: ${code}`;
+  const handlers = window.webkit && window.webkit.messageHandlers;
+  if (handlers && handlers.zeloShareGeneric) {
+    handlers.zeloShareGeneric.postMessage({ text, url });
+    return;
+  }
   if (navigator.share) {
-    navigator.share(shareData).catch(() => {});
+    navigator.share({ title: 'Zelo', text, url }).catch(() => {});
   } else {
     copyReferralLink();
   }
@@ -14650,6 +16544,23 @@ function getMyLeaderboardEntry() {
 
 const LB_UNITS = { streak: 'days', messages: 'messages', level: 'levels' };
 
+const LB_CAT_NAMES = { streak: 'Longest Streak', messages: 'Most Messages', level: 'Most Level' };
+const LB_PERIOD_NOW = { weekly: 'this week', monthly: 'this month', alltime: 'yet' };
+
+// Time left in the current week (Monday start) or month, from the real clock. All-time has no end.
+function _lbTimerInfo(filter) {
+  const now = new Date();
+  let end;
+  if (filter === 'weekly') { end = new Date(now); end.setHours(0, 0, 0, 0); end.setDate(end.getDate() + ((8 - end.getDay()) % 7 || 7)); }
+  else if (filter === 'monthly') end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  else return null;
+  let ms = Math.max(0, end - now);
+  const d = Math.floor(ms / 86400000); ms -= d * 86400000;
+  const hrs = Math.floor(ms / 3600000); ms -= hrs * 3600000;
+  const m = Math.floor(ms / 60000);
+  return { label: filter === 'weekly' ? 'This week ends in' : 'This month ends in', value: (d ? d + 'd ' : '') + hrs + 'h ' + m + 'm' };
+}
+
 function renderLeaderboard() {
   const data       = getLbData(lbTimeFilter, lbCategory);
   const myName     = getDisplayName();
@@ -14666,6 +16577,36 @@ function renderLeaderboard() {
     const btn = document.getElementById('lb-cat-' + c);
     if (btn) btn.classList.toggle('active', c === lbCategory);
   });
+
+  const timer = document.getElementById('lb-timer');
+  const ti = _lbTimerInfo(lbTimeFilter);
+  if (timer) {
+    timer.hidden = !ti;
+    if (ti) {
+      const l = document.getElementById('lb-timer-label'), v = document.getElementById('lb-timer-value');
+      if (l) l.textContent = ti.label;
+      if (v) v.textContent = ti.value;
+    }
+  }
+
+  // Nobody ranked: say so, and hide every part that needs people.
+  const empty = data.length === 0;
+  const emptyEl = document.getElementById('lb-empty');
+  if (emptyEl) emptyEl.hidden = !empty;
+  const emptyText = document.getElementById('lb-empty-text');
+  if (emptyText) {
+    emptyText.textContent = lbTimeFilter === 'alltime'
+      ? 'Nobody is on the ' + LB_CAT_NAMES[lbCategory] + ' board yet. Be the first.'
+      : 'Nobody is on the ' + LB_CAT_NAMES[lbCategory] + ' board ' + LB_PERIOD_NOW[lbTimeFilter] + '. Be the first.';
+  }
+  const podiumWrap = document.querySelector('.lb-podium-wrap');
+  if (podiumWrap) podiumWrap.hidden = empty;
+  const listEl0 = document.getElementById('lb-list');
+  if (listEl0) listEl0.hidden = empty;
+  const pinEl0 = document.getElementById('lb-my-rank');
+  if (pinEl0) pinEl0.hidden = empty;
+  const motivEl0 = document.getElementById('lb-motivation');
+  if (empty) { if (motivEl0) motivEl0.hidden = true; return; }
 
   // Podium (top 3) — pedestal/crown art is the cropped, blank
   // hero-podium-blank.png (no baked-in badge/text, see index.html). The
@@ -14686,17 +16627,14 @@ function renderLeaderboard() {
     }).join('');
   }
 
-  // "Keep going!" motivational line — distance to the next rank up. Not
-  // every anonymous player is actually IN the mock 100-entry dataset (see
-  // getMyLeaderboardEntry()'s synthetic fallback) — for those, "next rank
-  // up" is the lowest real entry rather than nothing.
+  // Distance to the next rank up.
   const motivEl = document.getElementById('lb-motivation');
   if (motivEl) {
     const myIdxInData = data.findIndex(e => e.name === myEntry.name);
     const aheadIdx = myIdxInData >= 0 ? myIdxInData - 1 : data.length - 1;
     const ahead = aheadIdx >= 0 ? data[aheadIdx] : null;
     if (ahead && ahead.score > myEntry.score) {
-      motivEl.textContent = `📈 Keep going! You're ${ahead.score - myEntry.score} ${unit} away from #${ahead.rank}`;
+      motivEl.textContent = `${ahead.score - myEntry.score} ${unit} to reach #${ahead.rank}`;
       motivEl.hidden = false;
     } else {
       motivEl.hidden = true;
@@ -14770,7 +16708,7 @@ function renderJourneyDots() {
 // than the inline-SVG icon system the Milestones pages use, per explicit
 // direction. Nothing to render here anymore.
 function openJourney() {
-  renderJourneyDots();
+  ZeloActivity.render();
   const countEl = document.querySelector('.journey-badges-count');
   if (countEl) countEl.textContent = `${getTotalUnlockedCount()}/${MILESTONE_BADGES.length} unlocked`;
   pushScreen('journey');
@@ -15227,6 +17165,8 @@ function _currentSheetBadge() {
 }
 
 let _msShareText = '';
+let _msShareCard = null;         // { accent, artSrc, digitsValue, title, sub } — everything _renderShareImage needs
+let _msShareImageCache = null;   // { key, blob } — the rendered PNG, rebuilt only when the card actually changes
 
 function _openShareSheet({ accent, tint, artName, digitsValue, title, sub, text }) {
   const sheet = document.getElementById('badge-share-sheet');
@@ -15241,8 +17181,95 @@ function _openShareSheet({ accent, tint, artName, digitsValue, title, sub, text 
   document.getElementById('badge-share-title').textContent = title;
   document.getElementById('badge-share-sub').textContent = sub;
   _msShareText = text;
+  _msShareCard = { accent, artSrc: milestoneArtSrc(artName), digitsValue, title, sub };
+  _msShareImageCache = null;
   _milestoneCloseSheet('badge-sheet-overlay');
   _milestoneOpenSheet('badge-share-overlay');
+}
+
+// Draws the actual streak/badge card as one flat PNG — art + digit glyphs + title/sub — sized for
+// Instagram Stories (1080x1920) so it also looks right dropped into Messages/WhatsApp/anywhere else.
+// Always rendered in LIGHT colors regardless of the sharer's own theme: the people THEY share it with
+// have no relation to the sharer's device setting, so a fixed, predictable look is correct here, not
+// "whatever theme I'm in right now".
+async function _renderShareImage() {
+  const card = _msShareCard;
+  if (!card) return null;
+  const key = JSON.stringify(card);
+  if (_msShareImageCache && _msShareImageCache.key === key) return _msShareImageCache.blob;
+
+  const W = 1080, H = 1920;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const loadImg = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+
+  // Background: a soft tint fading to white, same spirit as .ms-sheet--share's gradient.
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, _colorMixWhite(card.accent, 0.30));
+  grad.addColorStop(0.55, '#ffffff');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2;
+  let y = H * 0.36;
+
+  const art = await loadImg(card.artSrc);
+  if (art) {
+    const size = 520;
+    ctx.drawImage(art, cx - size / 2, y - size / 2, size, size);
+    y += size / 2;
+  }
+
+  if (card.digitsValue !== null && card.digitsValue !== undefined) {
+    const chars = String(card.digitsValue).split('');
+    const digitImgs = await Promise.all(chars.map(ch => loadImg(`${MILESTONE_ART_DIR}digit-${ch}.png`)));
+    const dH = 120, dTop = y - dH * 0.3;
+    const widths = digitImgs.map(im => im ? (im.width / im.height) * dH : 0);
+    const totalW = widths.reduce((a, b) => a + b, 0);
+    let dx = cx - totalW / 2;
+    digitImgs.forEach((im, i) => { if (im) { ctx.drawImage(im, dx, dTop, widths[i], dH); dx += widths[i]; } });
+    y = dTop + dH;   // below the digit glyphs' own bottom edge, not the art's
+  }
+
+  y += 70;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = card.accent;
+  ctx.font = '800 56px -apple-system, system-ui, sans-serif';
+  ctx.fillText(card.title.toUpperCase(), cx, y);
+
+  y += 56;
+  ctx.fillStyle = '#8a8175';
+  ctx.font = '400 32px -apple-system, system-ui, sans-serif';
+  ctx.fillText(card.sub, cx, y);
+
+  // Bold CTA caption, same pattern as Cal AI's "Get healthy with Cal AI" — only ever in this exported
+  // image (what actually gets sent/saved), never shown in the live in-app share-sheet preview itself.
+  // The star after "Zelo" is the app's own brand sparkle (.scan-spark's exact SVG path, used after
+  // every "Zelo" wordmark in the app's own headers) — same glyph, same place, not a new invention.
+  const ctaText = 'Get better at texting with Zelo';
+  const ctaY = H - 100;
+  ctx.fillStyle = card.accent;
+  ctx.font = '800 38px -apple-system, system-ui, sans-serif';
+  ctx.fillText(ctaText, cx, ctaY);
+  const ctaWidth = ctx.measureText(ctaText).width;
+  const starSize = 30;
+  ctx.save();
+  ctx.translate(cx + ctaWidth / 2 + 8, ctaY - starSize * 0.78);
+  ctx.scale(starSize / 24, starSize / 24);
+  ctx.fillStyle = card.accent;
+  ctx.fill(new Path2D('M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z'));
+  ctx.restore();
+
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  _msShareImageCache = { key, blob };
+  return blob;
+}
+function _colorMixWhite(hex, amount) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  const mix = c => Math.round(c * amount + 255 * (1 - amount));
+  return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
 function openStreakShare() {
@@ -15276,14 +17303,63 @@ function closeBadgeShare() {
   _milestoneCloseSheet('badge-share-overlay');
 }
 
-function shareSheetNatively() {
+function _blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(',')[1] || '');
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+// "Save" and "More" — the general OS share sheet, now carrying the actual rendered card image (not just
+// text). "Save Image" and every other app (incl. WhatsApp, which has no direct deep-link of its own — see
+// shareSheetWhatsapp below) are reached through here.
+async function shareSheetNatively() {
   if (!_msShareText) return;
+  const blob = await _renderShareImage();
+  const file = blob ? new File([blob], 'zelo-streak.png', { type: 'image/png' }) : null;
   if (navigator.share) {
-    navigator.share({ title: 'Zelo', text: _msShareText }).catch(() => {});
+    const data = { title: 'Zelo', text: _msShareText };
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
+    navigator.share(data).catch(() => {});
   } else if (navigator.clipboard) {
     navigator.clipboard.writeText(_msShareText).then(() => flashLimitToast('Copied to clipboard')).catch(() => {});
   }
 }
+
+// Instagram — the real "ready to post" Stories deep link (native, MainViewController.swift), not the
+// generic picker. Falls back to the generic share sheet if Instagram isn't installed or the native
+// handler isn't available (e.g. testing outside the iOS app).
+async function shareSheetInstagram() {
+  if (!_msShareCard) return;
+  const handlers = window.webkit && window.webkit.messageHandlers;
+  const blob = await _renderShareImage();
+  if (handlers && handlers.zeloShareInstagram && blob) {
+    const base64 = await _blobToBase64(blob);
+    try { ZeloAnalytics.track('referral_link_shared', { via: 'instagram_native' }); } catch (e) {}
+    handlers.zeloShareInstagram.postMessage({ imageBase64: base64 });
+    return;
+  }
+  shareSheetNatively();
+}
+window._zeloShareInstagramUnavailable = () => showChatToast("Instagram isn't installed.");
+
+// Messages — a real compose sheet with the image already attached (MFMessageComposeViewController,
+// MainViewController.swift), not the generic picker. Falls back to the generic share sheet otherwise.
+async function shareSheetMessages() {
+  if (!_msShareCard) return;
+  const handlers = window.webkit && window.webkit.messageHandlers;
+  const blob = await _renderShareImage();
+  if (handlers && handlers.zeloShareMessages && blob) {
+    const base64 = await _blobToBase64(blob);
+    try { ZeloAnalytics.track('referral_link_shared', { via: 'messages_native' }); } catch (e) {}
+    handlers.zeloShareMessages.postMessage({ imageBase64: base64, body: _msShareText });
+    return;
+  }
+  shareSheetNatively();
+}
+window._zeloShareMessagesUnavailable = () => showChatToast("Messages isn't available on this device.");
 
 function copySheetText() {
   if (!_msShareText || !navigator.clipboard) return;
@@ -15353,6 +17429,74 @@ document.addEventListener('DOMContentLoaded', () => {
 // deliberately left as placeholder (pricing, scan-retention values, icons).
 // ================================================================
 
+// Pulling Profile & Login past its top exposes the screen's own background. Instead of guessing colors, read the
+// REAL top row of the rendered header image (same cover-crop the <img> uses on this screen size) and paint
+// that as a horizontal gradient, so the pulled-down area continues the header with no visible seam.
+function _plSyncPullColor() {
+  const scr = document.getElementById('screen-settings-profile-login');
+  const img = scr && scr.querySelector('.pl-hero-bg');
+  const hero = scr && scr.querySelector('.pl-hero');
+  if (!img || !hero || !img.complete || !img.naturalWidth) return;
+  const r = hero.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  const scale = Math.max(r.width / nw, r.height / nh);
+  const srcH = Math.max(1, 3 / scale);
+  const srcY = Math.max(0, (nh - r.height / scale) / 2);
+  const srcW = Math.min(nw, r.width / scale);
+  const srcX = (nw - srcW) / 2;
+  const N = 24;
+  try {
+    const cv = document.createElement('canvas');
+    cv.width = N; cv.height = 1;
+    const cx = cv.getContext('2d');
+    cx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, N, 1);
+    const d = cx.getImageData(0, 0, N, 1).data;
+    const stops = [];
+    for (let i = 0; i < N; i++) stops.push('rgb(' + d[i*4] + ',' + d[i*4+1] + ',' + d[i*4+2] + ') ' + Math.round(i / (N - 1) * 100) + '%');
+    scr.style.backgroundImage = 'linear-gradient(to bottom, transparent 88%, var(--bg) 88%), linear-gradient(90deg, ' + stops.join(',') + ')';
+  } catch (e) { /* keep the CSS fallback colors */ }
+}
+// Easter egg: the mascot hangs above the top of the phone and is lowered in step with how far the content is
+// pulled down, then rises back as it settles. Pull = how far the header has moved below the top of the screen.
+const PL_MASCOT = { startPull: 300, ratio: 0.9, hidden: -140, maxY: 120, ease: 0.16 };
+let _plMascotY = PL_MASCOT.hidden, _plMascotRunning = false;
+function _plMascotStart() {
+  if (_plMascotRunning) return;
+  _plMascotRunning = true;
+  requestAnimationFrame(_plMascotTick);
+}
+function _plMascotTick() {
+  const scr = document.getElementById('screen-settings-profile-login');
+  const el = document.getElementById('pl-mascot-peek');
+  const hero = scr && scr.querySelector('.pl-hero');
+  if (!scr || !el || !hero || !scr.classList.contains('active')) {
+    if (el) el.style.transform = 'translateY(' + PL_MASCOT.hidden + 'px)';
+    _plMascotY = PL_MASCOT.hidden; _plMascotRunning = false; return;
+  }
+  const pull = Math.max(0, hero.getBoundingClientRect().top);
+  const target = pull <= PL_MASCOT.startPull
+    ? PL_MASCOT.hidden
+    : Math.min(PL_MASCOT.maxY, PL_MASCOT.hidden + (pull - PL_MASCOT.startPull) * PL_MASCOT.ratio);
+  _plMascotY += (target - _plMascotY) * PL_MASCOT.ease;
+  if (Math.abs(target - _plMascotY) < 0.3) _plMascotY = target;
+  el.style.transform = 'translateY(' + _plMascotY.toFixed(1) + 'px)';
+  requestAnimationFrame(_plMascotTick);
+}
+(function () {
+  const start = () => {
+    const scr = document.getElementById('screen-settings-profile-login');
+    if (!scr) return;
+    const img = scr.querySelector('.pl-hero-bg');
+    if (img) img.addEventListener('load', _plSyncPullColor);
+    window.addEventListener('resize', _plSyncPullColor);
+    new MutationObserver(() => {
+      if (scr.classList.contains('active')) { _plSyncPullColor(); setTimeout(_plSyncPullColor, 400); _plMascotStart(); }
+    }).observe(scr, { attributes: true, attributeFilter: ['class'] });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
 function openSettingsProfileLogin() {
   _plRenderAvatar();
   const nameInput = document.getElementById('pl-display-name-input');
@@ -15363,30 +17507,136 @@ function openSettingsProfileLogin() {
 
 // ---- Avatar (photo + initial fallback) ----
 function _plRenderAvatar() {
-  const name = getDisplayName();
-  const initialEl = document.getElementById('pl-avatar');
-  if (initialEl) initialEl.textContent = name.charAt(0).toUpperCase();
+  const placeholderEl = document.getElementById('pl-avatar');
   const photo = localStorage.getItem('zelo_profile_photo');
   const img = document.getElementById('pl-avatar-photo');
-  if (img) {
-    img.src = photo || '';
-    img.hidden = !photo;
-  }
-  if (initialEl) initialEl.hidden = !!photo;
+  if (img) { img.src = photo || ''; img.hidden = !photo; }
+  if (placeholderEl) placeholderEl.hidden = !!photo;
+  const removeBtn = document.getElementById('pl-avatar-remove');
+  if (removeBtn) removeBtn.hidden = !photo;
+  const sub = document.getElementById('pl-avatar-sub');
+  if (sub) sub.textContent = photo ? 'Tap to change your photo' : 'Tap to add a photo';
+  _refreshProfilePhotoEverywhere();
 }
 
+// Every place the user's photo shows, updated together: the 3 tab-header profile buttons (the actual
+// first thing anyone sees, before ever opening the dashboard — was a static generic icon, never wired
+// to the real photo at all) + the Account tab's own dashboard card. Called from _plRenderAvatar() (so
+// every set/remove already covers this) and once on app init for a returning user who set a photo in
+// an earlier session.
+// Deliberately NOT the 3 tab-header profile buttons (tried that, reverted per the user: the photo
+// should only show on the dashboard's own "Player #.../Zelo member" card — the header stays the
+// plain generic icon). .profile-btn-photo/.profile-btn-icon still exist in the markup/CSS from that
+// attempt but are simply never toggled now.
+function _refreshProfilePhotoEverywhere() {
+  const photo = localStorage.getItem('zelo_profile_photo');
+  const dashImg = document.getElementById('dash-avatar-photo');
+  const dashInitial = document.getElementById('dash-avatar');
+  if (dashImg) { dashImg.src = photo || ''; dashImg.hidden = !photo; }
+  if (dashInitial) dashInitial.hidden = !!photo;
+}
+_refreshProfilePhotoEverywhere();   // picks up a photo set in an earlier session, before the dashboard/PL screen is ever opened
+
 function plPickPhoto() { document.getElementById('pl-photo-input')?.click(); }
+function plRemovePhoto() {
+  localStorage.removeItem('zelo_profile_photo');
+  _plRenderAvatar();
+}
+
+// ---- Crop/reposition sheet: picking a photo never writes it directly — it loads into this sheet
+// first, and only plCropConfirm() ever touches zelo_profile_photo. Drag to pan, slider to zoom; the
+// image is always kept scaled to fully cover the circular stage (same "cover" rule object-fit:cover
+// would give you, just with the user controlling WHERE within that cover window the crop sits). ----
+const _plCrop = { natW: 0, natH: 0, minScale: 1, scale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+const PL_CROP_STAGE = 280, PL_CROP_OUT = 320;
+
 function plPhotoSelected(event) {
   const file = event.target.files && event.target.files[0];
+  event.target.value = '';
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
-    localStorage.setItem('zelo_profile_photo', reader.result);
-    _plRenderAvatar();
-  };
+  reader.onload = () => _plOpenCrop(reader.result);
   reader.readAsDataURL(file);
-  event.target.value = '';
 }
+
+function _plOpenCrop(dataUrl) {
+  const img = document.getElementById('pl-crop-img');
+  img.onload = () => {
+    _plCrop.natW = img.naturalWidth; _plCrop.natH = img.naturalHeight;
+    _plCrop.minScale = PL_CROP_STAGE / Math.min(_plCrop.natW, _plCrop.natH);
+    _plCrop.scale = _plCrop.minScale;
+    _plCrop.x = (PL_CROP_STAGE - _plCrop.natW * _plCrop.scale) / 2;
+    _plCrop.y = (PL_CROP_STAGE - _plCrop.natH * _plCrop.scale) / 2;
+    document.getElementById('pl-crop-zoom').value = '1';
+    _plApplyCropTransform();
+    document.getElementById('pl-crop-overlay').hidden = false;
+  };
+  img.src = dataUrl;
+}
+
+function _plClampCrop() {
+  const w = _plCrop.natW * _plCrop.scale, h = _plCrop.natH * _plCrop.scale;
+  _plCrop.x = Math.min(0, Math.max(PL_CROP_STAGE - w, _plCrop.x));
+  _plCrop.y = Math.min(0, Math.max(PL_CROP_STAGE - h, _plCrop.y));
+}
+function _plApplyCropTransform() {
+  _plClampCrop();
+  const img = document.getElementById('pl-crop-img');
+  img.style.transform = `translate(${_plCrop.x}px, ${_plCrop.y}px) scale(${_plCrop.scale})`;
+}
+
+function plCropZoom(sliderVal) {
+  const newScale = _plCrop.minScale * Number(sliderVal);
+  // Zoom around the stage's own center, not the image's top-left corner, so zooming in/out feels
+  // anchored to what's actually visible rather than yanking the image toward a corner.
+  const cx = PL_CROP_STAGE / 2, cy = PL_CROP_STAGE / 2;
+  const ratio = newScale / _plCrop.scale;
+  _plCrop.x = cx - (cx - _plCrop.x) * ratio;
+  _plCrop.y = cy - (cy - _plCrop.y) * ratio;
+  _plCrop.scale = newScale;
+  _plApplyCropTransform();
+}
+
+function _plCropPointerDown(clientX, clientY) {
+  _plCrop.dragging = true; _plCrop.startX = clientX; _plCrop.startY = clientY;
+  _plCrop.baseX = _plCrop.x; _plCrop.baseY = _plCrop.y;
+}
+function _plCropPointerMove(clientX, clientY) {
+  if (!_plCrop.dragging) return;
+  _plCrop.x = _plCrop.baseX + (clientX - _plCrop.startX);
+  _plCrop.y = _plCrop.baseY + (clientY - _plCrop.startY);
+  _plApplyCropTransform();
+}
+function _plCropPointerUp() { _plCrop.dragging = false; }
+
+function _plInitCropDrag() {
+  const stage = document.getElementById('pl-crop-stage');
+  if (!stage || stage.dataset.bound) return;
+  stage.dataset.bound = '1';
+  stage.addEventListener('touchstart', e => { const t = e.touches[0]; _plCropPointerDown(t.clientX, t.clientY); }, { passive: true });
+  stage.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; _plCropPointerMove(t.clientX, t.clientY); }, { passive: false });
+  stage.addEventListener('touchend', _plCropPointerUp);
+  stage.addEventListener('mousedown', e => _plCropPointerDown(e.clientX, e.clientY));
+  window.addEventListener('mousemove', e => _plCropPointerMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', _plCropPointerUp);
+}
+
+function plCropCancel() {
+  document.getElementById('pl-crop-overlay').hidden = true;
+}
+function plCropConfirm() {
+  const img = document.getElementById('pl-crop-img');
+  const canvas = document.createElement('canvas');
+  canvas.width = PL_CROP_OUT; canvas.height = PL_CROP_OUT;
+  const ctx = canvas.getContext('2d');
+  const ratio = PL_CROP_OUT / PL_CROP_STAGE;
+  ctx.scale(ratio, ratio);
+  ctx.drawImage(img, _plCrop.x, _plCrop.y, _plCrop.natW * _plCrop.scale, _plCrop.natH * _plCrop.scale);
+  localStorage.setItem('zelo_profile_photo', canvas.toDataURL('image/jpeg', 0.9));
+  document.getElementById('pl-crop-overlay').hidden = true;
+  _plRenderAvatar();
+}
+_plInitCropDrag();
 
 // ---- Display name — saves on blur, same zelo_display_name key every
 // other name editor in the app already reads/writes. ----
@@ -16025,13 +18275,416 @@ function toggleSettingsFaq(rowEl) {
   if (chevron) chevron.style.transform = opening ? 'rotate(90deg)' : '';
 }
 
-function sendSettingsSupportMessage() {
-  const textarea = document.getElementById('settings2-support-message');
-  const msg = (textarea?.value || '').trim();
-  if (!msg) return;
-  if (textarea) textarea.value = '';
-  _settingsToast("Thanks — we'll get back to you soon.");
+// ── Support (Report a problem / Contact support) ────────────────────────────
+// The in-app sheet (saves straight to Supabase `support_messages`, services/support.js) is the PRIMARY
+// and only reliable path — every report is guaranteed captured regardless of the user's device.
+// Native Mail (MainViewController.swift, webkit.messageHandlers.zeloMail) is offered as an OPTIONAL
+// secondary action inside the sheet ("Open in Mail instead"), never the entry point.
+//
+// Why native Mail can't be the primary/gating path: MFMailComposeViewController.canSendMail() only
+// checks that SOME Mail account exists on the device — it does not verify that account can actually
+// send. And once the user taps Send, iOS reports .sent the moment the message is QUEUED, not once
+// delivery is confirmed — if the account's SMTP auth is broken (a real, fairly common failure, found
+// by testing this exact build), Apple's Mail app handles that error entirely on its own, with zero
+// visibility given to any third-party app. A user hitting that would see our "Message sent" toast and
+// believe it worked, while their report silently vanished forever with no signal to them or to us.
+// Routing it through native Mail first (2026-10-19l) was the wrong call for that reason; this undoes it.
+const SUPPORT_EMAIL = 'support@zelofficial.com';
+const MAIL_KINDS = {
+  problem: { title: 'Report a Problem', subject: 'Report a problem', file: 'zelo-problem-log.txt', placeholder: '' },
+  contact: { title: 'Contact Support',  subject: 'Contact support',  file: 'zelo-contact-log.txt', placeholder: '' },
+};
+// Opens the REAL native Mail compose sheet pre-filled with whatever the user has already typed in our
+// own sheet, as an OPTIONAL extra — our sheet's own Send button is still the one guaranteed to reach us.
+function mailOpenNative() {
+  const handlers = window.webkit && window.webkit.messageHandlers;
+  if (!handlers || !handlers.zeloMail) { showChatToast("Mail isn't available on this device."); return; }
+  const k = _mail.kind, cfg = MAIL_KINDS[k] || MAIL_KINDS.contact;
+  const t = document.getElementById('mail-text');
+  try { ZeloAnalytics.track('support_sent', { kind: k, result: 'native_opened' }); } catch (e) {}
+  handlers.zeloMail.postMessage({
+    to: SUPPORT_EMAIL, subject: cfg.subject, body: t ? t.value : '',
+    attachmentName: cfg.file, attachmentText: ZeloSupport.buildDiagnostics(k),
+  });
 }
+window._zeloMailUnavailable = () => showChatToast("No Mail account is set up on this device.");
+// Native Mail's .sent only means "queued", not confirmed delivered (see note above) — so this is just a
+// courtesy toast, never anything Supabase-side; our sheet's own Send already did the reliable part.
+window._zeloMailResult = (outcome) => {
+  if (outcome === 'sent') showChatToast('Opened in Mail — send it from there whenever you like.');
+};
+const _mail = { kind: 'contact', sending: false, drafts: {} };
+let _mailHideTimer = null;
+function openSupport(kind) {
+  const k = MAIL_KINDS[kind] ? kind : 'contact', cfg = MAIL_KINDS[k], sheet = document.getElementById('mail-sheet');
+  if (!sheet) return;
+  _mail.kind = k; _mail.sending = false;
+  document.getElementById('mail-title').textContent = cfg.title;
+  document.getElementById('mail-subject').textContent = cfg.subject;
+  document.getElementById('mail-file').textContent = cfg.file;
+  document.getElementById('mail-size').textContent = (ZeloSupport.buildDiagnostics(k).length / 1024).toFixed(1) + ' KB';
+  document.getElementById('mail-text').value = '';
+  const err = document.getElementById('mail-error'); err.hidden = true;
+  mailInput();
+  clearTimeout(_mailHideTimer);
+  sheet.hidden = false;
+  sheet.classList.remove('chat-settings-sheet--in'); void sheet.offsetWidth;
+  requestAnimationFrame(() => sheet.classList.add('chat-settings-sheet--in'));
+  setTimeout(() => { const t = document.getElementById('mail-text'); if (t && !sheet.hidden) t.focus(); }, 380);   // like a compose sheet: the keyboard is already up
+}
+function mailInput() {
+  const t = document.getElementById('mail-text'), b = document.getElementById('mail-send');
+  if (b && !_mail.sending) b.disabled = (t ? t.value.trim().length : 0) < 3;
+}
+function _mailClose() {
+  const sheet = document.getElementById('mail-sheet');
+  if (!sheet || sheet.hidden) return;
+  const t = document.getElementById('mail-text'); if (t) t.blur();
+  sheet.classList.remove('chat-settings-sheet--in');
+  clearTimeout(_mailHideTimer);
+  _mailHideTimer = setTimeout(() => { sheet.hidden = true; }, 320);
+}
+function mailCancel() {
+  if (_mail.sending) return;
+  const t = document.getElementById('mail-text');
+  if (t && t.value.trim().length) { _showChatConfirm('Discard this message?', "What you've written won't be sent.", 'Discard', _mailClose); return; }
+  _mailClose();
+}
+async function mailSend() {
+  const t = document.getElementById('mail-text'), btn = document.getElementById('mail-send'), err = document.getElementById('mail-error');
+  const msg = t ? t.value.trim() : '';
+  if (msg.length < 3 || _mail.sending) return;
+  _mail.sending = true; btn.disabled = true; btn.classList.add('mail-send--busy'); err.hidden = true;
+  const kind = _mail.kind;
+  const result = await ZeloSupport.sendSupport(kind, msg);
+  _mail.sending = false; btn.classList.remove('mail-send--busy');
+  try { ZeloAnalytics.track('support_sent', { kind, result }); } catch (e) {}
+  if (result === 'limit') {
+    err.textContent = "You've sent a lot of messages today. Please try again tomorrow."; err.hidden = false; mailInput();
+    return;
+  }
+  _mailClose();
+  setTimeout(() => {
+    if (result === 'queued') showCopyToast("We'll send it as soon as you're signed in and online.", 'Saved on your phone');
+    else showCopyToast("We read every message, but we can't reply to each one.", kind === 'problem' ? 'Report sent' : 'Message sent');
+  }, 250);
+}
+
+// ── Feature requests (board + new request) ─────────────────────────────────
+// Rows come from `list_feature_requests()` (services/support.js); the title/body are checked by a
+// database trigger before a request is shown to anyone else. Voting is optimistic and settles to
+// the server's count.
+const FR = { sort: 'top', q: '', gen: 0, items: [], timer: null, voting: new Set(), detail: null, comments: [], editing: null };
+// ── AI review (edge function moderate-feature-text) ──
+// A new post, edit or comment that passed the free checks is 'pending' until Gemini says ok/hold. The app asks for the
+// review right after saving; if that fails (offline, function not deployed, Gemini busy) the database makes the item
+// visible to everyone after 3 minutes, and the next time the board or page loads we ask again.
+FR.modAsked = new Map();                                              // kind+id -> when we last asked (retry after 30 s, never more often)
+async function _frModerate(kind, id) {
+  if (!id) return;
+  FR.modAsked.set(kind + id, Date.now());
+  const r = await ZeloSupport.moderate(kind, id);
+  if (!r.status || r.status === 'pending') return;
+  if (kind === 'request') {
+    const it = FR.items.find(x => String(x.id) === String(id)); if (it) it.status = r.status;
+    if (FR.detail && String(FR.detail.id) === String(id)) { FR.detail.status = r.status; _frdRenderCard(); }
+    if (state.activeScreen === 'settings-feature-requests') frLoad(false);
+    if (r.status === 'held') showNotice('Under review', 'Your post was held for review. Only you can see it for now.');
+    else if (r.status === 'live') showNotice('Your post is live', 'Everyone can see and vote on it now.');
+  } else if (FR.detail) {
+    const com = await ZeloSupport.listComments(FR.detail.id);
+    if (com.items && state.activeScreen === 'settings-feature-detail') _frdRenderComments(com.items, false);
+    if (r.status === 'held') showNotice('Under review', 'Your comment was held for review. Only you can see it for now.');
+  }
+}
+function _frRetryPending(items, kind) {
+  (items || []).forEach(it => {
+    const last = FR.modAsked.get(kind + it.id) || 0;
+    if (it.is_mine && it.status === 'pending' && Date.now() - last > 30000) _frModerate(kind, it.id);
+  });
+}
+function openFeatureRequests() {
+  const go = () => { pushScreen('settings-feature-requests'); frLoad(true); };
+  if (typeof AUTH !== 'undefined' && AUTH.signedIn && !AUTH.signedIn()) { AUTH.requireAuth('feature-requests', go); return; }
+  go();
+}
+function _frCount(n) {
+  n = Number(n) || 0;
+  if (n >= 10000) return Math.round(n / 1000) + 'k';
+  if (n >= 1000) return (Math.round(n / 100) / 10) + 'k';
+  return String(n);
+}
+function _frDate(iso) {
+  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return ''; }
+}
+const _FR_BUBBLE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.5-4.6A8 8 0 1 1 21 12z"/></svg>';
+const _FR_CHEVRON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>';
+function _frCardHTML(it) {
+  const who = it.is_mine ? 'You' : 'Member ' + _escapeHtml(it.author_tag || '');
+  const badge = it.status === 'held' ? '<span class="fr-badge">Under review</span>' : (it.status === 'pending' && it.is_mine ? '<span class="fr-badge">Checking…</span>' : '');
+  const body = it.body ? '<p class="fr-card-body">' + _escapeHtml(it.body) + '</p>' : '';
+  return '<article class="fr-card" data-id="' + _escapeHtml(it.id) + '">' +
+    '<div class="fr-card-main"><h3 class="fr-card-title">' + _escapeHtml(it.title) + '</h3>' + body +
+    '<div class="fr-card-meta"><span>' + who + '</span><span class="fr-cmt">' + _FR_BUBBLE + (Number(it.comment_count) || 0) + '</span><span>' + _frDate(it.created_at) + '</span>' + badge + '</div></div>' +
+    '<button type="button" class="fr-vote' + (it.i_voted ? ' voted' : '') + '" aria-pressed="' + (it.i_voted ? 'true' : 'false') + '" aria-label="Vote">' +
+    _FR_CHEVRON + '<span>' + _frCount(it.vote_count) + '</span></button></article>';
+}
+function _frState(title, text, btnLabel) {
+  return '<div class="fr-state"><b>' + title + '</b>' + text + (btnLabel ? '<br><button type="button" onclick="frLoad(true)">' + btnLabel + '</button>' : '') + '</div>';
+}
+async function frLoad(showSkeleton) {
+  const list = document.getElementById('fr-list'); if (!list) return;
+  const gen = ++FR.gen;
+  if (showSkeleton && !FR.items.length) list.innerHTML = '<div class="fr-skel"></div><div class="fr-skel"></div><div class="fr-skel"></div>';
+  const r = await ZeloSupport.listRequests(FR.sort, FR.q);
+  if (gen !== FR.gen) return;                                       // a newer load (typing, sort change) replaced this one
+  if (r.error) {
+    FR.items = [];
+    const msg = r.error === 'net' ? ['No connection', 'Check your internet and try again.']
+      : r.error === 'signed_out' ? ['Sign in to see requests', 'Requests are shared between Zelo users, so you need to be signed in.']
+      : r.error === 'unavailable' ? ['Not available yet', 'The request board is not ready. Please try again later.']
+      : ['Something went wrong', "We couldn't load the requests."];
+    list.innerHTML = _frState(msg[0], msg[1], r.error === 'unavailable' ? '' : 'Try again');
+    return;
+  }
+  FR.items = r.items;
+  if (!r.items.length) {
+    list.innerHTML = FR.q ? _frState('No matches', 'Nobody has asked for that yet. Be the first.', '')
+      : _frState('No requests yet', 'Be the first to tell us what Zelo should do next.', '');
+    return;
+  }
+  list.innerHTML = r.items.map(_frCardHTML).join('');
+  _frRetryPending(r.items, 'request');
+}
+function frSetSort(sort) {
+  if (FR.sort === sort) return;
+  FR.sort = sort;
+  const seg = document.getElementById('fr-seg');
+  if (seg) { seg.classList.toggle('fr-seg--new', sort === 'new'); seg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.sort === sort)); }
+  frLoad(false);
+}
+function frSearchInput() {
+  clearTimeout(FR.timer);
+  FR.timer = setTimeout(() => { const el = document.getElementById('fr-search'); FR.q = el ? el.value.trim() : ''; frLoad(false); }, 280);
+}
+function _frFindItem(id) {
+  if (FR.detail && String(FR.detail.id) === String(id)) return FR.detail;
+  return FR.items.find(x => String(x.id) === String(id));
+}
+async function frVote(host) {
+  const id = host && host.dataset.id; if (!id || FR.voting.has(id)) return;
+  const btn = host.querySelector('.fr-vote'), numEl = btn.querySelector('span');
+  const was = btn.classList.contains('voted');
+  const item = _frFindItem(id);
+  const base = item ? Number(item.vote_count) || 0 : 0;
+  const apply = (voted, count) => {
+    btn.classList.toggle('voted', voted); btn.setAttribute('aria-pressed', String(voted)); numEl.textContent = _frCount(count);
+    const lbl = host.querySelector('.fr-votes-label'); if (lbl) lbl.textContent = count + (count === 1 ? ' vote' : ' votes');
+    [FR.detail].concat(FR.items).forEach(x => { if (x && String(x.id) === String(id)) { x.i_voted = voted; x.vote_count = count; } });
+  };
+  FR.voting.add(id);
+  apply(!was, Math.max(0, base + (was ? -1 : 1)));
+  btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop');
+  try { navigator.vibrate && navigator.vibrate(6); _cineHaptic('LIGHT'); } catch (e) {}
+  const r = await ZeloSupport.toggleVote(id);
+  FR.voting.delete(id);
+  if (r.error) { apply(was, base); showNotice("Couldn't save your vote", 'Check your connection and try again.'); return; }
+  apply(r.voted, r.count);
+}
+document.addEventListener('click', (e) => {
+  const card = e.target.closest && e.target.closest('#fr-list .fr-card');
+  if (card) { if (e.target.closest('.fr-vote')) frVote(card); else openFeatureDetail(card.dataset.id); return; }
+  const dv = e.target.closest && e.target.closest('#frd-card .fr-vote');
+  if (dv) frVote(document.getElementById('frd-card'));
+});
+
+// ── One request: the post, its comments, edit / delete for your own ──
+function _frAvatar(isMine) { return '<span class="fr-avatar' + (isMine ? ' fr-avatar--me' : '') + '" aria-hidden="true">' + (isMine ? 'Y' : 'M') + '</span>'; }
+function _frWho(it) { return it.is_mine ? 'You' : 'Member ' + _escapeHtml(it.author_tag || ''); }
+function _frdRenderCard() {
+  const it = FR.detail, card = document.getElementById('frd-card'); if (!it || !card) return;
+  card.dataset.id = it.id;
+  const votes = Number(it.vote_count) || 0;
+  const own = it.is_mine ? '<div class="fr-own-actions"><button type="button" onclick="frEdit()">Edit</button><button type="button" class="danger" onclick="frDelete()">Delete</button></div>' : '';
+  card.innerHTML =
+    '<div class="fr-author">' + _frAvatar(it.is_mine) + '<div class="fr-author-text"><b>' + _frWho(it) + '</b><span>' + _frDate(it.created_at) + (it.edited_at ? ' · edited' : '') + '</span></div></div>' +
+    '<h2 class="fr-detail-title">' + _escapeHtml(it.title) + '</h2>' +
+    (it.body ? '<p class="fr-detail-body">' + _escapeHtml(it.body) + '</p>' : '') +
+    (it.status === 'held' ? '<div><span class="fr-badge">Under review. Only you can see this for now.</span></div>' : (it.status === 'pending' && it.is_mine ? '<div><span class="fr-badge">Checking your post…</span></div>' : '')) +
+    '<div class="fr-detail-actions"><button type="button" class="fr-vote' + (it.i_voted ? ' voted' : '') + '" aria-pressed="' + (it.i_voted ? 'true' : 'false') + '" aria-label="Vote">' + _FR_CHEVRON + '<span>' + _frCount(votes) + '</span></button>' +
+    '<span class="fr-votes-label">' + votes + (votes === 1 ? ' vote' : ' votes') + '</span>' + own + '</div>';
+}
+function _frdCommentHTML(c) {
+  const held = c.status === 'held' ? ' <span class="fr-badge">Under review</span>' : (c.status === 'pending' && c.is_mine ? ' <span class="fr-badge">Checking…</span>' : '');
+  const del = c.is_mine ? '<button type="button" class="fr-comment-del" data-del="' + _escapeHtml(c.id) + '">Delete</button>' : '';
+  return '<div class="fr-comment" data-cid="' + _escapeHtml(c.id) + '">' + _frAvatar(c.is_mine) +
+    '<div class="fr-comment-main"><div class="fr-comment-head"><b>' + _frWho(c) + '</b><span>' + _frDate(c.created_at) + '</span>' + held + '</div>' +
+    '<p class="fr-comment-text">' + _escapeHtml(c.body) + '</p>' + del + '</div></div>';
+}
+function _frdRenderComments(items, isNew) {
+  FR.comments = items;
+  const list = document.getElementById('frd-comments'), label = document.getElementById('frd-count');
+  const live = items.filter(c => c.status === 'live').length;
+  list.innerHTML = items.length ? items.map(_frdCommentHTML).join('') : '';
+  label.textContent = !items.length ? 'No comments yet. Start the conversation below.' : (live === 1 ? '1 comment' : live + ' comments');
+  if (isNew) { const last = list.lastElementChild; if (last) { last.classList.add('new'); last.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } }
+}
+async function openFeatureDetail(id) {
+  const base = FR.items.find(x => String(x.id) === String(id));
+  if (!base) return;
+  FR.detail = Object.assign({}, base); FR.comments = [];
+  const input = document.getElementById('frd-input'); if (input) input.value = '';
+  frdInput();
+  _frdRenderCard(); _frdRenderComments([], false);
+  document.getElementById('frd-count').textContent = 'Loading comments…';
+  pushScreen('settings-feature-detail');
+  const [req, com] = await Promise.all([ZeloSupport.getRequest(id), ZeloSupport.listComments(id)]);
+  if (!FR.detail || String(FR.detail.id) !== String(id)) return;       // left, or opened another one meanwhile
+  if (req.item === null) { showNotice('Request not available', 'It may have been removed.'); frDetailBack(); return; }
+  if (req.item) { FR.detail = req.item; _frdRenderCard(); }
+  if (com.items) { _frdRenderComments(com.items, false); _frRetryPending(com.items, 'comment'); }
+  else document.getElementById('frd-count').textContent = com.error === 'net' ? "No connection. Comments couldn't load." : "Comments couldn't load.";
+}
+function frDetailBack() {
+  FR.detail = null;
+  const input = document.getElementById('frd-input'); if (input) input.blur();
+  popScreen();
+  frLoad(false);                                                        // counts and votes may have changed
+}
+function frdInput() {
+  const i = document.getElementById('frd-input'), b = document.getElementById('frd-send');
+  if (i && b && !b.dataset.busy) b.disabled = i.value.trim().length < 1;
+}
+async function frdSendComment() {
+  const i = document.getElementById('frd-input'), b = document.getElementById('frd-send');
+  const text = i ? i.value.trim() : ''; if (!text || !FR.detail || b.dataset.busy) return;
+  const bad = ZeloTextGuard.check(text);
+  if (bad) { showNotice("Can't post that", ZeloTextGuard.MESSAGES[bad]); return; }
+  b.dataset.busy = '1'; b.disabled = true;
+  const r = await ZeloSupport.addComment(FR.detail.id, text);
+  delete b.dataset.busy;
+  if (r.error || !r.item) {
+    const msg = { daily_limit: "You've posted a lot of comments today. Try again tomorrow.", net: 'Check your connection and try again.', signed_out: 'Please sign in to comment.', not_found: 'This request is no longer available.', inappropriate: ZeloTextGuard.MESSAGES.rude, has_link: ZeloTextGuard.MESSAGES.link }[r.error] || 'Please try again.';
+    showNotice("Couldn't post your comment", msg); frdInput(); return;
+  }
+  i.value = ''; frdInput();
+  if (r.item.status === 'live') FR.detail.comment_count = (Number(FR.detail.comment_count) || 0) + 1;
+  _frdRenderComments((FR.comments || []).concat([r.item]), true);
+  if (r.item.status === 'held') showNotice('Thanks for commenting', 'Your comment will be under review before others see it.');
+  else if (r.item.status === 'pending') _frModerate('comment', r.item.id);
+}
+document.addEventListener('click', (e) => {
+  const del = e.target.closest && e.target.closest('#frd-comments .fr-comment-del'); if (!del) return;
+  const id = del.dataset.del;
+  _showChatConfirm('Delete this comment?', "It will be removed for everyone. This can't be undone.", 'Delete', async () => {
+    const r = await ZeloSupport.deleteComment(id);
+    if (r.error) { showNotice("Couldn't delete", 'Check your connection and try again.'); return; }
+    const was = (FR.comments || []).find(c => String(c.id) === String(id));
+    if (was && was.status === 'live' && FR.detail) FR.detail.comment_count = Math.max(0, (Number(FR.detail.comment_count) || 0) - 1);
+    _frdRenderComments((FR.comments || []).filter(c => String(c.id) !== String(id)), false);
+  });
+});
+function frEdit() {
+  const it = FR.detail; if (!it || !it.is_mine) return;
+  FR.editing = it.id; FR.formMode = 'edit';
+  const t = document.getElementById('fr-new-title'), b = document.getElementById('fr-new-body');
+  t.value = it.title; b.value = it.body || ''; delete t.dataset.sent; delete b.dataset.sent;
+  document.getElementById('fr-new-heading').textContent = 'Edit request';
+  document.getElementById('fr-new-send').textContent = 'Save changes';
+  document.getElementById('fr-new-note').textContent = 'Changes are checked again before they show to others.';
+  document.getElementById('fr-new-error').hidden = true;
+  frNewInput();
+  pushScreen('settings-feature-new');
+}
+function frDelete() {
+  const it = FR.detail; if (!it || !it.is_mine) return;
+  _showChatConfirm('Delete this request?', "It will be removed for everyone, along with its votes and comments. This can't be undone.", 'Delete', async () => {
+    const r = await ZeloSupport.deleteRequest(it.id);
+    if (r.error) { showNotice("Couldn't delete", 'Check your connection and try again.'); return; }
+    FR.items = FR.items.filter(x => String(x.id) !== String(it.id));
+    showNotice('Request deleted', 'It has been removed from the board.');
+    frDetailBack();
+  });
+}
+
+function openFeatureNew() {
+  const wasEdit = FR.formMode === 'edit';                                // the form still holds an edit's text
+  FR.editing = null; FR.formMode = 'new';
+  ['fr-new-title', 'fr-new-body'].forEach(id => { const el = document.getElementById(id); if (el && (el.dataset.sent || wasEdit)) { el.value = ''; delete el.dataset.sent; } });
+  document.getElementById('fr-new-heading').textContent = 'New request';
+  document.getElementById('fr-new-send').textContent = 'Submit request';
+  document.getElementById('fr-new-note').textContent = 'Search first in case someone already asked. Requests are checked automatically before they go live.';
+  const err = document.getElementById('fr-new-error'); if (err) err.hidden = true;
+  frNewInput();
+  pushScreen('settings-feature-new');
+}
+function frNewInput() {
+  const t = document.getElementById('fr-new-title'), b = document.getElementById('fr-new-body'), btn = document.getElementById('fr-new-send');
+  if (!t || !b) return;
+  document.getElementById('fr-new-title-n').textContent = String(t.value.length);
+  document.getElementById('fr-new-body-n').textContent = String(b.value.length);
+  if (btn && !btn.dataset.busy) btn.disabled = t.value.trim().length < 8;
+}
+async function frSubmitNew() {
+  const t = document.getElementById('fr-new-title'), b = document.getElementById('fr-new-body'), btn = document.getElementById('fr-new-send'), err = document.getElementById('fr-new-error');
+  if (!t || !btn || btn.dataset.busy || t.value.trim().length < 8) return;
+  const bad = ZeloTextGuard.check(t.value) || ZeloTextGuard.check(b.value);
+  if (bad) { err.textContent = ZeloTextGuard.MESSAGES[bad]; err.hidden = false; return; }
+  const editing = FR.editing;
+  btn.dataset.busy = '1'; btn.disabled = true; btn.textContent = editing ? 'Saving…' : 'Submitting…';
+  t.blur(); b.blur(); err.hidden = true;
+  const r = editing ? await ZeloSupport.updateRequest(editing, t.value, b.value) : await ZeloSupport.submitRequest(t.value, b.value);
+  delete btn.dataset.busy; btn.textContent = editing ? 'Save changes' : 'Submit request';
+  if (r.error) {
+    const text = { duplicate: 'Someone already asked for this. Search the list and give it a vote instead.',
+      daily_limit: "You've added a few requests today. Please try again tomorrow.",
+      net: 'No connection. Check your internet and try again.',
+      signed_out: 'Please sign in to add a request.',
+      invalid: 'Please give your request a title of at least 8 characters.',
+      not_found: 'This request is no longer available.',
+      inappropriate: ZeloTextGuard.MESSAGES.rude,
+      has_link: ZeloTextGuard.MESSAGES.link,
+      unavailable: 'Requests are not available yet. Please try again later.' }[r.error] || "Something went wrong. Please try again.";
+    err.textContent = text; err.hidden = false; btn.disabled = false;
+    return;
+  }
+  if (editing) {                                                         // back to the request page with the new text
+    FR.editing = null;
+    popScreen();
+    const fresh = await ZeloSupport.getRequest(editing);
+    if (fresh.item && FR.detail && String(FR.detail.id) === String(editing)) { FR.detail = fresh.item; _frdRenderCard(); }
+    showNotice('Changes saved', 'Your edit will be checked again before others see it.');
+    if (r.status === 'pending') _frModerate('request', editing);
+    return;
+  }
+  t.dataset.sent = '1'; b.dataset.sent = '1';
+  try { ZeloAnalytics.track('feature_requested', { held: r.status === 'held' }); } catch (e) {}
+  popScreen();
+  FR.sort = 'new'; FR.q = '';
+  const seg = document.getElementById('fr-seg');
+  if (seg) { seg.classList.add('fr-seg--new'); seg.querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.sort === 'new')); }
+  const se = document.getElementById('fr-search'); if (se) se.value = '';
+  frLoad(false);
+  showNotice('Thanks for submitting the feature request', 'Your post will be under review before it goes live.');
+  if (r.status === 'pending') _frModerate('request', r.id);
+}
+
+// The keyboard doesn't resize the page (Keyboard.resize is "none"), so these screens pad their
+// bottom by the keyboard height and keep the focused field in view.
+function _syncSupportKeyboard() {
+  const kb = window.__zeloKbH || 0;
+  document.querySelectorAll('#screen-settings-feature-new .fr-layout, #screen-settings-feature-requests .fr-layout')
+    .forEach(el => { el.style.paddingBottom = kb ? (kb + 24) + 'px' : ''; });
+  const comp = document.getElementById('frd-composer'); if (comp) { comp.style.transform = kb ? 'translateY(' + (-kb) + 'px)' : ''; comp.classList.toggle('fr-composer--kb', !!kb); }
+  const dl = document.querySelector('#screen-settings-feature-detail .fr-layout'); if (dl) dl.style.paddingBottom = kb ? (kb + 72) + 'px' : '';
+  const a = document.activeElement;
+  const mp = document.getElementById('mail-panel'); if (mp) mp.style.paddingBottom = kb ? (kb + 8) + 'px' : '';
+  if (kb && a && a.closest && a.closest('#screen-settings-feature-new, #mail-panel')) {
+    setTimeout(() => a.scrollIntoView({ block: 'center', behavior: 'smooth' }), 120);
+  }
+}
+window.addEventListener('zelo-kb', _syncSupportKeyboard);
+document.addEventListener('focusin', (e) => { if (e.target && e.target.closest && e.target.closest('#mail-panel, #screen-settings-feature-new')) setTimeout(_syncSupportKeyboard, 350); });
 
 // Minimal single-button acknowledgement — reuses the same mini-modal shell
 // as showDeleteConfirm() above (see that function) rather than a jarring
@@ -16744,6 +19397,8 @@ document.addEventListener('touchstart', (e) => {
   // outside the field and swallows that touch's click — which is exactly why
   // Continue and Back needed two presses with the keyboard open.
   if (target && target.closest && target.closest('#cine-convo')) return;
+  // Support forms and the feature board: Send, Submit, New, the sort tabs and the vote buttons must work on the first tap with the keyboard up.
+  if (target && target.closest && target.closest('#screen-settings-feature-requests, #screen-settings-feature-new, #screen-settings-feature-detail') && target.closest('button, .fr-card, .back-btn')) return;
   // Opening her profile from the chat must work on the first tap with the keyboard up.
   if (target && target.closest && target.closest('[data-open-profile], #pp-overlay')) return;
   // Flag this exact tap as "just dismissed the keyboard" (see
@@ -16965,7 +19620,8 @@ function _swallowKeyboardDismissClick(e) {
     // Every other keyboard-avoiding field in the app (AI Coach included)
     // keeps the real nudge — this is a targeted exception, not a change to
     // the shared mechanism.
-    if (active.closest && (active.closest('#auth-overlay') || active.closest('#screen-tellzelo'))) return;
+    // Support forms + the feature board manage their own keyboard spacing (_syncSupportKeyboard), so no extra nudge.
+    if (active.closest && (active.closest('#auth-overlay') || active.closest('#screen-tellzelo') || active.closest('#mail-sheet, #screen-settings-feature-requests, #screen-settings-feature-new, #screen-settings-feature-detail'))) return;
     const { els, clip, measureEl, contentEl } = movableElsAndClip(active);
     const sameTarget = nudgedEls.length && nudgedEls[0] === els[0];
     const prevEls = sameTarget ? null : nudgedEls;
