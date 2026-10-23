@@ -1,6 +1,8 @@
 {
   "scripts": {
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "test": "node --test tests/*.test.js",
+    "test:smoke": "node --test tests/smoke.test.js"
   },
   "dependencies": {
     "@capacitor/browser": "^8.0.4",
@@ -12,8 +14,7 @@
     "@capacitor/local-notifications": "^8.2.1",
     "@capawesome/capacitor-posthog": "^8.6.2",
     "@capgo/capacitor-date-picker": "^8.0.2",
-    "@capgo/capacitor-social-login": "^8.3.40",
-    "capacitor-plugin-app-tracking-transparency": "^3.0.0"
+    "@capgo/capacitor-social-login": "^8.3.40"
   },
   "devDependencies": {
     "patch-package": "^8.0.1"

@@ -15,7 +15,11 @@
 // no pronoun at all. See the note above MEN_ARCH for what they are based on.
 //
 // category : 'men' (straight men, M-series) | 'other-men' (G-series)
-// Images: assets/characters/<id>-<1..4>.jpg + <id>-pfp.jpg (the pfp is a
+// Character photos are WebP (converted 2026-10-22, q80, same 1080x1350):
+// ~48% smaller than the JPEGs for no visible difference, and the iOS
+// deployment target is 15.0, where WKWebView supports WebP natively.
+// The originals are in design-refs/characters-original-jpg-2026-10-22/.
+// Images: assets/characters/<id>-<1..4>.webp + <id>-pfp.webp (the pfp is a
 // head-and-shoulders crop of the library master, which never ships whole).
 // ======================================================================
 
@@ -185,10 +189,11 @@ function _menProfile(r, i) {
     age_pool: r.age <= 20 ? '18-20' : (r.age <= 29 ? '21-29' : '30+'),
     city: r.city,
     category: r.cat,
+    identity: r.ident || '',
     orientation: _menOrientationLabel(r),
     ageGroup: r.band,
-    photos: [1, 2, 3, 4].map(n => `assets/characters/${r.id}-${n}.jpg`),
-    avatar: `assets/characters/${r.id}-pfp.jpg`,
+    photos: [1, 2, 3, 4].map(n => `assets/characters/${r.id}-${n}.webp`),
+    avatar: `assets/characters/${r.id}-pfp.webp`,
     systemPrompt: _menPrompt(r),
   };
 }

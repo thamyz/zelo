@@ -50,7 +50,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
           media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" /></noscript>
-    <link rel="stylesheet" href="style.css?v=20261019ay" />
+    <link rel="stylesheet" href="style.css?v=20261023g" />
     <style>
       /* Guards against a flash of the main app tab (visible by default in
          the raw HTML below) before script.js has run far enough to hide it
@@ -146,8 +146,9 @@
               </svg>
             </span>
           </h1>
-          <!-- Streak pill — PROTOTYPE, static dummy data (3 days), no
-               animation, Scan header only. Mascot is a real 1:1 crop from
+          <!-- Streak pill — REAL: ZeloActivity.render() writes the live streak
+               into #streak-pill-num (it used to be a static "3"). Scan header
+               only, no animation. Mascot is a real 1:1 crop from
                assets/icons/New ver streak.png (Getting Started tier), not
                redrawn — matches the layout/position from the mockup at
                design-refs/streak/streak-pill-reference.png but uses
@@ -281,13 +282,9 @@
             </div>
           </div>
 
-          <!-- Free-tier daily scan counter + mocked rewarded-ad upsell.
-               Hidden entirely for paid users. -->
+          <!-- Free-tier daily scan counter. Hidden entirely for paid users. -->
           <div class="scan-limit-banner" id="scan-limit-banner" hidden>
             <span class="scan-limit-text" id="scan-limit-text"></span>
-            <button class="scan-limit-ad-btn" id="scan-limit-ad-btn" type="button" onclick="watchRewardedAd()" hidden>
-              Watch Ad for +3
-            </button>
           </div>
 
           <!-- MESSAGE — inline editable textarea. Stays visible and empty even
@@ -583,16 +580,16 @@
                already covers "Manage your Zelo account", so Settings' own
                duplicate profile card was dropped; everything else below is
                unchanged from the standalone Settings Home screen. -->
-          <button class="settings2-pro-card" onclick="pushScreen('settings-zelo-pro')">
+          <button class="settings2-pro-card" onclick="openSettingsZeloPro()">
             <span class="settings2-icon settings2-icon--pro" aria-hidden="true">
               <img loading="lazy" data-src="assets/icons/aicoach-topics/mascot-brand.png" alt="">
             </span>
             <span class="settings2-pro-info">
               <span class="settings2-pro-title">Zelo Pro</span>
-              <span class="settings2-pro-sub">Annual plan<br>THB 999 / year</span>
+              <span class="settings2-pro-sub" id="settings2-pro-sub">No active subscription</span>
             </span>
             <span class="settings2-chevron" aria-hidden="true">›</span>
-            <span class="settings2-manage-link">Manage subscription ›</span>
+            <span class="settings2-manage-link" id="settings2-manage-link">See plans ›</span>
           </button>
 
           <div class="settings2-section">
@@ -626,7 +623,7 @@
               </button>
               <button class="settings2-row" onclick="openReferFriends()">
                 <img loading="lazy" class="settings2-icon" data-src="assets/icons/settings/settings-icon-refer-friends.png" alt="" aria-hidden="true">
-                <span class="settings2-row-text"><b>Refer friends</b><span>Get rewards by inviting friends</span></span>
+                <span class="settings2-row-text"><b>Invite friends</b><span>Share Zelo with someone you know</span></span>
                 <span class="settings2-chevron" aria-hidden="true">›</span>
               </button>
             </div>
@@ -690,13 +687,13 @@
           <button class="back-btn" onclick="closeReferFriends()" aria-label="Back">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
-          <span class="screen-title">Refer friends</span>
+          <span class="screen-title">Invite friends</span>
         </div>
         <div class="refer-layout">
           <img loading="lazy" class="refer-hero-img" data-src="assets/icons/referral/refer-friends-hero.png" alt="">
 
-          <h1 class="refer-headline">Invite friends.<br><span class="refer-headline-accent">Get rewards.</span></h1>
-          <p class="refer-sub">Share Zelo with your friends and you'll earn rewards when they join.</p>
+          <h1 class="refer-headline">Invite friends.<br><span class="refer-headline-accent">Practice together.</span></h1>
+          <p class="refer-sub">Share your invite code with someone who would enjoy Zelo.</p>
 
           <div class="refer-link-box">
             <p class="refer-link-label">Your referral code</p>
@@ -725,13 +722,13 @@
             </div>
             <div class="refer-step">
               <span class="refer-step-num">3</span>
-              <span class="refer-step-text"><b>You both get rewards</b><span>You'll both receive rewards after they complete their first scan.</span></span>
+              <span class="refer-step-text"><b>You practise together</b><span>You'll both be set up and ready to go.</span></span>
             </div>
           </div>
 
           <div class="refer-tip">
-            <span class="refer-tip-icon" aria-hidden="true">🎁</span>
-            <p>The more friends you invite, the more rewards you unlock!</p>
+            <span class="refer-tip-icon" aria-hidden="true">💬</span>
+            <p>Zelo is more fun when the people you practise talking about are in on it too.</p>
           </div>
         </div>
       </div>
@@ -930,12 +927,12 @@
           <h3 class="cine-sheet-title">Verify Your Email</h3>
           <p class="pl-modal-sub">We've sent a 6-digit code to<br><strong id="pl-verify-email-addr"></strong></p>
           <div class="pl-modal-code-row" id="pl-email-code-row">
-            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" data-idx="0" />
-            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="1" />
-            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="2" />
-            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="3" />
-            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="4" />
-            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="5" />
+            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="0" />
+            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="1" />
+            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="2" />
+            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="3" />
+            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="4" />
+            <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="5" />
           </div>
           <p class="auth-error-msg" id="pl-email-code-error"></p>
           <p class="pl-modal-resend">Didn't receive the code? <b id="pl-email-resend-btn" onclick="plResendEmailChangeCode()">Resend</b><span id="pl-email-resend-timer"></span></p>
@@ -944,9 +941,11 @@
         </div>
       </div>
 
-      <!-- 02e — FORGOT YOUR PASSWORD? (real AUTH.sendPasswordReset(), see
-           script.js — replaces the old in-app 6-digit "Change Password"
-           reauth modal entirely) -->
+      <!-- 02e — FORGOT YOUR PASSWORD? Sends a 6-digit code via
+           AUTH.startPasswordReset(); the code + new password are entered on
+           the shared #auth-reset-overlay (same screen the sign-in sheet uses).
+           The old link-based confirmation page that followed this one had no
+           field to type a code into — it is gone. -->
       <div class="screen" id="screen-settings-forgot-password">
         <div class="auth-card">
           <button class="auth-back-btn" onclick="popScreen()" aria-label="Back">
@@ -954,35 +953,15 @@
           </button>
           <span class="pl-icon-circle-lg"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><polyline points="3 6.5 12 13 21 6.5"/></svg></span>
           <h1 class="auth-email-title">Forgot your password?</h1>
-          <p class="auth-subtext">No worries! Enter your email and we'll send you a link to reset your password.</p>
+          <p class="auth-subtext">No worries! Enter your email and we'll send you a 6-digit code to reset your password.</p>
           <div class="auth-form">
             <label class="pl-authpage-label" for="pl-forgot-email">Email address</label>
             <input type="email" id="pl-forgot-email" class="auth-input" placeholder="you@example.com" />
             <p class="auth-error-msg" id="pl-forgot-error"></p>
-            <button class="auth-submit-btn" onclick="plSendPasswordReset()">Send reset link</button>
+            <button class="auth-submit-btn" onclick="plSendPasswordReset()">Send reset code</button>
           </div>
           <div class="pl-divider"><span>or</span></div>
           <button type="button" class="settings2-footlink" onclick="_plBackToProfileLogin()">Back to settings</button>
-        </div>
-      </div>
-
-      <!-- 02f — RESET LINK SENT (success) -->
-      <div class="screen" id="screen-settings-reset-sent">
-        <div class="auth-card">
-          <button class="auth-back-btn" onclick="popScreen()" aria-label="Back">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          </button>
-          <div class="pl-success-icon-wrap">
-            <img loading="lazy" data-src="assets/icons/settings/icon-pl-email-connected.png" alt="" />
-          </div>
-          <h1 class="auth-email-title">Reset link sent!</h1>
-          <p class="auth-subtext">We've sent a password reset link to <strong id="pl-reset-sent-email"></strong>. Check your inbox (and spam folder) and follow the instructions.</p>
-          <div class="pl-resend-row">
-            <span class="pl-resend-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
-            <span class="pl-resend-text"><b>Didn't receive the email?</b><span id="pl-reset-resend-sub">You can resend the link in 60 seconds.</span></span>
-            <button type="button" class="pl-resend-btn" id="pl-reset-resend-btn" onclick="plResendPasswordReset()" disabled>Resend link</button>
-          </div>
-          <button class="auth-submit-btn" onclick="plBackToSettingsFromReset()">Back to settings</button>
         </div>
       </div>
 
@@ -1398,7 +1377,7 @@
               <img loading="lazy" data-src="assets/icons/aicoach-topics/mascot-brand.png" alt="">
             </span>
             <p class="settings2-pro-hero-title">Zelo Pro</p>
-            <p class="settings2-pro-hero-sub">You're getting the most out of Zelo.</p>
+            <p class="settings2-pro-hero-sub" id="pro-hero-sub">Everything Zelo Pro unlocks.</p>
             <ul class="settings2-pro-list">
               <li>Unlimited Scans</li>
               <li>Advanced AI Coach</li>
@@ -1410,30 +1389,19 @@
 
           <p class="settings2-section-label">Current plan</p>
           <div class="settings2-card settings2-plan-card">
-            <p class="settings2-plan-name">Annual Plan</p>
-            <p class="settings2-plan-price">THB 999 / year</p>
-            <p class="settings2-plan-renew">Renews on Aug 15, 2026</p>
+            <p class="settings2-plan-name" id="pro-plan-name">No active subscription</p>
+            <p class="settings2-plan-price" id="pro-plan-price" hidden></p>
+            <p class="settings2-plan-renew" id="pro-plan-renew">Manage or cancel any subscription in the App Store.</p>
           </div>
           <div class="settings2-card">
             <button class="settings2-row settings2-row--link" onclick="showPaywallNow()">
-              <span class="settings2-row-text"><b>Change Plan</b></span>
+              <span class="settings2-row-text"><b id="pro-plan-cta">See Plans</b></span>
               <span class="settings2-chevron" aria-hidden="true">›</span>
             </button>
             <button class="settings2-row settings2-row--link" onclick="restoreSettingsPurchases()">
               <span class="settings2-row-text"><b>Restore Purchases</b></span>
               <span class="settings2-chevron" aria-hidden="true">›</span>
             </button>
-          </div>
-          <!-- TEMP (testing): pretend the subscription has ended, to try the locked app. Hidden when
-               DEV_SHOW_SUBSCRIPTION_SWITCH is false in script.js. -->
-          <div class="settings2-card" id="dev-subscription-row" hidden>
-            <label class="settings2-toggle-row">
-              <span class="settings2-row-text"><b>DEV: simulate expired subscription</b><span>Locks the app: only Home, Settings and Streak stay open</span></span>
-              <span class="settings2-toggle">
-                <input type="checkbox" id="toggle-dev-expired" onchange="devSetSubscriptionExpired(this.checked)">
-                <span class="settings2-toggle-slider"></span>
-              </span>
-            </label>
           </div>
           <a class="settings2-footlink" href="#" onclick="openLegalPage('pro.html'); return false;">Learn more about Zelo Pro</a>
         </div>
@@ -1531,7 +1499,12 @@
         </div>
       </div>
 
-      <!-- DOWNLOAD MY DATA -->
+      <!-- DOWNLOAD MY DATA — restored 2026-10-22a. The original screen's email
+           flow (confirm a masked address -> "we emailed it to you") was removed
+           because nothing ever sent an email; the designed steps and their
+           reference art are kept and now drive the REAL on-device export
+           (exportAccountData()), so every state the user sees is true:
+           request -> preparing -> ready + Download. -->
       <div class="screen" id="screen-settings-download-data">
         <div class="screen-header">
           <button class="back-btn" onclick="ddBack()" aria-label="Back">
@@ -1539,47 +1512,25 @@
           </button>
           <span class="screen-title">Download My Data</span>
         </div>
-        <!-- Step 1 — request (text unchanged from the original screen) -->
+
+        <!-- Step 1 — request -->
         <div class="settings2-layout settings2-layout--centered" data-dd-step="request">
-          <!-- Cropped from assets/icons/settings/"First data.png" (the user's own
-               light|dark reference sheet) — settings2-data-request(.png/-dark.png).
-               Was an empty pink circle placeholder. -->
           <img class="settings2-data-hero" loading="lazy" data-src="assets/icons/settings/settings2-data-request.png" alt="" aria-hidden="true" />
-          <p class="settings2-lede">We'll prepare a copy of your data and email it to you.</p>
+          <p class="settings2-lede">We'll gather a copy of your Zelo data and save it to this device.</p>
           <ul class="settings2-bullet-list">
             <li>Profile information</li>
             <li>Scans and results</li>
             <li>Subscription info</li>
           </ul>
-          <button class="btn2 btn2-primary" onclick="ddRequestData()">Request Data</button>
-          <p class="settings2-footnote">This may take a few minutes to prepare.</p>
+          <button class="btn2 btn2-primary" onclick="ddRequestData()">Prepare My Data</button>
+          <p class="settings2-footnote">This only takes a moment.</p>
         </div>
 
-        <!-- Step 2 — confirm: masked email already on the Zelo account, no re-entry.
-             Icons cropped from "Third data.png" / "Fourth data.png". -->
-        <div class="settings2-layout settings2-layout--centered" data-dd-step="confirm" hidden>
-          <img class="settings2-data-hero" loading="lazy" data-src="assets/icons/settings/settings2-data-email.png" alt="" aria-hidden="true" />
-          <h2 class="settings2-title dd-title">Confirm your request</h2>
-          <p class="settings2-lede dd-sub" data-dd-lede>We'll send your data to<br>the email linked to your Zelo account.</p>
-          <div class="dd-email"><svg class="dd-email-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><polyline points="3.5 7 12 13 20.5 7"/></svg><span data-dd-email>—</span></div>
-          <input type="email" class="dd-email-input" data-dd-input placeholder="you@example.com" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Email to send your data to" oninput="ddEmailInput()" hidden />
-          <p class="settings2-footnote dd-under-chip">We'll email you when it's ready.</p>
-          <p class="dd-include-label">Your download will include:</p>
-          <ul class="settings2-bullet-list settings2-bullet-list--sm">
-            <li>Profile information</li>
-            <li>Scans and results</li>
-            <li>Subscription info</li>
-          </ul>
-          <p class="dd-error" data-dd-error role="alert" hidden></p>
-          <button class="btn2 btn2-primary dd-cta" onclick="ddConfirmRequest()">Confirm &amp; Request</button>
-          <button type="button" class="dd-link" onclick="ddChangeEmail()" data-dd-link>Use a different email</button>
-        </div>
-
-        <!-- Step 3 — preparing -->
+        <!-- Step 2 — preparing -->
         <div class="settings2-layout settings2-layout--centered" data-dd-step="preparing" hidden>
           <img class="settings2-data-hero" loading="lazy" data-src="assets/icons/settings/settings2-data-preparing.png" alt="" aria-hidden="true" />
           <h2 class="settings2-title dd-title">We're preparing your data</h2>
-          <p class="settings2-lede dd-sub">We'll email you a copy once it's ready.<br>This usually takes a few minutes.</p>
+          <p class="settings2-lede dd-sub">Collecting everything stored on this device.</p>
           <ul class="dd-checklist">
             <li>Profile information</li>
             <li>Scans and results</li>
@@ -1588,43 +1539,19 @@
           <div class="dd-progress" role="status"><span class="dd-spinner" aria-hidden="true"></span><span>Preparing your data...</span></div>
         </div>
 
-        <!-- Step 4 — submitted -->
-        <div class="settings2-layout settings2-layout--centered" data-dd-step="submitted" hidden>
+        <!-- Step 3 — ready. The button hands over a real file; nothing is emailed. -->
+        <div class="settings2-layout settings2-layout--centered" data-dd-step="ready" hidden>
           <img class="settings2-data-hero" loading="lazy" data-src="assets/icons/settings/settings2-data-submitted.png" alt="" aria-hidden="true" />
-          <h2 class="settings2-title dd-title">Request submitted</h2>
-          <p class="settings2-lede dd-sub">We'll email your data to</p>
-          <div class="dd-email dd-email--sm"><svg class="dd-email-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><polyline points="3.5 7 12 13 20.5 7"/></svg><span data-dd-email>—</span></div>
+          <h2 class="settings2-title dd-title">Your data is ready</h2>
+          <p class="settings2-lede dd-sub">Save it anywhere on your device.<br>It's a JSON file you can open or keep.</p>
           <ul class="dd-checklist">
             <li>Profile information</li>
             <li>Scans and results</li>
             <li>Subscription info</li>
           </ul>
-          <button class="btn2 btn2-primary dd-cta" onclick="ddDone()">Done</button>
-        </div>
-
-        <!-- 24-hour cooldown — shown instead of the request step while the last
-             accepted request is under 24h old. Same page, no error. -->
-        <div class="settings2-layout settings2-layout--centered" data-dd-step="cooldown" hidden>
-          <img class="settings2-data-hero" loading="lazy" data-src="assets/icons/settings/settings2-data-submitted.png" alt="" aria-hidden="true" />
-          <h2 class="settings2-title dd-title">Data request submitted</h2>
-          <p class="settings2-lede dd-sub">Your latest data export is being prepared.<br>We'll email you when it's ready.</p>
-          <div class="dd-email dd-email--sm"><svg class="dd-email-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><polyline points="3.5 7 12 13 20.5 7"/></svg><span data-dd-email>—</span></div>
-          <button class="btn2 btn2-primary dd-cta" disabled>Request Data</button>
-          <p class="settings2-footnote dd-cooldown-note" data-dd-cooldown>Available again in —</p>
-        </div>
-
-        <!-- Step 5 — email sent. Only reachable once a backend marks the stored
-             request as 'emailed' (see _ddStatus in script.js). -->
-        <div class="settings2-layout settings2-layout--centered" data-dd-step="ready" hidden>
-          <img class="settings2-data-hero" loading="lazy" data-src="assets/icons/settings/settings2-data-email.png" alt="" aria-hidden="true" />
-          <h2 class="settings2-title dd-title">Your data is ready</h2>
-          <p class="settings2-lede dd-sub">We've emailed your data to</p>
-          <div class="dd-email dd-email--sm"><svg class="dd-email-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><polyline points="3.5 7 12 13 20.5 7"/></svg><span data-dd-email>—</span></div>
-          <div class="dd-tip">
-            <svg class="dd-tip-ico" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><polyline points="3.5 7 12 13 20.5 7"/></svg>
-            <div class="dd-tip-text"><b>Didn't receive the email?</b><span>Check your spam folder or request again.</span></div>
-          </div>
-          <button class="btn2 btn2-primary dd-cta" onclick="ddRequestAgain()">Request Again</button>
+          <p class="dd-error" data-dd-error role="alert" hidden></p>
+          <button class="btn2 btn2-primary dd-cta" onclick="ddDownloadNow()">Download</button>
+          <button type="button" class="dd-link" onclick="ddDone()">Done</button>
         </div>
       </div>
 
@@ -2328,37 +2255,6 @@
 
 
       <!-- ============================================================
-           SCREEN: SCAN — TYPE MESSAGE  (overlay — dedicated typing page)
-           ============================================================ -->
-      <div class="screen" id="screen-scan-type">
-
-        <div class="screen-header">
-          <button class="back-btn" onclick="confirmScanType()" aria-label="Back">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          </button>
-          <span class="screen-title">Your Message</span>
-        </div>
-
-        <div class="scan-type-layout">
-          <textarea
-            class="msg-textarea msg-textarea--primary scan-type-textarea"
-            placeholder="Paste a message, describe the situation…"
-            maxlength="4000"
-          ></textarea>
-
-          <!-- Thread pre-select — rendered by renderScanTypeThreadPicker() -->
-          <div id="scan-type-thread-picker" class="scan-type-thread-picker"></div>
-
-          <span class="scan-type-spacer"></span>
-
-          <button class="generate-btn" id="scan-type-continue-btn" onclick="confirmScanType()">
-            Continue
-          </button>
-        </div>
-      </div>
-
-
-      <!-- ============================================================
            SCREEN: SCAN — UPLOAD SCREENSHOT  (overlay — dedicated upload page)
            ============================================================ -->
       <div class="screen" id="screen-scan-upload">
@@ -2993,7 +2889,7 @@
 
             <div class="sty-chat">
               <div class="sty-chat-head">
-                <img class="sty-chat-pfp" src="assets/characters/z019-pfp.jpg" alt="" />
+                <img class="sty-chat-pfp" src="assets/characters/z019-pfp.webp" alt="" />
                 <span class="sty-chat-who">
                   <span class="sty-chat-name">Kendra, 24</span>
                   <span class="sty-chat-sub">Practice conversation</span>
@@ -3161,11 +3057,11 @@
             <h2 class="cine-title cine-title--plain">Save your progress</h2>
             <p class="cine-lede">Create an account to save your settings, history, and favorites across devices.</p>
 
-            <button type="button" class="cine-provider cine-provider--apple" onclick="cineProviderTap('apple')">
+            <button type="button" class="cine-provider cine-provider--apple" data-provider="apple" onclick="cineProviderTap('apple')">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16.7 12.7c0-2.4 2-3.6 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.6.9s-1.9-.9-3.1-.8c-1.6 0-3.1.9-3.9 2.4-1.7 2.9-.4 7.2 1.2 9.5.8 1.2 1.7 2.4 2.9 2.4 1.2 0 1.6-.7 3.1-.7s1.8.7 3.1.7c1.3 0 2.1-1.2 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7 0 0-2.5-1-2.5-3.9zM14.3 5.2c.6-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4z"/></svg>
               Continue with Apple
             </button>
-            <button type="button" class="cine-provider" onclick="cineProviderTap('google')">
+            <button type="button" class="cine-provider" data-provider="google" onclick="cineProviderTap('google')">
               <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4z"/><path fill="#34A853" d="M12 22c2.7 0 4.9-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.7-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1a10 10 0 0 0 0 9.2z"/><path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.8-2.8A10 10 0 0 0 3.1 7.4L6.4 10c.8-2.4 3-4.1 5.6-4.1z"/></svg>
               Continue with Google
             </button>
@@ -3406,7 +3302,7 @@
            (onboarding already completed). Fully automatic.
            ============================================================ -->
       <div class="welcome-back" id="welcome-back-overlay" hidden>
-        <h1 class="welcome-back-type" id="welcome-back-type"></h1>
+        <div class="cine-p1-logo" id="welcome-back-type" aria-label="Zelo">Zelo<span class="cine-p1-spark" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.25a3.2 3.2 0 0 0 2 2L22.5 12l-6.4 1.75a3.2 3.2 0 0 0-2 2L12 22l-2.1-6.25a3.2 3.2 0 0 0-2-2L1.5 12l6.4-1.75a3.2 3.2 0 0 0 2-2z"/></svg></span></div>
       </div>
 
       <!-- ============================================================
@@ -3556,7 +3452,11 @@
           </button>
           <button type="button" class="cine-btn cine-btn--dark" onclick="cineTrialStartContinue()">Continue</button>
           <p class="cine-trial-legal" id="cine-trial-legal">3 days free, then THB 999.00 per year.<br>Billed annually and renews automatically unless canceled in the App Store.</p>
-          <p class="cine-offer-legal">Terms &middot; Privacy &middot; Restore</p>
+          <p class="cine-offer-legal">
+            <a href="#" onclick="openLegalPage('terms.html'); return false;">Terms</a> &middot;
+            <a href="#" onclick="openLegalPage('privacy.html'); return false;">Privacy</a> &middot;
+            <a href="#" onclick="restorePurchasesFromPaywall(); return false;">Restore</a>
+          </p>
         </div>
       </div>
 
@@ -3579,15 +3479,19 @@
             <span class="cine-offer-spark cine-offer-spark--b" aria-hidden="true">✦</span>
             <span class="cine-offer-spark cine-offer-spark--c" aria-hidden="true">✦</span>
             <span class="cine-offer-spark cine-offer-spark--d" aria-hidden="true">✦</span>
-            <div class="cine-offer-badge"><span id="cine-offer-pct">78</span>% OFF</div>
+            <div class="cine-offer-badge"><span id="cine-offer-pct">85</span>% OFF</div>
           </div>
-          <p class="cine-offer-price"><s id="cine-offer-was">THB 2,999.00</s> <b id="cine-offer-now">THB 699.00/year</b></p>
-          <p class="cine-offer-sub"><span id="cine-offer-pct2">78</span>% less than our monthly rate!</p>
+          <p class="cine-offer-price"><s id="cine-offer-was">THB 4,788.00</s> <b id="cine-offer-now">THB 699.00/year</b></p>
+          <p class="cine-offer-sub"><span id="cine-offer-pct2">85</span>% less than our monthly rate!</p>
         </div>
         <div class="cine-offer-foot">
           <button type="button" class="cine-btn cine-btn--dark" onclick="cineOfferClaim()">Claim your free trial now</button>
           <p class="cine-tick"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>No Commitment &ndash; Cancel Anytime</p>
-          <p class="cine-offer-legal">Terms &middot; Privacy &middot; Restore</p>
+          <p class="cine-offer-legal">
+            <a href="#" onclick="openLegalPage('terms.html'); return false;">Terms</a> &middot;
+            <a href="#" onclick="openLegalPage('privacy.html'); return false;">Privacy</a> &middot;
+            <a href="#" onclick="restorePurchasesFromPaywall(); return false;">Restore</a>
+          </p>
         </div>
       </div>
 
@@ -3613,7 +3517,7 @@
             <img loading="lazy" class="paywall-hero-img" data-src="assets/icons/misc/new-paywall.png" alt="" />
           </div>
 
-          <h2 class="paywall-headline">How your 7-day<br><span class="paywall-headline-accent">free trial</span> works</h2>
+          <h2 class="paywall-headline">How your 3-day<br><span class="paywall-headline-accent">free trial</span> works</h2>
 
           <!-- Step 1's checkmark pops in large & centered here (point A),
                then travels + scales down into the step-1 circle below
@@ -3663,7 +3567,7 @@
                 <span class="paywall-step-line"></span>
               </div>
               <div class="paywall-step-body">
-                <p class="paywall-step-title">Day 5: Trial Reminder</p>
+                <p class="paywall-step-title">Day 2: Trial Reminder</p>
                 <p class="paywall-step-sub">We'll send you an email and notification before your trial ends.</p>
               </div>
             </div>
@@ -3677,7 +3581,7 @@
                 </span>
               </div>
               <div class="paywall-step-body">
-                <p class="paywall-step-title">Day 7: Trial Ends</p>
+                <p class="paywall-step-title">Day 3: Trial Ends</p>
                 <p class="paywall-step-sub">You'll be charged. Cancel anytime before in the App Store.</p>
               </div>
             </div>
@@ -3690,8 +3594,8 @@
                 <span class="paywall-plan-name">Monthly</span>
               </span>
               <span class="paywall-plan-price-col">
-                <span class="paywall-plan-price">$7.99 <small>/ mo</small></span>
-                <span class="paywall-plan-note">$7.99 billed monthly</span>
+                <span class="paywall-plan-price">THB 399.00 <small>/ mo</small></span>
+                <span class="paywall-plan-note">THB 399.00 billed monthly</span>
               </span>
             </button>
 
@@ -3703,13 +3607,13 @@
               <span class="paywall-plan-name-col">
                 <span class="paywall-plan-name">Yearly</span>
                 <span class="paywall-plan-strike-row">
-                  <span class="paywall-plan-strike">$96.00</span>
-                  <span class="paywall-plan-strike-price">$49.99 / year</span>
+                  <span class="paywall-plan-strike">THB 4,788.00</span>
+                  <span class="paywall-plan-strike-price">THB 999.00 / year</span>
                 </span>
               </span>
               <span class="paywall-plan-price-col">
-                <span class="paywall-plan-price paywall-plan-price--accent">$4.17 <small>/ mo</small></span>
-                <span class="paywall-plan-permo-pill">(~$4.17/mo)</span>
+                <span class="paywall-plan-price paywall-plan-price--accent">THB 83.25 <small>/ mo</small></span>
+                <span class="paywall-plan-permo-pill">(~THB 83.25/mo)</span>
               </span>
             </button>
           </div>
@@ -3820,10 +3724,9 @@
         <!-- Attachments row — staged suggestion + photo preview sit side
              by side here (not stacked) when both are present. -->
         <div class="aicoach-attachments-row" id="aicoach-attachments-row">
-          <!-- Staged suggestion — PROTOTYPE. Tapping a suggestion card no
+          <!-- Staged suggestion. Tapping a suggestion card no
                longer sends immediately (see aiCoachPromptTap()); it lands
-               here as a preview box instead, same size/material as the
-               photo preview beside it. The corner X is just a visual cue —
+               here as a preview box instead. The corner X is just a visual cue —
                tapping anywhere on the box removes it (a wider hitbox than
                the tiny X alone) — it's only actually sent when the user
                hits send/Enter (see sendAiCoachMessage()). Dismissal fires
@@ -3841,27 +3744,9 @@
             </span>
           </button>
 
-          <!-- Photo attach preview — PROTOTYPE (see aiCoachPhotoSelected()).
-               Shown once a photo is picked via the + button below; sent
-               alongside the next message as an image bubble. No vision/OCR
-               wiring yet — this is the attach/preview/send UI only. -->
-          <div class="aicoach-photo-preview" id="aicoach-photo-preview" hidden>
-            <img loading="lazy" class="aicoach-photo-preview-img" id="aicoach-photo-preview-img" alt="">
-            <button type="button" class="aicoach-photo-preview-remove" onclick="aiCoachRemovePhoto()" aria-label="Remove photo">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
         </div>
 
         <div class="aicoach-input-bar">
-          <!-- Photo only, not camera — plain accept="image/*" with no
-               capture attribute opens the OS picker (library/files); it's
-               the same file-input pattern already used for onboarding
-               photos (#cine-photo-input, #ped-photo-input). -->
-          <button type="button" class="aicoach-attach-btn" onclick="document.getElementById('aicoach-photo-input').click()" ontouchstart="document.getElementById('aicoach-photo-input').click()" aria-label="Add photo">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
-          <input type="file" accept="image/*" id="aicoach-photo-input" hidden onchange="aiCoachPhotoSelected(event)" />
           <input class="aicoach-input" id="aicoach-input" type="text"
                  placeholder="Ask a follow-up question…"
                  enterkeyhint="send"
@@ -4116,9 +4001,12 @@
           </div>
         </div>
 
-        <!-- Leaderboard settings — skeleton only (toggles are UI-only for
-             now, no persistence/backend wiring yet), same build-architecture-
-             first convention as the rest of this screen's dummy data. -->
+        <!-- Leaderboard settings. "Show me on leaderboard" and "Display as
+             anonymous" are real: they persist and change what renders (see
+             lbSettings()/lbDisplayName() in script.js). "Notify when overtaken"
+             is hidden — it needs a server that knows when your rank changes and
+             a push notification to deliver it, and Zelo has neither; it only
+             sends LOCAL notifications. Unhide it when that backend exists. -->
         <div class="lb-settings-sheet" id="lb-settings-sheet" hidden>
           <div class="lb-settings-backdrop" onclick="closeLeaderboardSettings()"></div>
           <div class="lb-settings-panel">
@@ -4127,21 +4015,21 @@
             <div class="settings-toggle-row">
               <span class="settings-toggle-label">Show me on leaderboard</span>
               <label class="settings-toggle">
-                <input type="checkbox" checked onchange="toggleLbSetting(this)">
+                <input type="checkbox" id="lb-toggle-show" data-lb-setting="show" onchange="toggleLbSetting(this)">
                 <span class="settings-toggle-slider"></span>
               </label>
             </div>
-            <div class="settings-toggle-row">
+            <div class="settings-toggle-row" hidden>
               <span class="settings-toggle-label">Notify when overtaken</span>
               <label class="settings-toggle">
-                <input type="checkbox" checked onchange="toggleLbSetting(this)">
+                <input type="checkbox" id="lb-toggle-notify" data-lb-setting="notify" onchange="toggleLbSetting(this)">
                 <span class="settings-toggle-slider"></span>
               </label>
             </div>
             <div class="settings-toggle-row">
               <span class="settings-toggle-label">Display as anonymous</span>
               <label class="settings-toggle">
-                <input type="checkbox" onchange="toggleLbSetting(this)">
+                <input type="checkbox" id="lb-toggle-anon" data-lb-setting="anon" onchange="toggleLbSetting(this)">
                 <span class="settings-toggle-slider"></span>
               </label>
             </div>
@@ -4290,7 +4178,7 @@
 
           <h2 class="mission-section-title">Daily Missions</h2>
           <div class="mission-missions-card">
-            <div class="mission-row">
+            <div class="mission-row" data-mission="conversation">
               <span class="mission-row-check mission-row-check--todo" aria-hidden="true">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c9c0b6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </span>
@@ -4301,7 +4189,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
-            <div class="mission-row">
+            <div class="mission-row" data-mission="message">
               <span class="mission-row-check mission-row-check--todo" aria-hidden="true">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c9c0b6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </span>
@@ -4312,14 +4200,14 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
-            <div class="mission-row">
+            <div class="mission-row" data-mission="scan">
               <span class="mission-row-check mission-row-check--todo" aria-hidden="true">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c9c0b6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </span>
-              <span class="mission-row-label">Revive a dead conversation</span>
+              <span class="mission-row-label">Scan two conversations</span>
               <span class="mission-row-xp">+10 XP</span>
-              <span class="mission-row-progress">0/1</span>
-              <button class="mission-row-go" type="button" onclick="missionGoToChatOrPractice()" aria-label="Go">
+              <span class="mission-row-progress">0/2</span>
+              <button class="mission-row-go" type="button" onclick="missionGoToScan()" aria-label="Go">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
@@ -4515,13 +4403,13 @@
           <div class="auth-sheet-hr"></div>
 
           <div class="auth-providers">
-            <button class="auth-provider-btn auth-provider-btn--apple" onclick="AUTH.signInWithApple()">
+            <button class="auth-provider-btn auth-provider-btn--apple" data-provider="apple" onclick="AUTH.signInWithApple()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
               </svg>
               <span id="auth-apple-btn-label">Sign in with Apple</span>
             </button>
-            <button class="auth-provider-btn" onclick="AUTH.signInWithGoogle()">
+            <button class="auth-provider-btn" data-provider="google" onclick="AUTH.signInWithGoogle()">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -4583,25 +4471,15 @@
             <div id="auth-forgot-form">
               <span class="pl-icon-circle-lg"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><polyline points="3 6.5 12 13 21 6.5"/></svg></span>
               <h1 class="auth-email-title" style="text-align:center">Forgot your password?</h1>
-              <p class="auth-subtext" style="text-align:center">No worries! Enter your email and we'll send you a link to reset your password.</p>
+              <p class="auth-subtext" style="text-align:center">No worries! Enter your email and we'll send you a 6-digit code to reset your password.</p>
               <div class="auth-form">
                 <input id="auth-forgot-email" class="auth-input" type="email" placeholder="Email" autocomplete="email" enterkeyhint="send" />
                 <p class="auth-error-msg" id="auth-forgot-error"></p>
               </div>
             </div>
-            <div id="auth-forgot-sent" hidden>
-              <span class="pl-icon-circle-lg"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><polyline points="3 6.5 12 13 21 6.5"/><polyline points="8.5 15 11 17.5 15.5 12.5" stroke-width="2.4"/></svg></span>
-              <h1 class="auth-email-title" style="text-align:center">Reset link sent!</h1>
-              <p class="auth-subtext" style="text-align:center">We've sent a password reset link to <strong id="auth-forgot-sent-email"></strong>. Check your inbox (and spam folder) and follow the instructions.</p>
-              <div class="pl-resend-row">
-                <span class="pl-resend-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
-                <span class="pl-resend-text"><b>Didn't receive the email?</b><span id="auth-forgot-resend-sub">You can resend the link in 60 seconds.</span></span>
-                <button type="button" class="pl-resend-btn" id="auth-forgot-resend" onclick="AUTH.sendForgot(true)" disabled>Resend link</button>
-              </div>
-            </div>
           </div>
           <div class="auth-email-step-foot">
-            <button class="auth-submit-btn" id="auth-forgot-send" onclick="AUTH.sendForgot()">Send reset link</button>
+            <button class="auth-submit-btn" id="auth-forgot-send" onclick="AUTH.sendForgot()">Send reset code</button>
             <button class="auth-toggle-btn" onclick="AUTH.closeForgot()">Back to sign in</button>
           </div>
         </div>
@@ -4634,18 +4512,64 @@
 
           <div class="auth-form">
             <div class="auth-code-row" id="auth-code-row">
-              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" data-idx="0" />
-              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="1" />
-              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="2" />
-              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="3" />
-              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="4" />
-              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="5" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="0" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="1" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="2" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="3" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="4" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="5" />
             </div>
             <p class="auth-error-msg" id="auth-verify-error"></p>
             <button class="auth-submit-btn" id="auth-verify-submit-btn"
                     onclick="AUTH.handleVerifySubmit()">Verify</button>
             <button class="auth-toggle-btn" id="auth-resend-btn"
                     onclick="AUTH.handleResendCode()">Resend code</button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ============================================================
+           AUTH OVERLAY — reset password (code + new password)
+           Added 2026-10-22a. Supabase's recovery email is consumed as a
+           6-digit code here, exactly like sign-up verification, because a
+           reset LINK opens Safari at the Site URL and has no way to set a
+           password inside the app.
+           ============================================================ -->
+      <div class="auth-overlay" id="auth-reset-overlay" hidden>
+        <div class="auth-card">
+          <button class="auth-dismiss-btn" onclick="AUTH.dismiss()" aria-label="Close">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <button class="auth-back-btn" onclick="AUTH.backFromReset()" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </button>
+          <div class="auth-logo">
+            Zelo<span class="scan-spark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l1.9 5.7a3 3 0 0 0 1.9 1.9L21.5 12l-5.7 1.9a3 3 0 0 0-1.9 1.9L12 21.5l-1.9-5.7a3 3 0 0 0-1.9-1.9L2.5 12l5.7-1.9a3 3 0 0 0 1.9-1.9z"/>
+              </svg>
+            </span>
+          </div>
+          <h1 class="auth-email-title">Set a new password</h1>
+          <p class="auth-subtext">Enter the 6-digit code we sent to<br><strong id="auth-reset-email"></strong></p>
+
+          <div class="auth-form">
+            <div class="auth-code-row" id="auth-reset-code-row">
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="0" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="1" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="2" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="3" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="4" />
+              <input class="auth-code-input" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-idx="5" />
+            </div>
+            <input id="auth-reset-password" class="auth-input" type="password" placeholder="New password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" />
+            <input id="auth-reset-password2" class="auth-input" type="password" placeholder="Confirm new password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+            <p class="auth-error-msg" id="auth-reset-error"></p>
+            <button class="auth-submit-btn" id="auth-reset-submit-btn" onclick="AUTH.handleResetSubmit()">Change password</button>
+            <button class="auth-toggle-btn" id="auth-reset-resend-btn" onclick="AUTH.handleResetResend()">Resend code</button>
           </div>
         </div>
       </div>
@@ -4802,43 +4726,18 @@
                 <span class="levelup-row-label">Start a conversation</span>
                 <span class="levelup-row-xp">+10 XP</span>
               </div>
-              <div class="levelup-row">
-                <img loading="lazy" class="levelup-row-icon" data-src="assets/icons/xp-levels/xp-icon-streak.png" alt="">
-                <span class="levelup-row-label">Keep your streak alive</span>
-                <span class="levelup-row-xp">+10 XP/day</span>
-              </div>
             </div>
 
             <div class="levelup-section">
-              <h3 class="levelup-section-title">Bonus XP</h3>
-              <p class="levelup-section-sub">Get extra XP from special actions.</p>
+              <h3 class="levelup-section-title">Daily missions</h3>
+              <p class="levelup-section-sub">Three every day, built from the actions above.</p>
               <div class="levelup-row">
                 <img loading="lazy" class="levelup-row-icon" data-src="assets/icons/xp-levels/xp-icon-quest.png" alt="">
-                <span class="levelup-row-label">Complete daily quests</span>
-                <span class="levelup-row-xp">+15-20 XP</span>
-              </div>
-              <div class="levelup-row">
-                <img loading="lazy" class="levelup-row-icon" data-src="assets/icons/xp-levels/xp-icon-revival.png" alt="">
-                <span class="levelup-row-label">Revive a dead conversation</span>
-                <span class="levelup-row-xp">+20 XP</span>
-              </div>
-              <div class="levelup-row">
-                <img loading="lazy" class="levelup-row-icon" data-src="assets/icons/xp-levels/xp-icon-refer.png" alt="">
-                <span class="levelup-row-label">Refer a friend who joins</span>
-                <span class="levelup-row-xp">+50 XP</span>
-              </div>
-            </div>
-
-            <div class="levelup-section levelup-section--leaderboard">
-              <img loading="lazy" class="levelup-leaderboard-img" data-src="assets/icons/xp-levels/xp-trophy-hero.png" alt="">
-              <h3 class="levelup-section-title">Weekly Leaderboard</h3>
-              <p class="levelup-section-sub">Compete and earn bonus XP.</p>
-              <div class="levelup-row">
-                <img loading="lazy" class="levelup-row-icon" data-src="assets/icons/xp-levels/xp-icon-rank.png" alt="">
                 <span class="levelup-row-label">
-                  Finish top of the weekly leaderboard
-                  <span class="levelup-row-note">The higher you rank, the more you earn.</span>
+                  Finish all three
+                  <span class="levelup-row-note">They reset at midnight.</span>
                 </span>
+                <span class="levelup-row-xp">+40 XP</span>
               </div>
             </div>
 
@@ -4938,21 +4837,19 @@
          no npm dependency on it (there isn't one; it's CDN/vendored-only). -->
     <script src="services/vendor/supabase-js.js?v=20260923a"></script>
     <script src="config.js"></script>
-    <script src="personas.js?v=20261017s"></script>
-    <script src="personas-roster.js?v=20261018r"></script>
-    <script src="personas-posts.js?v=20261013e"></script>
-    <script src="personas-about.js?v=20261013g"></script>
-    <script src="personas-men.js?v=20261018r"></script>
-    <script src="personas-threads.js?v=20261018y"></script>
-    <script src="data.js?v=20261019a"></script>
+    <script src="personas.js?v=20261023g"></script>
+    <script src="personas-roster.js?v=20261023g"></script>
+    <script src="personas-posts.js?v=20261023g"></script>
+    <script src="personas-about.js?v=20261023g"></script>
+    <script src="personas-men.js?v=20261023g"></script>
+    <script src="personas-threads.js?v=20261023g"></script>
+    <script src="data.js?v=20261023g"></script>
     <script src="services/supabase.js"></script>
-    <script src="services/auth.js?v=20261017l"></script>
-    <script src="services/analytics.js?v=20261019a"></script>
-    <script src="services/records.js?v=20261019b"></script>
-    <script src="services/textguard.js?v=20261019i"></script>
-    <script src="services/support.js?v=20261019i"></script>
-    <script src="archive/legacy-onboarding.js"></script>
-    <script src="dev-credentials.js"></script>
-    <script src="script.js?v=20261019ay"></script>
+    <script src="services/auth.js?v=20261023g"></script>
+    <script src="services/analytics.js?v=20261023g"></script>
+    <script src="services/records.js?v=20261023g"></script>
+    <script src="services/textguard.js?v=20261023g"></script>
+    <script src="services/support.js?v=20261023g"></script>
+    <script src="script.js?v=20261023g"></script>
   </body>
 </html>

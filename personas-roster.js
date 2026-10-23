@@ -3,7 +3,11 @@
 // (Z011-Z100 straight women, O001-O035 "Other option"). Built once from the
 // approved library's manifest + authored persona records, then maintained
 // here by hand: edit ROSTER_DATA (or the archetype wording in ROSTER_ARCH),
-// not the output of _rosterPrompt(). Images: assets/characters/<id>-<1..4>.jpg.
+// Character photos are WebP (converted 2026-10-22, q80, same 1080x1350):
+// ~48% smaller than the JPEGs for no visible difference, and the iOS
+// deployment target is 15.0, where WKWebView supports WebP natively.
+// The originals are in design-refs/characters-original-jpg-2026-10-22/.
+// not the output of _rosterPrompt(). Images: assets/characters/<id>-<1..4>.webp.
 //
 // Each record is expanded into a full profile + system prompt that mirrors
 // the structure of the hand-written pilot personas in personas.js (same
@@ -110,10 +114,11 @@ function _rosterProfile(r, i) {
     age_pool: r.age <= 20 ? '18-20' : (r.age <= 29 ? '21-29' : '30+'),
     city: r.city,
     category: r.cat,
+    identity: r.ident || '',
     orientation: _orientationLabel(r),
     ageGroup: r.band,
-    photos: [1, 2, 3, 4].map(n => `assets/characters/${r.id}-${n}.jpg`),
-    avatar: `assets/characters/${r.id}-pfp.jpg`,
+    photos: [1, 2, 3, 4].map(n => `assets/characters/${r.id}-${n}.webp`),
+    avatar: `assets/characters/${r.id}-pfp.webp`,
     systemPrompt: _rosterPrompt(r),
   };
 }

@@ -62,8 +62,6 @@ const ZeloAnalytics = (() => {
     restore_purchase_tapped:   [],
     payment_failed:            ['reason'],
     // Ads
-    ad_watched:                [],
-    ad_skipped:                [],
     // AI reliability / cost (numbers and short codes only — never a prompt or a reply)
     ai_request:                ['kind', 'ok', 'latency_ms', 'prompt_tokens', 'completion_tokens', 'model', 'error_kind'],
     reply_feedback:            ['outcome'],
@@ -73,7 +71,7 @@ const ZeloAnalytics = (() => {
     app_backgrounded:          [],
     session_length:            ['duration_s', 'drive_arm'],
     // Referral
-    referral_link_shared:      [],
+    referral_link_shared:      ['via'],   // 'instagram_native' | 'messages_native' | 'copy' | 'native_share' | 'redeemed'
     referral_signup_completed: [],
   };
 

@@ -1098,6 +1098,6 @@ const PERSONA_PHOTO_SET = {
 
 GIRL_PROFILES.forEach(p => {
   const z = PERSONA_PHOTO_SET[p.id];
-  if (z) p.photos = [1, 2, 3, 4].map(n => `assets/characters/z${z}-${n}.jpg`);
-  if (z) p.avatar = `assets/characters/z${z}-pfp.jpg`;
+  if (z) p.photos = [1, 2, 3, 4].map(n => `assets/characters/z${z}-${n}.webp`);
+  if (z) p.avatar = `assets/characters/z${z}-pfp.webp`;
 });

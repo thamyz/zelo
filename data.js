@@ -325,22 +325,23 @@ const CHAT_TIMING_LABELS = {
 };
 
 // Reply-mode pills shown on the swipe card, before a match happens.
-// `free: false` = paid-only outside the trial window.
+// The "Cold" mode was removed 2026-10-22: it was the only paid-only entry
+// (`free: false`) and its gate, isColdAvailable(), was reachable only from
+// code that was already dead, so it never actually locked anything.
+// NOTE: nothing reads CARD_MODES itself — only CARD_MODE_DEFAULT below is
+// used (at the chat creation site). The pills are not rendered anywhere yet.
 const CARD_MODES = [
-  { key: "open",    label: "Open",    desc: "Open — easy to talk to, warm",        free: true  },
-  { key: "neutral", label: "Neutral", desc: "Neutral — realistic, balanced",       free: true  },
-  { key: "cold",    label: "Cold",    desc: "Cold — takes real effort to open up", free: false }
+  { key: "open",    label: "Open",    desc: "Open — easy to talk to, warm",  free: true },
+  { key: "neutral", label: "Neutral", desc: "Neutral — realistic, balanced", free: true }
 ];
 const CARD_MODE_DEFAULT = "neutral";
 
 // Free vs paid limits.
 const FREE_LIMITS = {
   scansPerDay:     10,  // shared daily cap: Scan + AI feedback together
-  bonusScansPerAd: 3,
-  maxAdsPerDay:    1,
   historyDays:     7,
   maxMatches:      3,
-  trialDays:       7
+  trialDays:       3
 };
 
 // ================================================================

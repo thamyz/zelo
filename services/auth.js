@@ -14,7 +14,7 @@ const AUTH = (() => {
   let _verifyEmail = '';     // email currently being confirmed on the verify screen
   let _explicitSignOut = false; // set right before OUR OWN signOut() calls — see onAuthStateChange's SIGNED_OUT branch
 
-  const OVERLAY_IDS = ['auth-overlay', 'auth-verify-overlay', 'auth-setup-overlay'];
+  const OVERLAY_IDS = ['auth-overlay', 'auth-verify-overlay', 'auth-reset-overlay', 'auth-setup-overlay'];
 
   // ── Overlay helpers ────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ const AUTH = (() => {
       const el = document.getElementById(oid);
       if (el) el.hidden = (oid !== id);
     });
+    if (id === 'auth-overlay') _applyProviderVisibility();
   }
 
   function _hideAll() {
@@ -76,9 +77,11 @@ const AUTH = (() => {
   // ── Init ───────────────────────────────────────────────────────
 
   async function init() {
+    _applyProviderVisibility();
     const { data } = await zeloSupabase.auth.getSession();
     _session     = data.session;
     _initialized = true;
+    if (_session) ensureProfile().then(ok => { if (ok) _loadProfileIntoLocalStorage(); });   // background; heals accounts whose profile row was never created
     if (_session && typeof ZeloRecords !== 'undefined') ZeloRecords.flushConsents().then(() => ZeloRecords.syncPracticeConsent()); // returning user: retry anything queued, then read the server-side consent back
 
     // Post-OAuth page reload: session appeared and we stored a pending dest
@@ -139,13 +142,38 @@ const AUTH = (() => {
   // Already signed in when onboarding reaches its sign-up step (they signed in first,
   // then had to go through onboarding): _onSignedIn won't fire again, so write the
   // profile from the onboarding answers here.
+  // Makes sure the signed-in account has its row in public.profiles, creating it from the name and
+  // age collected in onboarding if it is missing. The profile is what holds the referral code, so
+  // without it a friend code is a dud. Confirmed once per account per device (zelo_profile_ok).
+  // Resolves true when the row exists afterwards, false when it could not be confirmed or created
+  // (offline, no permission, or no name/age to build it from, which the setup screen handles).
+  async function ensureProfile() {
+    const uid = _session?.user?.id;
+    if (!uid) return false;
+    if (localStorage.getItem('zelo_profile_ok') === uid) return true;
+    try {
+      const { data, error } = await zeloSupabase.from('profiles').select('id').eq('id', uid).limit(1);
+      if (error) return false;
+      if (data && data.length) { localStorage.setItem('zelo_profile_ok', uid); return true; }
+      const name = localStorage.getItem('zelo_display_name');
+      const age  = Number(localStorage.getItem('zelo_user_age'));
+      if (!name || !age) return false;
+      const { error: insertError } = await zeloSupabase.from('profiles').insert({ id: uid, display_name: name, age });
+      if (insertError && insertError.code !== '23505') return false;
+      localStorage.setItem('zelo_profile_ok', uid);
+      return true;
+    } catch (e) { return false; }
+  }
+
   async function _insertProfileFromOnboarding() {
     const userId = _session?.user?.id;
     const name = localStorage.getItem('zelo_display_name');
     const age  = localStorage.getItem('zelo_user_age');
     if (!userId || !name || !age) return;
-    await zeloSupabase.from('profiles').insert({ id: userId, display_name: name, age: Number(age) }).then(() => {}, () => {});
-    localStorage.setItem('zelo_setup_done', '1');
+    // Only mark setup done if the profile row really exists afterwards. This used to set the
+    // flag unconditionally, so an account whose insert failed looked finished forever and
+    // never retried. (23505 = it already exists, which is fine.)
+    if (await ensureProfile()) localStorage.setItem('zelo_setup_done', '1');
     if (typeof window._redeemPendingReferralIfAny === 'function') window._redeemPendingReferralIfAny();
   }
 
@@ -369,9 +397,9 @@ const AUTH = (() => {
     return msg || 'Something went wrong. Try again.';
   }
 
-  // ── Forgot password: its own page (form -> "link sent" with a resend timer) ──
-  let _forgotTimer = null;
-
+  // ── Forgot password: its own page (just the email form now — the
+  // "we emailed you a link" step moved to #auth-reset-overlay, which takes
+  // the code and the new password together) ──
   function handleForgotPassword() {
     const step = document.getElementById('auth-forgot-step');
     if (!step) return;
@@ -379,56 +407,224 @@ const AUTH = (() => {
     document.getElementById('auth-forgot-email').value = typed;
     document.getElementById('auth-forgot-error').textContent = '';
     document.getElementById('auth-forgot-form').hidden = false;
-    document.getElementById('auth-forgot-sent').hidden = true;
     document.getElementById('auth-forgot-send').hidden = false;
     step.classList.add('auth-email-step--show');
     setTimeout(() => document.getElementById('auth-forgot-email')?.focus(), 320);
   }
 
   function closeForgot() {
-    clearInterval(_forgotTimer);
     document.getElementById('auth-forgot-step')?.classList.remove('auth-email-step--show');
   }
 
-  function _forgotCountdown() {
-    clearInterval(_forgotTimer);
-    let remaining = 60;
-    const btn = document.getElementById('auth-forgot-resend');
-    const sub = document.getElementById('auth-forgot-resend-sub');
+  // Sync on purpose: nothing here waits on the network. The code screen opens
+  // immediately and the email is sent in the background (see
+  // startPasswordReset / _deliverResetCode).
+  function sendForgot() {
+    const errEl = document.getElementById('auth-forgot-error');
+    if (errEl) errEl.textContent = '';
+    const r = startPasswordReset(document.getElementById('auth-forgot-email')?.value, 'sheet');
+    if (r.error) { if (errEl) errEl.textContent = r.error; return; }
+    closeForgot();
+  }
+
+  // ── Reset password (recovery code -> new password) ───────────────
+  // Supabase's recovery email is consumed as a 6-digit code (verifyOtp with
+  // type 'recovery'), the same way sign-up verification already works, because
+  // a reset LINK opens Safari at the Site URL and cannot set a password inside
+  // the app. verifyOtp DOES issue a session, which fires SIGNED_IN — so
+  // _resettingPassword holds _onSignedIn() back until the new password is
+  // actually saved, otherwise the sheet would navigate away mid-flow and leave
+  // the old password in place.
+  let _resetEmail = '';
+  let _resettingPassword = false;
+  let _resetFrom = 'sheet';        // 'sheet' (sign-in) | 'settings' (Profile & Login)
+  let _resetTapLatch = false;      // swallows a double-tap on the send button
+
+  // Last code request, so asking again for the same address inside the window
+  // reuses the code already in their inbox instead of sending a second email.
+  // 60 s mirrors the server's own limit (smtp_max_frequency).
+  const RESET_SENT_KEY    = 'zelo_reset_sent';
+  const RESET_COOLDOWN_MS = 60 * 1000;
+  function _resetCooldownLeft(email) {
+    try {
+      const r = JSON.parse(localStorage.getItem(RESET_SENT_KEY) || 'null');
+      if (!r || r.e !== String(email).toLowerCase()) return 0;
+      return Math.max(0, r.t + RESET_COOLDOWN_MS - Date.now());
+    } catch (e) { return 0; }
+  }
+  function _markResetSent(email) {
+    try { localStorage.setItem(RESET_SENT_KEY, JSON.stringify({ e: String(email).toLowerCase(), t: Date.now() })); } catch (e) {}
+  }
+  function _clearResetSent() { try { localStorage.removeItem(RESET_SENT_KEY); } catch (e) {} }
+
+  // ONE entry point for both places a password can be reset from. Returns
+  // synchronously: { error } only for something wrong with the input itself.
+  // On success the code screen is ALREADY showing and the email is on its way
+  // in the background, so the person never sits watching a greyed-out button
+  // while an SMTP round trip finishes.
+  function startPasswordReset(rawEmail, source) {
+    const email = String(rawEmail || '').trim();
+    if (!email) return { error: 'Enter your email address.' };
+    if (!_looksLikeEmail(email)) return { error: "That doesn't look like a valid email address. Check for typos." };
+    if (_resetTapLatch) return { error: null };            // second tap of the same press: ignore
+    _resetTapLatch = true;
+    setTimeout(() => { _resetTapLatch = false; }, 2000);
+    _resetFrom = source === 'settings' ? 'settings' : 'sheet';
+    _showResetScreen(email);
+    _deliverResetCode(email, false);                       // deliberately not awaited
+    return { error: null };
+  }
+
+  async function _deliverResetCode(email, isResend) {
+    const errEl = document.getElementById('auth-reset-error');
+    // Only write to the screen if it is still about this address.
+    const say = (msg, ok) => { if (errEl && _resetEmail === email) { errEl.textContent = msg; errEl.style.color = ok ? '#22c55e' : ''; } };
+    if (!isResend && _resetCooldownLeft(email) > 0) {
+      say('A code was already sent. Check your email.', true);
+      return true;
+    }
+    _markResetSent(email);       // claimed BEFORE the network call, so a re-entry can't race it
+    try {
+      if (await _emailExists(email) === false) {
+        _clearResetSent();
+        say('No account found with this email. Go back and check the spelling.', false);
+        _resetResendEnable();
+        return false;
+      }
+      const { error } = await zeloSupabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        _clearResetSent();
+        say(await _friendlyAuthError(error, email, 'reset'), false);
+        _resetResendEnable();
+        return false;
+      }
+      say('Code sent. Check your email.', true);
+      return true;
+    } catch (e) {
+      _clearResetSent();
+      say("Can't reach Zelo. Check your internet connection and try again.", false);
+      _resetResendEnable();
+      return false;
+    }
+  }
+
+  function _showResetScreen(email) {
+    _resetEmail = email;
+    const el = document.getElementById('auth-reset-overlay');
+    if (el) {
+      const emailEl = el.querySelector('#auth-reset-email');
+      if (emailEl) emailEl.textContent = email;
+      const errEl = el.querySelector('#auth-reset-error');
+      if (errEl) { errEl.textContent = ''; errEl.style.color = ''; }
+      el.querySelectorAll('.auth-code-input').forEach(inp => { inp.value = ''; });
+      const p1 = el.querySelector('#auth-reset-password');
+      const p2 = el.querySelector('#auth-reset-password2');
+      if (p1) p1.value = '';
+      if (p2) p2.value = '';
+    }
+    _initCodeInputs('auth-reset-code-row');
+    _showOverlay('auth-reset-overlay');
+    _resetResendCountdown();   // a code was just sent — don't offer an instant resend
+    el?.querySelector('.auth-code-input')?.focus();
+  }
+
+  function backFromReset() {
+    clearInterval(_resetResendTimer);
+    _resettingPassword = false;
+    // From Settings there is no sign-in sheet to return to: closing the overlay
+    // lands back on the Forgot Password page underneath.
+    if (_resetFrom === 'settings') { _hideAll(); return; }
+    _showOverlay('auth-overlay');
+  }
+
+  async function handleResetSubmit() {
+    const errEl = document.getElementById('auth-reset-error');
+    const set = msg => { if (errEl) { errEl.textContent = msg; errEl.style.color = ''; } };
+    set('');
+    const code = _readCode('auth-reset-code-row');
+    const pw   = document.getElementById('auth-reset-password')?.value  || '';
+    const pw2  = document.getElementById('auth-reset-password2')?.value || '';
+    if (code.length !== 6)  { set('Enter the 6-digit code.'); return; }
+    // Supabase's own default minimum. Checked here so a weak password is
+    // rejected BEFORE the code is spent — a recovery code is single-use, and
+    // failing after verifyOtp would force the user to request a new one.
+    if (pw.length < 6)      { set('Use at least 6 characters for your new password.'); return; }
+    if (pw !== pw2)         { set("Those passwords don't match."); return; }
+
+    const btn = document.getElementById('auth-reset-submit-btn');
     if (btn) btn.disabled = true;
-    const tick = () => {
-      if (remaining <= 0) {
-        clearInterval(_forgotTimer);
-        if (btn) btn.disabled = false;
-        if (sub) sub.textContent = "Didn't get it? Check your spam folder.";
+    _resettingPassword = true;
+    try {
+      const { error: otpError } = await zeloSupabase.auth.verifyOtp({ email: _resetEmail, token: code, type: 'recovery' });
+      if (otpError) {
+        _resettingPassword = false;
+        set(/expired|invalid/i.test(otpError.message || '')
+          ? 'That code is wrong or has expired. Tap "Resend code" for a new one.'
+          : otpError.message);
         return;
       }
-      if (sub) sub.textContent = `You can resend the link in ${remaining} second${remaining === 1 ? '' : 's'}.`;
+      const { error: pwError } = await zeloSupabase.auth.updateUser({ password: pw });
+      if (pwError) {
+        // The code was spent and a session exists, so the user IS signed in —
+        // say exactly that rather than implying nothing happened.
+        _resettingPassword = false;
+        set("You're signed in, but the new password couldn't be saved: " + (pwError.message || 'please try again from Settings.'));
+        return;
+      }
+      _resettingPassword = false;
+      if (_resetFrom === 'settings') {
+        // Already signed in and already inside the app: just close the overlay,
+        // go back to Profile & Login and say it worked. _onSignedIn() would
+        // run the sign-in navigation, which makes no sense from Settings.
+        _hideAll();
+        if (typeof window._plBackToProfileLogin === 'function') window._plBackToProfileLogin();
+        if (typeof window.showNotice === 'function') window.showNotice('Password updated', 'Your new password is ready to use.');
+        return;
+      }
+      _onSignedIn();   // held back above; run the normal post-sign-in path now
+    } catch (e) {
+      _resettingPassword = false;
+      set("Can't reach Zelo. Check your internet connection and try again.");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  let _resetResendTimer = null;
+
+  function _resetResendCountdown() {
+    clearInterval(_resetResendTimer);
+    const btn = document.getElementById('auth-reset-resend-btn');
+    if (!btn) return;
+    let remaining = 60;
+    btn.disabled = true;
+    const tick = () => {
+      if (remaining <= 0) {
+        clearInterval(_resetResendTimer);
+        btn.disabled = false;
+        btn.textContent = 'Resend code';
+        return;
+      }
+      btn.textContent = `Resend code in ${remaining}s`;
       remaining--;
     };
     tick();
-    _forgotTimer = setInterval(tick, 1000);
+    _resetResendTimer = setInterval(tick, 1000);
   }
 
-  async function sendForgot(isResend) {
-    const errEl = document.getElementById('auth-forgot-error');
-    const email = isResend
-      ? (document.getElementById('auth-forgot-sent-email')?.textContent || '')
-      : (document.getElementById('auth-forgot-email')?.value || '').trim();
-    if (errEl) errEl.textContent = '';
-    if (!email) { if (errEl) errEl.textContent = 'Enter your email address.'; return; }
-    if (!_looksLikeEmail(email)) { if (errEl) errEl.textContent = "That doesn't look like a valid email address. Check for typos."; return; }
-    if (await _emailExists(email) === false) {
-      if (errEl) errEl.textContent = 'No account found with this email. Check the spelling, or create an account.';
-      return;
-    }
-    const { error } = await zeloSupabase.auth.resetPasswordForEmail(email);
-    if (error) { if (errEl) errEl.textContent = await _friendlyAuthError(error, email, 'reset'); return; }
-    document.getElementById('auth-forgot-sent-email').textContent = email;
-    document.getElementById('auth-forgot-form').hidden = true;
-    document.getElementById('auth-forgot-sent').hidden = false;
-    document.getElementById('auth-forgot-send').hidden = true;
-    _forgotCountdown();
+  // Failed to send: give the button back immediately instead of making them
+  // wait out a 60 s cooldown for an email that never went.
+  function _resetResendEnable() {
+    clearInterval(_resetResendTimer);
+    const btn = document.getElementById('auth-reset-resend-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Resend code'; }
+  }
+
+  async function handleResetResend() {
+    const btn = document.getElementById('auth-reset-resend-btn');
+    if (!_resetEmail || (btn && btn.disabled)) return;
+    _resetResendCountdown();                 // disables the button on THIS tap, before any await
+    await _deliverResetCode(_resetEmail, true);
   }
 
   function toggleEmailMode() {
@@ -465,35 +661,82 @@ const AUTH = (() => {
     _showOverlay('auth-overlay');
   }
 
-  function _codeInputs() {
-    return Array.from(document.querySelectorAll('#auth-code-row .auth-code-input'));
+  function _codeInputs(rowId) {
+    return Array.from(document.querySelectorAll('#' + (rowId || 'auth-code-row') + ' .auth-code-input'));
   }
 
-  let _codeInputsBound = false;
-  function _initCodeInputs() {
-    if (_codeInputsBound) return;
-    _codeInputsBound = true;
-    const inputs = _codeInputs();
+  // ── The one-time-code boxes (sign-up verify, password reset, Profile & Login) ──
+  // ONE implementation, used by all three rows (script.js's Profile & Login
+  // modals call AUTH.bindCodeRow too — they had their own copy with the same flaw).
+  //
+  // What it has to cope with, none of which a "one character per box" handler does:
+  //  * iOS offers the code from Messages/Mail ("From Messages") and puts the WHOLE code
+  //    into the one field that carries autocomplete="one-time-code". The old handler
+  //    kept only the last character, so autofill left a single digit behind.
+  //  * a maxlength="1" box truncates that autofill to one digit before any script sees it,
+  //    so maxlength is removed and the length is enforced here instead.
+  //  * the same code can arrive by paste, or into whichever box happened to be focused.
+  //  * typing a digit over one that is already there.
+  //  * Backspace on an empty box should delete the PREVIOUS digit, not just move the cursor.
+  const _codeRowsBound = new Set();
+  function bindCodeRow(rowId) {
+    const row = rowId || 'auth-code-row';
+    if (_codeRowsBound.has(row)) return;
+    const inputs = _codeInputs(row);
+    if (!inputs.length) return;
+    _codeRowsBound.add(row);
+    const last = inputs.length - 1;
+    const digitsOf = v => String(v || '').replace(/\D/g, '');
+
+    inputs.forEach(inp => {
+      inp.removeAttribute('maxlength');                   // see above
+      inp.setAttribute('autocomplete', 'one-time-code');  // any box can receive the autofill
+      inp.setAttribute('inputmode', 'numeric');
+      inp._prev = digitsOf(inp.value);
+    });
+
+    // Put `digits` into the boxes from `start`, then park the cursor after the last one written.
+    const fill = (start, digits) => {
+      const d = digits.slice(0, inputs.length - start);
+      d.split('').forEach((ch, k) => { inputs[start + k].value = ch; inputs[start + k]._prev = ch; });
+      inputs[Math.min(start + d.length, last)].focus();
+    };
+
     inputs.forEach((inp, i) => {
       inp.addEventListener('input', () => {
-        inp.value = inp.value.replace(/[^0-9]/g, '').slice(-1);
-        if (inp.value && i < inputs.length - 1) inputs[i + 1].focus();
+        const d = digitsOf(inp.value);
+        const prev = inp._prev || '';
+        if (d.length <= 1) {                                 // normal typing / deleting
+          inp.value = d; inp._prev = d;
+          if (d && i < last) inputs[i + 1].focus();
+        } else if (d.length === 2 && prev.length === 1) {    // typed over an existing digit
+          const typed = d[0] === prev ? d[1] : d[0];
+          inp.value = typed; inp._prev = typed;
+          if (i < last) inputs[i + 1].focus();
+        } else {                                             // a whole code: autofill, paste, IME
+          // A complete code always starts at box 1, whichever box received it.
+          fill(d.length >= inputs.length ? 0 : i, d);
+        }
       });
       inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
+        if (e.key === 'Backspace' && !inp.value && i > 0) {
+          e.preventDefault();                                // delete the previous digit in one press
+          inputs[i - 1].value = ''; inputs[i - 1]._prev = '';
+          inputs[i - 1].focus();
+        }
       });
       inp.addEventListener('paste', (e) => {
-        const text = (e.clipboardData?.getData('text') || '').replace(/[^0-9]/g, '');
+        const text = digitsOf(e.clipboardData?.getData('text'));
         if (!text) return;
         e.preventDefault();
-        text.slice(0, inputs.length).split('').forEach((ch, idx) => { if (inputs[idx]) inputs[idx].value = ch; });
-        inputs[Math.min(text.length, inputs.length) - 1]?.focus();
+        fill(text.length >= inputs.length ? 0 : i, text);
       });
     });
   }
+  const _initCodeInputs = bindCodeRow;
 
-  function _readCode() {
-    return _codeInputs().map(inp => inp.value).join('');
+  function _readCode(rowId) {
+    return _codeInputs(rowId).map(inp => inp.value).join('');
   }
 
   async function handleVerifySubmit() {
@@ -526,6 +769,35 @@ const AUTH = (() => {
   // same client IDs as authorized audiences.
   const GOOGLE_IOS_CLIENT_ID = 'REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com';
   const APPLE_SERVICE_ID     = 'com.ozlilbrother.zelo'; // bundle id — fine for native iOS
+
+  // Each provider needs work OUTSIDE this file before its button can work, and
+  // a button that always fails is worse than no button (App Review taps every
+  // one of them). Flip a flag to true only once its whole chain is done:
+  //
+  //   apple:  Xcode > Signing & Capabilities > + Sign in with Apple (writes
+  //           App.entitlements), AND Supabase > Auth > Providers > Apple
+  //           enabled with the bundle id as an authorized client.
+  //   google: a real iOS OAuth client in Google Cloud Console, its id in
+  //           GOOGLE_IOS_CLIENT_ID above AND in Info.plist (GIDClientID +
+  //           the reversed-id CFBundleURLScheme), AND Supabase > Auth >
+  //           Providers > Google listing it as an authorized audience.
+  //
+  // Email sign-in works on its own, and Apple only *requires* Sign in with
+  // Apple when some other third-party login is offered — so shipping with
+  // both off is compliant, not a gap.
+  const PROVIDER_ENABLED = { apple: false, google: false };
+
+  // Hides the buttons whose chain isn't finished, so nothing on screen
+  // promises a sign-in route that cannot complete. Covers BOTH places they
+  // appear: the auth sheet and onboarding step 14 ("Save your progress"),
+  // which is the one that matters most — every new user has to get past it,
+  // and tapping a broken provider there left them stuck.
+  function _applyProviderVisibility() {
+    document.querySelectorAll('[data-provider]').forEach(btn => {
+      const name = btn.dataset.provider;
+      if (name in PROVIDER_ENABLED) btn.hidden = !PROVIDER_ENABLED[name];
+    });
+  }
 
   let _socialInitDone = null;
 
@@ -560,6 +832,7 @@ const AUTH = (() => {
   }
 
   async function signInWithApple() {
+    if (!PROVIDER_ENABLED.apple) { _setProviderError('Apple sign-in isn\u2019t available yet. Use your email instead.'); return; }
     const SocialLogin = await _initSocialLogin();
     if (!SocialLogin) { _setProviderError('Apple sign-in is only available in the app.'); return; }
     try {
@@ -573,6 +846,7 @@ const AUTH = (() => {
   }
 
   async function signInWithGoogle() {
+    if (!PROVIDER_ENABLED.google) { _setProviderError('Google sign-in isn\u2019t available yet. Use your email instead.'); return; }
     if (_isUnconfigured(GOOGLE_IOS_CLIENT_ID)) {
       _setProviderError('Google sign-in isn’t configured yet (missing OAuth Client ID).');
       return;
@@ -611,6 +885,9 @@ const AUTH = (() => {
   }
 
   function _onSignedIn() {
+    // A recovery code issues a session before the new password is saved (see
+    // handleResetSubmit) — navigating here would abandon the reset half-done.
+    if (_resettingPassword) return;
     // Consent given before there was an account (onboarding) gets written now.
     if (typeof ZeloRecords !== 'undefined') ZeloRecords.flushConsents().then(() => ZeloRecords.syncPracticeConsent());
     const isOnboardingSignIn = _pendingIsOnboardingSignIn;
@@ -626,11 +903,9 @@ const AUTH = (() => {
     const onboardingName = localStorage.getItem('zelo_display_name');
     const onboardingAge  = localStorage.getItem('zelo_user_age');
     if (!isOnboardingSignIn && !localStorage.getItem('zelo_setup_done') && onboardingName && onboardingAge) {
-      localStorage.setItem('zelo_setup_done', '1');
-      const userId = _session?.user?.id;
-      const insert = userId
-        ? zeloSupabase.from('profiles').insert({ id: userId, display_name: onboardingName, age: Number(onboardingAge) }).then(() => {}, () => {})
-        : Promise.resolve();
+      // setup_done is set only once ensureProfile() has confirmed the row exists (see its comment);
+      // if the insert fails the flag stays unset, so the next launch or the Invite screen retries it.
+      const insert = ensureProfile().then(done => { if (done) localStorage.setItem('zelo_setup_done', '1'); });
       insert.finally(() => {
         if (typeof window._redeemPendingReferralIfAny === 'function') window._redeemPendingReferralIfAny();
         _hideAll(); _resolvePending();
@@ -797,6 +1072,7 @@ const AUTH = (() => {
         display_name: displayName,
         age:          age
       });
+      if (error && error.code !== "23505") console.error("profile insert failed", error.code);
     }
 
     _hideAll();
@@ -809,7 +1085,7 @@ const AUTH = (() => {
     if      (dest === 'practice')        showTab('practice');
     else if (dest === 'chats')           showTab('chats');
     else if (dest === 'save-thread')     openThreadPicker();
-    else if (dest === 'download-data')   { openDownloadData(); ddRequestData(); }
+    else if (dest === 'download-data')   openDownloadData();
   }
 
   function _resolvePending() {
@@ -843,6 +1119,10 @@ const AUTH = (() => {
     // Force onboarding to replay after sign-out, independent of the
     // dev-mode wipe in script.js's DOMContentLoaded handler.
     localStorage.removeItem('zelo_onboarding_done');
+    // Practice conversations persist across launches now, so they have to be
+    // dropped here or the next person to sign in on this device would open
+    // the Chats tab and find someone else's.
+    if (typeof clearLocalChats === 'function') clearLocalChats();
     _explicitSignOut = true;
     await zeloSupabase.auth.signOut();
     location.reload();
@@ -859,15 +1139,6 @@ const AUTH = (() => {
   }
 
   // ── Forgot password (Profile & Login) ─────────────────────────────
-  // Plain email-link reset, same real API the sign-in screen's own
-  // handleForgotPassword() already uses — just reusable with any email
-  // string instead of reading a specific DOM input, since Profile & Login
-  // has its own separate form/screens for this.
-  async function sendPasswordReset(email) {
-    const { error } = await zeloSupabase.auth.resetPasswordForEmail(email);
-    return { error: error ? error.message : null };
-  }
-
   // ── Link a new email/password identity (Profile & Login → Sign-in
   // methods → Email → "Add Your Email") ─────────────────────────────
   // updateUser({email, password}) on an authenticated session with no
@@ -932,6 +1203,9 @@ const AUTH = (() => {
     handleForgotPassword,
     closeForgot,
     sendForgot,
+    handleResetSubmit,
+    handleResetResend,
+    backFromReset,
     toggleEmailMode,
     rememberAuthState,
     backFromVerify,
@@ -946,7 +1220,9 @@ const AUTH = (() => {
     dismiss,
     currentEmail,
     currentUserId,
-    sendPasswordReset,
+    startPasswordReset,
+    bindCodeRow,
+    ensureProfile,
     linkEmail,
     verifyEmailChange,
     resendEmailChange,

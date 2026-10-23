@@ -1,5 +1,5 @@
 // Instagram-style profile posts: one caption per photo, in photo order, keyed by
-// photo set (the zNNN / oNNN in assets/characters/<set>-<n>.jpg). Written the
+// photo set (the zNNN / oNNN in assets/characters/<set>-<n>.webp). Written the
 // way she would caption it herself — a feeling or a little confession with an
 // emoji, not a description of the picture ("this hike is so exhausting 😮‍💨",
 // not "highland hike"). Authored from the source photo names, not by viewing

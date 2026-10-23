@@ -26,6 +26,12 @@
    TOKENS
    ---------------------------------------------------------------- */
 :root {
+  /* App-space viewport units. Viewport units resolve against the REAL viewport,
+     which on iPad is the device size, not the smaller box the app is laid out
+     in before being scaled up — so a raw dvh reads ~1.4x too big there and
+     pushes every clamp() to its max. Identity on a phone. */
+  --app-vh: 1dvh;
+  --app-vw: 1vw;
   --bg:      #ffffff;   /* white base */
   --s1:      #ffffff;   /* card surface */
   --s2:      #f3ede4;   /* input / elevated surface */
@@ -1617,7 +1623,7 @@ a { text-decoration: none; color: inherit; }
   border-radius: 26px 26px 0 0;
   width: 100%;
   max-width: 430px;
-  max-height: 88vh;
+  max-height: calc(var(--app-vh) * 88);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2318,14 +2324,14 @@ a { text-decoration: none; color: inherit; }
      bar collapses/expands. Unchanged at 390px+ height where it already fit;
      compresses on short viewports (SE, common Android) where 7 stacked
      options genuinely didn't fit at full size. */
-  padding: clamp(10px, 2.6dvh, 22px) 20px clamp(12px, 3.3dvh, 28px);
+  padding: clamp(10px, calc(var(--app-vh) * 2.6), 22px) 20px clamp(12px, calc(var(--app-vh) * 3.3), 28px);
 }
 
 /* Segmented step progress (one segment per step) */
 .tz-progress {
   display: flex;
   gap: 8px;
-  margin-bottom: clamp(10px, 3dvh, 26px);
+  margin-bottom: clamp(10px, calc(var(--app-vh) * 3), 26px);
 }
 
 .tz-seg {
@@ -2339,7 +2345,7 @@ a { text-decoration: none; color: inherit; }
 .tz-seg.done { background: var(--accent); }
 
 .tz-question {
-  font-size: clamp(18px, 2.75dvh, 1.45rem);
+  font-size: clamp(18px, calc(var(--app-vh) * 2.75), 1.45rem);
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--text);
@@ -2361,7 +2367,7 @@ a { text-decoration: none; color: inherit; }
      icon size below are the biggest levers for fitting short viewports
      (see .tz-layout comment); unchanged at 390px+ height where 7 rows at
      full size already fit. */
-  gap: clamp(4px, 1.2dvh, 11px);
+  gap: clamp(4px, calc(var(--app-vh) * 1.2), 11px);
 }
 
 .tz-option {
@@ -2369,7 +2375,7 @@ a { text-decoration: none; color: inherit; }
   align-items: center;
   gap: 14px;
   width: 100%;
-  padding: clamp(6px, 1.7dvh, 15px) 16px;
+  padding: clamp(6px, calc(var(--app-vh) * 1.7), 15px) 16px;
   background: var(--s1);
   border: 1.5px solid var(--border);
   border-radius: var(--r-md);
@@ -2383,8 +2389,8 @@ a { text-decoration: none; color: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(24px, 4.3dvh, 38px);
-  height: clamp(24px, 4.3dvh, 38px);
+  width: clamp(24px, calc(var(--app-vh) * 4.3), 38px);
+  height: clamp(24px, calc(var(--app-vh) * 4.3), 38px);
   flex-shrink: 0;
   border-radius: 11px;
   background: var(--s2);
@@ -2427,7 +2433,7 @@ a { text-decoration: none; color: inherit; }
 .tz-option.selected .tz-option-radio svg { opacity: 1; transform: scale(1); }
 
 /* Pushes the Next button to the bottom of the viewport */
-.tz-spacer { flex: 1; min-height: clamp(6px, 1.7dvh, 24px); }
+.tz-spacer { flex: 1; min-height: clamp(6px, calc(var(--app-vh) * 1.7), 24px); }
 
 .tz-next {
   display: flex;
@@ -4819,7 +4825,7 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.4;
 }
 
-/* Scan daily-limit banner + mocked rewarded-ad button */
+/* Scan daily-limit banner */
 .scan-limit-banner[hidden] { display: none; }
 .scan-limit-banner {
   display: flex;
@@ -4834,16 +4840,6 @@ a { text-decoration: none; color: inherit; }
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-2);
-}
-
-.scan-limit-ad-btn {
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.76rem;
-  font-weight: 700;
-  padding: 7px 12px;
-  border-radius: 99px;
-  flex-shrink: 0;
 }
 
 /* Out-of-matches toast (no extra screen) */
@@ -4889,7 +4885,7 @@ a { text-decoration: none; color: inherit; }
 /* ----------------------------------------------------------------
    DESKTOP — phone frame
    ---------------------------------------------------------------- */
-@media (min-width: 480px) {
+@media (min-width: 480px) and (pointer: fine) and (hover: hover) {
   body {
     display: flex;
     align-items: center;
@@ -6574,6 +6570,11 @@ a { text-decoration: none; color: inherit; }
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
+/* An author `display` always beats the UA stylesheet's `[hidden] {display:none}`,
+   so the Go button on a completed mission needs this to actually disappear
+   (renderDailyMissions sets .hidden on it). Same pattern as the other
+   `.foo[hidden]` rules in this file. */
+.mission-row-go[hidden] { display: none; }
 
 .mission-bottom-row {
   display: flex;
@@ -6838,6 +6839,32 @@ a { text-decoration: none; color: inherit; }
 
 .auth-overlay[hidden] { display: none; }
 
+/* The FULL-SCREEN overlays: the sign-up code screen (#auth-verify-overlay), the
+   password-reset screen (#auth-reset-overlay) and the name/age setup
+   (#auth-setup-overlay). Restored 2026-10-22 from the project's first commit —
+   this rule was deleted in the 2026-08-15 auto-commit that introduced the
+   bottom-sheet sign-in (.auth-overlay--sheet), which left these three with no
+   position and no background at all: they rendered as transparent blocks in
+   the page flow, with whatever screen was behind them showing through. It went
+   unnoticed because email confirmation was switched off, so the sign-up code
+   screen was never reached. Scoped with :not(--sheet) because the sheet has
+   its own look below. */
+.auth-overlay:not(.auth-overlay--sheet) {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  z-index: 2000;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Sibling of .screen/.tab under #app, not a descendant — doesn't inherit
+     their safe-area padding, so it needs its own (see .auth-dismiss-btn). */
+  padding-top: 34px;
+  padding-bottom: 34px;
+}
+.auth-overlay:not(.auth-overlay--sheet)[hidden] { display: none; }
+
 /* ── Stage 1 — iOS-style partial bottom sheet (provider picker) ──
    Not a full-screen takeover: a dimmed scrim over whatever screen was
    already showing, with a sheet covering under half the viewport height,
@@ -6862,7 +6889,7 @@ a { text-decoration: none; color: inherit; }
 .auth-sheet {
   position: fixed;
   left: 0; right: 0; bottom: 0;
-  max-height: 46vh;
+  max-height: calc(var(--app-vh) * 46);
   overflow-y: auto;
   background: var(--bg);
   border-radius: 26px 26px 0 0;
@@ -8387,7 +8414,7 @@ a { text-decoration: none; color: inherit; }
      tracks Safari's real, currently-visible viewport as the address bar
      collapses/expands, not the theoretical full-screen height. Horizontal
      padding is untouched — width isn't the constrained dimension here. */
-  padding: clamp(4px, 1.3dvh, 14px) 20px calc(clamp(5px, 1.9dvh, 22px) + 34px);
+  padding: clamp(4px, calc(var(--app-vh) * 1.3), 14px) 20px calc(clamp(5px, calc(var(--app-vh) * 1.9), 22px) + 34px);
 }
 
 .paywall-topbar {
@@ -8397,7 +8424,7 @@ a { text-decoration: none; color: inherit; }
   justify-content: center;
   height: 44px;
   flex-shrink: 0;
-  margin-bottom: clamp(2px, 0.6dvh, 6px);
+  margin-bottom: clamp(2px, calc(var(--app-vh) * 0.6), 6px);
 }
 .paywall-brand.scan-page-brand {
   font-size: 1.5rem;
@@ -8407,8 +8434,8 @@ a { text-decoration: none; color: inherit; }
   align-self: center;
   /* Full 156px on tall viewports, shrinks on short ones (see .paywall-layout
      comment) — the box (not the scaled image below) is what reclaims space. */
-  width: clamp(96px, 15dvh, 156px);
-  height: clamp(96px, 15dvh, 156px);
+  width: clamp(96px, calc(var(--app-vh) * 15), 156px);
+  height: clamp(96px, calc(var(--app-vh) * 15), 156px);
   margin: 0 0 2px;
   flex-shrink: 0;
   /* Box stays this size for layout purposes (nothing below shifts) — the
@@ -8425,14 +8452,14 @@ a { text-decoration: none; color: inherit; }
 }
 
 .paywall-headline {
-  font-size: clamp(19px, 3.0dvh, 28px);
+  font-size: clamp(19px, calc(var(--app-vh) * 3.0), 28px);
   font-weight: 800;
   line-height: 1.18;
   letter-spacing: -0.5px;
   color: var(--text);
   text-align: center;
   /* More breathing room above "Complete Sign-up" — was clamp(4px,1dvh,8px). */
-  margin-bottom: clamp(12px, 2.4dvh, 22px);
+  margin-bottom: clamp(12px, calc(var(--app-vh) * 2.4), 22px);
   flex-shrink: 0;
 }
 .paywall-headline-accent { color: #EC4899; }
@@ -8440,7 +8467,7 @@ a { text-decoration: none; color: inherit; }
 .paywall-timeline {
   display: flex;
   flex-direction: column;
-  margin-bottom: clamp(4px, 1.5dvh, 24px); /* full gap on tall viewports, ~20-30px per spec; compresses on short ones */
+  margin-bottom: clamp(4px, calc(var(--app-vh) * 1.5), 24px); /* full gap on tall viewports, ~20-30px per spec; compresses on short ones */
   flex-shrink: 0;
 }
 .paywall-step {
@@ -8468,7 +8495,7 @@ a { text-decoration: none; color: inherit; }
 .paywall-step-line {
   width: 2px;
   flex: 1;
-  min-height: clamp(6px, 1.9dvh, 34px);
+  min-height: clamp(6px, calc(var(--app-vh) * 1.9), 34px);
   background: #EC4899;
   margin: 3px 0;
   transform-origin: top;
@@ -8476,7 +8503,7 @@ a { text-decoration: none; color: inherit; }
 .paywall-step-body {
   flex: 1;
   min-width: 0;
-  padding-bottom: clamp(3px, 1.6dvh, 32px);
+  padding-bottom: clamp(3px, calc(var(--app-vh) * 1.6), 32px);
 }
 .paywall-step:last-child .paywall-step-body { padding-bottom: 0; }
 
@@ -8555,7 +8582,7 @@ a { text-decoration: none; color: inherit; }
 .paywall-plans {
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 1.2dvh, 10px);
+  gap: clamp(6px, calc(var(--app-vh) * 1.2), 10px);
   margin-top: 0; /* gap to the timeline above is fixed via .paywall-timeline's
     margin-bottom instead, per spec (~20-30px, not a flexible/collected gap). */
   flex-shrink: 0;
@@ -8686,7 +8713,7 @@ a { text-decoration: none; color: inherit; }
    pill-shaped .asst-suggest-btn treatment; this one is explicitly
    60px tall / 30px radius and must stay a dead button (no onclick). */
 .paywall-cta {
-  margin-top: clamp(8px, 1.5dvh, 14px);
+  margin-top: clamp(8px, calc(var(--app-vh) * 1.5), 14px);
   width: 100%;
   height: 60px;
   border-radius: 30px;
@@ -9175,7 +9202,7 @@ a { text-decoration: none; color: inherit; }
   transition: max-height 0.35s ease, padding 0.35s ease;
 }
 .aicoach-suggest-panel.open .aicoach-suggest-body {
-  max-height: 42vh;
+  max-height: calc(var(--app-vh) * 42);
   overflow-y: auto;
   padding: 0 18px 16px;
 }
@@ -9306,42 +9333,6 @@ a { text-decoration: none; color: inherit; }
   justify-content: center;
   pointer-events: none;
 }
-
-/* Photo attach preview — PROTOTYPE (see aiCoachPhotoSelected()). */
-.aicoach-photo-preview[hidden] { display: none; }
-.aicoach-photo-preview {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-.aicoach-photo-preview-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.aicoach-photo-preview-remove {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.aicoach-attach-btn {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-2);
-}
-.aicoach-attach-btn:active { background: var(--s2); }
 
 .aicoach-input-bar {
   position: relative;
@@ -10182,7 +10173,7 @@ a { text-decoration: none; color: inherit; }
 }
 @keyframes cinePhoneFly {
   0% {
-    transform: translate3d(-55vw, 24vh, 0) scale(0.7) rotate(-8deg);
+    transform: translate3d(-55vw, calc(var(--app-vh) * 24), 0) scale(0.7) rotate(-8deg);
     opacity: 0;
   }
   4.7% {
@@ -10196,12 +10187,12 @@ a { text-decoration: none; color: inherit; }
     opacity: 1;
   }
   90.3% {
-    transform: translate3d(55vw, 24vh, 0) scale(0.75) rotate(6deg);
+    transform: translate3d(calc(var(--app-vw) * 55), calc(var(--app-vh) * 24), 0) scale(0.75) rotate(6deg);
     opacity: 0;
   }
   100% {
     /* Holds off-screen/invisible for the gap before the next loop. */
-    transform: translate3d(55vw, 24vh, 0) scale(0.75) rotate(6deg);
+    transform: translate3d(calc(var(--app-vw) * 55), calc(var(--app-vh) * 24), 0) scale(0.75) rotate(6deg);
     opacity: 0;
   }
 }
@@ -10943,7 +10934,7 @@ a { text-decoration: none; color: inherit; }
 }
 @keyframes cineTrialPhoneFlyIn {
   0% {
-    transform: translate3d(-55vw, 24vh, 0) scale(0.7) rotate(-8deg);
+    transform: translate3d(-55vw, calc(var(--app-vh) * 24), 0) scale(0.7) rotate(-8deg);
     opacity: 0;
   }
   31.3% {
@@ -11190,6 +11181,36 @@ a { text-decoration: none; color: inherit; }
 .cine-trial-sheet .cine-btn { margin-top: 10px; }
 .cine-trial-legal { margin: 14px 0 4px; font-size: 0.8rem; line-height: 1.5; text-align: center; color: var(--text-2); }
 
+/* ---- Short phones (iPhone SE/8, 667pt; 13 mini is 812 and unaffected) ----
+   .cine-trial-hero-img is `width:100%; height:auto`, so its height follows the
+   image's ASPECT, not the screen: on a 375pt-wide SE it renders 429px tall —
+   64% of the viewport — and pushes the plan picker and Continue button 148px
+   below the fold. (The screen does scroll, so this was reachable, just badly
+   cut off.) This is the same failure mode as the iPad trial hero in 2026-10-20c:
+   a full-bleed height:auto hero sized by aspect rather than available height.
+
+   Scoped by max-height, NOT by width, so it only touches genuinely short
+   screens and leaves the designed proportions on an iPhone 14/15/Pro Max
+   exactly as they were. object-fit: cover crops rather than squashes. */
+@media (max-height: 740px) {
+  .cine-trial-hero-img {
+    max-height: calc(var(--app-vh) * 40);
+    object-fit: cover;
+  }
+  /* The paywall's own comment says it should "fit with zero scroll" on an SE;
+     it was still 46px over. Padding BELOW the CTA cannot help — only things
+     stacked above it move it up. Measured on a 375x667 SE, the three levers
+     below give back ~46px. Note the hero's clamp FLOOR (96px) is NOT what
+     binds here — at 667pt the vh term already computes to 100px, so only
+     lowering the vh term moves it. 9.5vh = 63px on an SE. */
+  .paywall-hero {
+    width: clamp(56px, calc(var(--app-vh) * 9.5), 156px);
+    height: clamp(56px, calc(var(--app-vh) * 9.5), 156px);
+  }
+  .paywall-headline { margin-bottom: 10px; }
+  .paywall-timeline { margin-bottom: 4px; }
+}
+
 /* ================================================================
    SCREEN 14 — one-time offer (own .screen overlay, own X close)
    ================================================================ */
@@ -11221,7 +11242,7 @@ a { text-decoration: none; color: inherit; }
 }
 .cine-offer-badge-wrap { position: relative; margin: 26px 0 22px; }
 .cine-offer-badge {
-  width: 240px; max-width: 76vw;
+  width: 240px; max-width: calc(var(--app-vw) * 76);
   padding: 44px 0;
   border-radius: 26px;
   background: linear-gradient(150deg, #ff4d94, var(--accent));
@@ -11242,6 +11263,9 @@ a { text-decoration: none; color: inherit; }
 .cine-offer-sub { margin: 0; font-size: 1rem; color: var(--text-2); }
 .cine-offer-foot { width: 100%; max-width: 340px; }
 .cine-offer-legal { margin: 14px 0 0; font-size: 0.86rem; color: var(--text-2); text-align: center; }
+/* Real links now (Apple requires Terms/Privacy/Restore to work on a
+   subscription screen), so they need a tap target and the accent colour. */
+.cine-offer-legal a { color: var(--text-2); text-decoration: underline; padding: 4px 2px; }
 
 /* ================================================================
    PRACTICE TAB TUTORIAL — welcome screen + swipe/photo-nav lesson
@@ -11618,7 +11642,7 @@ a { text-decoration: none; color: inherit; }
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: var(--s1);
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13397,7 +13421,7 @@ a { text-decoration: none; color: inherit; }
   display: flex;
   flex-direction: column;
   gap: 22px;
-  margin-top: var(--convo-top, 42vh);
+  margin-top: var(--convo-top, calc(var(--app-vh) * 42));
   transform: translateY(var(--convo-lift, 0px));
   transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -13588,7 +13612,7 @@ a { text-decoration: none; color: inherit; }
 /* Practice tutorial conversation — full screen over everything, tab bar
    included. Everything else comes from the .cine-convo* rules. */
 .cine-convo.pc-convo { position: fixed; z-index: 4500; }
-.pc-convo .cine-convo-stage { margin-top: var(--convo-top, 38vh); }
+.pc-convo .cine-convo-stage { margin-top: var(--convo-top, calc(var(--app-vh) * 38)); }
 .cine-convo-choice--sub { color: var(--text-2); font-weight: 600; }
 #practice-edit-details .pcp-avatar-wrap { display: none; }  /* the profile photo was never used anywhere */
 
@@ -14711,7 +14735,7 @@ button.pp-btn:active { opacity: 0.6; }
 
 
 /* ---- Report a problem sheet (reuses .chat-settings-sheet's slide-up chrome) ---- */
-.report-panel { max-height: 88vh; overflow-y: auto; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+.report-panel { max-height: calc(var(--app-vh) * 88); overflow-y: auto; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
 .report-title { margin: 6px 20px 2px; font-size: 1.15rem; font-weight: 800; color: var(--text); }
 .report-sub   { margin: 0 20px 12px; font-size: 0.9rem; color: var(--text-2); }
 .report-reasons { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; }
@@ -14909,3 +14933,94 @@ button.pp-btn:active { opacity: 0.6; }
 .lb-empty-text { margin: 0; font-size: 0.9rem; line-height: 1.45; color: var(--text-2); max-width: 280px; }
 .lb-timer[hidden] { display: none; }
 .lb-podium-wrap[hidden], .lb-list[hidden], .lb-my-rank[hidden] { display: none; }
+
+
+/* ================================================================
+   iPad / large touch screens
+   ----------------------------------------------------------------
+   #app MUST fill the viewport here. Around forty of its children are
+   position:fixed (sheets, toasts, the long-press menu, the scan
+   loader, every overlay), and a fixed element resolves against the
+   VIEWPORT, not against #app. On a phone the two are the same box so
+   it never shows. Cap #app to a narrow centred column on a wide
+   screen and every one of those forty lands against the screen
+   instead of the content — which is exactly why the headers appeared
+   "outside the app" on iPad. Letting #app fill the screen restores
+   fixed == app bounds, no per-element patching.
+
+   The phone design is built around a ~430px column, so the content
+   itself is capped and centred instead. Every wrapper listed below
+   already paints var(--bg), the same colour as the page behind it, so
+   narrowing the box is invisible — only the content narrows.
+   ================================================================ */
+@media (pointer: coarse) and (min-width: 600px) {
+  /* The phone design is scaled up bodily rather than just given a wider
+     column, so everything (type, icons, cards, spacing) grows together.
+     #app is laid out at viewport/scale and then scaled back up to fill the
+     screen, so it renders as one large phone.
+
+     transform (not zoom) on purpose: zoom changes the CSS-pixel size of the
+     viewport, which would re-evaluate this very media query and could flip
+     it on and off. A transform leaves the layout viewport alone. It also
+     makes #app the containing block for its ~40 position:fixed children, so
+     every sheet and overlay lines up with the app instead of the screen.
+
+     Scale is chosen so the app's height matches the design's ~930px: the
+     iPad is proportionally much squarer than a phone, so filling the WIDTH
+     would leave far too little height for these layouts. */
+  :root {
+    --ipad-scale: 1.4;
+    --app-vh: calc(1dvh / var(--ipad-scale));
+    --app-vw: calc(1vw / var(--ipad-scale));
+    --ipad-col: 100%;
+    --ipad-gut: 0px;
+  }
+
+  #app {
+    max-width: none;
+    /* The base rule centres #app with margin:0 auto. transform-origin is the
+       element's own top-left, so any left margin is applied BEFORE the scale
+       and pushes the scaled box off the right edge. */
+    margin: 0;
+    width: calc(100vw / var(--ipad-scale));
+    height: calc(100dvh / var(--ipad-scale));
+    transform: scale(var(--ipad-scale));
+    transform-origin: top left;
+  }
+
+  /* These carry a 430px cap at ID specificity. #app is now a phone-width
+     box again, so the cap just has to get out of the way. */
+  #screen-dashboard .screen-header,
+  #tab-practice .app-header,
+  #tab-chats .app-header,
+  #tab-assistant .app-header { max-width: none; }
+
+  /* Profile & Login paints its pull-past-the-top pink on the screen itself;
+     with #app phone-width again this needs no constraining, but the
+     background must still cover the full box. */
+  #screen-settings-profile-login { background-size: 100% 100%, 100% 100%; }
+
+  /* Full-bleed hero images are sized by WIDTH (width:100%, height:auto). The
+     iPad's app box is proportionally much wider than a phone's (596x853 vs
+     390x844), so such a hero grows ~235px taller and pushes the CTA and the
+     legal text below the fold — measured, not theoretical. Cap it to a share
+     of the app's height and crop instead of letting it set its own height. */
+  .cine-trial-hero { max-height: calc(var(--app-vh) * 46); overflow: hidden; }
+  .cine-trial-hero-img {
+    height: calc(var(--app-vh) * 46);
+    object-fit: cover;
+    object-position: center 28%;
+  }
+}
+
+/* 12.9" iPad: at 1.4 the app would lay out 731px wide, much wider than any
+   phone and wider than these layouts are tuned for. A bigger scale keeps the
+   laid-out width in the same ~600px range as the smaller iPads, so every
+   iPad behaves the same and only the rendered size differs. */
+@media (pointer: coarse) and (min-width: 900px) {
+  :root {
+    --ipad-scale: 1.7;
+    --app-vh: calc(1dvh / 1.7);
+    --app-vw: calc(1vw / 1.7);
+  }
+}

@@ -1,7 +1,6 @@
 // ================================================================
 // ChatPractice — script.js
 // ================================================================
-const DEV_MODE = false; // DEV — set to false before release
 
 // Bumped by hand right before every autopush.sh — an on-screen, unambiguous
 // way to confirm which build is actually running on a device (see the
@@ -9,25 +8,11 @@ const DEV_MODE = false; // DEV — set to false before release
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-10-19ay (opener follow-up, proportionate compliments)";
+const BUILD_STAMP = "2026-10-23g (AI Coach Upload Screenshot restored; Day Streak page and share use the real streak)";
 // Analytics must never be able to break the app: if services/analytics.js didn't load, every ZeloAnalytics call becomes a no-op.
 if (typeof ZeloAnalytics === 'undefined') window.ZeloAnalytics = { track() {}, setOptOut() {} };
 if (typeof ZeloRecords === 'undefined') window.ZeloRecords = { submitChatReport() { return Promise.resolve('queued'); }, flushReports() {}, recordConsent() {}, flushConsents() { return Promise.resolve(); }, saveGeneratedReply() { return null; }, markReplyCopied() {}, savePracticeSession() {}, queueOnboarding() {}, flushOnboarding() {}, setReplyOutcome() {}, logAiRequest() {}, syncPracticeConsent() { return Promise.resolve(); }, status() {} };
-const SHOW_BUILD_STAMP = true;
-// TEMP (testing): show the "Help Zelo get smarter" modal on EVERY practice chat, ignoring the once-only
-// memory, so its UI can be reviewed. Set to false before release.
-const DEV_ALWAYS_SHOW_PRACTICE_REVIEW = false;
-const DEV_AUTO_SIGN_IN = true;
-const SUPPRESS_GIBBERISH_CHECK = false;
-const FORCE_DEMO_SCAN_FOR_RECORDING = false; // screen-recording prep, reverted — real generation again
-const SUPPRESS_XP_LEVEL_NOTIFS = true; // TEMP — no XP/Level-up popups anywhere for now; flip back to false to re-enable
-// DEV — flip either of these to true, reload the app, review the screen,
-// then flip back to false before shipping. Lets you see the launch
-// No Connection screen or the loading dots → error/Retry card
-// (Scan) on demand, without needing a real dropped connection to trigger
-// them. See CLAUDE.md's Case Log for exactly which screen each one shows.
-const FORCE_NO_CONNECTION_SCREEN = false;
-const FORCE_SCAN_ERROR_CARD      = false;
+const SHOW_BUILD_STAMP = false;
 window.addEventListener('DOMContentLoaded', () => {
   if (!SHOW_BUILD_STAMP) return;
   const b = document.createElement('div');
@@ -338,7 +323,7 @@ const state = {
   eligibleStyles:   [],    // ordered styles for the current scan's Situation+Goal (see getEligibleStyles())
   currentStyleIndex: 0,    // index into eligibleStyles for the card currently shown
 
-  // mode chosen per swipe-card profile (Open/Neutral/Cold), keyed by name
+  // mode chosen per swipe-card profile (Open/Neutral), keyed by name
   cardModes: {},
 
   // Active chat id (for syncing to chatStore)
@@ -381,13 +366,6 @@ const state = {
 const CONNECTIVITY_TIMEOUT_MS = 6000;
 
 function _checkConnectivity() {
-  // DEV — see FORCE_NO_CONNECTION_SCREEN at the top of this file. Skips the
-  // real network check but keeps a short delay, so the No Connection screen
-  // appears a moment after launch — same pacing as a real failure, not an
-  // instant jump-cut.
-  if (FORCE_NO_CONNECTION_SCREEN) {
-    return new Promise(resolve => setTimeout(() => resolve(false), 1000));
-  }
   // no-cors + a HEAD request: we only care whether the network round-trip
   // to our own backend completes at all, never read the response itself
   // (an opaque no-cors response can't be inspected, and doesn't need to be).
@@ -615,73 +593,24 @@ function _sessionExpiredGoHome() {
   showTab('practice');
 }
 
-async function _devAutoSignIn() {
-  try {
-    const { data } = await zeloSupabase.auth.getSession();
-    if (data && data.session) return;
-    const creds = window.ZELO_DEV_LOGIN;
-    if (creds && creds.email && creds.password) {
-      await zeloSupabase.auth.signInWithPassword({ email: creds.email, password: creds.password });
-    } else {
-      await zeloSupabase.auth.signInAnonymously();
-    }
-  } catch (_) { /* stay signed out — the AI status pill explains it */ }
-}
-
 window.addEventListener('DOMContentLoaded', () => {
   // Background reachability check — nothing below waits on it (see the
   // LAUNCH CONNECTIVITY CHECK comment above); #app's own visibility gate is
   // lifted further down, right after onboarding has been set up.
   _runLaunchConnectivityGate();
 
-  // DEV — clear first-run keys on every load for testing. Remove before release.
-  // NOTE: this wipes zelo_onboarding_done every load, so maybeShowWelcomeBack()
-  // below never fires in dev (onboarding always looks "not done" first).
-  // Comment this block out temporarily to test the welcome-back typewriter.
-  localStorage.removeItem('zelo_onboarding_done');
-  localStorage.removeItem('zelo_tour_seen');
-  // The "Finding your type" quest starts from 0 on every launch, like the rest of this block.
-  localStorage.removeItem('zelo_quest_likes');
-  localStorage.removeItem('zelo_quest_done');
-  localStorage.removeItem('zelo_quest_liked');
-  // Onboarding + Home-tab answers start blank each run — nothing pre-chosen.
-  localStorage.removeItem('zelo_practice_mode');
-  localStorage.removeItem('zelo_mode_selected');
-  localStorage.removeItem('zelo_age_range');
-  localStorage.removeItem('zelo_display_name');
-  localStorage.removeItem('zelo_onb_gender');
-  localStorage.removeItem('zelo_user_age');
-  localStorage.removeItem('zelo_age_pool');
-  localStorage.removeItem('zelo_birthdate');
-  localStorage.removeItem('zelo_profile_photo');
-  localStorage.removeItem('zelo_onb_icebreaker');
-  localStorage.removeItem('zelo_onb_struggle');
-  localStorage.removeItem('zelo_onb_where');
-  localStorage.removeItem('zelo_onb_stopping');
-  localStorage.removeItem('zelo_onb_accomplish');
-  localStorage.removeItem('zelo_default_tones');
-  localStorage.removeItem('zelo_default_card_mode');
-  localStorage.removeItem('zelo_decline_discount_shown');
-  localStorage.removeItem('zelo_offer_shown');
-
   initTheme();
   _armLazyImageObserver();
   watchForNewIcons();
-  // DEV — automatic sign-in on launch, no screen, no typing. Uses the
-  // gitignored dev-credentials.js (window.ZELO_DEV_LOGIN = {email, password})
-  // if present, else tries an anonymous session (works only if "Allow
-  // anonymous sign-ins" is switched on in the Supabase dashboard). Skipped
-  // when a session already exists. A failure here is silent: AI features just
-  // show their normal "Sign in required" pill. Set DEV_AUTO_SIGN_IN to false
-  // (and delete dev-credentials.js) before release.
-  const _devSignedIn = DEV_AUTO_SIGN_IN ? _devAutoSignIn() : Promise.resolve();
-  _devSignedIn.then(() => AUTH.init()); // session check — must run before any auth triggers fire
+  AUTH.init(); // session check — must run before any auth triggers fire
   // TODO — merge anonymous scan history on signup
 
   _loadGibberishDictionary(); // preload word dictionary for fast gibberish detection
 
   ensureTrialStarted();
+  pruneExpiredScans();        // retention enforced once per launch — see getThreads()
   initScanCountForToday();
+  loadChats();                // practice conversations survive a relaunch
   initMatchSlots();           // Feature 7: restore expired deletion slots
   maybeShowWelcomeBack();     // returning users only — see NOTE above
   initOnboarding();
@@ -796,7 +725,6 @@ window.addEventListener('DOMContentLoaded', () => {
   attachEdgeSwipeBack('screen-settings-profile-login',   popScreen, { excludeSelector: '.pl-crop-overlay' });
   attachEdgeSwipeBack('screen-settings-add-email',       popScreen);
   attachEdgeSwipeBack('screen-settings-forgot-password', popScreen);
-  attachEdgeSwipeBack('screen-settings-reset-sent',      popScreen);
   attachEdgeSwipeBack('screen-settings-personalization', popScreen);
   attachEdgeSwipeBack('screen-settings-tone-preview',    popScreen);
   attachEdgeSwipeBack('screen-settings-practice-prefs',  popScreen);
@@ -862,8 +790,8 @@ function updateTabGlassPill(name) {
     pill.style.opacity = '0';
     return;
   }
-  const barRect = bar.getBoundingClientRect();
-  const btnRect = btn.getBoundingClientRect();
+  const barRect = _rectA(bar);
+  const btnRect = _rectA(btn);
   const inset = 10;
   // Scan is the centre FAB, which would cover all but a sliver of the
   // indicator — so it keeps its shape and still travels to Scan's position,
@@ -912,9 +840,9 @@ let _tabDrag = null;
 
 function _tabCenters() {
   const bar = document.getElementById('tab-bar');
-  const br = bar.getBoundingClientRect();
+  const br = _rectA(bar);
   return TAB_DRAG_ORDER.map(n => {
-    const r = document.getElementById('tabbtn-' + n).getBoundingClientRect();
+    const r = _rectA(document.getElementById('tabbtn-' + n));
     return r.left - br.left + r.width / 2;
   });
 }
@@ -1070,8 +998,11 @@ function showTab(name) {
 
   // The tour drives its own tab switches; only end it when the user navigates
   // away on their own (e.g. tapping a tab mid-tour).
+  // The guided tour lives in archive/legacy-onboarding.js and is not loaded in
+  // the shipped bundle, so every one of its globals needs a typeof guard.
   const tour = document.getElementById('tour');
-  if (tour && !tour.hidden && !tourSwitchingTab) endTour();
+  if (tour && !tour.hidden && typeof tourSwitchingTab !== 'undefined' && !tourSwitchingTab
+      && typeof endTour === 'function') endTour();
 
   // Hide all screens and tabs
   document.querySelectorAll(".tab, .screen").forEach(el => el.classList.remove("active"));
@@ -1107,10 +1038,6 @@ function showTab(name) {
   }
   if (name === 'chats') {
     renderChatsList();
-    // TEMP — for review only, remove once checked: pop the level-up panel
-    // every time the Chats tab opens, so it can be looked at without
-    // needing a real match + real XP first.
-    setTimeout(() => { const lvl = getLevelForXP(getXP()); showLevelUpPanel(lvl + 1, lvl); }, 200);
   }
   if (name === 'assistant') {
     maybeShowScanIntro();
@@ -1188,7 +1115,7 @@ function _pfpUrl(p) {
 }
 function _pfpImgHTML(p) {
   const u = _pfpUrl(p);
-  return u ? `<img class="pfp-img" src="${u}" alt="" decoding="async" onerror="this.remove()">` : '';
+  return u ? `<img class="pfp-img" src="${_escapeHtml(u)}" alt="" decoding="async" onerror="this.remove()">` : '';
 }
 
 // ================================================================
@@ -1241,7 +1168,7 @@ const _PP_ICONS = {
 
 function _ppAvatar(p, cls) {
   const grad = `linear-gradient(145deg, ${p.gradientColors[0]}, ${p.gradientColors[1]})`;
-  return `<div class="${cls}" style="background:${grad}">${p.initial || ''}${_pfpImgHTML(p)}</div>`;
+  return `<div class="${_escapeHtml(cls)}" style="background:${_escapeHtml(grad)}">${_escapeHtml(p.initial || '')}${_pfpImgHTML(p)}</div>`;
 }
 
 function openPersonaProfile(profile) {
@@ -1283,7 +1210,7 @@ function openPersonaProfile(profile) {
       <button type="button" class="pp-tab" data-tab="tagged" onclick="personaProfileTab('tagged')" aria-label="Tagged">${_PP_ICONS.tagged}</button>
     </div>
     <div class="pp-grid" id="pp-grid">
-      ${posts.map((x, i) => `<button type="button" class="pp-cell" onclick="openPersonaPost(${i})" aria-label="Post ${i + 1}"><img src="${x.src}" alt="" loading="lazy" decoding="async"></button>`).join('')}
+      ${posts.map((x, i) => `<button type="button" class="pp-cell" onclick="openPersonaPost(${i})" aria-label="Post ${i + 1}"><img src="${_escapeHtml(x.src)}" alt="" loading="lazy" decoding="async"></button>`).join('')}
     </div>
     <div class="pp-empty" id="pp-tagged" hidden>
       <span class="pp-empty-ic">${_PP_ICONS.camera}</span>
@@ -1292,7 +1219,7 @@ function openPersonaProfile(profile) {
   document.getElementById('pp-feed-list').innerHTML = posts.map((x, i) => `
     <article class="pp-post" id="pp-post-${i}">
       <header class="pp-post-head">${_ppAvatar(p, 'pp-post-av')}<span><b>${handle}</b>${p.city ? `<i>${_escapeHtml(p.city)}</i>` : ''}</span></header>
-      <img class="pp-post-img" src="${x.src}" alt="" loading="lazy" decoding="async">
+      <img class="pp-post-img" src="${_escapeHtml(x.src)}" alt="" loading="lazy" decoding="async">
       ${x.caption ? `<p class="pp-post-cap"><b>${handle}</b> ${_escapeHtml(x.caption)}</p>` : ''}
     </article>`).join('');
   document.getElementById('pp-scroll').scrollTop = 0;
@@ -1503,8 +1430,6 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) _trac
 // persona's own interests and job, so each one is specific to her; tapping one
 // puts a ready-to-edit line in the message box (it never sends by itself).
 const _chipSets = Object.create(null);
-
-function _article(word) { return /^[aeiou]/i.test(word) ? 'an' : 'a'; }
 
 function _chipsFor(p) {
   // Plain greetings, written the way people actually text them — lowercase, no
@@ -1750,7 +1675,6 @@ function startChat() {
   // practice deck, not re-show "It's a Match"/"Keep Swiping" first.
   if (state.activeScreen === 'match') state.activeScreen = null;
   pushScreen("chat");
-  bindDevPaceToggle();
   _trackPracticeStart(false);
 
   // Every brand-new chat asks once, with no way to dismiss without choosing.
@@ -1834,8 +1758,6 @@ function selectChatMode(mode) {
     // open on its own.
   }, openingDelay);
 }
-
-function closeRealisticIntro() {}
 
 function openChatSettings() {
   const sheet = document.getElementById('chat-settings-sheet');
@@ -2099,6 +2021,7 @@ function chatSettingsDelete() {
   // Now matches onDeleteChat()'s own removal + re-render.
   const idx = chatStore.findIndex(c => c.id === state.activeChatId);
   if (idx >= 0) chatStore.splice(idx, 1);
+  saveChats();
   renderChatsList();
   exitChat();
 }
@@ -2141,7 +2064,6 @@ function openAiCoachFromChat() {
   _aiCoachSuggestOpen = false;
   renderAiCoachSuggestPanel();
   aiCoachDismissStagedPill();
-  aiCoachRemovePhoto();
   toggleAiCoachHistoryPanel(false);
   const limit = document.getElementById('aicoach-limit');
   if (limit) limit.hidden = true;
@@ -4287,7 +4209,7 @@ function openMsgMenu(msgId, row) {
   document.removeEventListener('click', _swallowKeyboardDismissClick, { capture: true });
   document.querySelectorAll('.kb-dismiss-click-blocker').forEach(el => el.remove());
 
-  const rowRect = row.getBoundingClientRect();
+  const rowRect = _rectA(row);
   overlay.hidden = false;
   _positionMsgMenu();
 
@@ -4313,14 +4235,44 @@ function openMsgMenu(msgId, row) {
 
 // Centres the stack vertically, clamped inside the safe area. Called on open
 // and again if the emoji row is expanded, since that makes the stack taller
+// ---- App coordinate space -------------------------------------------------
+// On iPad the whole app is laid out small and scaled up (see the
+// "iPad / large touch screens" block in style.css), so window.innerWidth /
+// innerHeight are DEVICE pixels while everything the app lays out, and every
+// CSS px it writes, is in the smaller pre-scale space. getBoundingClientRect()
+// reports post-transform (device) values, so any calculation that mixes a rect
+// with offsetWidth/innerHeight and then writes a px value has to agree on one
+// space. These return the app's own space; all three are no-ops on a phone,
+// where the scale is 1.
+function _appScale() {
+  const a = document.getElementById('app');
+  if (!a || !a.offsetWidth) return 1;
+  const s = a.getBoundingClientRect().width / a.offsetWidth;
+  return s > 0.01 ? s : 1;
+}
+function _appW() { const a = document.getElementById('app'); return a ? a.clientWidth  : window.innerWidth;  }
+// An element's rect in the app's own space. getBoundingClientRect() reports
+// post-transform (device) values, so any rect number that is going to be
+// written back out as a px style / transform has to come through here or it
+// lands scale-times too far. Identity on a phone.
+function _rectA(el) {
+  const r = el.getBoundingClientRect();
+  const s = _appScale();
+  if (s === 1) return r;
+  return { left: r.left / s, top: r.top / s, right: r.right / s, bottom: r.bottom / s,
+           width: r.width / s, height: r.height / s };
+}
+function _appH() { const a = document.getElementById('app'); return a ? a.clientHeight : window.innerHeight; }
+
 // and could otherwise push the actions off the bottom of the screen.
 function _positionMsgMenu() {
   const stack = document.getElementById('msg-menu-stack');
   if (!stack) return;
   const SAFE_TOP = 56, SAFE_BOTTOM = 40;
   const stackH = stack.offsetHeight;
-  let top = Math.round((window.innerHeight - stackH) / 2);
-  top = Math.max(SAFE_TOP, Math.min(top, window.innerHeight - stackH - SAFE_BOTTOM));
+  const appH = _appH();
+  let top = Math.round((appH - stackH) / 2);
+  top = Math.max(SAFE_TOP, Math.min(top, appH - stackH - SAFE_BOTTOM));
   stack.style.top = top + 'px';
 }
 
@@ -4504,7 +4456,10 @@ function _setChatTyping(chatId, on) {
   const chat = chatStore.find(c => c.id === chatId);
   if (chat) chat.typing = !!on;
   const row = document.querySelector(`#chats-list .chat-row[data-chat-id="${chatId}"] .chat-row-preview`);
-  if (row && chat) row.innerHTML = on ? _typingDotsHTML() : chat.lastMessage;
+  if (row && chat) {
+    if (on) row.innerHTML = _typingDotsHTML();
+    else row.textContent = chat.lastMessage || '';
+  }
   if (_chatIsLive(chatId)) {
     if (on) { setHeaderStatus('typing'); showTypingIndicator(); }
     else { hideTypingIndicator(); setHeaderStatus('online'); }
@@ -4752,12 +4707,12 @@ function _ensureScrollableOverflow(el, minOverflowPx) {
   const existing = document.getElementById(spacerId);
   if (existing) existing.remove();
   const kids = el.children;
-  const elRect = el.getBoundingClientRect();
+  const elRect = _rectA(el);
   // Last child that is actually laid out — a hidden one (display:none) has an
   // all-zero rect, which made the spacer enormous (the profile's hidden Tagged tab).
   let lastKid = null;
   for (let i = kids.length - 1; i >= 0; i--) { if (kids[i].getClientRects().length) { lastKid = kids[i]; break; } }
-  const lastRect = lastKid ? lastKid.getBoundingClientRect() : null;
+  const lastRect = lastKid ? _rectA(lastKid) : null;
   const paddingBottom = parseFloat(getComputedStyle(el).paddingBottom) || 0;
   const contentHeight = (lastRect ? lastRect.bottom - elRect.top : 0) + paddingBottom;
   const needed = (el.clientHeight + minOverflowPx) - contentHeight;
@@ -4935,7 +4890,7 @@ function _startDeckDragSmoothing(card) {
 // The deck draws from one of two libraries, chosen by the "Who to practice
 // with" setting (zelo_practice_mode: women / men / nonbinary / both) combined with
 // who the user is (zelo_onb_gender) — see initSwipeDeck's "which library".
-// Men / Non-binary still use the placeholder pool below — no such personas exist yet.
+// Women, men, and non-binary choices all draw from real persona records.
 //
 // On top of that sits the Age Range screen. It has a dual-handle slider
 // (zelo_age_filter_min / _max) and a "Show only people in this age range"
@@ -4991,6 +4946,11 @@ function _invalidateDeck() {
 // photo, for "swipe left". `photo` is the 0-based slot.
 const PRACTICE_TUTORIAL_CARDS = [{ id: 'z019', photo: 3 }, { id: 'z026', photo: 2 }];
 
+// Identity labels that put a persona in the non-binary deck. Matched against
+// the roster's own free-text `identity` string (e.g. "nonbinary (they/them)",
+// "genderfluid (she/they)"), so adding a persona is a data change only.
+const NONBINARY_IDENTITY_RE = /non-?binary|enby|genderqueer|genderfluid|agender/i;
+
 function initSwipeDeck(opts = {}) {
   if (opts.fresh || state.swipeIndex >= state.swipeProfiles.length) {
     // A reshuffled deck is a clean slate — a profile coming back around
@@ -5019,15 +4979,20 @@ function initSwipeDeck(opts = {}) {
       }
     };
 
-    // No real non-binary personas exist yet — until they're written, that one
-    // falls back to the 10 placeholder layout cards used for design review,
-    // rather than silently showing another deck with no indication the
-    // preference did anything. Women and Men are both real libraries.
+    // Non-binary draws only on real persona records whose own identity label
+    // puts them under the non-binary umbrella — never on placeholder cards.
+    // The roster is small (both persona files carry `identity`, so this grows
+    // on its own as more are written), which is why running out gets its own
+    // honest empty state instead of the generic "widen your filters" one.
     if (practiceMode === 'nonbinary') {
-      let pool = TEST_LAYOUT_PROFILES.filter(p => !skippedIds.has(p.id) && !excluded.has(p.id));
-      if (pool.length === 0) pool = TEST_LAYOUT_PROFILES; // everyone's skipped — refill rather than show an empty deck
+      const isEnby = p => NONBINARY_IDENTITY_RE.test(p.identity || '');
+      let pool = ALL_PROFILES.filter(p => isEnby(p) && !skippedIds.has(p.id) && !excluded.has(p.id));
+      // Everyone skipped — refill rather than show an empty deck, same as the
+      // other libraries do.
+      if (pool.length === 0) pool = ALL_PROFILES.filter(p => isEnby(p) && !excluded.has(p.id));
       state.swipeProfiles = shuffleArray([...pool]);
       state.swipeIndex    = 0;
+      if (pool.length === 0) state.deckEmptyReason = 'nonbinary';
       finishDeck();
       renderDeck();
       return;
@@ -5132,14 +5097,22 @@ function renderDeck(opts = {}) {
   const remaining = state.swipeProfiles.length - state.swipeIndex;
 
   if (remaining <= 0) {
-    const filtered = state.deckEmptyReason === 'filter';
+    const reason  = state.deckEmptyReason;
+    // 'nonbinary' gets its own copy: the non-binary roster is small, so telling
+    // someone to widen their age range would be false advice — no age range
+    // produces more people.
+    const icon  = reason === 'nonbinary' ? '🌱' : reason === 'filter' ? '🔍' : '✨';
+    const title = reason === 'nonbinary' ? 'More profiles on the way'
+                : reason === 'filter'    ? 'No one matches your filters'
+                : "You've seen everyone";
+    const sub   = reason === 'nonbinary' ? "We're still writing non-binary characters. You can switch who you practise with in Home settings."
+                : reason === 'filter'    ? 'Try widening your age range in Home settings.'
+                : 'Check your Chats or come back later for new people.';
     deck.insertAdjacentHTML('afterbegin', `
       <div class="deck-empty">
-        <div class="deck-empty-icon">${filtered ? '🔍' : '✨'}</div>
-        <div class="deck-empty-title">${filtered ? 'No one matches your filters' : "You've seen everyone"}</div>
-        <div class="deck-empty-sub">${filtered
-          ? 'Try widening your age range in Home settings.'
-          : 'Check your Chats or come back later for new people.'}</div>
+        <div class="deck-empty-icon">${icon}</div>
+        <div class="deck-empty-title">${title}</div>
+        <div class="deck-empty-sub">${sub}</div>
       </div>`);
     disableSwipeButtons();
     return;
@@ -5204,16 +5177,6 @@ const INTEREST_ICONS = {
   // Misc
   'Formula 1': '🏎️'
 };
-
-// Shared by the swipe card and the full-screen profile detail page.
-function buildInterestTagsHTML(interests) {
-  return interests
-    .map(i => {
-      const icon = INTEREST_ICONS[i] || '✨';
-      return `<span class="interest-tag">${icon} ${i}</span>`;
-    })
-    .join('');
-}
 
 // EXPERIMENT (2026-10-10): floating pill tab bar, in the style of LINE's —
 // a detached rounded bar inset from the screen edges with a soft grey chip
@@ -5433,35 +5396,6 @@ function _navigateCardPhoto(cardEl, dir) {
   _setCardPhoto(cardEl, next, photos);
 }
 
-// Wires the Open/Neutral/Cold pills inside the full-screen profile detail
-// page. Cold is locked for free users outside their 7-day trial window —
-// tapping it just shows the paywall note inline, it never commits the
-// selection.
-function attachProfileDetailModeListeners(profile) {
-  const wrap   = document.getElementById('pd-mode-pills');
-  const descEl = document.getElementById('pd-mode-desc');
-  wrap.querySelectorAll('.card-mode-pill').forEach(btn => {
-    btn.onclick = () => {
-      const mode = btn.dataset.mode;
-      const config = CARD_MODES.find(m => m.key === mode);
-      const locked = !config.free && !isColdAvailable();
-
-      descEl.textContent = config.desc;
-
-      if (locked) {
-        btn.classList.add('locked-tap');
-        setTimeout(() => btn.classList.remove('locked-tap'), 260);
-        return;
-      }
-
-      wrap.querySelectorAll('.card-mode-pill').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.cardModes[profile.name] = mode;
-    };
-  });
-}
-
-
 // ================================================================
 // DRAG / TOUCH SYSTEM
 // Mouse and touch share the same onDragStart/Move/End handlers.
@@ -5675,8 +5609,8 @@ function commitSwipe(cardEl, direction) {
   if (typeof tourSwipeArmed !== 'undefined' && tourSwipeArmed) flashSwipeFeedback(direction);
 
   const flyX = direction === 'right'
-    ?  window.innerWidth  * 1.6
-    : -window.innerWidth  * 1.6;
+    ?  _appW()  * 1.6
+    : -_appW()  * 1.6;
   const flyR = direction === 'right' ? 30 : -30;
 
   // Weightier, more deliberate fly-off than a plain accelerate-and-vanish —
@@ -6292,8 +6226,7 @@ function _pcBuildSteps(needGender) {
       ], mode(), canBack),
       apply: (o) => {
         localStorage.setItem('zelo_practice_mode', o.value);
-        cineAnswers.attracted = o.value;
-        localStorage.setItem('zelo_onb_attracted', o.value);
+        cineAnswers.attracted = o.value;   // in-memory only (onboarding nav state)
       } },
     { id: 'age', lines: [],
       type: async (st) => { st.lines.push(await _pcType('And what age range feels right for them?', { noBeat: true })); },
@@ -6624,7 +6557,7 @@ function enableSwipeButtons() {
 // ================================================================
 // PROFILE DETAIL — full-screen, modal-style page opened by tapping the
 // swipe card (not dragging it). Shows everything the card shows plus the
-// Open/Neutral/Cold mode pills, and moves Skip/I'm Interested down here.
+// Open/Neutral mode pills, and moves Skip/I'm Interested down here.
 // The Home tab stays rendered (and active) behind the dim backdrop —
 // this does NOT use pushScreen()/the .screen takeover system.
 // ================================================================
@@ -6755,7 +6688,7 @@ function _slideMountEl(el, track, widthPx) {
   // and snapped back to its normal size on release. Pinning the captured
   // height explicitly (cleared again in _slideUnmountEl) keeps it
   // identical throughout the drag instead of recomputing from content.
-  const height = el.getBoundingClientRect().height;
+  const height = _rectA(el).height;
   // Capture BEFORE the position:relative switch just below — that switch
   // alone (still position:absolute at this point, before any reparenting)
   // already resets scrollTop to 0 on a nested overflow-y:auto flex child in
@@ -7797,17 +7730,6 @@ function attachProfileDetailDragToClose() {
   });
 }
 
-function onProfileDetailSkip() {
-  closeProfileDetail();
-  onSkipBtn();
-}
-
-function onProfileDetailLike() {
-  closeProfileDetail();
-  onLikeBtn();
-}
-
-
 // ================================================================
 // MATCH OVERLAY
 // ================================================================
@@ -7839,6 +7761,7 @@ function showMatchOverlay(profile) {
     lastActive:  'just now',
     unread:      0
   });
+  saveChats();
 
   pushScreen('match');
 
@@ -7917,51 +7840,12 @@ function updateScanMessagePreview() {
   }
 }
 
-// ---- Legacy situation hooks — kept null-safe for the guided tour ----
-function openSituation()  { document.getElementById('situation')?.classList.add('open'); }
-function closeSituation() { document.getElementById('situation')?.classList.remove('open'); }
-
-
 // ================================================================
 // SCAN — DEDICATED SUB-PAGES
 // Message typing, screenshot upload, and the generated reply each
 // live on their own screen so the Scan tab stays a lightweight
 // entry point (tap a row → its own page → back into Scan).
 // ================================================================
-
-function openScanType() {
-  document.getElementById('asst-input')?.focus();
-}
-
-function confirmScanType() {
-  updateScanMessagePreview();
-  checkGenerateReady();
-}
-
-function renderScanTypeThreadPicker() {
-  const container = document.getElementById('scan-type-thread-picker');
-  if (!container) return;
-  const threads = getThreads();
-  if (threads.length === 0) {
-    container.innerHTML = '<p class="scan-type-thread-empty">No threads yet — you can save after analyzing.</p>';
-    return;
-  }
-  let html = '<p class="scan-type-thread-label">Save to a thread?</p>';
-  threads.forEach(t => {
-    const sel = state.preselectThreadId === t.id ? ' selected' : '';
-    const safeId = t.id.replace(/'/g, "\\'");
-    html += `<button class="scan-type-thread-row${sel}" onclick="togglePreselectThread('${safeId}')">
-      <span>${t.name}</span>
-      <span class="scan-type-thread-count">${t.scans.length} scan${t.scans.length !== 1 ? 's' : ''}</span>
-    </button>`;
-  });
-  container.innerHTML = html;
-}
-
-function togglePreselectThread(id) {
-  state.preselectThreadId = state.preselectThreadId === id ? null : id;
-  renderScanTypeThreadPicker();
-}
 
 function openScanUpload() {
   pushScreen('scan-upload');
@@ -8399,7 +8283,6 @@ const NO_MESSAGE_SENTINEL = "__NO_MESSAGE_FOUND__";
 async function _extractScreenshotConversation(file) {
   try {
     const base64Data = await _fileToBase64(file);
-    console.log("[Zelo OCR] extracting conversation at analyze time — base64 length:", base64Data.length, "mimeType:", file.type);
     if (!base64Data) return null;
 
     const { data, error } = await _aiInvoke('openai-proxy', {
@@ -8410,17 +8293,13 @@ async function _extractScreenshotConversation(file) {
       // supabase-js only puts a generic message on error.message for a
       // non-2xx response — the actual { error: "..." } body from
       // openai-proxy has to be read off error.context.
-      let details = error.message;
-      try {
-        if (error.context && typeof error.context.clone === "function") {
-          details = await error.context.clone().text();
-        }
-      } catch (_) { /* best-effort — fall back to error.message */ }
-      console.error("[Zelo OCR] openai-proxy invoke error:", error, "— response body:", details);
+      // The response body can echo back the extracted text, so only its
+      // status/shape is logged — never the body itself.
+      console.error("[Zelo OCR] openai-proxy failed:", error?.name || "error",
+                    "status:", error?.context?.status ?? "n/a");
       return null;
     }
 
-    console.log("[Zelo OCR] openai-proxy response:", data);
     const messages = Array.isArray(data?.messages) ? data.messages : [];
     if (!data?.found || !messages.length) return NO_MESSAGE_SENTINEL;
 
@@ -8433,7 +8312,8 @@ async function _extractScreenshotConversation(file) {
 
     return { messages, lastHerText };
   } catch (err) {
-    console.error("[Zelo OCR] openai-proxy invoke threw:", err);
+    // Name only: an exception's message can carry the payload that caused it.
+    console.error("[Zelo OCR] openai-proxy threw:", err?.name || "Error");
     return null;
   }
 }
@@ -8455,37 +8335,6 @@ function _showScanOcrError(message) {
 // ================================================================
 
 // ================================================================
-// DEMO SCAN OVERRIDE — fixed/scripted output for exactly one input string,
-// for a repeatable screen-recording demo (see generateReplies()/
-// _buildZeloRead() below for where these are consumed). Does not touch
-// carousel/layout/swipe code at all — only short-circuits which text ends
-// up in state.asstCurrentSet and state.eligibleStyles for this one input,
-// same as a real scan would populate them.
-// ================================================================
-const DEMO_SCAN_TRIGGER = "how's your day going";
-// TEMP — for review only, swap back to the previous warmer/longer/smooth
-// set once this recording is done: see git history / earlier session notes.
-const DEMO_SCAN_REPLIES = {
-  direct:  "You caught my attention, honestly.",
-  smooth:  "You looked like someone I'd regret not getting to know.",
-  playful: "I could tell you, but I feel like you'd make me prove it."
-};
-// Order matters: renderReplyCarousel() centers on index 0 (also the one
-// that gets the "Best Match" badge — see isBest in _cardHTML()) and clones
-// the *last* style as the left-peek phantom card — so this exact order is
-// what puts Smooth centered/Best Match, Playful peeking right (the real
-// next card), and a Direct phantom peeking left (clone of the last real style).
-const DEMO_SCAN_STYLES = ["smooth", "playful", "direct"];
-const DEMO_ZELO_READ = "Casual question, but it's your chance to make the conversation more interesting.";
-
-// Case/whitespace-insensitive, and normalizes curly quotes to straight —
-// iOS auto-capitalizes the first letter and smart-punctuation can turn "'"
-// into a curly apostrophe, either of which would otherwise silently miss
-// the trigger on a real device.
-function _isDemoScanTrigger(text) {
-  return String(text || "").trim().toLowerCase().replace(/[‘’]/g, "'") === DEMO_SCAN_TRIGGER;
-}
-
 const SAFE_FALLBACK_STYLES        = ["direct", "shorter"];
 // No Situation/Goal provided at all — gives a spread across the main axes
 // (neutral, direct, shorter, longer) so there's something to swipe through
@@ -8557,17 +8406,7 @@ function buildScanContextBlock() {
 }
 
 async function _fetchDeepSeekReply(style) {
-  // DEV — see FORCE_SCAN_ERROR_CARD at the top of this file. Fails every
-  // attempt (including the auto-retry, since it calls this same function),
-  // so Scan naturally lands on the error/Retry card after the same ~700ms
-  // beat a real failure would take.
-  if (FORCE_SCAN_ERROR_CARD) throw new Error('Forced for review (FORCE_SCAN_ERROR_CARD)');
-
   const contextBlock = buildScanContextBlock();
-
-  // DEV — confirms the tone actually varies per card/swipe. Remove once the
-  // tone-routing report is resolved; see _fetchDeepSeekReply() call sites.
-  console.log('[Zelo Tone]', style, '->', STYLE_LABELS[style]);
 
   let userPrompt = `Message I received: "${state.asstMessage}"\nTone: ${STYLE_LABELS[style]}`;
   if (contextBlock) userPrompt += `\nContext: ${contextBlock}`;
@@ -8801,7 +8640,7 @@ function _fitHerMessageBubble() {
     `font:${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily};max-width:${maxW - padX}px;`;
   probe.textContent = ta.value + "\u200b";
   row.appendChild(probe);
-  const w = Math.min(Math.ceil(probe.getBoundingClientRect().width) + padX + 2, maxW);
+  const w = Math.min(Math.ceil(_rectA(probe).width) + padX + 2, maxW);
   probe.remove();
   ta.style.flex = "0 0 auto";
   if (ta.style.width !== w + "px") ta.style.width = w + "px";
@@ -8833,7 +8672,6 @@ function _watchHerMessageBox() {
 function _buildZeloRead(message, ctx) {
   const msg = (message || "").trim();
   if (!msg) return "Drop her message in and I'll tell you what she's really saying.";
-  if (_isDemoScanTrigger(msg)) return DEMO_ZELO_READ;
   const low   = msg.toLowerCase();
   const words = low.split(/\s+/).filter(Boolean);
   const goal  = (ctx && ctx.goal ? String(ctx.goal) : "").toLowerCase();
@@ -8964,9 +8802,10 @@ async function onResultScreenshot(input) {
   _showResultConversationLoading();
 
   const extracted = await _extractScreenshotConversation(file);
-  // Requested: log the RAW OCR result before it's rendered, so a wrong/garbled
-  // extraction is debuggable if it recurs.
-  console.log("[Zelo OCR] result-box raw extracted conversation (before rendering):", JSON.stringify(extracted));
+  // NOT logged. This is the conversation read out of the user's screenshot;
+  // printing it would put their private messages into the device log (a
+  // webview console.log is bridged to os_log and captured by sysdiagnose).
+  // To debug an extraction, read it off the rendered result box instead.
 
   if (extracted && extracted !== NO_MESSAGE_SENTINEL) {
     // Do NOT write anything into the text box — the rendered conversation
@@ -9036,6 +8875,10 @@ const ACTIVITY_KEY = 'zelo_activity_log';
 const ACTIVITY_OWNER_KEY = 'zelo_activity_owner';
 const ACTIVITY_DAYS_KEY = 'zelo_active_days';
 const ACTIVITY_BEST_KEY = 'zelo_best_streak';
+// Last streak length and badge set we reported, so the events below fire once
+// per real change rather than on every render.
+const ACTIVITY_SEEN_STREAK_KEY = 'zelo_streak_reported';
+const ACTIVITY_SEEN_BADGES_KEY = 'zelo_badges_reported';
 const ACTIVITY_WINDOW_MS = 7 * 24 * 3600 * 1000;
 const ZeloActivity = {
   _syncing: false, _pulled: false, _flushTimer: null,
@@ -9186,6 +9029,35 @@ const ZeloActivity = {
       const l = t.querySelector('.mission-stat-label'), n = t.querySelector('.mission-stat-num');
       if (l && n && l.textContent.trim() === 'Scans') n.textContent = String(c.scan);
     });
+    this._reportStreakChange(s);
+    this._reportNewBadges();
+  },
+
+  // Fires once per real change. Numbers only — no content, same rule as the
+  // rest of the analytics allowlist.
+  _reportStreakChange(s) {
+    try {
+      const raw = localStorage.getItem(ACTIVITY_SEEN_STREAK_KEY);
+      const seen = raw == null ? null : Number(raw);
+      if (seen === s.current) return;
+      localStorage.setItem(ACTIVITY_SEEN_STREAK_KEY, String(s.current));
+      if (seen == null) return;                 // first run: record, don't report
+      if (s.current > seen)      ZeloAnalytics.track('streak_incremented', { days: s.current });
+      else if (s.current === 0)  ZeloAnalytics.track('streak_broken', { days: seen });
+    } catch (e) { /* analytics must never break the app */ }
+  },
+
+  _reportNewBadges() {
+    try {
+      if (typeof MILESTONE_BADGES === 'undefined') return;
+      const unlocked = MILESTONE_BADGES.filter(isBadgeUnlocked).map(b => b.id);
+      let seen;
+      try { seen = JSON.parse(localStorage.getItem(ACTIVITY_SEEN_BADGES_KEY) || 'null'); } catch (_) { seen = null; }
+      localStorage.setItem(ACTIVITY_SEEN_BADGES_KEY, JSON.stringify(unlocked));
+      if (!Array.isArray(seen)) return;         // first run: record, don't report
+      const fresh = unlocked.filter(id => !seen.includes(id));
+      fresh.forEach(id => ZeloAnalytics.track('badge_earned', { badge_id: id }));
+    } catch (e) { /* analytics must never break the app */ }
   },
 };
 document.addEventListener('DOMContentLoaded', () => ZeloActivity.render());
@@ -9214,30 +9086,14 @@ async function generateReplies() {
 
   if (!userInput && !hasImage) { shakeInputCard(); return; }
 
-  // Fixed demo input (DEMO_SCAN_TRIGGER, above) bypasses the scan limit and
-  // gibberish check too — it needs to be re-runnable an unlimited number of
-  // times across takes, not gated by the same limits a real scan is.
-  // FORCE_DEMO_SCAN_FOR_RECORDING (top of file) makes ANY input take this
-  // same fixed path — no need to type the exact trigger phrase on camera.
-  const isDemoScan = FORCE_DEMO_SCAN_FOR_RECORDING || _isDemoScanTrigger(userInput);
-
-  // FORCE_SCAN_ERROR_CARD also bypasses the limit — it's for previewing the
-  // error/Retry card on demand, which is useless if it silently no-ops the
-  // instant the day's real scan count (easy to burn through while testing)
-  // hits zero. This is almost certainly why "reply cards didn't show
-  // anything" happened — not a bug in the error-card code itself, just this
-  // gate returning before ever reaching it.
-  if (!isDemoScan && !FORCE_SCAN_ERROR_CARD && !isPaidUser() && scansRemainingToday() <= 0) {
+  if (!isPaidUser() && scansRemainingToday() <= 0) {
     refreshScanLimitBanner();
     return;
   }
 
   // Instant, local check — flags genuine keyboard mashing before anything
   // else happens. No API call, so normal messages pay zero extra delay.
-  // Temporarily suppressed (SUPPRESS_GIBBERISH_CHECK, top of file) for
-  // screen recording — flip back to false when done, nothing else here
-  // changed.
-  if (!isDemoScan && !SUPPRESS_GIBBERISH_CHECK && userInput && _looksLikeGibberish(userInput)) {
+  if (userInput && _looksLikeGibberish(userInput)) {
     const proceed = await _confirmGibberish(userInput);
     if (!proceed) return; // user chose to edit — nothing consumed, no navigation
   }
@@ -9247,7 +9103,7 @@ async function generateReplies() {
 
   // Analytics: source only ("text"/"screenshot") — never the content. Demo
   // (screen-recording) scans aren't real usage.
-  _lastScanSource = isDemoScan ? null : (hasImage ? 'screenshot' : 'text');
+  _lastScanSource = hasImage ? 'screenshot' : 'text';
   state.asstInputSource = _lastScanSource; // null for demo scans
   state.asstReplyIds = {};
   if (_lastScanSource) ZeloAnalytics.track('scan_started', { source: _lastScanSource });
@@ -9301,37 +9157,6 @@ async function generateReplies() {
 
   state.asstConversationMessages = conversationMessages;
   renderHerMessagePreview(messageText, conversationMessages);
-
-  if (isDemoScan) {
-    // Fixed, scripted output for a repeatable screen-recording demo — see
-    // DEMO_SCAN_TRIGGER/DEMO_SCAN_REPLIES/DEMO_SCAN_STYLES above. Deliberately
-    // skips recordScan()/decrementScanCount() so re-running it across takes
-    // never eats into the real scan limit. Everything else downstream
-    // (carousel rendering, centering, prefetch) is the exact same code a
-    // real scan uses — only the reply text and eligible-styles source differ.
-    state.asstCurrentSet    = { ...DEMO_SCAN_REPLIES };
-    state.asstMessage       = messageText;
-    state.asstContext       = context;
-    state.asstContextObj    = { ...state.scanContext };
-    state.eligibleStyles    = DEMO_SCAN_STYLES.slice();
-    state.currentStyleIndex = 0;
-    state.asstStyle         = state.eligibleStyles[0];
-
-    renderReplyCarousel();
-
-    const firstStyle = state.asstStyle;
-    setTimeout(() => {
-      _hideScanGen(true);
-      _renderCardText(firstStyle);
-      loading.hidden = true;
-      content.hidden = false;
-      _centerCarouselOnCurrent();
-      _onReplyRevealed();
-      _prefetchNextStyle();
-      _armAddTogglePill(); // content was hidden (0 layout) at _resetReplayAdd()'s own call — size it now that it's real
-    }, 1000); // fixed ~1s delay — same "Zelo is thinking…" beat every take, deterministic for recording
-    return;
-  }
 
   recordScan();
   decrementScanCount();
@@ -9439,7 +9264,10 @@ function _onReplyRevealed() {
       state.scanSavedToThread = true;
       const tsp = document.getElementById('thread-save-prompt');
       if (tsp) {
-        tsp.innerHTML = `<p class="thread-save-q thread-save-success">Saved to "${preThr.name}" ✓</p>`;
+        const saved = document.createElement('p');
+        saved.className = 'thread-save-q thread-save-success';
+        saved.textContent = `Saved to "${preThr.name}" ✓`;
+        tsp.replaceChildren(saved);
         tsp.hidden = false;
         setTimeout(() => { tsp.hidden = true; }, 1500);
       }
@@ -9470,6 +9298,11 @@ function _escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function _safeImageDataUrl(value) {
+  const src = String(value || '');
+  return /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=\r\n]+$/i.test(src) ? src : '';
 }
 
 // Auto-generated short title from a message — used both for a newly-saved
@@ -9881,7 +9714,7 @@ function _initCarouselDrag(track) {
 let _widgetCarouselIndex = 0;
 
 function _widgetCarouselCards(track) {
-  return Array.from(track.querySelectorAll(".widget-card"));
+  return Array.from(track.querySelectorAll(".widget-card:not([hidden])"));
 }
 
 function _closestWidgetCard(track) {
@@ -10356,8 +10189,8 @@ function _slideAddTogglePill(animate) {
   if (!pill || !wrap) return;
   const btn = document.getElementById('yr-add-tab-' + _replayAddWho);
   if (!btn || !btn.offsetWidth) return;
-  const wrapRect = wrap.getBoundingClientRect();
-  const btnRect  = btn.getBoundingClientRect();
+  const wrapRect = _rectA(wrap);
+  const btnRect  = _rectA(btn);
   pill.style.transition = animate === false ? 'none' : '';
   pill.style.width = btnRect.width + 'px';
   pill.style.transform = 'translateX(' + (btnRect.left - wrapRect.left - 3) + 'px)';
@@ -10492,10 +10325,6 @@ function replayPickTone(style) {
   if (style === _replayCurrentStyle()) return;
   ZeloAnalytics.track('tone_selected', { tone: style });
   _replaySwitchStyle(style);
-}
-
-function replayShorterReply() {
-  _replaySwitchStyle('shorter');
 }
 
 // ---- "Explain why" — real AI Coach, not a canned line. Opens the same
@@ -10767,7 +10596,7 @@ let cineStep    = 0;           // 0 = Phase 1; 'showcase'; 1-16 = Phase 2 screen
 const CINE_STEPS = {
   1:  { label: 'Continue', enabledFn: () => cineIntroReady(), entrance: cineRunIntroEntrance },
   2:  { label: 'Continue', enabledFn: () => !!cineAnswers.gender, entrance: cineRunQuestionEntrance },
-  3:  { label: 'Continue', enabledFn: () => !!cineAnswers.source, entrance: cineRunQuestionEntrance , entrance: cineRunQuestionEntrance },     // NEW — "Where did you hear about Zelo?"
+  3:  { label: 'Continue', enabledFn: () => !!cineAnswers.source, entrance: cineRunQuestionEntrance },     // NEW — "Where did you hear about Zelo?"
   4:  { label: 'Continue', enabledFn: () => !!cineAnswers.overthink, entrance: cineRunQuestionEntrance },
   5:  { label: 'Continue', enabledFn: () => (cineAnswers.help || []).length > 0, entrance: cineRunQuestionEntrance },
   6:  { label: 'Continue', enabledFn: () => !!cineAnswers.attracted, entrance: cineRunQuestionEntrance },
@@ -11344,30 +11173,6 @@ async function _convoAskName() {
   return name;
 }
 
-function _convoRenderChoices(opts, onPick) {
-  const wrap = document.getElementById('cine-convo-choices');
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  wrap.hidden = false;
-  opts.forEach((o, i) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'cine-convo-choice';
-    b.innerHTML = `<span aria-hidden="true">${o.icon || ''}</span><span>${o.label}</span>`;
-    b.onclick = (ev) => { ev.stopPropagation(); onPick(o, b); };
-    wrap.appendChild(b);
-    // Staggered slide-in, one-shot: the class is stripped once it has played.
-    _convoTimers.push(setTimeout(() => {
-      b.classList.add('cine-convo-choice--in');
-      _convoTimers.push(setTimeout(() => {
-        b.classList.remove('cine-convo-choice--in');
-        b.classList.add('cine-convo-choice--shown');
-      }, 460));
-    }, 90 * i));
-  });
-  _convoRelift();
-}
-
 // Clears the conversation one row at a time, bottom row first and upward,
 // so the stack empties the way it filled rather than vanishing at once.
 async function _convoClearLines() {
@@ -11528,16 +11333,10 @@ function cineShowcaseStart(e) {
 // so you can sign in first (in Xcode/the simulator, no console needed) and then walk through
 // onboarding manually while already signed in — onboarding_responses uploads live as you go,
 // instead of only after the whole flow finishes. Flip to false to restore "sign in -> app".
-const DEV_ONBOARDING_SIGNIN_STAYS = true;
-
 function cineShowcaseSignIn(e) {
   if (e) e.stopPropagation();
-  AUTH.startSignIn(DEV_ONBOARDING_SIGNIN_STAYS ? cineStayInOnboardingAfterSignIn : cineEnterAppAfterSignIn, cineShowcaseStart); // no account -> onboarding
+  AUTH.startSignIn(cineEnterAppAfterSignIn, cineShowcaseStart); // no account -> onboarding
 }
-// TEMP (testing) — see DEV_ONBOARDING_SIGNIN_STAYS above: the auth sheet is already closing
-// (_hideAll(), called before this runs); doing nothing here just leaves whichever onboarding
-// screen was underneath it showing, signed in.
-function cineStayInOnboardingAfterSignIn() {}
 function cineEnterAppAfterSignIn() {
   _cineClearTimers();
   // A returning user skips the intro entirely; marking it done first also keeps
@@ -12337,7 +12136,6 @@ function cineRunSetupEntrance() {
 
   const startedAt = Date.now();
   const startedOn = cineStep;
-  let attFired = false;
   const tick = () => {
     // Bail out if the user navigated away mid-animation — otherwise this
     // keeps ticking against a screen that is no longer on-screen and then
@@ -12349,13 +12147,6 @@ function cineRunSetupEntrance() {
     if (numEl)  numEl.textContent = String(pct);
     if (fillEl) fillEl.style.width = pct + '%';
     rows.forEach((r, i) => r.classList.toggle('done', t >= (i + 1) / rows.length));
-    // Real native permission prompt, fired once as the bar passes ~20% —
-    // mid-loading is where these mock "setting up" screens conventionally
-    // slip a real permission ask in, rather than a separate dedicated screen.
-    if (!attFired && pct >= 20) {
-      attFired = true;
-      requestTrackingPermission();
-    }
     if (t < 1) { _cineDelay(tick, 40); return; }
     _cineDelay(() => { if (cineStep === startedOn) cineGoTo(startedOn + 1); }, 420);
   };
@@ -12455,7 +12246,7 @@ async function _redeemPendingReferralIfAny() {
   if (!code || typeof ZeloRecords === 'undefined') return;
   const ok = await ZeloRecords.redeemReferralCode(code).catch(() => false);
   if (ok) {
-    try { ZeloAnalytics.track('referral_link_shared', { via: 'redeemed' }); } catch (e) {}
+    try { ZeloAnalytics.track('referral_signup_completed'); } catch (e) {}
     // Reward granting is not built yet (no real entitlement system exists) — this is a placeholder
     // confirmation only, deliberately vague about WHAT the reward is rather than promising one.
     setTimeout(() => showNotice('Invite code added', "You and your friend are both set — thanks for joining through them!"), 600);
@@ -12519,33 +12310,6 @@ function cineSwipeQueueInit() {
   if (cineSwipeQueueIndex < 0) cineSwipeQueueIndex = 0;
 }
 
-function cineRunSwipeEntrance() {
-  const card = document.getElementById('cine-swipe-card');
-  const backCard = document.getElementById('cine-swipe-card-back');
-  if (!card || card.dataset.filled) return;
-
-  // Real swipe-card content — reuses buildCardElement() (same component as
-  // the Home tab deck) instead of a mocked-up card, populated with the
-  // real Sophia persona. No photo wiring exists anywhere yet, so
-  // .swipe-card-photo just renders its default solid block, same as it
-  // would on the real deck.
-  if (typeof PROFILES !== 'undefined' && PROFILES.length) {
-    cineSwipeQueueInit();
-    const front = PROFILES[cineSwipeQueueIndex];
-    card.innerHTML = buildCardElement(front, 1).innerHTML;
-    card.dataset.filled = '1';
-    if (backCard) {
-      const nextProfile = PROFILES[(cineSwipeQueueIndex + 1) % PROFILES.length];
-      backCard.innerHTML = buildCardElement(nextProfile, 1).innerHTML;
-      backCard.dataset.filled = '1';
-    }
-  }
-
-  attachDragListeners(card);
-  cineArmDragSmoothing(card);
-  cineArmSwipeHint(card);
-}
-
 // Fixed-feel drag speed for the onboarding demo card — instead of the
 // shared onDragMove's raw 1:1 snap-to-finger (see the id guard there), this
 // eases the card's rendered position toward the live drag target every
@@ -12589,16 +12353,6 @@ function cineArmSwipeHint(card) {
   };
   card.addEventListener('mousedown', cancelHint, { once: true });
   card.addEventListener('touchstart', cancelHint, { once: true, passive: true });
-}
-
-// X button — routes through the same fly-away + commit pipeline a real
-// left-drag uses (commitSwipe -> transitionend -> cineCommitDemoSwipe),
-// instead of a separate instant path, so tap and drag behave identically.
-function cineSwipeDeclineTap(e) {
-  if (e) e.stopPropagation();
-  const card = document.getElementById('cine-swipe-card');
-  if (!card) return;
-  commitSwipe(card, 'left');
 }
 
 // Left swipe / X on the onboarding demo — instead of exiting onboarding,
@@ -12742,9 +12496,10 @@ function cineShowMatchContinuePrompt(demoChatId, prevState) {
 function requestNotifPermission() {
   const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
   if (LocalNotifications) {
-    return LocalNotifications.requestPermissions()
-      .then(r => localStorage.setItem('zelo_notif_permission', r?.display || ''))
-      .catch(() => {});
+    // Deliberately not cached: iOS lets this change in Settings at any time,
+    // so the only trustworthy answer is a live checkPermissions() at the point
+    // of use — which is what _fbScheduleNotification() does.
+    return LocalNotifications.requestPermissions().then(() => {}).catch(() => {});
   }
   // Plain web (Netlify) fallback — no native runtime, use the browser API.
   try {
@@ -12755,20 +12510,6 @@ function requestNotifPermission() {
   return Promise.resolve();
 }
 
-// App Tracking Transparency. No screen in the current reference sequence
-// asks for it, but the plugin is installed and this is the one call site —
-// kept so re-adding an ATT screen is a markup + CINE_STEPS change only.
-function requestTrackingPermission() {
-  const ATT = window.Capacitor?.Plugins?.AppTrackingTransparency;
-  if (!ATT) return Promise.resolve();  // no ATT equivalent on plain web
-  return ATT.requestPermission()
-    .then(r => localStorage.setItem('zelo_att_status', r?.status || ''))
-    .catch(() => {});
-}
-
-// Phase 1 / showcase are non-interactive except their own dedicated buttons.
-function cineNoop() {}
-
 // ---- End of Phase 2 (step 13) — screen 14 ("Start your 3-day FREE trial")
 // then, only if the user declines it (taps back), screen 14 (one-time
 // offer). Screen 13 is a dedicated screen built to match the reference
@@ -12776,15 +12517,61 @@ function cineNoop() {}
 // existing #screen-paywall, which stays in place only for the History tab's
 // upgradeNow() entry point, a separate already-shipped feature. ----
 
-// Reference-mockup values. Not a confirmed pricing decision — change here.
-const TRIAL_ANNUAL_PRICE  = 'THB 83.25/mo';
-const TRIAL_ANNUAL_NOTE   = 'THB 999.00 billed annually';
-const TRIAL_ANNUAL_LEGAL  = '3 days free, then THB 999.00 per year.<br>Billed annually and renews automatically unless canceled in the App Store.';
-const TRIAL_MONTHLY_PRICE = 'THB 399.00/mo';
-const TRIAL_MONTHLY_LEGAL = '3 days free, then THB 399.00 per month.<br>Renews automatically unless canceled in the App Store.';
-const OFFER_PCT = 78;
-const OFFER_WAS = 'THB 2,999.00';
-const OFFER_NOW = 'THB 699.00/year';
+// ── PRICING — one source of truth for every paywall surface ────
+// The two products: annual THB 999, monthly THB 399, 3-day free trial as the
+// introductory offer. Every price shown anywhere in the app is derived from
+// these, so no screen can drift into a different currency or a figure that
+// does not correspond to a real product (the old #screen-paywall was still in
+// USD, and the one-time offer struck through THB 2,999 — a price that has
+// never existed for anything).
+const PRICE_ANNUAL_THB   = 999;
+const PRICE_MONTHLY_THB  = 399;
+const PRICE_OFFER_THB    = 699;   // one-time win-back offer, annual
+const _thb = n => 'THB ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// The only honest anchor for an annual price is what 12 months actually cost
+// at the monthly rate — that is a real, purchasable comparison.
+const PRICE_ANNUAL_AT_MONTHLY_THB = PRICE_MONTHLY_THB * 12;   // 4,788
+const _pctOff = price => Math.round((1 - price / PRICE_ANNUAL_AT_MONTHLY_THB) * 100);
+
+const TRIAL_ANNUAL_PRICE  = _thb(PRICE_ANNUAL_THB / 12) + '/mo';
+const TRIAL_ANNUAL_NOTE   = _thb(PRICE_ANNUAL_THB) + ' billed annually';
+const TRIAL_ANNUAL_LEGAL  = '3 days free, then ' + _thb(PRICE_ANNUAL_THB) + ' per year.<br>Billed annually and renews automatically unless canceled in the App Store.';
+const TRIAL_MONTHLY_PRICE = _thb(PRICE_MONTHLY_THB) + '/mo';
+const TRIAL_MONTHLY_LEGAL = '3 days free, then ' + _thb(PRICE_MONTHLY_THB) + ' per month.<br>Renews automatically unless canceled in the App Store.';
+const OFFER_PCT = _pctOff(PRICE_OFFER_THB);
+const OFFER_WAS = _thb(PRICE_ANNUAL_AT_MONTHLY_THB);
+const OFFER_NOW = _thb(PRICE_OFFER_THB) + '/year';
+
+// #screen-paywall (History's upgradeNow() entry point) — same two products,
+// rendered from the same numbers instead of the hardcoded USD it shipped with.
+const PAYWALL_PRICES = {
+  monthlyPrice:  _thb(PRICE_MONTHLY_THB),
+  yearlyStrike:  _thb(PRICE_ANNUAL_AT_MONTHLY_THB),
+  yearlyPrice:   _thb(PRICE_ANNUAL_THB) + ' / year',
+  yearlyPerMo:   _thb(PRICE_ANNUAL_THB / 12)
+};
+
+const PAYWALL_ANNUAL_LABEL = PAYWALL_PRICES.yearlyPrice;   // for analytics
+
+function renderPaywallPrices() {
+  const set = (sel, text) => { const el = document.querySelector(sel); if (el) el.textContent = text; };
+  // .paywall-plan-price is "<amount> <small>/ mo</small>" — only the leading
+  // text node is the amount, so textContent would eat the "/ mo" suffix.
+  const setAmount = (sel, text) => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const first = el.firstChild;
+    if (first && first.nodeType === 3) first.nodeValue = text + ' ';
+    else el.textContent = text;
+  };
+  setAmount('#paywall-plan-monthly .paywall-plan-price', PAYWALL_PRICES.monthlyPrice);
+  set('#paywall-plan-monthly .paywall-plan-note',        PAYWALL_PRICES.monthlyPrice + ' billed monthly');
+  set('#paywall-plan-yearly .paywall-plan-strike',       PAYWALL_PRICES.yearlyStrike);
+  set('#paywall-plan-yearly .paywall-plan-strike-price', PAYWALL_PRICES.yearlyPrice);
+  setAmount('#paywall-plan-yearly .paywall-plan-price',  PAYWALL_PRICES.yearlyPerMo);
+  set('#paywall-plan-yearly .paywall-plan-permo-pill',   '(~' + PAYWALL_PRICES.yearlyPerMo + '/mo)');
+}
 
 function cineFinishPhase2() {
   _cineClearTimers();
@@ -12811,7 +12598,7 @@ function cineHideOverlay() {
 let _cineTrialPlan = 'annual';
 
 function cineShowTrialStart() {
-  ZeloAnalytics.track('paywall_viewed', { screen: 'trial_start', plan: 'annual', price: 'THB 999.00/year' });
+  ZeloAnalytics.track('paywall_viewed', { screen: 'trial_start', plan: 'annual', price: PAYWALL_ANNUAL_LABEL });
   _cineTrialPlan = 'annual';
   cineSelectTrialPlan('annual');
   const img = document.getElementById('cine-trial-hero-img');
@@ -12952,11 +12739,6 @@ function finishOnboardingNoPrompt() {
 // HOME TAB — first-visit practice-mode popup
 // ================================================================
 
-function showHomeModePopup() {
-  const el = document.getElementById('home-mode-popup');
-  if (el) el.hidden = false;
-}
-
 function homeModeSelect(mode, el) {
   localStorage.setItem('zelo_practice_mode', mode);
   localStorage.setItem('zelo_mode_selected', '1');
@@ -12977,31 +12759,31 @@ function homeModeSelect(mode, el) {
 // ================================================================
 
 function maybeShowWelcomeBack() {
+  // Second launch onward: the Zelo logo and its star, no words. The first launch has its own
+  // intro (the typewriter and word morph in onboarding), so this only runs once onboarding is done.
   if (!localStorage.getItem('zelo_onboarding_done')) return;
   const overlay = document.getElementById('welcome-back-overlay');
-  const type    = document.getElementById('welcome-back-type');
-  if (!overlay || !type) return;
+  const logo    = document.getElementById('welcome-back-type');
+  if (!overlay || !logo) return;
 
-  const name = localStorage.getItem('zelo_display_name');
-  const text = name ? `Welcome back, ${name}.` : 'Welcome back.';
-
+  // On the phone the native app-icon screen is still fading out for the first ~0.3s after the page
+  // paints, which would hide the start of the animation. Hold the logo back until it has gone.
+  const native = !!window.webkit?.messageHandlers?.zeloReady;
   overlay.hidden = false;
   overlay.classList.remove('welcome-back--out');
-  type.textContent = '';
-
-  let i = 0;
-  function tick() {
-    if (i < text.length) {
-      type.textContent = text.slice(0, ++i);
-      setTimeout(tick, 38);
-    } else {
-      setTimeout(() => {
-        overlay.classList.add('welcome-back--out');
-        setTimeout(() => { overlay.hidden = true; }, 400);
-      }, 1000);
-    }
-  }
-  tick();
+  logo.classList.remove('cine-p1-logo--in');
+  logo.style.opacity = '0';
+  setTimeout(() => {
+    logo.style.opacity = '';
+    void logo.offsetWidth;
+    logo.classList.add('cine-p1-logo--in');
+    // One tick as the star pops in (the star has a 0.28s delay in CSS).
+    setTimeout(() => { navigator.vibrate?.(6); _cineHaptic('MEDIUM'); }, 280);
+    setTimeout(() => {
+      overlay.classList.add('welcome-back--out');
+      setTimeout(() => { overlay.hidden = true; logo.classList.remove('cine-p1-logo--in'); }, 400);
+    }, 1500);
+  }, native ? 380 : 0);
 }
 
 
@@ -13015,21 +12797,111 @@ function maybeShowWelcomeBack() {
 let scanIntroShown = false;
 
 function maybeShowScanIntro() {}
-function scanBeginnerYes() {}
-function closeScanModal() {}
-
-
-
-
 // ================================================================
 // CHATS TAB
 // ================================================================
 
-// In-memory store of chat sessions. Starts empty; new matches are pushed here.
+// Practice chat sessions. Persisted across launches (see loadChats/saveChats
+// below) — this used to be a bare in-memory array, so every conversation was
+// lost on relaunch and the Chats tab was empty every time the app opened.
 let chatStore = [];
 
+// ── Chat persistence ─────────────────────────────────────────────
+// Stored SLIM: the persona is kept as an id and rehydrated from ALL_PROFILES
+// on load, because the live chat object holds the whole persona — four photo
+// paths and a long systemPrompt — which must not be duplicated into
+// localStorage once per chat.
+const CHATS_KEY       = 'zelo_chats';
+const CHATS_OWNER_KEY = 'zelo_chats_owner';
+const CHATS_MAX       = 30;    // most recent conversations kept
+const CHAT_MSGS_MAX   = 300;   // most recent messages kept per conversation
+
+// Everything that is part of the conversation's real state. Deliberately
+// EXCLUDES `typing` and `replyFailed`: both describe an in-flight reply, and
+// restoring them would show a permanent typing indicator or a stale error on
+// a conversation that is no longer doing anything.
+const _CHAT_SAVED_FIELDS = ['id', 'difficulty', 'mode', 'cardMode', 'lastMessage', 'lastActive',
+  'unread', 'blocked', 'pinned', 'nudges', 'strikes', 'cleanRun', 'compCount', 'lastCompAt',
+  'lastInviteAt', 'lastThreadAt', 'threadsUsed', 'threadPick', 'drive', 'status', 'scan'];
+
+function _chatsOwner() {
+  try {
+    return (typeof AUTH !== 'undefined' && AUTH.currentUserId && AUTH.currentUserId()) || '';
+  } catch (e) { return ''; }
+}
+
+function _serializeChats() {
+  return chatStore.slice(0, CHATS_MAX).map(c => {
+    const out = { profileId: c.profile && c.profile.id };
+    _CHAT_SAVED_FIELDS.forEach(k => { if (c[k] !== undefined) out[k] = c[k]; });
+    out.messages = (Array.isArray(c.messages) ? c.messages : []).slice(-CHAT_MSGS_MAX)
+      .map(m => ({ id: m.id, sender: m.sender, text: m.text, time: m.time, replyToId: m.replyToId }));
+    return out;
+  }).filter(c => c.profileId);
+}
+
+let _chatsSaveTimer = null;
+
+// Debounced: a single reply can touch the store several times in a few ms.
+function saveChats() {
+  clearTimeout(_chatsSaveTimer);
+  _chatsSaveTimer = setTimeout(saveChatsNow, 400);
+}
+
+function saveChatsNow() {
+  clearTimeout(_chatsSaveTimer);
+  try {
+    localStorage.setItem(CHATS_KEY, JSON.stringify(_serializeChats()));
+    const uid = _chatsOwner();
+    if (uid) localStorage.setItem(CHATS_OWNER_KEY, uid);
+  } catch (e) { /* quota or private mode — never break the app over a save */ }
+}
+
+// Called from AUTH.signOut() before it reloads, so the next person on this
+// device does not inherit the previous account's conversations.
+// AI Coach chats are NOT touched here: they live inside zelo_threads
+// (thread.coachChat, written by _persistAiCoachChatToThread) alongside saved
+// scan history, which sign-out has never cleared. Wiping that would be a
+// separate behaviour change, not part of making practice chats persist.
+function clearLocalChats() {
+  chatStore = [];
+  clearTimeout(_chatsSaveTimer);
+  try {
+    localStorage.removeItem(CHATS_KEY);
+    localStorage.removeItem(CHATS_OWNER_KEY);
+  } catch (e) {}
+}
+
+function loadChats() {
+  try {
+    // A different account on the same device must not inherit these. Only acts
+    // when the current user is actually known — at launch AUTH.init() has not
+    // resolved yet, and signOut() clears the keys itself.
+    const uid = _chatsOwner();
+    const owner = localStorage.getItem(CHATS_OWNER_KEY);
+    if (uid && owner && owner !== uid) { clearLocalChats(); return; }
+
+    const raw = JSON.parse(localStorage.getItem(CHATS_KEY) || '[]');
+    if (!Array.isArray(raw)) return;
+    chatStore = raw.map(c => {
+      // A persona that no longer exists (roster edited between releases) would
+      // otherwise render as an undefined avatar/name — drop that chat instead.
+      const profile = (typeof ALL_PROFILES !== 'undefined' ? ALL_PROFILES : []).find(p => p.id === c.profileId);
+      if (!profile) return null;
+      const chat = { ...c, profile, messages: Array.isArray(c.messages) ? c.messages : [],
+                     typing: false, replyFailed: null };
+      delete chat.profileId;
+      return chat;
+    }).filter(Boolean);
+  } catch (e) { chatStore = []; }
+}
+
+// Backgrounding is the last reliable moment before iOS can discard the web
+// view, so flush immediately rather than waiting out the debounce.
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveChatsNow(); });
+window.addEventListener('pagehide', saveChatsNow);
+
 function initChatsTab() {
-  // Chats start empty — only real matches populate the store.
   renderChatsList();
 }
 
@@ -13060,15 +12932,15 @@ function renderChatsList() {
     // A press that matured into the hold menu must not also open the chat when the finger lifts.
     row.onclick = () => { if (Date.now() - (row._heldAt || 0) < 700) return; openChatFromStore(chat); };
     row.innerHTML = `
-      <div class="chat-row-avatar" style="background:${grad}">${profile.initial}${_pfpImgHTML(profile)}</div>
+      <div class="chat-row-avatar" style="background:${grad}">${_escapeHtml(profile.initial)}${_pfpImgHTML(profile)}</div>
       <div class="chat-row-info">
         <div class="chat-row-top">
-          <span class="chat-row-name">${profile.name}, ${profile.age}</span>
-          <span class="chat-row-time">${chat.lastActive}</span>
+          <span class="chat-row-name">${_escapeHtml(profile.name)}, ${_escapeHtml(profile.age)}</span>
+          <span class="chat-row-time">${_escapeHtml(chat.lastActive)}</span>
         </div>
-        <span class="chat-row-preview">${chat.typing ? _typingDotsHTML() : chat.lastMessage}</span>
+        <span class="chat-row-preview">${chat.typing ? _typingDotsHTML() : _escapeHtml(chat.lastMessage)}</span>
       </div>
-      ${chat.unread ? `<div class="chat-row-unread">${chat.unread}</div>` : ''}
+      ${chat.unread ? `<div class="chat-row-unread">${_escapeHtml(chat.unread)}</div>` : ''}
     `;
 
     wrapper.appendChild(row);
@@ -13161,12 +13033,16 @@ function openChatRowMenu(chat, row) {
   // Below the row, right-aligned; above it when there is no room (tab bar).
   const card = o.querySelector('.crm-card');
   const w = card.offsetWidth, h = card.offsetHeight;
-  const below = r.bottom + 10 + h <= window.innerHeight - 96;
-  const top = below ? r.bottom + 10 : Math.max(60, r.top - 10 - h);
-  const left = Math.min(Math.max(16, r.right - w - 4), window.innerWidth - w - 16);
+  // r comes from getBoundingClientRect (device space); w/h and the left/top
+  // written below are app space, so bring r across before comparing.
+  const s = _appScale();
+  const rTop = r.top / s, rBottom = r.bottom / s, rRight = r.right / s;
+  const below = rBottom + 10 + h <= _appH() - 96;
+  const top = below ? rBottom + 10 : Math.max(60, rTop - 10 - h);
+  const left = Math.min(Math.max(16, rRight - w - 4), _appW() - w - 16);
   card.style.left = left + 'px';
   card.style.top  = top + 'px';
-  card.style.transformOrigin = `${Math.round(r.right - left)}px ${below ? '0' : '100%'}`;
+  card.style.transformOrigin = `${Math.round(rRight - left)}px ${below ? '0' : '100%'}`;
 
   o.querySelector('.crm-backdrop').onclick = () => closeChatRowMenu();
   lift.onclick = () => closeChatRowMenu();
@@ -13286,7 +13162,7 @@ function _chatSearchResults(q) {
 
 function _csAvatar(profile, cls) {
   const grad = `linear-gradient(145deg, ${profile.gradientColors[0]}, ${profile.gradientColors[1]})`;
-  return `<div class="${cls}" style="background:${grad}">${profile.initial}${_pfpImgHTML(profile)}</div>`;
+  return `<div class="${_escapeHtml(cls)}" style="background:${_escapeHtml(grad)}">${_escapeHtml(profile.initial)}${_pfpImgHTML(profile)}</div>`;
 }
 
 function _renderChatSearch() {
@@ -13315,18 +13191,21 @@ function _renderChatSearch() {
   const idOf = (c) => chatStore.indexOf(c);
   body.innerHTML =
     (people.length ? `<div class="csearch-sec"><span>PEOPLE</span></div>` + people.map(c => `
-      <button type="button" class="csearch-hit" onclick="chatSearchOpen(${idOf(c)})">
+      <button type="button" class="csearch-hit" data-chat-index="${idOf(c)}">
         ${_csAvatar(c.profile, 'csearch-av')}
         <span class="csearch-hit-text"><b>${_hiHTML(`${c.profile.name}, ${c.profile.age}`, q)}</b></span>
       </button>`).join('') : '')
     + (msgs.length ? `<div class="csearch-sec"><span>MESSAGES</span></div>` + msgs.map(({ chat, m }) => `
-      <button type="button" class="csearch-hit" onclick="chatSearchOpen(${idOf(chat)}, '${m.id || ''}')">
+      <button type="button" class="csearch-hit" data-chat-index="${idOf(chat)}" data-message-id="${_escapeHtml(m.id || '')}">
         ${_csAvatar(chat.profile, 'csearch-av')}
         <span class="csearch-hit-text">
           <b>${_escapeHtml(chat.profile.name)}<i>${m.sender === 'user' ? ' · You' : ''}</i></b>
           <span>${_hiHTML(m.text, q)}</span>
         </span>
       </button>`).join('') : '');
+  body.querySelectorAll('.csearch-hit').forEach(hit => {
+    hit.addEventListener('click', () => chatSearchOpen(Number(hit.dataset.chatIndex), hit.dataset.messageId || ''));
+  });
 }
 
 function chatSearchOpen(chatIdx, msgId) {
@@ -13425,6 +13304,7 @@ function openChatFromStore(chat) {
 
   // Mark unread cleared
   chat.unread = 0;
+  saveChats();   // unread is persisted, so opening a chat has to be recorded
 
   // Set up state as if we just matched
   state.character  = chat.profile;
@@ -13447,7 +13327,6 @@ function openChatFromStore(chat) {
   _forceChatRepaint();
   _trackPracticeStart(true);
   setTimeout(maybeShowPracticeReviewModal, 350);
-  bindDevPaceToggle();
   // No auto-focus here — opening a chat (from the list, or from a match)
   // shouldn't pop the keyboard on its own; same reasoning as her replies
   // not doing it either (see doTypingAndReply()/startChat()'s own note).
@@ -13497,6 +13376,7 @@ function syncChatToStore(text, sender, replyToId, chatId) {
   chat.messages.push(msg);
   chat.lastMessage = text;
   chat.lastActive  = 'just now';
+  saveChats();
   return id;
 }
 
@@ -13529,6 +13409,8 @@ function openDashboard() {
   document.getElementById('stat-chats').textContent   =
     chatStore.filter(c => c.messages.length > 0).length;
 
+  _renderProSummary();
+  _refreshRetentionPreview();
   pushScreen('dashboard');
 }
 
@@ -13539,21 +13421,82 @@ function openDashboard() {
 // creation moment yet to anchor it to.
 // ================================================================
 
+// ── ENTITLEMENT SEAM ────────────────────────────────────────────
+// The ONE place a real subscription plugs in. When StoreKit/RevenueCat lands,
+// getEntitlement() reads the verified receipt/server row and
+// ENTITLEMENT_UNLOCK_ALL goes to false — nothing else in the app needs to
+// change, because isPaidUser(), subscriptionExpired() and every screen that
+// shows plan state all read through here.
+//
+// Until then ENTITLEMENT_UNLOCK_ALL is true: there is no way to buy anything,
+// so gating features behind a purchase would just wall users out of an app
+// they cannot pay for. What it must NOT do is make the UI *claim* a
+// subscription exists — getEntitlement() reports the truth (active: false),
+// which is what the Zelo Pro screen and the Settings card display.
+const ENTITLEMENT_UNLOCK_ALL = true;
+
+function getEntitlement() {
+  // Shape kept deliberately close to a RevenueCat entitlement so wiring it up
+  // is a body swap, not a refactor of every caller.
+  return {
+    active:     false,
+    plan:       null,   // 'annual' | 'monthly'
+    priceLabel: null,   // e.g. 'THB 999 / year'
+    renewsAt:   null,   // ms epoch
+    // Real today: ensureTrialStarted() stamps zelo_trial_start on first launch
+    // and isWithinTrial() measures FREE_LIMITS.trialDays from it. Nothing gates
+    // on it yet (ENTITLEMENT_UNLOCK_ALL is true), but it is the correct value
+    // and StoreKit's own introductory-offer state replaces it later.
+    inTrial:    isWithinTrial(),
+    source:     'none'  // 'storekit' | 'revenuecat' | 'none'
+  };
+}
+
 function isPaidUser() {
-  return true;  // all features unlocked — paywall gates wired in later
+  return ENTITLEMENT_UNLOCK_ALL || getEntitlement().active;
+}
+
+// Settings' Zelo Pro card + the Zelo Pro screen, both rendered from
+// getEntitlement() so neither can drift back into claiming a plan that
+// isn't there.
+function _renderProSummary() {
+  const ent = getEntitlement();
+  const sub  = document.getElementById('settings2-pro-sub');
+  const link = document.getElementById('settings2-manage-link');
+  if (sub)  sub.textContent  = ent.active ? [ent.plan === 'monthly' ? 'Monthly plan' : 'Annual plan', ent.priceLabel].filter(Boolean).join(' · ') : 'No active subscription';
+  if (link) link.textContent = ent.active ? 'Manage subscription \u203a' : 'See plans \u203a';
+}
+
+function openSettingsZeloPro() {
+  const ent = getEntitlement();
+  const name  = document.getElementById('pro-plan-name');
+  const price = document.getElementById('pro-plan-price');
+  const renew = document.getElementById('pro-plan-renew');
+  const cta   = document.getElementById('pro-plan-cta');
+  const hero  = document.getElementById('pro-hero-sub');
+  if (name)  name.textContent = ent.active ? (ent.plan === 'monthly' ? 'Monthly Plan' : 'Annual Plan') : 'No active subscription';
+  if (price) { price.textContent = ent.priceLabel || ''; price.hidden = !ent.priceLabel; }
+  if (renew) {
+    renew.textContent = ent.active && ent.renewsAt
+      ? 'Renews on ' + new Date(ent.renewsAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+      : 'Manage or cancel any subscription in the App Store.';
+  }
+  if (cta)  cta.textContent  = ent.active ? 'Change Plan' : 'See Plans';
+  if (hero) hero.textContent = ent.active ? "You're getting the most out of Zelo." : 'Everything Zelo Pro unlocks.';
+  pushScreen('settings-zelo-pro');
 }
 
 // ── Expired-subscription LOCK (Cal AI style) ─────────────────────────────
 // When the subscription has ended the app still opens and Home (Scan) stays visible, but
 // everything that does something sends the user to the paywall. Still reachable while locked:
 // Settings/Account and the Streak (Journey + badges — view only; nothing here updates it).
-// There is no purchase system yet, so subscriptionExpired() is the ONE place a real entitlement
-// (StoreKit receipt / server subscription row) plugs in later. Until then it is driven by
-// DEV_SUBSCRIPTION or the temporary switch on Settings > Zelo Pro (localStorage zelo_dev_subscription).
-const DEV_SUBSCRIPTION = 'active';               // 'active' | 'expired'  — TEMP testing default
-const DEV_SHOW_SUBSCRIPTION_SWITCH = true;       // TEMP: the "simulate expired" row on Settings > Zelo Pro
+// Reads the entitlement seam above. While ENTITLEMENT_UNLOCK_ALL is true nothing
+// can expire (there is nothing to buy), so the locked app is unreachable by
+// design — it is not dead code, it is waiting on the same one switch.
 function subscriptionExpired() {
-  return (localStorage.getItem('zelo_dev_subscription') || DEV_SUBSCRIPTION) === 'expired';
+  if (ENTITLEMENT_UNLOCK_ALL) return false;
+  const ent = getEntitlement();
+  return !ent.active && !ent.inTrial;
 }
 const LOCKED_ALLOWED_SCREENS = new Set(['dashboard', 'refer-friends', 'journey', 'milestones', 'locked', 'paywall', 'trial-start', 'offer']);
 function _lockedAllows(screenName) {
@@ -13576,17 +13519,6 @@ function showLockedScreen() {
 }
 function lockedContinue() { cineShowTrialStart(); }
 function lockedClose() { popScreen(); }
-function devSetSubscriptionExpired(expired) {
-  localStorage.setItem('zelo_dev_subscription', expired ? 'expired' : 'active');
-  if (expired) state.activeTab = 'assistant'; // the locked app lives on Home
-}
-window.addEventListener('DOMContentLoaded', () => {
-  const row = document.getElementById('dev-subscription-row');
-  if (row) row.hidden = !DEV_SHOW_SUBSCRIPTION_SWITCH;
-  const t = document.getElementById('toggle-dev-expired');
-  if (t) t.checked = subscriptionExpired();
-});
-
 function ensureTrialStarted() {
   if (!localStorage.getItem('zelo_trial_start')) {
     localStorage.setItem('zelo_trial_start', String(Date.now()));
@@ -13598,12 +13530,6 @@ function isWithinTrial() {
   const trialMs = FREE_LIMITS.trialDays * 24 * 60 * 60 * 1000;
   return Date.now() - start < trialMs;
 }
-
-// Cold mode (swipe card) and the 3rd "Cold mode" women-trial both gate on this.
-function isColdAvailable() {
-  return isPaidUser() || isWithinTrial();
-}
-
 
 // ================================================================
 // SCAN LIMITS (free tier)
@@ -13641,7 +13567,6 @@ function initScanCountForToday() {
   if (localStorage.getItem('zelo_scan_date') !== todayKey()) {
     localStorage.setItem('zelo_scan_date', todayKey());
     localStorage.setItem('zelo_scan_count', String(FREE_LIMITS.scansPerDay));
-    localStorage.setItem('zelo_ad_used_today', '0');
     localStorage.setItem('zelo_scan_exhausted', '0');
   }
 }
@@ -13649,10 +13574,6 @@ function initScanCountForToday() {
 function scansRemainingToday() {
   if (isPaidUser()) return Infinity;
   return Number(localStorage.getItem('zelo_scan_count') || 0);
-}
-
-function adUsedToday() {
-  return localStorage.getItem('zelo_ad_used_today') === '1';
 }
 
 // The other of the two places zelo_scan_count is allowed to change — one
@@ -13669,20 +13590,9 @@ function decrementScanCount() {
   refreshScanLimitBanner();
 }
 
-// Mocked rewarded video — no ad SDK yet, watching it just adds +3 directly
-// to today's remaining count. User-initiated only, never forced.
-function watchRewardedAd() {
-  if (adUsedToday()) return;
-  ZeloAnalytics.track('ad_watched');
-  localStorage.setItem('zelo_ad_used_today', '1');
-  localStorage.setItem('zelo_scan_count', String(scansRemainingToday() + FREE_LIMITS.bonusScansPerAd));
-  refreshScanLimitBanner();
-}
-
 function refreshScanLimitBanner() {
   const banner = document.getElementById('scan-limit-banner');
   const text   = document.getElementById('scan-limit-text');
-  const adBtn  = document.getElementById('scan-limit-ad-btn');
   if (!banner) return;
 
   if (isPaidUser()) {
@@ -13695,7 +13605,6 @@ function refreshScanLimitBanner() {
   text.textContent = remaining > 0
     ? `${remaining} scan${remaining === 1 ? '' : 's'} left today`
     : 'No scans left today';
-  adBtn.hidden = !(remaining <= 0 && !adUsedToday());
 }
 
 
@@ -13740,41 +13649,6 @@ function formatTime(atTime) {
   if (isToday) return timeStr;
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   return days[d.getDay()] + ' ' + timeStr;
-}
-
-
-// ================================================================
-// SET THE PACE — HIDDEN DEV TOGGLE
-// Safety net only: lets the timing choice be reverted mid-chat without a
-// real settings screen. Buried behind a long-press on the chat profile
-// block's name text so it's never a visible, prominent control.
-// ================================================================
-
-let devPaceLongPressTimer = null;
-
-function bindDevPaceToggle() {
-  // Re-anchored to the profile block's name text — the status pill it used
-  // to hang off no longer exists (see .chat-profile-block); same "buried
-  // behind a long-press on unobtrusive header text" spirit as before.
-  const statusEl = document.getElementById('chat-profile-name');
-  if (!statusEl || statusEl.dataset.devBound) return;
-  statusEl.dataset.devBound = '1';
-
-  const start = () => { devPaceLongPressTimer = setTimeout(resetChatPace, 600); };
-  const cancel = () => clearTimeout(devPaceLongPressTimer);
-
-  statusEl.addEventListener('mousedown',  start);
-  statusEl.addEventListener('touchstart', start, { passive: true });
-  ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt =>
-    statusEl.addEventListener(evt, cancel)
-  );
-}
-
-function resetChatPace() {
-  if (!document.getElementById('screen-chat').classList.contains('active')) return;
-  state.chatModePending = null;
-  updateChatModeOptionUI();
-  document.getElementById('chat-mode-modal').hidden = false;
 }
 
 
@@ -13890,36 +13764,61 @@ function isInSilentGap() {
 // Free users get 2 threads permanently; slots don't restore on delete.
 // ================================================================
 
+// Pure read. Retention is enforced by pruneExpiredScans() — once at launch and
+// again whenever the setting changes — NOT from in here: getThreads() is called
+// from dozens of render paths, and deleting the user's history as a side effect
+// of reading it made every render a destructive write.
 function getThreads() {
   try { return JSON.parse(localStorage.getItem('zelo_threads') || '[]'); }
   catch { return []; }
 }
+
+// ms a scan is allowed to live, or null for "keep forever" / nothing chosen yet.
+// An unset preference deliberately prunes nothing: the user never asked for a
+// 30-day window just because the settings row happens to display one.
+function _retentionWindowMs() {
+  const pref = localStorage.getItem('zelo_history_retention_days');
+  if (!pref || pref === 'forever') return null;
+  const days = Number(pref);
+  if (!Number.isFinite(days) || days <= 0) return null;
+  return days * 24 * 60 * 60 * 1000;
+}
+
+// How many stored scans the given retention choice would delete right now.
+// Used to confirm before shortening the window (see settingsRetentionSelect).
+function retentionDeleteCount(value) {
+  if (!value || value === 'forever') return 0;
+  const days = Number(value);
+  if (!Number.isFinite(days) || days <= 0) return 0;
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  return getThreads().reduce((total, thread) => total
+    + (Array.isArray(thread.scans) ? thread.scans.filter(sc => sc.time && Number(sc.time) < cutoff).length : 0), 0);
+}
+
+// Deletes scans older than the chosen window, and any thread left with none.
+// Scans with no timestamp are kept — we can't prove they are expired, and
+// guessing would silently destroy data.
+function pruneExpiredScans() {
+  const windowMs = _retentionWindowMs();
+  if (!windowMs) return 0;
+  const cutoff = Date.now() - windowMs;
+  const threads = getThreads();
+  let removed = 0;
+  const kept = [];
+  threads.forEach(thread => {
+    const scans = Array.isArray(thread.scans) ? thread.scans : [];
+    const fresh = scans.filter(sc => !sc.time || Number(sc.time) >= cutoff);
+    removed += scans.length - fresh.length;
+    // A thread that had scans and now has none is gone; one that never had any
+    // (a freshly created, still-empty thread) is left alone.
+    if (fresh.length || !scans.length) kept.push(fresh.length === scans.length ? thread : { ...thread, scans: fresh });
+  });
+  if (removed) { try { localStorage.setItem('zelo_threads', JSON.stringify(kept)); } catch (e) {} }
+  return removed;
+}
 function saveThreads(arr) { localStorage.setItem('zelo_threads', JSON.stringify(arr)); }
 function getThreadCount()  { return Number(localStorage.getItem('zelo_thread_count') || 0); }
 function setThreadCount(n) { localStorage.setItem('zelo_thread_count', String(n)); }
-
-// Returns the thread object if save succeeds, or null with a reason string.
-function saveToThread(name, message, reply) {
-  const threads = getThreads();
-  const norm    = name.trim();
-  if (!norm) return { error: 'Enter a name first.' };
-
-  let thread = threads.find(t => t.name.toLowerCase() === norm.toLowerCase());
-  if (!thread) {
-    const count = getThreadCount();
-    // DEV — restore paid gate before release
-    if (!isPaidUser() && count >= 2) {
-      return { error: "You've hit your maximum threads. Delete one to make room or upgrade for unlimited." };
-    }
-    thread = { id: 'thread_' + Date.now(), name: norm, createdAt: Date.now(), scans: [], chat: [] };
-    threads.unshift(thread);
-    setThreadCount(count + 1);
-  }
-
-  thread.scans.push({ id: 'scan_' + Date.now(), message, reply, time: Date.now() });
-  saveThreads(threads);
-  return { thread };
-}
 
 function deleteThread(threadId) {
   const threads = getThreads().filter(t => t.id !== threadId);
@@ -13994,68 +13893,6 @@ function historyRowActionsDelete() {
   renderHistory();
 }
 
-// + button: check free-tier slot then show inline name input
-function openAddThread() {
-  const count = getThreadCount();
-  if (!isPaidUser() && count >= 2) {
-    const modal = document.getElementById('thread-upgrade-modal');
-    if (modal) modal.hidden = false;
-    return;
-  }
-
-  // If an input row is already open, just focus it
-  const existing = document.getElementById('thread-new-input-row');
-  if (existing) { existing.querySelector('input')?.focus(); return; }
-
-  const listEl = document.getElementById('thread-list');
-  const newBtn = listEl?.querySelector('.thread-edit-new-btn');
-  if (!listEl) return;
-
-  const row = document.createElement('div');
-  row.id = 'thread-new-input-row';
-  row.className = 'thread-new-input-row';
-  row.innerHTML = `
-    <input class="thread-save-input thread-new-name-input"
-           type="text" placeholder="Thread name…" autocomplete="off" maxlength="50" enterkeyhint="done" />
-    <button class="thread-save-btn" type="button">Add</button>
-  `;
-
-  const input = row.querySelector('input');
-  const addBtn = row.querySelector('button');
-
-  function commit() {
-    const name = input.value.trim();
-    row.remove();
-    if (!name) return;
-    const threads = getThreads();
-    if (!threads.some(t => t.name.toLowerCase() === name.toLowerCase())) {
-      const thread = { id: 'thread_' + Date.now(), name, createdAt: Date.now(), scans: [], chat: [] };
-      threads.unshift(thread);
-      setThreadCount(count + 1);
-      saveThreads(threads);
-    }
-    renderThreadList();
-  }
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); commit(); }
-    if (e.key === 'Escape') { row.remove(); }
-  });
-  addBtn.addEventListener('click', commit);
-
-  if (newBtn) listEl.insertBefore(row, newBtn);
-  else listEl.appendChild(row);
-
-  setTimeout(() => input.focus(), 30);
-}
-
-function cancelAddThread() {}
-function confirmAddThread() {}
-
-function dismissThreadUpgrade() {
-  document.getElementById('thread-upgrade-modal').hidden = true;
-}
-
 // ─── Swipe-to-delete helpers (threads + chats) ─────────────────────────────
 
 function showDeleteConfirm(message, onConfirm) {
@@ -14064,7 +13901,7 @@ function showDeleteConfirm(message, onConfirm) {
   overlay.className = 'mini-modal-overlay';
   overlay.innerHTML = `
     <div class="mini-modal-card">
-      <p class="mini-modal-body">${message}</p>
+      <p class="mini-modal-body">${_escapeHtml(message)}</p>
       <div class="mini-modal-actions">
         <button class="mini-modal-cancel">Cancel</button>
         <button class="mini-modal-confirm mini-modal-confirm--danger">Delete</button>
@@ -14078,45 +13915,6 @@ function showDeleteConfirm(message, onConfirm) {
 // ─── Thread list ────────────────────────────────────────────────────────────
 
 let _activeThreadDeleteRow = null;
-
-function _dismissActiveThreadDelete() {
-  if (!_activeThreadDeleteRow) return;
-  const del = _activeThreadDeleteRow.querySelector('.thread-row-inline-del');
-  if (del) { del.classList.remove('visible'); }
-  _activeThreadDeleteRow = null;
-}
-
-function _showThreadRowDelete(wrapper, threadId) {
-  if (_activeThreadDeleteRow === wrapper) {
-    _dismissActiveThreadDelete();
-    return;
-  }
-  _dismissActiveThreadDelete();
-  _activeThreadDeleteRow = wrapper;
-
-  let del = wrapper.querySelector('.thread-row-inline-del');
-  if (!del) {
-    del = document.createElement('button');
-    del.className = 'thread-row-inline-del';
-    del.textContent = 'Delete';
-    del.onclick = (e) => {
-      e.stopPropagation();
-      _activeThreadDeleteRow = null;
-      deleteThread(threadId);
-      renderThreadList();
-    };
-    wrapper.appendChild(del);
-  }
-  requestAnimationFrame(() => del.classList.add('visible'));
-}
-
-function toggleThreadEditMode() {
-  _dismissActiveThreadDelete();
-  threadEditMode = !threadEditMode;
-  const btn = document.getElementById('thread-edit-btn');
-  if (btn) btn.textContent = threadEditMode ? 'Done' : 'Edit';
-  renderThreadList();
-}
 
 // History now lives on its own screen (Fix 2/3). Old call sites that
 // refreshed the inline Scan list now refresh the History screen instead.
@@ -14148,11 +13946,6 @@ function openHistory(tab) {
   screen.classList.add('active');
   _revealLazyImages(screen);
 
-  // TEMP — for review only, remove once checked: pop the XP panel every
-  // time History opens, so it can be looked at without earning real XP.
-  // Passes a fake "before" 40 XP lower than current so the count-up
-  // animation actually has something to animate.
-  setTimeout(() => showXPPanel(10, 'New conversation!', Math.max(0, getXP() - 40)), 200);
 }
 
 function closeHistory() {
@@ -14354,11 +14147,11 @@ function renderHistory() {
       <span class="history-row-icon" style="background:${styleColor.bg};color:${styleColor.accent}">${rowIconHTML}</span>
       <div class="history-row-main">
         <div class="history-row-top">
-          <span class="history-row-name">${thread.name}</span>
+          <span class="history-row-name">${_escapeHtml(thread.name)}</span>
           <span class="history-row-time">${_scanHistoryTime(activity.time)}</span>
         </div>
-        <span class="history-row-preview">${activity.text}</span>
-        <span class="history-row-pill" style="background:${styleColor.bg};color:${styleColor.accent}">${pillLabel}</span>
+        <span class="history-row-preview">${_escapeHtml(activity.text)}</span>
+        <span class="history-row-pill" style="background:${styleColor.bg};color:${styleColor.accent}">${_escapeHtml(pillLabel)}</span>
       </div>
       <svg class="history-row-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -14445,7 +14238,8 @@ let _paywallAnimated = false;
 let _paywallAnimationTimers = [];
 
 function showPaywallNow() {
-  ZeloAnalytics.track('paywall_viewed', { screen: subscriptionExpired() ? 'locked' : 'paywall', plan: 'annual', price: 'THB 999.00/year' });
+  renderPaywallPrices();
+  ZeloAnalytics.track('paywall_viewed', { screen: subscriptionExpired() ? 'locked' : 'paywall', plan: 'annual', price: PAYWALL_ANNUAL_LABEL });
   _replaceActiveScreen('paywall');
   const declineBtn = document.getElementById('paywall-decline');
   if (!_paywallAnimated) {
@@ -14569,8 +14363,8 @@ function playPaywallCheckmarkIntro() {
   // 4. Travel — position + scale together, into the real step-1 icon's spot.
   _paywallAnimationTimers.push(setTimeout(() => {
     overlay.classList.remove('paywall-checkmark-overlay--pop'); // free up `transform` for the travel transition
-    const overlayRect = overlay.getBoundingClientRect();
-    const targetRect = stepIcon.getBoundingClientRect();
+    const overlayRect = _rectA(overlay);
+    const targetRect = _rectA(stepIcon);
     const dx = (targetRect.left + targetRect.width / 2) - (overlayRect.left + overlayRect.width / 2);
     const dy = (targetRect.top + targetRect.height / 2) - (overlayRect.top + overlayRect.height / 2);
     const scale = targetRect.width / overlayRect.width;
@@ -14849,8 +14643,8 @@ function _renderThreadScans() {
     const body = document.createElement('div');
     body.className = 'thread-scan-body';
     body.innerHTML = `
-      <div class="thread-scan-msg">${scan.message}</div>
-      <div class="thread-scan-reply">${scan.reply}</div>
+      <div class="thread-scan-msg">${_escapeHtml(scan.message)}</div>
+      <div class="thread-scan-reply">${_escapeHtml(scan.reply)}</div>
       <div class="thread-scan-time">${formatTime(scan.time)}</div>
     `;
     entry.appendChild(body);
@@ -14865,36 +14659,6 @@ function _updateScanEditCount() {
   const delBtn  = document.getElementById('scan-edit-delete-btn');
   if (countEl) countEl.textContent = checked + ' selected';
   if (delBtn)  delBtn.disabled = checked === 0;
-}
-
-function toggleScanEditMode() {
-  state.scanEditMode = !state.scanEditMode;
-  const editBtn = document.getElementById('scan-edit-btn');
-  const toolbar = document.getElementById('scan-edit-toolbar');
-  if (editBtn) editBtn.textContent = state.scanEditMode ? 'Done' : 'Edit';
-  if (toolbar) toolbar.hidden = !state.scanEditMode;
-  _renderThreadScans();
-  if (state.scanEditMode) _updateScanEditCount();
-}
-
-function deleteSelectedScans() {
-  const threads = getThreads();
-  const thread  = threads.find(t => t.id === state.activeThreadId);
-  if (!thread) return;
-  const checked = [...document.querySelectorAll('.scan-select-cb:checked')];
-  const indices = checked.map(cb => Number(cb.closest('.thread-scan-entry').dataset.scanIdx));
-  indices.sort((a, b) => b - a).forEach(i => thread.scans.splice(i, 1));
-  saveThreads(threads);
-  toggleScanEditMode();
-}
-
-function _deleteScanAtIndex(idx) {
-  const threads = getThreads();
-  const thread  = threads.find(t => t.id === state.activeThreadId);
-  if (!thread) return;
-  thread.scans.splice(idx, 1);
-  saveThreads(threads);
-  _renderThreadScans();
 }
 
 function closeThreadDetail() {
@@ -14974,6 +14738,7 @@ function openAiCoach(keepLinkedThread) {
   // no-op (sets null) for every other entry path, where History isn't open.
   _captureHistoryReturn();
   _aiCoachAutoThreadId = null; // fresh session — re-armed the instant a message is actually sent
+  _aiCoachShotConvo = null;    // an uploaded screenshot belongs to one visit, like the unlinked chat
   // If a text field on the previous screen (e.g. Tell Zelo More's free-text
   // step, or the "Other" wizard) is still focused/keyboard-up when this
   // opens, hand off cleanly instead of leaving it fighting a hidden field.
@@ -14996,7 +14761,6 @@ function openAiCoach(keepLinkedThread) {
   _aiCoachSuggestOpen = false;
   renderAiCoachSuggestPanel();
   aiCoachDismissStagedPill();
-  aiCoachRemovePhoto();
   toggleAiCoachHistoryPanel(false); // reset from any previous visit — classList state persists across screen show/hide
   const limit = document.getElementById('aicoach-limit');
   if (limit) limit.hidden = true;
@@ -15100,7 +14864,7 @@ function _aiCoachAddCardHTML() {
           <img src="${AICOACH_ADD_ICON_DIR}paste.png" alt="">
           <span>Paste<br>Message</span>
         </button>
-        <button type="button" class="aicoach-add-tile" onclick="document.getElementById('aicoach-photo-input').click()">
+        <button type="button" class="aicoach-add-tile" onclick="aiCoachUploadScreenshot()">
           <img src="${AICOACH_ADD_ICON_DIR}upload.png" alt="">
           <span>Upload<br>Screenshot</span>
         </button>
@@ -15113,6 +14877,53 @@ function _aiCoachAddCardHTML() {
         </button>
       </div>
     </div>`;
+}
+
+// Upload Screenshot: the same vision reader Scan uses turns the picture into the conversation, which
+// then rides along as the coach's context (shown in place of the "Add your conversation" card).
+let _aiCoachShotConvo = null;       // [{sender:'her'|'me', text}] read from an uploaded screenshot
+let _aiCoachShotLoading = false;
+
+function aiCoachUploadScreenshot() {
+  if (_aiCoachShotLoading) return;
+  let input = document.getElementById('aicoach-shot-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.id = 'aicoach-shot-input';
+    input.hidden = true;
+    input.addEventListener('change', aiCoachShotSelected);
+    document.body.appendChild(input);
+  }
+  input.click();
+}
+
+async function aiCoachShotSelected(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';   // allow picking the same file again
+  if (!file) return;
+  _aiCoachShotLoading = true;
+  const row = document.getElementById('aicoach-context-row');
+  if (row) {
+    row.className = 'aicoach-context-row aicoach-context-row--plain';
+    row.innerHTML = '<div class="aicoach-linked-head"><span class="yr-label aicoach-live-conv-label">Reading your screenshot…</span></div>';
+  }
+  const result = await _extractScreenshotConversation(file);
+  _aiCoachShotLoading = false;
+  if (result && result !== NO_MESSAGE_SENTINEL) {
+    _aiCoachShotConvo = result.messages.map(m => ({ sender: m.sender === 'me' ? 'me' : 'her', text: String(m.text || '') }));
+  } else {
+    showNotice(result === NO_MESSAGE_SENTINEL ? "Couldn't find a conversation" : "Couldn't read that screenshot",
+               result === NO_MESSAGE_SENTINEL ? 'Try a screenshot that shows the messages.' : 'Check your connection and try again.');
+  }
+  renderAiCoachContext();
+  document.getElementById('aicoach-input')?.focus();
+}
+
+function aiCoachRemoveShot() {
+  _aiCoachShotConvo = null;
+  renderAiCoachContext();
 }
 
 async function aiCoachAddPasteMessage() {
@@ -15143,9 +14954,10 @@ function renderAiCoachContext() {
     row.innerHTML = `
       <div class="aicoach-linked-head">
         <span class="yr-label aicoach-live-conv-label">Linked conversation</span>
-        <button type="button" class="aicoach-change-btn" onclick="openScanReplay('${thread.id}')">View full chat ›</button>
+        <button type="button" class="aicoach-change-btn" data-open-scan-replay>View full chat ›</button>
       </div>
       <div class="yr-conv aicoach-live-conv-box" id="aicoach-context-conv">${_convRowsHTML(conv.messages)}</div>`;
+    row.querySelector('[data-open-scan-replay]')?.addEventListener('click', () => openScanReplay(thread.id));
     const convBox = document.getElementById('aicoach-context-conv');
     if (convBox) requestAnimationFrame(() => { convBox.scrollTop = convBox.scrollHeight; });
   } else if (thread) {
@@ -15165,6 +14977,16 @@ function renderAiCoachContext() {
         </div>
         <button type="button" class="aicoach-change-btn" onclick="openThreadLinkPicker()">Change</button>
       </div>`;
+  } else if (_aiCoachShotConvo && _aiCoachShotConvo.length) {
+    row.className = 'aicoach-context-row aicoach-context-row--plain';
+    row.innerHTML = `
+      <div class="aicoach-linked-head">
+        <span class="yr-label aicoach-live-conv-label">Screenshot conversation</span>
+        <button type="button" class="aicoach-change-btn" onclick="aiCoachRemoveShot()">Remove</button>
+      </div>
+      <div class="yr-conv aicoach-live-conv-box" id="aicoach-context-conv">${_convRowsHTML(_aiCoachShotConvo)}</div>`;
+    const convBox = document.getElementById('aicoach-context-conv');
+    if (convBox) requestAnimationFrame(() => { convBox.scrollTop = convBox.scrollHeight; });
   } else {
     row.className = 'aicoach-context-row aicoach-context-row--add';
     row.innerHTML = _aiCoachAddCardHTML();
@@ -15343,7 +15165,7 @@ function _aiCoachZeloBubble(text, opts = {}) {
   const avatar = opts.greeting
     ? `<span class="aicoach-msg-avatar" aria-hidden="true">${_aiCoachBrandIconHTML()}</span>`
     : '';
-  const hi = opts.greeting ? `<p class="aicoach-bubble-hi">${opts.hiText || "Hi! I'm Zelo."}</p>` : '';
+  const hi = opts.greeting ? `<p class="aicoach-bubble-hi">${_escapeHtml(opts.hiText || "Hi! I'm Zelo.")}</p>` : '';
   // The waiting-for-reply placeholder (see sendAiCoachMessage()'s '…'
   // content) gets the same animated bouncing dots as the main chat's own
   // typing indicator, instead of a plain static ellipsis character —
@@ -15351,7 +15173,7 @@ function _aiCoachZeloBubble(text, opts = {}) {
   // own shape/theme instead of .typing-bubble's.
   const body = text === '…'
     ? `<div class="aicoach-typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`
-    : `<p class="aicoach-bubble-text">${text}</p>`;
+    : `<p class="aicoach-bubble-text">${_escapeHtml(text)}</p>`;
   row.innerHTML = `
     ${avatar}
     <div class="aicoach-bubble aicoach-bubble--zelo">
@@ -15365,8 +15187,18 @@ function _aiCoachZeloBubble(text, opts = {}) {
 function _aiCoachUserBubble(msg) {
   const row = document.createElement('div');
   row.className = 'aicoach-msg aicoach-msg--user';
-  const img = msg.image ? `<img class="aicoach-bubble-img" src="${msg.image}" alt="">` : '';
-  row.innerHTML = `<div class="aicoach-bubble aicoach-bubble--user">${img}${msg.content}</div>`;
+  const bubble = document.createElement('div');
+  bubble.className = 'aicoach-bubble aicoach-bubble--user';
+  const imageSrc = _safeImageDataUrl(msg.image);
+  if (imageSrc) {
+    const img = document.createElement('img');
+    img.className = 'aicoach-bubble-img';
+    img.src = imageSrc;
+    img.alt = '';
+    bubble.appendChild(img);
+  }
+  bubble.appendChild(document.createTextNode(String(msg.content || '')));
+  row.appendChild(bubble);
   return row;
 }
 
@@ -15378,9 +15210,14 @@ function _aiCoachSuggestion(text) {
     navigator.clipboard?.writeText(text).catch(() => {});
     flashLimitToast('Copied to clipboard');
   };
-  card.innerHTML = `
-    <span class="aicoach-suggestion-icon" aria-hidden="true">${_aiCoachBrandIconHTML()}</span>
-    <span class="aicoach-suggestion-text">${text}</span>`;
+  const icon = document.createElement('span');
+  icon.className = 'aicoach-suggestion-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = _aiCoachBrandIconHTML();
+  const label = document.createElement('span');
+  label.className = 'aicoach-suggestion-text';
+  label.textContent = String(text || '');
+  card.append(icon, label);
   return card;
 }
 
@@ -15600,44 +15437,6 @@ function aiCoachDismissStagedPill() {
   if (pill) pill.hidden = true;
 }
 
-// ================================================================
-// PHOTO ATTACH — PROTOTYPE (see #aicoach-photo-input in index.html).
-// Plain accept="image/*" with no capture attribute — opens the OS's
-// normal picker (library/files), not the camera, same file-input pattern
-// already used for onboarding photos. Attaches to the NEXT message sent
-// as an image bubble. No vision/OCR wiring to the AI proxy yet — this is
-// the attach/preview/send UI only.
-// ================================================================
-let _aiCoachPhotoDataUrl = null;
-
-function aiCoachPhotoSelected(e) {
-  const file = e.target.files && e.target.files[0];
-  e.target.value = ''; // allow re-selecting the same file later
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    _aiCoachPhotoDataUrl = reader.result;
-    const preview = document.getElementById('aicoach-photo-preview');
-    const img = document.getElementById('aicoach-photo-preview-img');
-    if (preview && img) {
-      img.src = _aiCoachPhotoDataUrl;
-      preview.hidden = false;
-    }
-    // The OS photo picker taking over the screen necessarily hides the
-    // keyboard while it's up (that part isn't ours to control) — this
-    // brings it right back the instant control returns, so the user isn't
-    // left having to tap back into the field themselves.
-    document.getElementById('aicoach-input')?.focus();
-  };
-  reader.readAsDataURL(file);
-}
-
-function aiCoachRemovePhoto() {
-  _aiCoachPhotoDataUrl = null;
-  const preview = document.getElementById('aicoach-photo-preview');
-  if (preview) preview.hidden = true;
-}
-
 function handleAiCoachKeyDown(e) {
   if (e.key === 'Enter') sendAiCoachMessage();
 }
@@ -15665,7 +15464,7 @@ function _buildAiCoachMessages() {
   // Opened from a chat's own composer (see openAiCoachFromChat()) never
   // sets a linked thread — that conversation instead lives in chatStore,
   // read here the same way _aiCoachAnalyzingCard()'s on-screen replay does.
-  const liveConv = _aiCoachChatSheetOpen ? _aiCoachLiveChatConversation() : [];
+  const liveConv = _aiCoachChatSheetOpen ? _aiCoachLiveChatConversation() : (_aiCoachShotConvo || []);
   let system =
     'You are Zelo, a casual texting coach. Never formal, never therapist-like. ' +
     'You talk like a smart friend giving quick, honest advice. Keep replies short, direct, no fluff. ';
@@ -15734,16 +15533,10 @@ async function sendAiCoachMessage(preset) {
     : typedText;
 
   // A staged suggestion (see aiCoachStagePrompt()) rides along with
-  // whatever's typed, folded into the same send — it's a preview, not a
-  // button, exactly like the photo attachment right next to it.
+  // whatever is typed, folded into the same send.
   if (stagedQuestion) aiCoachDismissStagedPill();
 
-  const photo = _aiCoachPhotoDataUrl;
-  if (!text && !photo) return;
-  // No vision wiring yet (see aiCoachPhotoSelected()'s note) — a photo
-  // with no caption still needs SOME text so the bubble and the message
-  // sent to the AI proxy aren't blank.
-  if (!text && photo) text = '[Photo attached]';
+  if (!text) return;
 
   // Daily limit (Fix 8) — AI Coach shares the 10/day scan budget
   if (!isPaidUser() && scansRemainingToday() <= 0) {
@@ -15753,7 +15546,6 @@ async function sendAiCoachMessage(preset) {
   }
 
   if (input && preset == null) input.value = '';
-  if (photo) aiCoachRemovePhoto();
 
   // A staged suggestion (e.g. "Is she interested?") needs an actual
   // message to work from. If there's no linked thread AND the user sent
@@ -15778,7 +15570,7 @@ async function sendAiCoachMessage(preset) {
     return;
   }
 
-  _aiCoachChat.push({ id: _newMsgId(), role: 'user', content: text, image: photo || null, time: Date.now() });
+  _aiCoachChat.push({ id: _newMsgId(), role: 'user', content: text, time: Date.now() });
   _ensureAiCoachAutoThread();
   if (!isPaidUser()) decrementScanCount();
 
@@ -16075,8 +15867,6 @@ function _ensureAiCoachAutoThread() {
   _aiCoachAutoThreadId = _createAiCoachThreadFromFirstMessage(firstUserMsg).id;
 }
 
-// ── "How it works" popup (Fix 5 — blank for now) ───────────────
-function showAiCoachHowItWorks() { document.getElementById('aicoach-hiw-overlay').hidden = false; }
 function hideAiCoachHowItWorks() { document.getElementById('aicoach-hiw-overlay').hidden = true; }
 
 // ── Thread link picker (Fix 7) ─────────────────────────────────
@@ -16128,7 +15918,7 @@ function openThreadLinkPicker() {
         : _aiCoachTopicIconHTML('reply');
       btn.innerHTML = `
         <span class="thread-link-avatar history-row-icon" style="background:${styleColor.bg};color:${styleColor.accent}">${rowIconHTML}</span>
-        <span class="thread-link-name">${t.name}</span>
+        <span class="thread-link-name">${_escapeHtml(t.name)}</span>
         <span class="thread-link-count">${t.scans.length} scan${t.scans.length !== 1 ? 's' : ''}</span>`;
       btn.onclick = () => linkThread(t.id);
       list.appendChild(btn);
@@ -16137,23 +15927,13 @@ function openThreadLinkPicker() {
   overlay.hidden = false;
 }
 
-function toggleAiCoachCard() {
-  const body    = document.getElementById('aicoach-card-body');
-  const sub     = document.getElementById('aicoach-card-sub');
-  const chevron = document.getElementById('aicoach-card-chevron');
-  if (!body) return;
-  const opening = body.hidden;
-  body.hidden = !opening;
-  if (sub)     sub.hidden = !opening;
-  if (chevron) chevron.classList.toggle('aicoach-card-chevron--open', opening);
-}
-
 function closeThreadLinkPicker() {
   const overlay = document.getElementById('thread-link-overlay');
   if (overlay) overlay.hidden = true;
 }
 
 function linkThread(id) {
+  _aiCoachShotConvo = null;   // a linked chat replaces any uploaded screenshot
   setLinkedThreadId(id);
   closeThreadLinkPicker();
   refreshAiCoachCard();
@@ -16273,7 +16053,7 @@ function _aiCoachHistoryRowHTML(entry) {
   // transparent exposes their soft drop-shadow edge directly against the
   // row background, which reads as a poorly-cropped smudge in dark mode.
   return `
-    <button type="button" class="aicoach-history-row${entry.active ? ' selected' : ''}" data-thread-id="${entry.id}" onclick="aiCoachHistorySelect('${entry.id}')">
+    <button type="button" class="aicoach-history-row${entry.active ? ' selected' : ''}" data-thread-id="${_escapeHtml(entry.id)}">
       <span class="aicoach-history-row-icon" style="background:${colors.bg};color:${colors.accent}">${iconHTML}</span>
       <span class="aicoach-history-row-main">
         <span class="aicoach-history-row-top">
@@ -16281,7 +16061,7 @@ function _aiCoachHistoryRowHTML(entry) {
           <span class="aicoach-history-row-time">${_scanHistoryTime(entry.updatedAt)}</span>
         </span>
         <span class="aicoach-history-row-preview">${_escapeHtml(entry.preview)}</span>
-        <span class="aicoach-history-row-pill" style="background:${colors.bg};color:${colors.accent}">${entry.pillText}</span>
+        <span class="aicoach-history-row-pill" style="background:${colors.bg};color:${colors.accent}">${_escapeHtml(entry.pillText)}</span>
       </span>
       ${entry.pinned ? '<span class="aicoach-history-pin-dot" aria-hidden="true"></span>' : ''}
     </button>`;
@@ -16308,6 +16088,7 @@ function renderAiCoachHistoryPanel() {
   // HTML attributes.
   list.querySelectorAll('.aicoach-history-row').forEach(row => {
     const id = row.dataset.threadId;
+    row.addEventListener('click', () => aiCoachHistorySelect(id));
     row.addEventListener('touchstart', () => {
       clearTimeout(_aiCoachLongPressTimer);
       _aiCoachLongPressTimer = setTimeout(() => openAiCoachRowActions(id), 500);
@@ -16334,7 +16115,6 @@ function aiCoachHistoryNewChat() {
   _aiCoachSuggestOpen = false;
   renderAiCoachSuggestPanel();
   aiCoachDismissStagedPill();
-  aiCoachRemovePhoto();
   toggleAiCoachHistoryPanel(false);
 }
 
@@ -16450,7 +16230,12 @@ function saveDisplayName(name) {
 // that domain — redemption itself only ever needs the code, typed into the app directly (step 8).
 const REFERRAL_DOMAIN = 'zelofficial.com/join/';
 async function getReferralCode() {
-  const code = await ZeloRecords.getMyReferralCode();
+  let code = await ZeloRecords.getMyReferralCode();
+  // No code usually means the account has no profile row to hold it (the server refuses to hand out a
+  // code it could not save). Create the row, then ask once more.
+  if (!code && typeof AUTH !== 'undefined' && AUTH.ensureProfile && await AUTH.ensureProfile()) {
+    code = await ZeloRecords.getMyReferralCode();
+  }
   return code || null;
 }
 async function _referralFullUrl() {
@@ -16464,7 +16249,7 @@ function openReferFriends() {
     const el = document.getElementById('refer-link-text');
     el.textContent = 'Loading…';
     const code = await getReferralCode();
-    el.textContent = code || "Couldn't load your code — check your connection";
+    el.textContent = code || "Couldn't load your code. Try again in a moment.";
   };
   if (typeof AUTH !== 'undefined' && AUTH.signedIn && !AUTH.signedIn()) { AUTH.requireAuth('refer-friends', go); return; }
   go();
@@ -16473,8 +16258,11 @@ function closeReferFriends() { popScreen(); }
 
 async function copyReferralLink() {
   const code = await getReferralCode();
-  if (!code) { showChatToast("Couldn't load your code — check your connection"); return; }
-  navigator.clipboard?.writeText(code).then(() => showCopyToast('Referral code copied to clipboard')).catch(() => {});
+  if (!code) { showChatToast("Couldn't load your code. Try again in a moment."); return; }
+  navigator.clipboard?.writeText(code).then(() => {
+    ZeloAnalytics.track('referral_link_shared', { via: 'copy' });
+    showCopyToast('Referral code copied to clipboard');
+  }).catch(() => {});
 }
 
 // The ONE share entry point (just "Share with friends" now — no custom per-app icon row). The real
@@ -16485,8 +16273,8 @@ async function copyReferralLink() {
 // rather than Zelo's, since that preview reflects the shared URL, not which app initiated the share.
 async function shareReferral() {
   const code = await getReferralCode();
-  if (!code) { showChatToast("Couldn't load your code — check your connection"); return; }
-  ZeloAnalytics.track('referral_link_shared');
+  if (!code) { showChatToast("Couldn't load your code. Try again in a moment."); return; }
+  ZeloAnalytics.track('referral_link_shared', { via: 'native_share' });
   const url = await _referralFullUrl();   // needs a real absolute URL
   const text = `Join me on Zelo! Use my code: ${code}`;
   const handlers = window.webkit && window.webkit.messageHandlers;
@@ -16522,9 +16310,51 @@ function setLbCategory(c)   { lbCategory   = c; renderLeaderboard(); }
 // Leaderboard settings sheet — skeleton only. Toggles flip their own
 // switch visually; nothing is persisted or wired to real behavior yet
 // (same build-architecture-first convention as the rest of this screen).
+// ── Leaderboard settings ────────────────────────────────────────
+// These used to be three checkboxes wired to a function that only vibrated:
+// nothing persisted, nothing changed, and two of them read as privacy
+// controls ("Show me on leaderboard", "Display as anonymous"). They are real
+// now. Anonymous is ON by default, which is what the Privacy Policy already
+// states ("By default you appear ... as an anonymized Player #[number]").
+const LB_SETTINGS_KEY = 'zelo_lb_settings';
+const LB_PLAYER_NO_KEY = 'zelo_lb_player_no';
+const LB_SETTINGS_DEFAULTS = { show: true, anon: true, notify: false };
+
+function lbSettings() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LB_SETTINGS_KEY) || '{}');
+    return { ...LB_SETTINGS_DEFAULTS, ...(raw && typeof raw === 'object' ? raw : {}) };
+  } catch (e) { return { ...LB_SETTINGS_DEFAULTS }; }
+}
+
+function _lbSaveSettings(next) {
+  try { localStorage.setItem(LB_SETTINGS_KEY, JSON.stringify(next)); } catch (e) {}
+}
+
+// Stable per device so the anonymous handle doesn't change under the user
+// between sessions.
+function lbPlayerNumber() {
+  let n = localStorage.getItem(LB_PLAYER_NO_KEY);
+  if (!n) {
+    n = String(1000 + Math.floor(Math.random() * 9000));
+    try { localStorage.setItem(LB_PLAYER_NO_KEY, n); } catch (e) {}
+  }
+  return n;
+}
+
+// The name to show for THIS user on the board.
+function lbDisplayName() {
+  return lbSettings().anon ? 'Player #' + lbPlayerNumber() : getDisplayName();
+}
+
 function openLeaderboardSettings() {
   const sheet = document.getElementById('lb-settings-sheet');
-  if (sheet) sheet.hidden = false;
+  if (!sheet) return;
+  const cfg = lbSettings();
+  sheet.querySelectorAll('[data-lb-setting]').forEach(input => {
+    input.checked = !!cfg[input.dataset.lbSetting];
+  });
+  sheet.hidden = false;
 }
 function closeLeaderboardSettings() {
   const sheet = document.getElementById('lb-settings-sheet');
@@ -16532,13 +16362,19 @@ function closeLeaderboardSettings() {
 }
 function toggleLbSetting(el) {
   navigator.vibrate?.(4);
+  const key = el && el.dataset ? el.dataset.lbSetting : null;
+  if (!key) return;
+  const next = lbSettings();
+  next[key] = !!el.checked;
+  _lbSaveSettings(next);
+  renderLeaderboard();   // the change has to be visible immediately
 }
 
 // Shared rank lookup — used by the full leaderboard screen and by the
 // Account page's compact leaderboard card, so both always agree.
 function getMyLeaderboardEntry() {
   const data   = getLbData(lbTimeFilter, lbCategory);
-  const myName = getDisplayName();
+  const myName = lbDisplayName();
   return data.find(e => e.name === myName) || { rank: data.length + 1, name: myName, score: 0 };
 }
 
@@ -16563,7 +16399,7 @@ function _lbTimerInfo(filter) {
 
 function renderLeaderboard() {
   const data       = getLbData(lbTimeFilter, lbCategory);
-  const myName     = getDisplayName();
+  const myName     = lbDisplayName();
   const myEntry    = getMyLeaderboardEntry();
   const unit       = LB_UNITS[lbCategory] || 'points';
 
@@ -16621,7 +16457,7 @@ function renderLeaderboard() {
       const r = rankWord[e.rank];
       return `
         <div class="lb-podium-rank-bg lb-podium-rank-bg--${r}">${e.rank}</div>
-        <div class="lb-podium-name lb-podium-name--${r}">${e.name}</div>
+        <div class="lb-podium-name lb-podium-name--${r}">${_escapeHtml(e.name)}</div>
         <div class="lb-podium-score lb-podium-score--${r}">${e.score}</div>
         <div class="lb-podium-unit lb-podium-unit--${r}">${unit}</div>`;
     }).join('');
@@ -16648,32 +16484,32 @@ function renderLeaderboard() {
       <div class="lb-list-row${e.name === myName ? ' lb-list-row--me' : ''}">
         <span class="lb-list-rank">${e.rank}</span>
         <div class="lb-list-avatar"></div>
-        <span class="lb-list-name">${e.name}</span>
+        <span class="lb-list-name">${_escapeHtml(e.name)}</span>
         <span class="lb-list-score">${e.score}</span>
         <span class="lb-list-badge">${e.rank === 1 ? '👑' : e.rank <= 10 ? '🥇' : '🥉'}</span>
       </div>`).join('');
   }
 
-  // Pinned own rank
+  // Pinned own rank — hidden entirely when "Show me on leaderboard" is off.
   const pinEl = document.getElementById('lb-my-rank');
   if (pinEl) {
-    pinEl.innerHTML = `
-      <span class="lb-list-rank">#${myEntry.rank}</span>
-      <div class="lb-list-avatar"></div>
-      <span class="lb-list-name">${myEntry.name} (you)</span>
-      <span class="lb-list-score">${myEntry.score}</span>`;
+    if (!lbSettings().show) {
+      pinEl.hidden = true;
+      pinEl.innerHTML = '';
+    } else {
+      pinEl.hidden = false;
+      pinEl.innerHTML = `
+        <span class="lb-list-rank">#${myEntry.rank}</span>
+        <div class="lb-list-avatar"></div>
+        <span class="lb-list-name">${_escapeHtml(myEntry.name)} (you)</span>
+        <span class="lb-list-score">${myEntry.score}</span>`;
+    }
   }
 }
 
 function getLbData(timeFilter, category) {
   return (LEADERBOARD_DATA[category] || {})[timeFilter] || [];
 }
-
-function openLeaderboardFromDash() {
-  popScreen();   // close dashboard first
-  setTimeout(() => openLeaderboard(), 50);
-}
-
 
 // ================================================================
 // YOUR JOURNEY  (Streak & Badges — opened from the Streak widget card)
@@ -16684,24 +16520,6 @@ function openLeaderboardFromDash() {
 // 7-slot week strip — reset to a fresh 0-day streak: nothing done yet,
 // today still upcoming (not yet checked in).
 const JOURNEY_WEEK = ['upcoming', 'upcoming', 'upcoming', 'upcoming', 'today', 'upcoming', 'upcoming'];
-
-function renderJourneyDots() {
-  const wrap = document.getElementById('journey-dots');
-  if (!wrap) return;
-  wrap.innerHTML = JOURNEY_WEEK.map(state => {
-    if (state === 'done') {
-      return `<span class="journey-dot journey-dot--done">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </span>`;
-    }
-    if (state === 'today') {
-      return `<span class="journey-dot journey-dot--today">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </span>`;
-    }
-    return `<span class="journey-dot journey-dot--upcoming"></span>`;
-  }).join('');
-}
 
 // Streak hero + badge row are static real-cropped-image markup now (see
 // index.html) — this page specifically uses cropped reference art rather
@@ -16822,6 +16640,7 @@ function awardXP(source) {
   if (spec.dailyCap != null && used >= spec.dailyCap) return 0;
   daily[source] = used + 1;
   _saveXpDailyState(daily);
+  renderDailyMissions();   // the only thing that can move a mission is an award
 
   const before = getXP();
   const beforeLevel = getLevelForXP(before);
@@ -16886,8 +16705,7 @@ function _xpPanelCountUp(fromInto, toInto, span, level) {
   _xpCountUpFrame = requestAnimationFrame(frame);
 }
 
-function showXPPanel(amount, sourceLabel, beforeXP, force) {
-  if (SUPPRESS_XP_LEVEL_NOTIFS && !force) return;
+function showXPPanel(amount, sourceLabel, beforeXP) {
   const panel = document.getElementById('xp-panel');
   if (!panel) return;
   document.getElementById('xp-panel-title').textContent = `+${amount} XP`;
@@ -16920,8 +16738,7 @@ function hideXPPanel() {
 }
 
 let _levelUpPanelTimers = [];
-function showLevelUpPanel(newLevel, beforeLevel, force) {
-  if (SUPPRESS_XP_LEVEL_NOTIFS && !force) return;
+function showLevelUpPanel(newLevel, beforeLevel) {
   const panel = document.getElementById('levelup-panel');
   if (!panel) return;
   _levelUpPanelTimers.forEach(clearTimeout);
@@ -16984,8 +16801,58 @@ function renderMissionLevelCard() {
 
 function openMissionControl() {
   renderMissionLevelCard();
-  _bindMissionTierPreviewToggle();
+  renderDailyMissions();
   pushScreen('mission-control');
+}
+
+// ---- Daily Missions ------------------------------------------------------
+// Rendered from the SAME per-day counters awardXP() already keeps
+// (_xpDailyState), so a row can only ever tick when XP was genuinely awarded
+// for it — the progress and the XP badge cannot drift apart. Each target is
+// chosen so the row's stated XP is exactly what completing it pays out:
+//   conversation  1 x 10 XP = +10    (awardXP('conversation'), startChat)
+//   message      10 x  2 XP = +20    (awardXP('message'), sendMessage)
+//   scan          2 x  5 XP = +10    (awardXP('scan'), recordScan)
+// Every target sits under that source's own daily cap (5 / 20 / 10), so a cap
+// can never make a mission unreachable.
+const DAILY_MISSIONS = {
+  conversation: { target: 1  },
+  message:      { target: 10 },
+  scan:         { target: 2  },
+};
+
+function renderDailyMissions() {
+  const daily = _xpDailyState();
+  document.querySelectorAll('.mission-row[data-mission]').forEach(row => {
+    const spec = DAILY_MISSIONS[row.dataset.mission];
+    if (!spec) return;
+    const done  = Math.min(daily[row.dataset.mission] || 0, spec.target);
+    const state = done >= spec.target ? 'done' : done > 0 ? 'partial' : 'todo';
+
+    const progress = row.querySelector('.mission-row-progress');
+    if (progress) progress.textContent = done + '/' + spec.target;
+
+    const check = row.querySelector('.mission-row-check');
+    if (check) {
+      check.classList.remove('mission-row-check--done', 'mission-row-check--partial', 'mission-row-check--todo');
+      check.classList.add('mission-row-check--' + state);
+      // The tick is invisible on the grey todo chip and white on the filled ones.
+      const tick = check.querySelector('svg');
+      if (tick) tick.setAttribute('stroke', state === 'todo' ? '#c9c0b6' : '#fff');
+    }
+
+    // A finished mission has nowhere left to send anyone.
+    const go = row.querySelector('.mission-row-go');
+    if (go) go.hidden = state === 'done';
+
+    row.classList.toggle('mission-row--done', state === 'done');
+  });
+}
+
+// Row 3's destination. Scan is the centre tab, internally 'assistant'.
+function missionGoToScan() {
+  closeMissionControl();
+  showTab('assistant');
 }
 
 function closeMissionControl() { popScreen(); }
@@ -17001,42 +16868,6 @@ function missionGoToChatOrPractice() {
 }
 
 // ================================================================
-// TIER PREVIEW — HIDDEN DEV TOGGLE
-// Same "buried behind a long-press on an unobtrusive element" pattern as
-// bindDevPaceToggle() above. There's no way to set a real device's XP from
-// this dev environment, and racking up enough real XP to reach a given
-// tier legitimately can take weeks (XP_SOURCES' daily caps top out at 140
-// XP/day) — so a long-press on the tier icon itself cycles straight to the
-// next tier's starting level, entirely on-device, no Safari Web Inspector
-// or Mac needed. Purely a preview: it overwrites real XP, so it's a one-way
-// door for whoever uses it, same tradeoff devPaceLongPressTimer accepts.
-// ================================================================
-let missionTierPreviewTimer = null;
-
-function _bindMissionTierPreviewToggle() {
-  const el = document.getElementById('mission-level-tier-icon');
-  if (!el || el.dataset.devBound) return;
-  el.dataset.devBound = '1';
-
-  const start = () => { missionTierPreviewTimer = setTimeout(_missionPreviewNextTier, 600); };
-  const cancel = () => clearTimeout(missionTierPreviewTimer);
-
-  el.addEventListener('mousedown',  start);
-  el.addEventListener('touchstart', start, { passive: true });
-  ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt =>
-    el.addEventListener(evt, cancel)
-  );
-}
-
-function _missionPreviewNextTier() {
-  const currentTier = getTierForLevel(getLevelForXP(getXP()));
-  const idx = XP_TIERS.indexOf(currentTier);
-  const nextTier = XP_TIERS[(idx + 1) % XP_TIERS.length];
-  setXP(XP_LEVEL_THRESHOLDS[nextTier.minLevel]);
-  renderMissionLevelCard();
-  navigator.vibrate?.(8);
-}
-
 // ---- "How to Level Up" info modal — replaces the old leaderboard
 // shortcut in Mission Control's top-right corner ----
 function openLevelUpInfo() {
@@ -17099,8 +16930,9 @@ function renderMilestonesHub() {
   const totalUnlocked = getTotalUnlockedCount();
   const total = MILESTONE_BADGES.length;
 
-  document.getElementById('milestones-streak-digits').innerHTML = milestoneDigitsHTML(0);
-  document.getElementById('milestones-longest-streak').textContent = '0';
+  const streak = ZeloActivity.streakInfo();
+  document.getElementById('milestones-streak-digits').innerHTML = milestoneDigitsHTML(streak.current);
+  document.getElementById('milestones-longest-streak').textContent = String(streak.best);
   document.getElementById('milestones-badges-digits').innerHTML = milestoneDigitsHTML(totalUnlocked);
   document.getElementById('milestones-badges-frac').textContent = `${totalUnlocked}/${total}`;
   document.getElementById('milestones-badges-progress-fill').style.width =
@@ -17212,11 +17044,16 @@ async function _renderShareImage() {
   ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
 
   const cx = W / 2;
-  let y = H * 0.36;
+  // Centre the whole group (art, number, title, sub) on the canvas, a little above the middle so the
+  // footer line has room, instead of pinning it near the top and leaving the lower half empty.
+  const ART = 580, DIG = 230;
+  const hasDigits = card.digitsValue !== null && card.digitsValue !== undefined;
+  const groupH = ART + (hasDigits ? DIG * 0.7 : 0) + 70 + 56 + 56;
+  let y = Math.max(160, (H - groupH) / 2 - 90) + ART / 2;
 
   const art = await loadImg(card.artSrc);
   if (art) {
-    const size = 520;
+    const size = ART;
     ctx.drawImage(art, cx - size / 2, y - size / 2, size, size);
     y += size / 2;
   }
@@ -17224,7 +17061,7 @@ async function _renderShareImage() {
   if (card.digitsValue !== null && card.digitsValue !== undefined) {
     const chars = String(card.digitsValue).split('');
     const digitImgs = await Promise.all(chars.map(ch => loadImg(`${MILESTONE_ART_DIR}digit-${ch}.png`)));
-    const dH = 120, dTop = y - dH * 0.3;
+    const dH = DIG, dTop = y - dH * 0.3;
     const widths = digitImgs.map(im => im ? (im.width / im.height) * dH : 0);
     const totalW = widths.reduce((a, b) => a + b, 0);
     let dx = cx - totalW / 2;
@@ -17273,14 +17110,17 @@ function _colorMixWhite(hex, amount) {
 }
 
 function openStreakShare() {
+  const n = ZeloActivity.streakInfo().current;
   _openShareSheet({
     accent: '#ec4899',
     tint: '#fdf2f8',
     artName: 'hero-streak-flame',
-    digitsValue: 0,
+    digitsValue: n,
     title: 'Day Streak',
-    sub: 'Keep your streak alive',
-    text: "I'm building a day streak on Zelo!",
+    sub: n > 0 ? 'Showing up every day' : 'Just getting started',
+    text: n > 1 ? `I'm on a ${n} day streak on Zelo. Come practice texting with me.`
+        : n === 1 ? "Day 1 of my streak on Zelo. Come practice texting with me."
+        : "I just started practicing texting on Zelo. Come join me.",
   });
 }
 
@@ -17474,7 +17314,7 @@ function _plMascotTick() {
     if (el) el.style.transform = 'translateY(' + PL_MASCOT.hidden + 'px)';
     _plMascotY = PL_MASCOT.hidden; _plMascotRunning = false; return;
   }
-  const pull = Math.max(0, hero.getBoundingClientRect().top);
+  const pull = Math.max(0, _rectA(hero).top);
   const target = pull <= PL_MASCOT.startPull
     ? PL_MASCOT.hidden
     : Math.min(PL_MASCOT.maxY, PL_MASCOT.hidden + (pull - PL_MASCOT.startPull) * PL_MASCOT.ratio);
@@ -17657,9 +17497,12 @@ function plToggleVisibility(inputId, btnEl) {
   btnEl?.classList.toggle('pl-eye-btn--active', !showing);
 }
 
-// ---- Forgot password — real AUTH.sendPasswordReset(), a plain email-link
-// flow (zeloSupabase.auth.resetPasswordForEmail) instead of an in-app
-// 6-digit reauth step. ----
+// ---- Forgot password ------------------------------------------------------
+// Sends a 6-digit code (not a link: a link opens Safari and cannot set a
+// password inside the app). Goes through the SAME entry point as the sign-in
+// sheet, AUTH.startPasswordReset(), which opens the code screen at once and
+// sends the email in the background — so this handler does not wait on the
+// network and cannot be tapped twice into two emails.
 function plOpenForgotPassword() {
   const input = document.getElementById('pl-forgot-email');
   if (input) input.value = AUTH.currentEmail();
@@ -17668,55 +17511,17 @@ function plOpenForgotPassword() {
   pushScreen('settings-forgot-password');
 }
 
-async function plSendPasswordReset() {
-  const input = document.getElementById('pl-forgot-email');
-  const err   = document.getElementById('pl-forgot-error');
+function plSendPasswordReset() {
+  const err = document.getElementById('pl-forgot-error');
   if (err) err.textContent = '';
-  const email = (input?.value || '').trim();
-  if (!email) { if (err) err.textContent = 'Enter your email address.'; return; }
-  const { error } = await AUTH.sendPasswordReset(email);
-  if (error) { if (err) err.textContent = error; return; }
-  const sentEl = document.getElementById('pl-reset-sent-email');
-  if (sentEl) sentEl.textContent = email;
-  pushScreen('settings-reset-sent');
-  _plStartResetCountdown();
+  const r = AUTH.startPasswordReset(document.getElementById('pl-forgot-email')?.value, 'settings');
+  if (r.error && err) err.textContent = r.error;
 }
 
-let _plResetCountdownTimer = null;
-function _plStartResetCountdown() {
-  clearInterval(_plResetCountdownTimer);
-  let remaining = 60;
-  const btn = document.getElementById('pl-reset-resend-btn');
-  const sub = document.getElementById('pl-reset-resend-sub');
-  if (btn) btn.disabled = true;
-  const tick = () => {
-    if (remaining <= 0) {
-      clearInterval(_plResetCountdownTimer);
-      if (btn) btn.disabled = false;
-      if (sub) sub.textContent = "Didn't get it? Check your spam folder.";
-      return;
-    }
-    if (sub) sub.textContent = `You can resend the link in ${remaining} second${remaining === 1 ? '' : 's'}.`;
-    remaining--;
-  };
-  tick();
-  _plResetCountdownTimer = setInterval(tick, 1000);
-}
-
-async function plResendPasswordReset() {
-  const btn = document.getElementById('pl-reset-resend-btn');
-  if (btn?.disabled) return;
-  const email = document.getElementById('pl-reset-sent-email')?.textContent || '';
-  if (!email) return;
-  await AUTH.sendPasswordReset(email);
-  _plStartResetCountdown();
-}
-
-// "Back to settings" (on both the Forgot Password and Reset Sent screens)
-// always returns to Profile & Login specifically, regardless of how deep
-// the stack is (1 level from Forgot Password, 2 from Reset Sent) — unlike
-// each screen's own back arrow (plain popScreen()), which just steps back
-// one level at a time.
+// "Back to settings" always returns to Profile & Login specifically,
+// regardless of how deep the stack is — unlike each screen's own back arrow
+// (plain popScreen()), which just steps back one level at a time. Also called
+// by the password-reset overlay once the new password is saved.
 function _plBackToProfileLogin() {
   let guard = 0;
   while (state.activeScreen !== 'settings-profile-login' && state.screenStack.length && guard < 5) {
@@ -17724,7 +17529,6 @@ function _plBackToProfileLogin() {
     guard++;
   }
 }
-function plBackToSettingsFromReset() { _plBackToProfileLogin(); }
 
 function _plOpenCodeModal(modalId, rowId) {
   const modal = document.getElementById(modalId);
@@ -17740,26 +17544,12 @@ function _plOpenCodeModal(modalId, rowId) {
 // share the .auth-code-input markup pattern but aren't part of the AUTH
 // module itself.
 const _plBoundCodeRows = new Set();
+// The Profile & Login code boxes use the same implementation as sign-up and
+// password reset (AUTH.bindCodeRow) — it used to be a second, separate copy.
 function _plBindCodeRow(rowId) {
   if (_plBoundCodeRows.has(rowId)) return;
   _plBoundCodeRows.add(rowId);
-  const inputs = Array.from(document.querySelectorAll(`#${rowId} .auth-code-input`));
-  inputs.forEach((inp, i) => {
-    inp.addEventListener('input', () => {
-      inp.value = inp.value.replace(/[^0-9]/g, '').slice(-1);
-      if (inp.value && i < inputs.length - 1) inputs[i + 1].focus();
-    });
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
-    });
-    inp.addEventListener('paste', (e) => {
-      const text = (e.clipboardData?.getData('text') || '').replace(/[^0-9]/g, '');
-      if (!text) return;
-      e.preventDefault();
-      text.slice(0, inputs.length).split('').forEach((ch, idx) => { if (inputs[idx]) inputs[idx].value = ch; });
-      inputs[Math.min(text.length, inputs.length) - 1]?.focus();
-    });
-  });
+  AUTH.bindCodeRow(rowId);
 }
 function _plReadCode(rowId) {
   return Array.from(document.querySelectorAll(`#${rowId} .auth-code-input`)).map(inp => inp.value).join('');
@@ -18254,15 +18044,45 @@ function openSettingsScanRetention() {
 }
 
 function settingsRetentionSelect(value, el) {
-  document.querySelectorAll('#settings2-retention-list .settings2-radio-row').forEach(row => row.classList.remove('selected'));
-  el.classList.add('selected');
-  onRetentionChange(value);
+  const previous = localStorage.getItem('zelo_history_retention_days') || DEFAULT_RETENTION_DAYS;
+  const doomed = retentionDeleteCount(value);
+  const apply = () => {
+    document.querySelectorAll('#settings2-retention-list .settings2-radio-row').forEach(row => row.classList.remove('selected'));
+    el.classList.add('selected');
+    onRetentionChange(value);
+  };
+  // Shortening the window deletes history immediately and permanently, so it
+  // gets the same confirmation as any other destructive action in the app.
+  if (doomed > 0) {
+    showDeleteConfirm(
+      `This will delete ${doomed} saved scan${doomed === 1 ? '' : 's'} older than this. It can't be undone.`,
+      apply
+    );
+    // Leave the radio where it was unless/until they confirm.
+    document.querySelectorAll('#settings2-retention-list .settings2-radio-row').forEach(row => {
+      row.classList.toggle('selected', row.dataset.days === previous);
+    });
+    return;
+  }
+  apply();
 }
 
 // ---- Zelo Pro ----
 function restoreSettingsPurchases() {
   ZeloAnalytics.track('restore_purchase_tapped');
-  _settingsToast('No purchases found to restore.');
+  // Truthful either way: with no purchase system there is genuinely nothing to
+  // restore, and once StoreKit lands this is where its restore result lands.
+  const ent = getEntitlement();
+  _settingsToast(ent.active ? 'Your subscription has been restored.' : 'No purchases found to restore.');
+}
+
+// Same action from the paywall/offer screens' "Restore" link, which Apple
+// expects to be present and working on a subscription screen. Uses the toast
+// rather than the settings modal so it works over those full-screen layouts.
+function restorePurchasesFromPaywall() {
+  ZeloAnalytics.track('restore_purchase_tapped');
+  const ent = getEntitlement();
+  flashLimitToast(ent.active ? 'Your subscription has been restored.' : 'No purchases found to restore.');
 }
 
 // ---- Help & Support ----
@@ -18695,7 +18515,7 @@ function _settingsToast(message) {
   overlay.className = 'mini-modal-overlay';
   overlay.innerHTML = `
     <div class="mini-modal-card">
-      <p class="mini-modal-body">${message}</p>
+      <p class="mini-modal-body">${_escapeHtml(message)}</p>
       <div class="mini-modal-actions">
         <button class="mini-modal-confirm">OK</button>
       </div>
@@ -18831,7 +18651,14 @@ function _populateSkippedPanel() {
   const list = _getSkippedProfiles();
   if (emptyEl) emptyEl.hidden = list.length > 0;
   if (deleteAllBtn) deleteAllBtn.hidden = list.length === 0;
-  if (listEl) listEl.innerHTML = list.map(_skippedRowHTML).join('');
+  if (listEl) {
+    listEl.innerHTML = list.map(_skippedRowHTML).join('');
+    listEl.querySelectorAll('.skipped-row-card').forEach((row, i) => {
+      const profile = list[i];
+      row.querySelector('.skipped-unskip-btn')?.addEventListener('click', () => unskipProfile(profile.id));
+      row.querySelector('.skipped-row-menu-btn')?.addEventListener('click', () => confirmDeleteSkippedProfile(profile.id, profile.name));
+    });
+  }
 }
 
 // Matches tab rows reuse the Skipped Profiles card look (.skipped-row-card): boxed
@@ -18839,12 +18666,12 @@ function _populateSkippedPanel() {
 function _matchRowHTML(c) {
   const p = c.profile;
   const grad = `linear-gradient(145deg, ${p.gradientColors[0]}, ${p.gradientColors[1]})`;
-  const unread = c.unread ? `<span class="match-row-unread">${c.unread}</span>` : '';
+  const unread = c.unread ? `<span class="match-row-unread">${_escapeHtml(c.unread)}</span>` : '';
   return `
     <div class="skipped-row-card match-row-card">
-      <div class="skipped-row-photo" style="background:${grad}">${p.initial}${_pfpImgHTML(p)}</div>
+      <div class="skipped-row-photo" style="background:${_escapeHtml(grad)}">${_escapeHtml(p.initial)}${_pfpImgHTML(p)}</div>
       <div class="skipped-row-main">
-        <span class="skipped-row-name">${p.name}${p.age ? ', ' + p.age : ''}</span>
+        <span class="skipped-row-name">${_escapeHtml(p.name)}${p.age ? ', ' + _escapeHtml(p.age) : ''}</span>
         <span class="skipped-row-occ">${_escapeHtml(c.lastMessage || 'New match!')}</span>
       </div>
       <div class="skipped-row-actions">
@@ -18870,17 +18697,16 @@ function _skippedRowHTML(p) {
   const grad = p.gradientColors
     ? `linear-gradient(145deg, ${p.gradientColors[0]}, ${p.gradientColors[1]})`
     : 'linear-gradient(145deg, #f0559f, #db2777)';
-  const safeName = (p.name || '').replace(/'/g, "\\'");
   return `
-    <div class="skipped-row-card">
-      <div class="skipped-row-photo" style="background:${grad}">${p.initial || (p.name ? p.name[0] : '?')}${_pfpImgHTML(p)}</div>
+    <div class="skipped-row-card" data-profile-id="${_escapeHtml(p.id)}">
+      <div class="skipped-row-photo" style="background:${_escapeHtml(grad)}">${_escapeHtml(p.initial || (p.name ? p.name[0] : '?'))}${_pfpImgHTML(p)}</div>
       <div class="skipped-row-main">
-        <span class="skipped-row-name">${p.name}${p.age ? ', ' + p.age : ''}</span>
-        <span class="skipped-row-occ">${p.occupation || ''}</span>
+        <span class="skipped-row-name">${_escapeHtml(p.name)}${p.age ? ', ' + _escapeHtml(p.age) : ''}</span>
+        <span class="skipped-row-occ">${_escapeHtml(p.occupation || '')}</span>
       </div>
       <div class="skipped-row-actions">
-        <button type="button" class="skipped-unskip-btn" onclick="unskipProfile('${p.id}')">Unskip</button>
-        <button type="button" class="skipped-row-menu-btn" onclick="confirmDeleteSkippedProfile('${p.id}', '${safeName}')" aria-label="More options">
+        <button type="button" class="skipped-unskip-btn">Unskip</button>
+        <button type="button" class="skipped-row-menu-btn" aria-label="More options">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
         </button>
       </div>
@@ -18892,233 +18718,121 @@ function openSettingsSkippedProfiles() {
   pushScreen('settings-skipped-profiles');
 }
 
-// 10 blank/placeholder cards (no real names or bios yet) — served as the
-// actual Men/Both deck content in initSwipeDeck() until real male
-// personas exist, so those preferences show *something* distinct from
-// the women's deck instead of silently reusing it.
-const TEST_LAYOUT_PROFILES = Array.from({ length: 10 }, (_, i) => ({
-  id:             'test-layout-' + (i + 1),
-  name:           'Layout ' + (i + 1),
-  age:            '—',
-  occupation:     '—',
-  bio:            '',
-  interests:      [],
-  initial:        String(i + 1),
-  gradientColors: ['#f0559f', '#db2777'],
-  color:          '#f0559f',
-  difficulty:     'easy',
-  age_pool:       '21-29',
-}));
-
 function onRetentionChange(value) {
   localStorage.setItem('zelo_history_retention_days', value);
+  pruneExpiredScans();
+  _refreshRetentionPreview();
 }
 
-// GDPR data export — everything the app actually stores for this user,
-// pulled from the same sources as the rest of the app (no separate copy).
-function exportAccountData() {
-  const payload = {
+function _refreshRetentionPreview() {
+  const el = document.getElementById('settings2-retention-preview');
+  if (!el) return;
+  const pref = localStorage.getItem('zelo_history_retention_days');
+  el.textContent = !pref ? '30 days' : pref === 'forever' ? 'Keep forever' : pref + ' days';
+}
+
+// GDPR data export — everything the app actually stores for this user, pulled
+// from the same sources as the rest of the app (no separate copy). Every
+// zelo_* localStorage key is included as well, so the export is genuinely
+// "all of it" rather than a curated subset that quietly omits things.
+function buildAccountExport() {
+  const device = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf('zelo_') === 0) device[k] = localStorage.getItem(k);
+    }
+  } catch (e) { /* storage unavailable — the structured fields below still export */ }
+  return {
+    exportedAt:  new Date().toISOString(),
+    account:     { email: (typeof AUTH !== 'undefined' && AUTH.currentEmail) ? (AUTH.currentEmail() || null) : null },
     displayName: getDisplayName(),
     age:         localStorage.getItem('zelo_user_age'),
     scanCount:   scanCount,
     threads:     getThreads(),
     matches:     chatStore,
-    exportedAt:  new Date().toISOString()
+    deviceStorage: device
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'zelo-my-data.json';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
-// ── Download My Data flow ────────────────────────────────────────
-// request → confirm → preparing → submitted (→ ready). One screen, step
-// containers toggled by [data-dd-step]. The request is recorded locally as
-// zelo_data_export_request {t, email, status}; status 'submitted' is set here,
-// 'emailed' is meant to be set by a backend once the email has actually gone
-// out (that is what makes the "Your data is ready" step reachable).
-const DD_KEY = 'zelo_data_export_request';
-// TEMP (testing): forget the last request on every app launch so Download My
-// Data can be requested again and again. Delete this line to bring the 24h
-// cooldown back across launches.
-try { localStorage.removeItem(DD_KEY); } catch (e) {}
+// Hands the file to the user. `<a download>` does nothing inside an iOS
+// WKWebView, so the native path is the share sheet (Web Share with a File,
+// supported in WKWebView), and the anchor is only the plain-web fallback.
+// Returns a promise that resolves true only when the file was actually handed
+// over, so the UI can report a failure instead of claiming success.
+async function exportAccountData() {
+  const json = JSON.stringify(buildAccountExport(), null, 2);
+  const name = 'zelo-my-data.json';
+  try {
+    const file = new File([json], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+      await navigator.share({ files: [file], title: 'My Zelo data' });
+      return true;
+    }
+  } catch (e) {
+    // AbortError = the user dismissed the share sheet. That is a cancel, not a
+    // failure, and must not fall through to a second attempt.
+    if (e && e.name === 'AbortError') return false;
+  }
+  try {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (e) { return false; }
+}
+
+// ── Download My Data screen ──────────────────────────────────────
+// request -> preparing -> ready + Download. Restored 2026-10-22a with the
+// email flow removed: nothing has ever emailed an export, so the screen now
+// describes and performs the real on-device export only.
 let _ddStep = 'request';
 let _ddTimer = null;
-let _ddTick = null;
-let _ddEditing = false; // confirm step: typing a one-off destination instead of the account email
-const DD_COOLDOWN_MS = 15 * 60 * 1000;
-
-function _ddStored() {
-  try { return JSON.parse(localStorage.getItem(DD_KEY) || 'null'); } catch (e) { return null; }
-}
-
-// oz••••@gmail.com — first two chars of the local part, the rest hidden.
-function _ddMaskEmail(email) {
-  const at = (email || '').lastIndexOf('@');
-  if (at < 1) return '';
-  const local = email.slice(0, at);
-  return local.slice(0, Math.min(2, local.length)) + '••••' + email.slice(at);
-}
-
-// ms left before another request is allowed. The cooldown only starts once a
-// request was accepted (record written in ddConfirmRequest), so a failed
-// submit never locks the user out.
-function _ddCooldownLeft() {
-  const rec = _ddStored();
-  const email = typeof AUTH !== 'undefined' && AUTH.currentEmail ? AUTH.currentEmail() : '';
-  if (!rec || !rec.t || rec.email !== email) return 0;
-  return Math.max(0, rec.t + DD_COOLDOWN_MS - Date.now());
-}
-
-function _ddFormatLeft(ms) {
-  const mins = Math.max(1, Math.ceil(ms / 60000));
-  const h = Math.floor(mins / 60), m = mins % 60;
-  return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
-}
-
-function _ddRenderCooldown() {
-  const left = _ddCooldownLeft();
-  if (!left) { ddShowStep('request'); return; }
-  const el = document.querySelector('#screen-settings-download-data [data-dd-cooldown]');
-  if (el) el.textContent = 'Available again in ' + _ddFormatLeft(left);
-}
 
 function ddShowStep(step) {
-  clearInterval(_ddTick);
+  clearTimeout(_ddTimer);
   _ddStep = step;
   const screen = document.getElementById('screen-settings-download-data');
   if (!screen) return;
-  screen.querySelectorAll('[data-dd-step]').forEach(el => {
-    el.hidden = el.dataset.ddStep !== step;
-  });
-  // Once a request exists, its own destination is shown; before that, the account email.
-  const rec = _ddStored();
-  const acct = typeof AUTH !== 'undefined' && AUTH.currentEmail ? AUTH.currentEmail() : '';
-  const shown = (step === 'submitted' || step === 'cooldown' || step === 'ready') && rec && rec.to ? rec.to : acct;
-  const masked = _ddMaskEmail(shown);
-  screen.querySelectorAll('[data-dd-email]').forEach(el => { el.textContent = masked || '—'; });
+  screen.querySelectorAll('[data-dd-step]').forEach(el => { el.hidden = el.dataset.ddStep !== step; });
   const err = screen.querySelector('[data-dd-error]');
   if (err) err.hidden = true;
-  if (step === 'confirm') {
-    _ddEditing = false;
-    const inp = screen.querySelector('[data-dd-input]');
-    if (inp) inp.value = '';
-    _ddRenderEditing();
-  }
   _revealLazyImages(screen);
   screen.scrollTop = 0;
-  if (step === 'cooldown') {
-    _ddRenderCooldown();
-    _ddTick = setInterval(_ddRenderCooldown, 15000);
-  }
-}
-
-// Confirm step: chip (account email) ⇄ input (one-off destination). Only this
-// request goes to the typed address — the account email is never changed.
-function _ddRenderEditing() {
-  const step = document.querySelector('#screen-settings-download-data [data-dd-step="confirm"]');
-  if (!step) return;
-  const acct = typeof AUTH !== 'undefined' && AUTH.currentEmail ? AUTH.currentEmail() : '';
-  step.querySelector('.dd-email').hidden = _ddEditing;
-  step.querySelector('[data-dd-input]').hidden = !_ddEditing;
-  step.querySelector('[data-dd-link]').textContent = _ddEditing
-    ? (acct ? 'Use my account email' : 'Cancel') : 'Use a different email';
-  step.querySelector('[data-dd-lede]').innerHTML = _ddEditing
-    ? "We'll send your data to<br>the email you enter below."
-    : "We'll send your data to<br>the email linked to your Zelo account.";
-  // With no account email the button waits for a typed address.
-  step.querySelector('.dd-cta').disabled = !_ddEditing && !acct;
-  const err = step.querySelector('[data-dd-error]');
-  if (!_ddEditing && !acct) {
-    err.textContent = 'No email is linked to your account. Use a different email to receive your data.';
-    err.hidden = false;
-  } else {
-    err.hidden = true;
-  }
-}
-
-function _ddValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
-
-function ddEmailInput() {
-  const err = document.querySelector('#screen-settings-download-data [data-dd-step="confirm"] [data-dd-error]');
-  if (err) err.hidden = true;
 }
 
 function openDownloadData() {
-  clearInterval(_ddTick);
   pushScreen('settings-download-data');
-  const rec = _ddStored();
-  const email = typeof AUTH !== 'undefined' && AUTH.currentEmail ? AUTH.currentEmail() : '';
-  if (rec && rec.status === 'emailed' && rec.email === email) ddShowStep('ready');
-  else ddShowStep(_ddCooldownLeft() ? 'cooldown' : 'request');
+  ddShowStep('request');
 }
 
-// Back arrow: from confirm go back one step, otherwise leave the screen.
-function ddBack() {
-  if (_ddStep === 'confirm') { ddShowStep('request'); return; }
-  clearInterval(_ddTick);
-  popScreen();
-}
-
-// "Done" stays on this screen and lands on the already-submitted state (the
-// same one shown when the user leaves and comes back within the cooldown).
-function ddDone() { ddShowStep('cooldown'); }
-
-// "Use a different email": swap the chip for an input for this request only.
-function ddChangeEmail() {
-  _ddEditing = !_ddEditing;
-  const step = document.querySelector('#screen-settings-download-data [data-dd-step="confirm"]');
-  const inp = step && step.querySelector('[data-dd-input]');
-  if (inp) inp.value = '';
-  _ddRenderEditing();
-  if (_ddEditing && inp) inp.focus();
-}
-
-// "Request Again" from the ready step still respects the 24h cooldown.
-function ddRequestAgain() { ddShowStep(_ddCooldownLeft() ? 'cooldown' : 'confirm'); }
-
+// The short "preparing" beat is honest: it is how long the collect step is
+// given before the file is offered, not a stand-in for a server round-trip.
 function ddRequestData() {
-  if (_ddCooldownLeft()) { ddShowStep('cooldown'); return; }
-  // Needs a signed-in account — its verified email is the only destination.
-  AUTH.requireAuth('download-data', () => {
-    ddShowStep('confirm');
-  });
-}
-
-function ddConfirmRequest() {
-  if (_ddStep !== 'confirm') return; // ignore double taps / stale calls
-  if (_ddCooldownLeft()) { ddShowStep('cooldown'); return; }
-  const email = AUTH.currentEmail();
-  let to = email;
-  if (_ddEditing) {
-    const inp = document.querySelector('#screen-settings-download-data [data-dd-input]');
-    to = (inp && inp.value || '').trim().toLowerCase();
-    if (!_ddValidEmail(to)) {
-      const err = document.querySelector('#screen-settings-download-data [data-dd-step="confirm"] [data-dd-error]');
-      if (err) { err.textContent = 'Enter a valid email address.'; err.hidden = false; }
-      return;
-    }
-  }
-  if (!to) return;
   ddShowStep('preparing');
-  _ddSubmitRequest(to).then(() => {
-    // email = the account (for the cooldown), to = where this export goes.
-    localStorage.setItem(DD_KEY, JSON.stringify({ t: Date.now(), email, to, status: 'submitted' }));
-    // Recorded even if the user left meanwhile; only advance if still waiting.
-    if (_ddStep === 'preparing') ddShowStep('submitted');
+  _ddTimer = setTimeout(() => { if (_ddStep === 'preparing') ddShowStep('ready'); }, 900);
+}
+
+function ddDownloadNow() {
+  exportAccountData().then(ok => {
+    if (ok) return;
+    const err = document.querySelector('#screen-settings-download-data [data-dd-error]');
+    if (err) { err.textContent = "Couldn't save the file. Try again."; err.hidden = false; }
   });
 }
 
-// Seam for the real backend: this should call an edge function that emails
-// the export to `to` (the account email or the one-off address the user typed). None exists yet, so for now it only
-// simulates the short "preparing" wait — nothing is sent.
-function _ddSubmitRequest(email) {
-  return new Promise(resolve => { _ddTimer = setTimeout(resolve, 1800); });
+function ddDone() { clearTimeout(_ddTimer); popScreen(); }
+
+function ddBack() {
+  if (_ddStep === 'preparing' || _ddStep === 'ready') { ddShowStep('request'); return; }
+  clearTimeout(_ddTimer);
+  popScreen();
 }
 
 // ── "How did your reply land?" (reply feedback) ─────────────────────────────
@@ -19216,7 +18930,7 @@ const PR_KEY = 'zelo_practice_review', PR_ASKED = 'zelo_practice_review_asked';
 function practiceReviewOn() { return localStorage.getItem(PR_KEY) === 'true'; }
 
 function maybeShowPracticeReviewModal() {
-  if (localStorage.getItem(PR_ASKED) && !DEV_ALWAYS_SHOW_PRACTICE_REVIEW) return;
+  if (localStorage.getItem(PR_ASKED)) return;
   const modal = document.getElementById('practice-review-modal');
   if (!modal || state.activeScreen !== 'chat') return;
   const onb = document.getElementById('cine-onboarding');
@@ -19279,11 +18993,17 @@ function confirmDeleteAccount() {
     if (el.tagName !== 'INPUT') return false;
     return !['checkbox', 'radio', 'file', 'button', 'submit'].includes(el.type);
   }
+  // Only write when the value actually changes, and not at all when focus is
+  // merely MOVING between two text fields (focusout's relatedTarget is the next
+  // one): the six one-time-code boxes hop focus on every digit, which meant
+  // ~12 viewport rewrites to type a code, each a chance for iOS to re-layout
+  // and fumble the keyboard while it is up.
+  const setMeta = (v) => { if (meta.getAttribute('content') !== v) meta.setAttribute('content', v); };
   document.addEventListener('focusin', (e) => {
-    if (isTextField(e.target)) meta.setAttribute('content', NO_ZOOM);
+    if (isTextField(e.target)) setMeta(NO_ZOOM);
   }, true);
   document.addEventListener('focusout', (e) => {
-    if (isTextField(e.target)) meta.setAttribute('content', NORMAL);
+    if (isTextField(e.target) && !isTextField(e.relatedTarget)) setMeta(NORMAL);
   }, true);
 })();
 
@@ -19399,6 +19119,10 @@ document.addEventListener('touchstart', (e) => {
   if (target && target.closest && target.closest('#cine-convo')) return;
   // Support forms and the feature board: Send, Submit, New, the sort tabs and the vote buttons must work on the first tap with the keyboard up.
   if (target && target.closest && target.closest('#screen-settings-feature-requests, #screen-settings-feature-new, #screen-settings-feature-detail') && target.closest('button, .fr-card, .back-btn')) return;
+  // The code / reset / setup screens: Change password, Resend, Verify and Back must work on
+  // the FIRST tap while a code box still has focus (otherwise the first tap only closes the
+  // keyboard and its click is swallowed — "I have to press it twice").
+  if (target && target.closest && target.closest('#auth-reset-overlay, #auth-verify-overlay, #auth-setup-overlay')) return;
   // Opening her profile from the chat must work on the first tap with the keyboard up.
   if (target && target.closest && target.closest('[data-open-profile], #pp-overlay')) return;
   // Flag this exact tap as "just dismissed the keyboard" (see
@@ -19561,7 +19285,7 @@ function _swallowKeyboardDismissClick(e) {
     // Lock to the height it has right now (before any shift), so the box
     // stays put while its content (moveEls) slides up inside it and gets
     // cut off at its top edge.
-    el.style.height = el.getBoundingClientRect().height + 'px';
+    el.style.height = _rectA(el).height + 'px';
     el.style.overflow = 'hidden';
     clippedEl = el;
   }
@@ -19634,9 +19358,13 @@ function _swallowKeyboardDismissClick(e) {
     // else changes this group's real layout. This call's own transform
     // write happens only once, below, and never before this read.
     const rect = measureEl.getBoundingClientRect();
-    const trueBottom = rect.bottom + _currentShiftY(measureEl);
+    // rect is device space; _currentShiftY is an app-space px transform, so it
+    // is scaled up to compare, and the resulting overlap scaled back down
+    // because it is written straight back out as an app-space transform.
+    const kbScale = _appScale();
+    const trueBottom = rect.bottom + _currentShiftY(measureEl) * kbScale;
     const visibleBottom = window.innerHeight - keyboardHeight;
-    const overlap = trueBottom - visibleBottom;
+    const overlap = (trueBottom - visibleBottom) / kbScale;
     // Moves exactly as much as the keyboard actually covers, no more — a
     // forced minimum (previously always at least 32-56px, "so opening the
     // keyboard is never a no-op") meant the whole group jumped up a visible
@@ -19740,7 +19468,8 @@ function _swallowKeyboardDismissClick(e) {
   if (Keyboard) {
     Keyboard.addListener('keyboardWillShow', (info) => {
       keyboardHeight = (info && info.keyboardHeight) || 0;
-      window.__zeloKbH = keyboardHeight;               // read by the onboarding conversation
+      // Consumed as app-space px (composer lifts, --kb), so convert out of device px.
+      window.__zeloKbH = keyboardHeight / _appScale();  // read by the onboarding conversation
       window.dispatchEvent(new Event('zelo-kb'));
       setTimeout(nudgeFocusedIntoView, 30);
     });
