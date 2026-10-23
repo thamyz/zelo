@@ -1,0 +1,979 @@
+/* ================================================================
+   07-rewards.css — Leaderboard, Your Journey, Mission Control and Milestones
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   FEATURE 9 — LEADERBOARD
+   ================================================================ */
+#screen-leaderboard .screen-header {
+  position: sticky;
+  top: 0;
+}
+#screen-leaderboard .screen-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+}
+/* Now that the title has a subtitle sibling (.lb-header-titles wraps both),
+   let them stack normally as a centered flex-column group instead of the
+   title alone spanning the full header width above. */
+#screen-leaderboard .lb-header-titles .screen-title {
+  position: static;
+  pointer-events: auto;
+  display: block;
+}
+/* Category cards/tabs/timer stay fixed; only the podium + list scroll
+   (as one region — see .lb-scroll-area) below them. */
+.lb-layout {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 56px);
+  overflow: hidden;
+}
+.lb-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+}
+/* Time filter — pill segmented control (replaces the old underline-tab
+   row): a pale pink track with a solid pink, fully-rounded active pill. */
+.lb-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 12px 14px 0;
+  padding: 4px;
+  background: var(--accent-soft);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.lb-tab {
+  flex: 1;
+  padding: 10px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+  background: none;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.lb-tab.active {
+  color: #fff;
+  background: var(--accent);
+}
+/* Category cards — theme-aware CSS card chrome (background/border/text),
+   with just the icon glyphs cropped from the reference art (transparent
+   background, chroma-keyed out of the composite) sitting on top — same
+   "icon fixed, background/text adapt" rule used everywhere else, so this
+   works in both light and dark. "Most Messages" is the big featured card
+   up top; Streak + Level sit below as a row of two smaller cards, each
+   now with its own big decorative icon on the right too. */
+.lb-cat-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  flex-shrink: 0;
+}
+.lb-cat-cards-row { display: flex; gap: 8px; }
+.lb-cat-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 10px 12px 12px;
+  background: var(--s1);
+  /* Grey outline → soft shadow (Scan page method); transparent border keeps
+     the size stable for .active's accent border. */
+  border: 1.5px solid transparent;
+  box-shadow: 0 1px 6px rgba(28,25,23,0.06);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  color: var(--text-2);
+  transition: background 0.15s, border-color 0.15s;
+}
+.lb-cat-card-text { display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0; }
+.lb-cat-card-ic { flex-shrink: 0; width: 26px; height: 26px; object-fit: contain; }
+.lb-cat-card-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.15;
+  margin-top: 6px;
+}
+.lb-cat-card-sub {
+  font-size: 0.6rem;
+  color: var(--text-2);
+  line-height: 1.25;
+  margin-top: 2px;
+}
+.lb-cat-card-cta {
+  margin-top: 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-2);
+  background: var(--s2);
+  border-radius: 999px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+.lb-cat-card.active {
+  background: color-mix(in srgb, var(--accent) 8%, var(--s1));
+  border-color: var(--accent);
+  box-shadow: none;
+  color: var(--accent);
+}
+.lb-cat-card.active .lb-cat-card-title { color: var(--accent); }
+.lb-cat-card.active .lb-cat-card-cta {
+  background: color-mix(in srgb, var(--accent) 16%, var(--s1));
+  color: var(--accent);
+}
+
+/* Hero card — "Most Messages", full width, bigger text + icon. */
+.lb-cat-card--hero { padding: 16px 14px 16px 18px; }
+.lb-cat-card--hero .lb-cat-card-ic { width: 30px; height: 30px; }
+.lb-cat-card--hero .lb-cat-card-title { font-size: 0.88rem; margin-top: 8px; }
+.lb-cat-card--hero .lb-cat-card-sub { font-size: 0.68rem; }
+.lb-cat-card--hero .lb-cat-card-cta { font-size: 0.66rem; padding: 6px 10px; margin-top: 10px; }
+.lb-cat-card-hero-ic { flex-shrink: 0; width: 100px; height: auto; object-fit: contain; }
+.lb-cat-card-small-ic { flex-shrink: 0; width: 56px; height: auto; object-fit: contain; }
+
+/* Header — back button + centered title/subtitle + a settings button on
+   the right (opens .lb-settings-sheet below), replacing the plain
+   title-only .screen-header this screen used to have. */
+.lb-header { justify-content: space-between; }
+.lb-header-titles { flex: 1; text-align: center; }
+.lb-subtitle { font-size: 0.72rem; color: var(--text-2); margin-top: 1px; }
+.lb-settings-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.lb-settings-btn:hover { background: var(--s2); }
+
+/* Settings sheet — skeleton (toggles are UI-only, no persistence yet).
+   Same bottom-sheet shell mechanics as .chat-settings-sheet. */
+.lb-settings-sheet { position: absolute; inset: 0; z-index: 500; }
+.lb-settings-sheet[hidden] { display: none !important; }
+.lb-settings-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.35); }
+.lb-settings-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--s1);
+  border-radius: 20px 20px 0 0;
+  padding: 10px 16px calc(20px + 34px);
+}
+.lb-settings-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  margin: 0 auto 14px;
+}
+.lb-settings-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+.lb-timer {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-2);
+  margin: 10px 14px 0;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.lb-timer-value { color: var(--accent); font-weight: 800; }
+
+/* Podium — hero-podium-blank.png (real crop, pedestal/crown art only, no
+   baked-in badge/text by design) sits as the illustration; the rank
+   badge + name/score/unit are real HTML absolutely positioned to sit
+   exactly on top of it. The wrapper's aspect-ratio is locked to the
+   source image's own pixel dimensions (1418x977) so its box is always
+   exactly the image's box, regardless of how any given browser resolves
+   height:auto on the <img> itself — both the image and the .lb-podium
+   overlay just fill that box with inset:0. Every top/left % below is
+   measured directly off that same 1418x977 image, so if the source art
+   is ever re-cropped these coordinates need re-deriving. */
+.lb-podium-wrap {
+  position: relative;
+  flex-shrink: 0;
+  margin: 12px 6px 0;
+  aspect-ratio: 1418 / 977;
+}
+.lb-podium-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.lb-podium { position: absolute; inset: 0; }
+
+/* WIP — big rank number blended into the pedestal itself (mix-blend-mode
+   so it tints with whatever pastel is underneath) instead of a separate
+   solid badge chip. Positioned centered between the avatar ring and the
+   pedestal's own base seam. Name/score/unit are not rendered yet — next
+   round overlays those on top of this. */
+.lb-podium-rank-bg {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-weight: 900;
+  color: #fff;
+  mix-blend-mode: soft-light;
+  opacity: 0.85;
+  line-height: 1;
+  pointer-events: none;
+}
+.lb-podium-rank-bg--first  { left: 47%; top: 68.5%; font-size: 110px; }
+.lb-podium-rank-bg--second { left: 20.6%; top: 73%;   font-size: 85px; }
+.lb-podium-rank-bg--third  { left: 78.8%; top: 74.5%; font-size: 85px; }
+
+.lb-podium-badge {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  color: #fff;
+  background: var(--accent);
+  font-size: 15px;
+}
+.lb-podium-badge--first  { left: 49.7%; top: 59.7%; width: 9.8%; }
+.lb-podium-badge--second { left: 20.6%; top: 65%; width: 8.0%; font-size: 12px; background: #8b5cf6; }
+.lb-podium-badge--third  { left: 78.8%; top: 68%; width: 8.0%; font-size: 12px; background: #f2994a; }
+
+.lb-podium-name, .lb-podium-score, .lb-podium-unit {
+  position: absolute;
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+}
+.lb-podium-name--first,  .lb-podium-score--first,  .lb-podium-unit--first  { left: 49.7%; }
+.lb-podium-name--second, .lb-podium-score--second, .lb-podium-unit--second { left: 20.6%; }
+.lb-podium-name--third,  .lb-podium-score--third,  .lb-podium-unit--third  { left: 78.8%; }
+
+/* Fixed dark color, not var(--text) — this sits on the podium art's own
+   pastel pedestal, which stays light in both themes, so the text must
+   stay dark in both themes too (var(--text) would go near-white in dark
+   mode and vanish against that same light pedestal). Badge gap is a
+   generous ~25% of the avatar circle's diameter for rank 1 (biggest
+   circle) and ~14% for ranks 2/3 (smaller circles) — a flat pixel gap
+   reads as tighter on a bigger circle, so the ratio is what needs to
+   stay consistent, not the raw number. */
+.lb-podium-name  { font-size: 12px; font-weight: 600; color: #3d3427; }
+.lb-podium-name--first  { top: 50.5%; font-size: 12.5px; }
+.lb-podium-name--second { top: 60.2%; }
+.lb-podium-name--third  { top: 63%; }
+
+.lb-podium-score { font-size: 17px; font-weight: 800; color: var(--accent); }
+.lb-podium-score--first  { top: 57%; font-size: 18px; }
+.lb-podium-score--second { top: 66.2%; color: #8b5cf6; }
+.lb-podium-score--third  { top: 69%; color: #f2994a; }
+
+.lb-podium-unit { font-size: 10px; color: var(--text-2); }
+.lb-podium-unit--first  { top: 66%; font-size: 10.5px; }
+.lb-podium-unit--second { top: 75%; }
+.lb-podium-unit--third  { top: 77.5%; }
+
+.lb-motivation {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+  padding: 10px 16px;
+  flex-shrink: 0;
+}
+
+.lb-list {
+  padding: 0 0 8px;
+}
+.lb-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+.lb-list-row--me { background: var(--accent-soft); }
+.lb-list-rank  { width: 28px; font-size: 13px; font-weight: 700; color: #9a8d84; text-align: center; }
+.lb-list-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ece7de;
+  flex-shrink: 0;
+}
+.lb-list-name  { flex: 1; font-size: 14px; color: var(--text); }
+.lb-list-score { font-size: 14px; font-weight: 600; color: #ec4899; }
+.lb-list-badge { font-size: 14px; margin-left: 4px; }
+
+.lb-my-rank {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 2px solid #ec4899;
+  background: var(--accent-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+/* ================================================================
+   SCREEN: YOUR JOURNEY  (Streak & Badges)
+   Zeroes out .screen's default 36px top padding so the hero image can
+   bleed to the very top edge, with the back button floating over it —
+   .journey-scroll supplies its own top padding instead.
+   ================================================================ */
+#screen-journey { padding-top: 0; }
+
+.journey-back-btn {
+  position: absolute;
+  top: 50px;
+  left: 20px;
+  z-index: 5;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}
+
+.journey-scroll { padding-bottom: 34px; }
+
+.journey-titles {
+  text-align: center;
+  padding: 60px 20px 4px;
+}
+.journey-title { font-size: 1.5rem; font-weight: 800; color: var(--text); }
+.journey-subtitle { font-size: 0.85rem; color: var(--text-2); margin-top: 2px; }
+
+/* Streak hero — hero-mountain.png is a real cropped illustration
+   (transparent PNG, soft glow baked in), not a drawn background. Fixed
+   height, not the image's own (very wide/short, ~2.8:1) natural aspect
+   ratio — that ratio renders too short at phone width to fit the
+   flag/peak plus the number+label overlay without them colliding.
+   object-fit:cover keeps the peak centered, cropping the wide edges. */
+.journey-hero {
+  position: relative;
+  margin-top: 8px;
+  height: 240px;
+  overflow: hidden;
+}
+.journey-hero-img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+/* Fades the crop's top edge into the page background above it, regardless
+   of exactly what the image shows at that boundary — a soft blend instead
+   of a hard cut where the sky meets the header.
+   The end stop must be a transparent version of the colour underneath, not
+   transparent WHITE: Safari/WebKit interpolates gradient stops without
+   premultiplying, so fading a dark colour to rgba(255,255,255,0) runs the
+   midpoint through a milky grey haze. Chromium premultiplies and looks
+   clean, which is why this only ever showed up on the phone. */
+.journey-hero::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 70px;
+  background: linear-gradient(to bottom, var(--bg) 0%, rgba(255,255,255,0) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ---- The journey hero keeps a light backdrop in dark mode ----
+   The mountain is a full-bleed scenic illustration with a transparent
+   sky, painted for a white page. On a dark page that sky shows the page
+   through it, so the artwork reads as see-through rather than as a
+   picture. Giving the hero its own pale backdrop (the same approach
+   already used on the Level Up panel) lets it render exactly as drawn,
+   and means the original artwork is correct here — no dark variant.
+   The top fade is switched off here too: it exists to blend the crop into
+   a same-coloured page, but fading the near-black page into pink just
+   reads as a grey smear. A clean edge where the panel starts looks
+   deliberate instead. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .journey-hero::before { display: none; }
+}
+:root[data-theme="dark"] .journey-hero::before { display: none; }
+.journey-hero-stat {
+  position: absolute;
+  left: 0; right: 0; bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* Fixed dark color, not var(--text) — this overlays the journey-hero's
+   own fixed-color mountain illustration (never adapts to theme), so the
+   text must stay fixed too; var(--text) would go near-white in dark
+   mode and wash out against that same pink art. */
+.journey-hero-num { font-size: 3rem; font-weight: 800; color: #1c1917; line-height: 1; }
+.journey-hero-label { font-size: 0.85rem; color: #1c1917; margin-top: 2px; }
+/* The dark-mode tree art is busier where this text sits (path + rocks,
+   not the mountain's plain light ground), so the same fixed dark colour
+   that worked there reads as barely-there here — switched to white with
+   a soft shadow for legibility against any of its mixed pinks/purples. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .journey-hero-num,
+  :root:not([data-theme="light"]) .journey-hero-label {
+    color: #fff;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.45);
+  }
+}
+:root[data-theme="dark"] .journey-hero-num,
+:root[data-theme="dark"] .journey-hero-label {
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.45);
+}
+
+.journey-progress-card {
+  margin: -8px 20px 0;
+  position: relative;
+  z-index: 2;
+  background: var(--s1);
+  border-radius: var(--r-xl);
+  box-shadow: 0 8px 24px rgba(20,16,12,0.08);
+  padding: 18px 16px;
+}
+.journey-dots { display: flex; justify-content: center; gap: 10px; }
+.journey-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.journey-dot--done { background: var(--accent); }
+.journey-dot--today {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.journey-dot--today img { width: 16px; height: 16px; object-fit: contain; }
+.journey-dot--upcoming { background: var(--s2); }
+.journey-progress-msg {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 12px;
+}
+
+.journey-stats-card {
+  margin: 16px 20px 0;
+  background: var(--s1);
+  border: none;
+  box-shadow: 0 1px 6px rgba(28,25,23,0.06);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.journey-stat-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  background: none;
+  text-align: left;
+}
+.journey-stat-row:last-child { border-bottom: none; }
+.journey-stat-icon { width: 28px; height: 28px; object-fit: contain; flex-shrink: 0; }
+.journey-stat-label { flex: 1; font-size: 0.88rem; color: var(--text); font-weight: 500; }
+.journey-stat-value { font-size: 0.88rem; color: var(--text-2); }
+.journey-stat-chevron { color: var(--text-3); flex-shrink: 0; }
+
+.journey-badges-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 22px 20px 10px;
+}
+.journey-section-title { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+.journey-badges-count { font-size: 0.78rem; color: var(--text-2); }
+
+.journey-badges-row {
+  display: flex;
+  gap: 10px;
+  padding: 0 20px;
+}
+.journey-badge {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.journey-badge-icon { width: 52px; height: 52px; object-fit: contain; display: block; }
+/* Locked badges reuse the real cropped artwork, just desaturated + dimmed
+   — never a separate fabricated "gray" asset, never colorful while locked. */
+.journey-badge:not(.journey-badge--unlocked) .journey-badge-icon {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.journey-badge--unlocked .journey-badge-icon {
+  filter: drop-shadow(0 3px 10px rgba(236, 72, 153, 0.45));
+}
+.journey-badge-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-2);
+}
+.journey-badge--unlocked .journey-badge-name { color: var(--accent); }
+
+.journey-explore-btn {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 22px 20px 0;
+  padding: 15px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: var(--r-lg);
+  text-align: center;
+}
+
+
+/* ================================================================
+   SCREEN: MISSION CONTROL
+   ================================================================ */
+.mission-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 20px 6px;
+  flex-shrink: 0;
+}
+.mission-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mission-titles { flex: 1; text-align: center; padding-top: 2px; }
+.mission-title { font-size: 1.15rem; font-weight: 800; color: var(--text); }
+.mission-subtitle { font-size: 0.75rem; color: var(--text-2); margin-top: 2px; }
+
+.mission-scroll { padding: 10px 20px 34px; }
+
+.mission-level-card {
+  position: relative;
+  background: linear-gradient(135deg, #fff6fa, #fdeef5);
+  border: none;
+  box-shadow: 0 1px 6px rgba(28,25,23,0.06);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  overflow: hidden;
+}
+/* hero-planet.png — real cropped illustration, positioned decoratively
+   in the card's top-right corner. */
+.mission-level-planet {
+  position: absolute;
+  top: 30px;
+  right: 18px;
+  width: 150px;
+  height: auto;
+  pointer-events: none;
+}
+/* Fixed colors, not var(--text)/var(--text-2)/var(--s2) — this whole
+   card (.mission-level-card above) is a permanently fixed light pink
+   gradient regardless of theme, so anything inside it must stay fixed
+   too; the theme tokens would go light-on-light (or a dark progress
+   track on a pale card) in dark mode otherwise. */
+.mission-level-label { display: block; font-size: 0.78rem; color: #8a8175; font-weight: 600; }
+.mission-level-num { display: block; font-size: 2.6rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
+.mission-level-title { display: block; font-size: 0.9rem; color: #1c1917; font-weight: 600; margin-bottom: 14px; }
+.mission-xp-row { display: flex; align-items: center; gap: 10px; max-width: 56%; }
+.mission-xp-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: #f3ede4;
+  overflow: hidden;
+}
+.mission-xp-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+.mission-xp-text { font-size: 0.72rem; color: #8a8175; white-space: nowrap; }
+/* ---- Dark mode: this card goes dark too, unlike the Level Up panel ----
+   The tier icon here (level-tier-*.png) is the only place those files are
+   used, and its new dark-mode artwork bakes in a rim shadow meant for a
+   dark backdrop -- against the fixed pink gradient above it read as a
+   stray dark smudge. Rather than fight that (the shading is real content,
+   not a crop error), the card follows the normal dark palette here, the
+   same as any other card on this screen, and its text goes back to the
+   normal theme tokens instead of the fixed light-card colours above. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mission-level-card { background: var(--s1); }
+  :root:not([data-theme="light"]) .mission-level-label { color: var(--text-2); }
+  :root:not([data-theme="light"]) .mission-level-title { color: var(--text); }
+  :root:not([data-theme="light"]) .mission-xp-bar { background: var(--s2); }
+  :root:not([data-theme="light"]) .mission-xp-text { color: var(--text-2); }
+}
+:root[data-theme="dark"] .mission-level-card { background: var(--s1); }
+:root[data-theme="dark"] .mission-level-label { color: var(--text-2); }
+:root[data-theme="dark"] .mission-level-title { color: var(--text); }
+:root[data-theme="dark"] .mission-xp-bar { background: var(--s2); }
+:root[data-theme="dark"] .mission-xp-text { color: var(--text-2); }
+
+.mission-section-title { font-size: 1.02rem; font-weight: 800; color: var(--text); margin: 22px 0 10px; }
+
+.mission-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.mission-stat-tile {
+  background: var(--s1);
+  border: none;
+  box-shadow: 0 1px 6px rgba(28,25,23,0.06);
+  border-radius: var(--r-md);
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mission-stat-ic {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  display: flex; align-items: center; justify-content: center;
+}
+.mission-stat-label { font-size: 0.68rem; color: var(--text-2); font-weight: 500; }
+.mission-stat-num { font-size: 1rem; font-weight: 800; color: var(--text); }
+
+.mission-missions-card {
+  background: var(--s1);
+  border: none;
+  box-shadow: 0 1px 6px rgba(28,25,23,0.06);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.mission-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+}
+.mission-row:last-child { border-bottom: none; }
+.mission-row-check {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mission-row-check--done { background: var(--accent); }
+.mission-row-check--partial { background: #a78bfa; }
+.mission-row-check--todo { background: var(--s2); }
+.mission-row-label { flex: 1; font-size: 0.85rem; color: var(--text); }
+.mission-row-progress { font-size: 0.8rem; color: var(--text-2); font-weight: 600; }
+.mission-row-xp {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  padding: 2px 7px;
+  border-radius: 8px;
+}
+.mission-row-go {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+/* An author `display` always beats the UA stylesheet's `[hidden] {display:none}`,
+   so the Go button on a completed mission needs this to actually disappear
+   (renderDailyMissions sets .hidden on it). Same pattern as the other
+   `.foo[hidden]` rules in this file. */
+.mission-row-go[hidden] { display: none; }
+
+.mission-bottom-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.mission-bottom-card {
+  flex: 1;
+  background: var(--s1);
+  border: none;
+  box-shadow: 0 1px 6px rgba(28,25,23,0.06);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mission-bottom-ic { width: 22px; height: 22px; object-fit: contain; margin-bottom: 4px; }
+.mission-stat-ic img { width: 22px; height: 22px; object-fit: contain; }
+.mission-bottom-label { font-size: 0.75rem; color: var(--text-2); }
+.mission-bottom-value { font-size: 1.15rem; font-weight: 800; color: var(--accent); }
+.mission-bottom-sub { font-size: 0.7rem; color: var(--text-2); }
+
+
+/* ================================================================
+   MILESTONES  (hub, badge sheet, share sheet)
+   Hub: summary, then one section per category with badges 3 across.
+   Badge art is the real cropped sheet art (light + -dark siblings).
+   ================================================================ */
+.ms-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px 6px;
+}
+.ms-round-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--s1);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(28, 25, 23, 0.07);
+  cursor: pointer;
+}
+.ms-scroll { padding: 10px 20px 34px; }
+.ms-page-title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  margin-top: 6px;
+}
+.ms-hero-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+.ms-hero { display: flex; flex-direction: column; align-items: center; }
+.ms-hero-art { width: 96px; height: 96px; object-fit: contain; }
+.ms-hero-digits {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  margin-top: -18px;
+  position: relative;
+  z-index: 1;
+}
+.ms-digit { height: 36px; width: auto; }
+.ms-hero-label { margin-top: 6px; font-size: 17px; font-weight: 700; color: var(--text); }
+.ms-stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+.ms-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  min-width: 0;
+  background: var(--s1);
+  border-radius: 20px;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+}
+.ms-stat-icon { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
+.ms-stat-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ms-stat-text b { font-size: 15px; font-weight: 700; color: var(--text); }
+.ms-stat-text > span { font-size: 13px; color: var(--text-2); }
+.ms-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--s2);
+  margin-top: 6px;
+  overflow: hidden;
+}
+.ms-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.35s ease;
+}
+.ms-section { margin-top: 26px; }
+.ms-section-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+.ms-section-sub { font-size: 14px; color: var(--text-2); margin-top: 4px; }
+.ms-section-divider {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 28px 0 0;
+}
+.ms-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  row-gap: 18px;
+  margin-top: 14px;
+}
+.ms-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ms-badge:active { transform: scale(0.97); }
+.ms-badge--locked .ms-badge-art { filter: grayscale(1); opacity: 0.5; }
+.ms-badge-art { width: 96px; height: 96px; object-fit: contain; }
+.ms-badge-name {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+.ms-badge-req { font-size: 12.5px; color: var(--text-2); text-align: center; margin-top: 2px; }
+
+.ms-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+.ms-sheet-overlay[hidden] { display: none; }
+.ms-sheet-overlay.is-open { opacity: 1; }
+.ms-sheet {
+  width: 100%;
+  height: calc(100% - 52px);
+  background: var(--bg);
+  border-radius: 32px 32px 0 0;
+  padding: 12px 24px calc(env(safe-area-inset-bottom) + 28px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ms-sheet-overlay.is-open .ms-sheet { transform: translateY(0); }
+.ms-sheet-handle { width: 40px; height: 5px; border-radius: 3px; background: var(--border); }
+.ms-sheet-art { width: 220px; height: 220px; object-fit: contain; margin-top: auto; }
+.ms-art--locked { filter: grayscale(1); opacity: 0.55; }
+.ms-sheet-label { margin-top: 18px; font-size: 14px; color: var(--text-2); }
+.ms-sheet-name { font-size: 28px; font-weight: 800; color: var(--text); margin-top: 4px; }
+.ms-sheet-req { font-size: 16px; color: var(--text-2); margin-top: 4px; }
+.ms-sheet-action {
+  width: 100%;
+  height: 56px;
+  margin-top: auto;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(236, 72, 153, 0.3);
+}
+.ms-sheet-action:disabled {
+  background: var(--s2);
+  color: var(--text-2);
+  box-shadow: none;
+  cursor: default;
+}
+.ms-sheet--share {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ms-accent, #ec4899) 38%, #ffffff) 0%, var(--bg) 58%);
+}
+.ms-share-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 24px;
+}
+.ms-share-art { width: 200px; height: 200px; object-fit: contain; }
+.ms-share-art-wrap { position: relative; }
+.ms-share-digits {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+}
+.ms-share-digits[hidden] { display: none; }
+.ms-share-digits .ms-digit { height: 50px; width: auto; }
+.ms-share-title {
+  margin-top: 22px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ms-accent, var(--accent));
+}
+.ms-share-sub { font-size: 15px; color: var(--text-2); margin-top: 6px; }
+.ms-share-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 24px;
+}
+.ms-share-btn {
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+.ms-share-ic { width: 60px; height: 60px; object-fit: contain; }
+.ms-share-btn span { font-size: 12px; color: var(--text-2); }

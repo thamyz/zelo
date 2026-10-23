@@ -1,0 +1,482 @@
+/* ================================================================
+   01-base.css — resets, design tokens, the dark-mode palette, the tab/screen system, the shared app header and hero
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   Zelo — style.css
+   Warm light UI. White cards, pink accent, black nav.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   RESET
+   ---------------------------------------------------------------- */
+*, *::before, *::after {
+  margin: 0; padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* No visible scrollbar/scroll indicator anywhere in the app — every
+   scrollable element (screens, tabs, sheets, lists, carousels, textareas)
+   scrolls normally, just without the bar drawn on its edge. This used to be
+   a per-class list (.tab/.screen/.chat-messages only), so any other
+   scrollable container still showed one. scrollbar-width is the standard
+   property; ::-webkit-scrollbar covers WebKit/Blink versions that predate
+   it. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; background: transparent; }
+
+/* ----------------------------------------------------------------
+   TOKENS
+   ---------------------------------------------------------------- */
+:root {
+  /* App-space viewport units. Viewport units resolve against the REAL viewport,
+     which on iPad is the device size, not the smaller box the app is laid out
+     in before being scaled up — so a raw dvh reads ~1.4x too big there and
+     pushes every clamp() to its max. Identity on a phone. */
+  --app-vh: 1dvh;
+  --app-vw: 1vw;
+  --bg:      #ffffff;   /* white base */
+  --s1:      #ffffff;   /* card surface */
+  --s2:      #f3ede4;   /* input / elevated surface */
+  --s3:      #ebe3d7;   /* hover state */
+
+  --border:  #ece5da;
+  --border-2:#dcd3c5;
+
+  --text:    #1c1917;   /* warm near-black */
+  --text-2:  #8a8175;
+  --text-3:  #b9b0a2;
+
+  /* One accent — pink, dating-first */
+  /* ---- Profile photo geometry (single source of truth) ----------------
+     Change --card-photo-ratio here and BOTH the generation target and every
+     rendered <img> move together. Measured boxes this must survive, taken
+     from the real UI (see the ratio table in CLAUDE.md):
+       swipe card photo : 0.72 (tall, 16 Pro Max) -> 1.75 (wide, iPhone SE)
+       detail sheet strip: ~1.95 -> ~2.20 (fixed 200px tall, full-bleed)
+     Every surface uses object-fit:cover, so the source is cropped, never
+     letterboxed — which is why the safe area matters more than the ratio. */
+  --card-photo-ratio: 4 / 5;
+  /* Scrim behind the name/actions on the full-bleed card. RGB triplet so
+     the gradient can vary alpha. White in light mode, near-black in dark —
+     --text flips on its own, so only this needs a dark override. */
+  --card-scrim-rgb: 255, 255, 255;
+  /* object-position for every profile photo. Biased slightly above centre
+     because the crop that bites is vertical (wide boxes), and faces sit
+     above the midline. Tune here, not per-element. */
+  --card-photo-focus: 50% 40%;
+
+  --accent:      #ec4899;
+  --accent-deep: #db2777;
+  --accent-soft: rgba(236, 72, 153, 0.10);
+  --accent-border: rgba(236, 72, 153, 0.35);
+
+  /* Bottom navigation */
+  --nav-bg: #ffffff;
+
+  --green: #22c55e;
+  --red:   #ef4444;
+
+  --r-sm:  8px;
+  --r-md:  14px;
+  --r-lg:  20px;
+  --r-xl:  26px;
+
+  --tab-h: 64px;
+
+  /* Inter loaded as a web font so type renders identically on every OS —
+     system-font stacks (Segoe UI / SF Pro / etc.) look different per device. */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light dark;
+}
+
+/* ----------------------------------------------------------------
+   DARK MODE — background/surface/border/text tokens only. Deliberately
+   does NOT redefine --accent, --green, or --red: buttons, icons, and photos
+   keep their exact same colors in dark mode, per spec — only what sits
+   behind/around them (and any near-black text that would go invisible on
+   it) changes. See applyTheme()/initTheme() in script.js for the JS side
+   (Settings > Personalization > Appearance) that toggles the [data-theme]
+   attribute; system ("no override") is handled by this media query alone.
+   Two fixed-light exceptions deliberately keep their hardcoded colors
+   instead of these tokens and are commented at their own definitions:
+   the cinematic onboarding flow (.cine*, "no black screens" by design)
+   and the first-visit practice-mode popup (.home-mode-*, same cream
+   family) — both are one-time/first-run brand moments, not regular app
+   chrome, so they intentionally never go dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --card-scrim-rgb: 14, 12, 9;
+    --bg:      #15130f;
+    --s1:      #201c17;
+    --s2:      #2a2520;
+    --s3:      #35302a;
+
+    --border:  #3a352d;
+    --border-2:#4a443a;
+
+    --text:    #f3ede4;
+    --text-2:  #a89e90;
+    --text-3:  #786f61;
+
+    --nav-bg:  #1a1712;
+  }
+}
+:root[data-theme="dark"] {
+  --card-scrim-rgb: 14, 12, 9;
+  --bg:      #15130f;
+  --s1:      #201c17;
+  --s2:      #2a2520;
+  --s3:      #35302a;
+
+  --border:  #3a352d;
+  --border-2:#4a443a;
+
+  --text:    #f3ede4;
+  --text-2:  #a89e90;
+  --text-3:  #786f61;
+
+  --nav-bg:  #1a1712;
+}
+
+/* ----------------------------------------------------------------
+   BASE
+   ---------------------------------------------------------------- */
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  /* Belt-and-suspenders against double-tap/pinch zoom alongside the
+     viewport meta tag's user-scalable=no — WKWebView doesn't always
+     honor that alone. */
+  touch-action: manipulation;
+}
+
+/* No text selection / drag-to-select / long-press copy callout anywhere
+   in the app — this isn't a document, it's an app UI. Inputs, textareas,
+   and contenteditable stay selectable so typing/editing still works. */
+*:not(input):not(textarea):not([contenteditable="true"]) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  max-width: 430px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ---- Shared fallback-screen layout — No Connection / crash / session
+   expired all use this same shape (logo, icon, title, 2-line subtext,
+   primary + secondary button). See the 3 #...-screen elements in
+   index.html right after <body>. ---- */
+.fallback-screen[hidden] { display: none; }
+.fallback-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 36px;
+  text-align: center;
+  background: var(--bg);
+}
+.fallback-logo {
+  position: absolute;
+  top: calc(60px + env(safe-area-inset-top));
+  /* Same size as the Home/Practice header's own Zelo wordmark (.home-brand)
+     — was noticeably smaller before, inconsistent with every other screen. */
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: flex-start;
+  margin: 0;
+}
+.fallback-icon {
+  width: 168px;
+  height: auto;
+  margin-bottom: 18px;
+}
+.fallback-title {
+  margin: 0 0 10px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.fallback-sub { margin: 0; line-height: 1.4; }
+.fallback-sub--1 { font-size: 0.95rem; font-weight: 600; color: var(--text-2); }
+.fallback-sub--2 { font-size: 0.85rem; color: var(--text-3); margin-top: 2px; }
+.fallback-btn-primary {
+  width: 100%;
+  max-width: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 26px;
+  padding: 16px;
+  border-radius: 99px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  -webkit-tap-highlight-color: transparent;
+}
+.fallback-btn-primary:active { transform: scale(0.97); }
+.fallback-btn-secondary {
+  width: 100%;
+  max-width: 280px;
+  margin-top: 10px;
+  padding: 14.5px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border-2);
+  background: none;
+  color: var(--text-2);
+  font-size: 1rem;
+  font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+}
+.fallback-btn-secondary:active { background: var(--s2); }
+
+button  { cursor: pointer; font-family: inherit; border: none; background: none; color: inherit; }
+textarea { font-family: inherit; }
+a { text-decoration: none; color: inherit; }
+
+/* Momentary full-screen click-blocker — see _armKeyboardDismissClickBlocker()
+   in script.js. Inert (no listeners of its own): its only job is to be the
+   thing physically sitting at the tap's screen point when the browser
+   synthesizes/dispatches that tap's click, so whatever is underneath it
+   never receives that click at all, regardless of event-propagation timing. */
+.kb-dismiss-click-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: transparent;
+}
+
+/* ----------------------------------------------------------------
+   TAB / SCREEN SYSTEM
+   ---------------------------------------------------------------- */
+.tab {
+  position: absolute;
+  inset: 0;
+  bottom: calc(var(--tab-h) + 34px);
+  padding-top: 92px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.tab.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  /* 36px + .screen-header's own 14px top padding = 50px total to the header
+     content — same target offset used for the tab headers, so every screen's
+     back button/title sits at the same distance from the Dynamic Island.
+     Screens with a differently-padded header (scan-result, chat, ai-coach,
+     history) override this below to hit the same 50px total. */
+  padding-top: 36px;
+  padding-bottom: 34px;
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+
+/* Wraps .tab-scroll on the Scan tab only — a plain pass-through box in
+   normal use, but gets overflow:hidden + a locked height added via JS while
+   the keyboard-open shift is active, so content sliding up clips cleanly at
+   the header's bottom edge instead of overlapping it. See the keyboard-nudge
+   code in script.js. */
+.scan-scroll-clip {
+  display: flex;
+  flex-direction: column;
+}
+
+/* #tab-assistant is display:flex/column with a fixed-height header above
+   this wrapper (see the #tab-assistant block below) — flex:1 lets this
+   wrapper claim exactly the real remaining space. min-height:100% (the
+   naive alternative) resolves against #tab-assistant's full content-box
+   height, blind to how much of it the header already consumed, which
+   silently added a phantom ~74px of extra scrollable height (exactly the
+   header's own height) below the real content. That extra scroll distance
+   was reachable but had nothing to show for it, which is what produced
+   both the "peek from the top" scroll glitch and the privacy note not
+   staying put at the bottom. */
+#tab-assistant .scan-scroll-clip {
+  flex: 1;
+  min-height: 0;
+}
+
+.tab-scroll {
+  padding: 0 22px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* flex-shrink:0 — .tab-scroll is a flex column on the tabs that scope it to
+   flex:1 (see #tab-assistant/#tab-chats .tab-scroll below); without this,
+   the flex algorithm shrinks this spacer toward 0 first whenever content
+   runs long, silently losing its clearance instead of just letting the
+   column scroll normally like it's supposed to. */
+.tab-bottom-spacer { height: 28px; flex-shrink: 0; }
+/* Scoped to this tab only (Practice tab keeps the default 28px) — the trust
+   line uses margin-top: auto to hug the bottom, so this spacer just needs to
+   clear the floating Scan FAB, not act as generic bottom padding. */
+#tab-assistant .tab-bottom-spacer { height: 30px; }
+
+
+/* ----------------------------------------------------------------
+   APP HEADER  (shared by all three tabs)
+   [profile button] [wordmark centered] [spacer]
+   ---------------------------------------------------------------- */
+.app-header {
+  display: grid;
+  grid-template-columns: 38px 1fr 38px;
+  align-items: center;
+  padding: 16px 0 14px;
+  flex-shrink: 0;
+  width: 100%;
+  /* .tab (this header's scrolling ancestor) is the thing WebKit scrolls to
+     reveal a focused input above the keyboard — without this, the header
+     just rides along with that scroll like everything else. */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+}
+
+/* Practice tab header sits outside .tab-scroll, needs its own side padding */
+.app-header--pad {
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+.wordmark {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.profile-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s1);
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+
+.profile-btn:hover { background: var(--s2); color: var(--text); }
+
+/* Avatar with presence dot (Scan header) */
+.profile-btn--avatar { position: relative; overflow: visible; }
+/* The actual "first box" a user sees before ever opening the dashboard — was a static generic person
+   icon, never updated with a real photo at all (separate bug from the dashboard's own card, which got
+   fixed in the round before this one). Same [hidden]-vs-display:flex trap as the other two avatar
+   pairs in this file by now — fixed up front this time instead of shipping it a third time. */
+.profile-btn-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.profile-btn-photo[hidden], .profile-btn-icon[hidden] { display: none; }
+
+.online-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 2px solid var(--bg);
+}
+
+.header-spacer { width: 44px; }
+
+/* Settings gear (Scan header, right) */
+.settings-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: none;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+}
+
+.settings-btn:hover { background: var(--s2); color: var(--text); }
+
+
+/* ----------------------------------------------------------------
+   HERO (both tabs)
+   ---------------------------------------------------------------- */
+.hero {
+  padding: 36px 0 32px;
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -1.5px;
+  color: var(--text);
+}
+
+.hero-sub {
+  margin-top: 12px;
+  font-size: 0.92rem;
+  color: var(--text-2);
+  line-height: 1.55;
+  max-width: 280px;
+}
+

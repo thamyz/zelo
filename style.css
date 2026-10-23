@@ -1,3 +1,16 @@
+/* GENERATED FILE - do not edit.
+   Built from css/ by scripts/build.sh - edit the files in css/ instead,
+   then run: bash scripts/sync.sh
+   What lives where: app/README.md */
+
+/* ================================================================
+   01-base.css — resets, design tokens, the dark-mode palette, the tab/screen system, the shared app header and hero
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
 /* ================================================================
    Zelo — style.css
    Warm light UI. White cards, pink accent, black nav.
@@ -472,6 +485,13 @@ a { text-decoration: none; color: inherit; }
   max-width: 280px;
 }
 
+/* ================================================================
+   02-scan.css — the Scan page: input card, Generate button, and the generated-reply results
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ----------------------------------------------------------------
    SCAN PAGE — guided steps
@@ -2107,6 +2127,13 @@ a { text-decoration: none; color: inherit; }
 }
 .reply-swipe-hint.hidden { opacity: 0; }
 
+/* ================================================================
+   03-screens.css — the shared screen header, Profile, Tell Zelo More, and the Scan sub-pages
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ----------------------------------------------------------------
    PRACTICE TAB — DIFFICULTY CARDS
@@ -2673,6 +2700,13 @@ a { text-decoration: none; color: inherit; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ================================================================
+   04-chat.css — the practice conversation screen, the chat-mode modal, the bottom tab bar and shared animations
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ----------------------------------------------------------------
    SCREEN: CHAT
@@ -3321,6 +3355,13 @@ a { text-decoration: none; color: inherit; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ================================================================
+   05-practice.css — the Home brand heading, the swipe card deck, the match screen and the Chats list
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    HOME TAB BRAND + SECTION HEADING
@@ -4288,6 +4329,13 @@ a { text-decoration: none; color: inherit; }
   flex-shrink: 0;
 }
 
+/* ================================================================
+   06-account.css — the Account dashboard, the older settings fields, and saved scan threads
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    PROFILE / DASHBOARD SCREEN
@@ -5858,6 +5906,13 @@ a { text-decoration: none; color: inherit; }
 /* .chat-row-delete replaced by .swipe-del-reveal above */
 
 
+/* ================================================================
+   07-rewards.css — Leaderboard, Your Journey, Mission Control and Milestones
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    FEATURE 9 — LEADERBOARD
@@ -6830,6 +6885,13 @@ a { text-decoration: none; color: inherit; }
 }
 .ms-share-ic { width: 60px; height: 60px; object-fit: contain; }
 .ms-share-btn span { font-size: 12px; color: var(--text-2); }
+/* ================================================================
+   08-auth.css — the sign-in, verification, password-reset and name/age overlays
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    AUTH OVERLAYS
@@ -7615,6 +7677,13 @@ a { text-decoration: none; color: inherit; }
 .streak-pill-icon { width: 30px; height: 30px; object-fit: contain; }
 .streak-pill-num { font-size: 1rem; font-weight: 800; color: var(--accent); }
 
+/* ================================================================
+   09-history.css — the History screen and the AI Coach entry card on Scan
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    HISTORY SCREEN  (Fix 2/3)
@@ -8394,6 +8463,13 @@ a { text-decoration: none; color: inherit; }
   font-size: 0.8rem;
   color: var(--text-3);
 }
+/* ================================================================
+   10-paywall.css — the trial explainer and paywall (presentation only - there is no payment code)
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    PAYWALL — trial-explainer format. UI mock only, no payment logic.
@@ -8745,6 +8821,13 @@ a { text-decoration: none; color: inherit; }
 }
 .paywall-decline[hidden] { display: none; }
 
+/* ================================================================
+   11-ai-coach.css — the full AI Coach page, its chat history panel and the thread picker
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    AI COACH — full page  (Fix 6)
@@ -9859,6 +9942,13 @@ a { text-decoration: none; color: inherit; }
   font-weight: 600;
 }
 
+/* ================================================================
+   12-onboarding.css — the two-phase first-launch flow, every onboarding screen, and the practice tutorial
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    CINEMATIC ONBOARDING  (two-phase first-launch flow)
@@ -11678,6 +11768,13 @@ a { text-decoration: none; color: inherit; }
 .cine-landing-loader[hidden] { display: none !important; }
 .cine-landing-loader--out { opacity: 0; }
 .cine-landing-bar { width: 100%; max-width: 220px; margin: 26px 0 14px; }
+/* ================================================================
+   13-settings.css — Settings 2.0, Refer Friends, Profile & Login, and the standard notification banner
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ================================================================
    SETTINGS 2.0 — rebuilt against the settings-flow reference. Two
@@ -13391,6 +13488,13 @@ a { text-decoration: none; color: inherit; }
   background: var(--border-2);
 }
 
+/* ================================================================
+   14-later-additions.css — rules added after the sheet was organised, which must stay last because they deliberately override earlier ones: the conversational intro, chat hold menu, persona profile, onboarding steps 7 and 13, blocked chat, retry bar, message banner and support forms
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
 
 /* ======================================================================
    CONVERSATIONAL ONBOARDING INTRO  (#cine-convo, CINE_CONVO_INTRO in

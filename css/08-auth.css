@@ -1,0 +1,792 @@
+/* ================================================================
+   08-auth.css — the sign-in, verification, password-reset and name/age overlays
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   AUTH OVERLAYS
+   Full-screen sheets that sit above all tabs and screens.
+   Shown/hidden via the `hidden` attribute.
+   ================================================================ */
+
+.auth-overlay[hidden] { display: none; }
+
+/* The FULL-SCREEN overlays: the sign-up code screen (#auth-verify-overlay), the
+   password-reset screen (#auth-reset-overlay) and the name/age setup
+   (#auth-setup-overlay). Restored 2026-10-22 from the project's first commit —
+   this rule was deleted in the 2026-08-15 auto-commit that introduced the
+   bottom-sheet sign-in (.auth-overlay--sheet), which left these three with no
+   position and no background at all: they rendered as transparent blocks in
+   the page flow, with whatever screen was behind them showing through. It went
+   unnoticed because email confirmation was switched off, so the sign-up code
+   screen was never reached. Scoped with :not(--sheet) because the sheet has
+   its own look below. */
+.auth-overlay:not(.auth-overlay--sheet) {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  z-index: 2000;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Sibling of .screen/.tab under #app, not a descendant — doesn't inherit
+     their safe-area padding, so it needs its own (see .auth-dismiss-btn). */
+  padding-top: 34px;
+  padding-bottom: 34px;
+}
+.auth-overlay:not(.auth-overlay--sheet)[hidden] { display: none; }
+
+/* ── Stage 1 — iOS-style partial bottom sheet (provider picker) ──
+   Not a full-screen takeover: a dimmed scrim over whatever screen was
+   already showing, with a sheet covering under half the viewport height,
+   sliding up on open / back down on dismiss. Tapping the scrim (anywhere
+   above the sheet) dismisses it exactly like the X does. */
+.auth-overlay--sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: transparent;
+}
+.auth-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,13,11,0.45);
+  opacity: 0;
+  transition: opacity 0.32s ease;
+  pointer-events: none;
+}
+.auth-overlay--open .auth-sheet-scrim { opacity: 1; pointer-events: auto; }
+
+.auth-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  max-height: calc(var(--app-vh) * 46);
+  overflow-y: auto;
+  background: var(--bg);
+  border-radius: 26px 26px 0 0;
+  padding: 18px 22px calc(22px + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.18);
+  transform: translateY(102%);
+  transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
+  box-sizing: border-box;
+}
+.auth-overlay--open .auth-sheet { transform: translateY(0); }
+
+.auth-sheet-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0 16px;
+}
+.auth-sheet-title {
+  margin: 0;
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.auth-sheet-head .auth-dismiss-btn { position: absolute; right: 0; top: 0; width: 34px; height: 34px; }
+.auth-sheet-hr { height: 1px; background: var(--border); margin: 0 -22px 18px; }
+.auth-sheet-legal {
+  margin: 18px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-3);
+  text-align: center;
+}
+.auth-sheet-legal a { color: var(--text-2); text-decoration: underline; }
+
+/* ── Stage 2 — full screen (email + password), reached via "Continue with
+   email". Slides in from the right over the sheet's stage; back returns to
+   stage 1 rather than dismissing the whole flow. ── */
+.auth-email-step {
+  position: fixed;
+  inset: 0;
+  z-index: 2001;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: calc(20px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(100%);
+  transition: transform 0.32s ease;
+  pointer-events: none;
+}
+.auth-email-step--show { transform: translateX(0); pointer-events: auto; }
+.auth-email-step-body { flex: 1; padding-top: 44px; }
+.auth-email-step-foot { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.auth-forgot-step { z-index: 2002; }
+.auth-forgot-body { display: flex; flex-direction: column; align-items: stretch; }
+.auth-forgot-body .pl-icon-circle-lg { display: flex; }
+/* Password dots: smaller once something is typed (the placeholder keeps the 16px iOS-safe size). */
+#auth-password-input:not(:placeholder-shown) { font-size: 12px; letter-spacing: 2px; }
+
+.auth-card {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  padding: 72px 28px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Logo ── */
+.auth-logo {
+  display: inline-flex;
+  align-items: flex-start;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  color: var(--accent);
+  margin-bottom: 32px;
+  line-height: 1;
+}
+
+/* ── Headings ── */
+.auth-heading,
+.auth-email-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  width: 100%;
+}
+
+.auth-heading     { margin-bottom: 36px; }
+.auth-email-title { margin-bottom: 6px; }
+
+.auth-subtext {
+  font-size: 0.86rem;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0 0 28px;
+  width: 100%;
+}
+
+.auth-subtext strong { color: var(--text); font-weight: 700; }
+
+/* ── Provider buttons ── */
+.auth-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.auth-provider-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  width: 100%;
+  padding: 15px 20px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  font-size: 0.93rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.auth-provider-btn:hover  { background: var(--s1); border-color: var(--border-2); }
+.auth-provider-btn:active { transform: scale(0.985); }
+
+.auth-provider-btn--apple {
+  background: #16130f;
+  border-color: #16130f;
+  color: #fff;
+}
+.auth-provider-btn--apple:hover { background: #16130f; border-color: #16130f; }
+
+/* ── Back button (email screen) ── */
+.auth-back-btn {
+  position: absolute;
+  top: calc(20px + env(safe-area-inset-top));
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.12s;
+}
+
+.auth-back-btn:hover { background: var(--s2); }
+
+.auth-dismiss-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-3);
+  transition: background 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-dismiss-btn:hover { background: var(--border); color: var(--text); }
+
+/* ── Email form ── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.auth-input {
+  width: 100%;
+  height: 52px; /* fixed, so a smaller font-size (e.g. the password field's dots) never shrinks the box itself */
+  padding: 15px 16px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 16px; /* 16px minimum avoids iOS auto-zoom-on-focus */
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  box-sizing: border-box;
+  display: flex; /* vertically centers the value regardless of font-size, instead of relying on line-height */
+  align-items: center;
+}
+
+.auth-input:focus         { border-color: var(--accent); background: var(--s1); }
+.auth-input::placeholder  { color: var(--text-3); }
+
+#auth-terms-wrap[hidden] { display: none; }
+
+/* ── Terms & Conditions agreement (sign-up only) ── */
+.auth-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 2px 2px 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.auth-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.auth-terms-row a {
+  color: var(--accent-deep);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-terms-row a:hover { text-decoration: underline; }
+
+.auth-error-msg {
+  font-size: 0.8rem;
+  color: var(--red);
+  min-height: 1em;
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Verification code entry (6 digit boxes) ── */
+.auth-code-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.auth-code-input {
+  width: 100%;
+  aspect-ratio: 1;
+  text-align: center;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+
+.auth-code-input:focus { border-color: var(--accent); background: var(--s1); }
+
+/* ── Primary action button ── */
+.auth-submit-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 99px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(236, 72, 153, 0.28);
+  transition: background 0.12s, transform 0.1s;
+  margin-top: 4px;
+}
+
+.auth-submit-btn:hover  { background: var(--accent-deep); }
+.auth-submit-btn:active { transform: scale(0.985); }
+.auth-submit-btn--busy, .auth-submit-btn:disabled { opacity: 0.72; pointer-events: none; box-shadow: none; }
+
+/* ── Secondary text buttons ── */
+.auth-forgot-btn,
+.auth-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px;
+  text-align: center;
+  display: block;
+  width: 100%;
+}
+
+.auth-forgot-btn {
+  font-size: 0.86rem;
+  color: var(--text-2);
+  margin-top: 14px;
+  padding: 8px 4px;
+}
+
+.auth-forgot-btn:hover { color: var(--text); }
+
+.auth-toggle-btn {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 6px;
+  padding: 10px 4px;
+}
+
+.auth-toggle-btn:hover { color: var(--accent-deep); }
+
+/* ── Setup screen ── */
+.auth-setup-card { padding-top: 56px; }
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setup-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+}
+
+.setup-note {
+  font-size: 0.76rem;
+  color: var(--text-2);
+  line-height: 1.55;
+  text-align: center;
+  margin: 0;
+}
+
+.age-warn {
+  font-size: 0.78rem;
+  color: var(--red);
+  min-height: 1em;
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Age drum roller ── */
+.age-roller-wrap {
+  position: relative;
+  height: 220px;
+  border-radius: var(--r-md);
+  background: var(--s2);
+  overflow: hidden;
+}
+
+/* Fade the top and bottom edges to create the drum-roller illusion */
+.age-roller-wrap::before,
+.age-roller-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 88px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.age-roller-wrap::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--s2) 0%, transparent 100%);
+}
+
+.age-roller-wrap::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--s2) 0%, transparent 100%);
+}
+
+/* Highlight band at the center of the roller */
+.age-roller-highlight {
+  position: absolute;
+  top: 88px;   /* (220px - 44px) / 2 */
+  left: 0;
+  right: 0;
+  height: 44px;
+  background: rgba(236, 72, 153, 0.07);
+  border-top: 1.5px solid var(--accent-border);
+  border-bottom: 1.5px solid var(--accent-border);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Scroll container */
+.age-roller {
+  position: relative;
+  z-index: 0;
+  height: 220px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.age-roller::-webkit-scrollbar { display: none; }
+
+/* Each age option */
+.age-roller-item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-2);
+  user-select: none;
+}
+
+.age-roller-ghost {
+  pointer-events: none;
+  color: transparent;
+}
+
+/* ── Scan Edit button ────────────────────────────────────────── */
+.scan-edit-btn {
+  background: none;
+  border: none;
+  font-size: 15px;
+  color: var(--accent, #e91e8c);
+  padding: 6px 4px;
+  margin-left: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scan-edit-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg-card, #fff);
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+
+.scan-edit-count {
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+.scan-edit-delete-btn {
+  background: none;
+  border: none;
+  font-size: 15px;
+  color: #ef4444;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.scan-edit-delete-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.thread-scan-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.scan-select-cb {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  accent-color: var(--accent, #e91e8c);
+  cursor: pointer;
+}
+
+.thread-scan-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Chat settings button ─────────────────────────────────────── */
+.chat-settings-btn {
+  background: var(--s1);
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+}
+
+/* ── Chat settings sheet ──────────────────────────────────────── */
+.chat-settings-sheet[hidden] { display: none; }
+.chat-settings-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.chat-settings-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+}
+
+.chat-settings-sheet-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Same flush-bottom-sheet properties as History's .thread-link-card (only
+   top corners rounded, no side margins, sits flat against the screen
+   edges) — was a fully-rounded floating card with its own 10px side
+   margins before, which was the actual reason the (now-removed) separate
+   Cancel button below it read as a second, disconnected box instead of
+   sharing one shape with Mute Notifications above it. */
+.chat-settings-panel {
+  background: var(--s1);
+  border-radius: 24px 24px 0 0;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+
+.chat-settings-handle {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border-2);
+  margin: 10px auto 6px;
+}
+
+.chat-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chat-settings-row:active { background: var(--s2); }
+.chat-settings-row--toggle { cursor: pointer; }
+
+.chat-settings-row--danger { color: #ef4444; }
+
+.chat-settings-icon { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+.chat-settings-row-text { flex: 1; min-width: 0; }
+.chat-settings-chevron { color: var(--text-3); font-size: 1.2rem; flex-shrink: 0; }
+
+.chat-settings-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 16px;
+}
+
+/* ── Reset/Delete confirmation — same centered-card-over-scrim pattern as
+   the other overlays (.thread-link-overlay etc). ── */
+.chat-confirm-overlay[hidden] { display: none; }
+.chat-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4700;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.chat-confirm-card {
+  width: 100%;
+  max-width: 320px;
+  background: var(--s1);
+  border-radius: var(--r-lg);
+  padding: 22px 20px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+}
+.chat-confirm-title { font-size: 1.1rem; font-weight: 800; color: var(--text); margin: 0 0 8px; }
+.chat-confirm-body { font-size: 0.9rem; color: var(--text-2); line-height: 1.5; margin: 0 0 18px; }
+.chat-confirm-actions { display: flex; gap: 10px; }
+.chat-confirm-actions .btn2 { width: auto; flex: 1; }
+
+/* ── Realistic intro popup ────────────────────────────────────── */
+.realistic-intro-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* ── Scan upload clear button ─────────────────────────────────── */
+.scan-upload-clear-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 12px;
+  padding: 12px;
+  background: none;
+  border: 1.5px solid var(--border, rgba(0,0,0,0.12));
+  border-radius: 12px;
+  font-size: 15px;
+  color: #ef4444;
+  cursor: pointer;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scan-upload-clear-btn:active { opacity: 0.7; }
+
+
+
+
+/* ================================================================
+   HISTORY ICON  (Scan header, right) — replaces the old gear
+   ================================================================ */
+.history-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s1);
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.history-btn:hover { background: var(--accent-soft); color: var(--accent); }
+.history-btn[hidden] { display: none; }
+
+/* AI Coach entry in the Your Reply header (was a plain drawn sparkle on the
+   generic .history-btn background — replaced with the same real gem crop +
+   pink-tinted circle used everywhere else "this is AI Coach" is shown, e.g.
+   .asst-coach-avatar / _aiCoachBrandIconHTML(), instead of an ad-hoc icon). */
+.history-btn--coach { background: #FFE1F0; }
+.scan-result-coach-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scan-result-coach-icon.has-img { background: transparent; }
+ /* same [hidden] gotcha as .copy-toast above — its own display:flex would otherwise win */
+
+/* Streak pill — Scan header only. Positioned absolutely (not a grid
+   column) specifically so it does NOT affect .app-header's shared
+   `38px 1fr 38px` grid — that grid is what keeps "Zelo" centered on
+   every header (Practice, Chats, paywall) including this one; giving
+   the pill its own grid column earlier was shifting the brand off
+   center. .app-header is itself position:fixed (see above), which
+   still establishes a containing block for this. */
+.streak-pill {
+  position: absolute;
+  /* top:50px, not 50%+translateY(-50%) — .profile-btn/.history-btn are
+     grid items centered within the row BELOW .app-header's 50px top
+     safe-area padding, not within the header's full box, so a
+     percentage-of-full-box center sat ~18px too high. Match their real
+     computed top directly instead of re-deriving that padding math. */
+  top: 50px;
+  right: 76px; /* clears the 44px history button + a real gap, not overlapping it */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 44px; /* matches .profile-btn/.history-btn so all three header controls read as the same size */
+  padding: 0 12px 0 6px;
+  border-radius: 999px;
+  background: var(--s1);
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+}
+.streak-pill-icon { width: 30px; height: 30px; object-fit: contain; }
+.streak-pill-num { font-size: 1rem; font-weight: 800; color: var(--accent); }
+

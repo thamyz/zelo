@@ -1,0 +1,1577 @@
+/* ================================================================
+   06-account.css — the Account dashboard, the older settings fields, and saved scan threads
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   PROFILE / DASHBOARD SCREEN
+   ================================================================ */
+
+.dash-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 20px 20px 48px;
+  flex: 1;
+}
+
+.dash-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: var(--s1);
+  border-radius: var(--r-lg);
+  padding: 18px;
+  text-align: left;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); /* same no-border/shadow treatment as the Scan page's own cards */
+}
+
+.dash-profile-chevron {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: 1.15rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.dash-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ec4899, #f43f5e);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dash-avatar-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+/* Same [hidden]-vs-display:flex bug this file already fixed once for the Profile & Login avatar —
+   fixing it here too rather than copy-pasting the same mistake into a second avatar pair. */
+.dash-avatar[hidden], .dash-avatar-photo[hidden] { display: none; }
+
+.dash-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-name { font-size: 1rem;  font-weight: 800; }
+.dash-sub  { font-size: 0.78rem; color: var(--text-2); }
+
+/* Stat tiles */
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.dash-stat {
+  background: var(--s1);
+  border-radius: var(--r-md);
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); /* same no-border/shadow treatment as the Scan page's own cards */
+}
+
+.dash-stat-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.dash-stat-label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ================================================================
+   Legacy settings fields — the standalone Settings Home screen these
+   were originally built for is gone now (its content lives directly on
+   screen-dashboard, see Settings 2.0 / .settings2-* below).
+   ================================================================ */
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-field-row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--s1);
+  font-size: 16px; /* 16px minimum avoids iOS auto-zoom-on-focus */
+  color: var(--text);
+}
+
+.settings-save-btn {
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-radius: var(--r-md);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-field-msg {
+  font-size: 0.76rem;
+  color: var(--text-2);
+  min-height: 1em;
+}
+
+.settings-delete-account-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.settings-signout-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--s1);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 18px;
+}
+
+/* Toggle switch */
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 10px;
+}
+
+.settings-toggle-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.settings-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.settings-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 999px;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+
+.settings-toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  top: 3px;
+  background: var(--s1);
+  border-radius: 50%;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.settings-toggle input:checked + .settings-toggle-slider {
+  background: var(--accent);
+}
+
+.settings-toggle input:checked + .settings-toggle-slider::before {
+  transform: translateX(18px);
+}
+
+.settings-info-block {
+  background: var(--s1);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); /* same no-border/shadow treatment as the Scan page's own cards */
+}
+
+.settings-info-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+
+.settings-info-text {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* Small "view the full policy" links attached to a toggle row or info
+   block — opens the matching page on zelofficial.com via the Browser
+   plugin (in-app Safari view), not a full app-switch. */
+.settings-info-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+.settings-info-link:active { opacity: 0.6; }
+
+
+/* ----------------------------------------------------------------
+   SKIPPED PROFILES — custom header (back circle / centered title /
+   Delete All pill) + pink info cards + box-photo row cards. Built to
+   match a supplied reference mockup pixel-sampled for its actual colors
+   (see the git history / commit notes for the sampled values) rather than
+   eyeballed — pale pink = --accent-soft, ink = --accent-deep throughout.
+   ---------------------------------------------------------------- */
+/* This screen has no .screen-header sibling (the custom top row below
+   replaces it) — .settings2-layout's own 18px top padding alone assumes
+   that header is what clears the status bar/notch on every other screen
+   that uses it, so this needs its own safe-area-aware top padding instead. */
+.skipped-layout { gap: 14px; padding-top: calc(18px + env(safe-area-inset-top)); }
+
+.skipped-top-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.back-btn--pink { background: var(--accent-soft); border: none; color: var(--text); }
+.skipped-title {
+  grid-column: 2;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+  white-space: nowrap;
+}
+.skipped-delete-all-btn {
+  grid-column: 3;
+  justify-self: end;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-weight: 700;
+  font-size: 0.84rem;
+  padding: 10px 15px;
+  border-radius: 999px;
+  border: none;
+  white-space: nowrap;
+}
+.skipped-delete-all-btn img { width: 15px; height: 15px; }
+.skipped-delete-all-btn[hidden] { display: none; }
+.skipped-subtitle { margin: 0; }
+
+/* Pale pink info cards — "Change your mind?" (top) / "Accidentally
+   skipped someone?" (footer). The footer one's icon has no bubble behind
+   it in the reference (a plain sparkle sitting directly on the card),
+   while the top one's icon sits in its own slightly-deeper pink circle —
+   see --icon-bare below. */
+.skipped-info-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--accent-soft);
+  border-radius: var(--r-lg);
+  padding: 16px;
+}
+.skipped-info-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.skipped-info-icon img { width: 18px; height: 18px; }
+.skipped-info-icon--bare { background: none; width: auto; height: auto; color: var(--accent-deep); }
+.skipped-info-text { display: flex; flex-direction: column; gap: 2px; }
+.skipped-info-text b { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+.skipped-info-text span { font-size: 0.84rem; color: var(--text-2); line-height: 1.4; }
+
+.skipped-empty { text-align: center; color: var(--text-2); font-size: 0.9rem; padding: 24px 0; }
+.skipped-empty[hidden] { display: none; }
+.skipped-locked[hidden] { display: none; }
+
+/* Row cards — own box (not the shared-border .settings2-card grouping),
+   one per skipped person, matching the reference's individually
+   separated cards rather than one card with internal row dividers. */
+.skipped-row-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+/* Box, not a circle — this app's real profile data has no photo URLs
+   (gradient + initial letter only, same as every other avatar spot in
+   the app), so this reuses that same placeholder pattern, just in the
+   reference's rounded-square shape instead of the round .history-avatar
+   shape used elsewhere. */
+.skipped-row-photo {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+.skipped-row-main { flex: 1; min-width: 0; }
+.skipped-row-name { display: block; font-weight: 800; color: var(--text); font-size: 0.98rem; }
+.skipped-row-occ { display: block; margin-top: 2px; color: var(--text-2); font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skipped-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.skipped-unskip-btn {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-weight: 700;
+  font-size: 0.84rem;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: none;
+  white-space: nowrap;
+}
+.skipped-row-menu-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ----------------------------------------------------------------
+   NEW FEATURE DECISIONS — onboarding example, profile detail, card modes,
+   tone-pill emoji/lock, limit banners/toasts, chat timestamps
+   ---------------------------------------------------------------- */
+
+/* Profile detail — full-screen modal-style page opened by tapping the
+   swipe card. Sits on top of #app while the Home tab stays rendered
+   (and "active") behind the dim backdrop, instead of using the
+   .screen/.tab takeover system. */
+.profile-detail-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  background: rgba(28, 25, 23, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-end;
+  animation: modalFade 0.18s ease;
+}
+
+.profile-detail-modal[hidden] { display: none; }
+
+/* Grab handle + height matched to the AI Coach sheet (which sits at
+   top:11%, i.e. 89% tall) so the two sheets feel like the same component. */
+/* Floats ON the photo rather than sitting above it. As a flex sibling it
+   reserved ~17px of its own, which read as a white band between the sheet's
+   top edge and the picture. Absolute + a translucent white so it stays
+   legible against whatever the photo happens to be. */
+.profile-detail-handle {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  margin: 0;
+  pointer-events: none;
+}
+
+.profile-detail-sheet {
+  position: relative; /* anchors .profile-detail-handle over the photo */
+  width: 100%;
+  height: 89%;
+  margin: 0 auto;
+  background: var(--bg);
+  border-radius: 26px 26px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.profile-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 16px;
+}
+
+.profile-detail-photo {
+  height: 200px;
+  margin: 0 -20px 16px;
+  border-radius: 0;
+}
+
+.profile-detail-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-detail-section {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-detail-actions {
+  padding: 14px 20px calc(18px + 34px);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Swipe-card mode pills (Open / Neutral / Cold) */
+.card-mode-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.card-mode-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.card-mode-pill {
+  flex: 1;
+  padding: 8px 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 99px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  color: var(--text-2);
+  transition: transform 0.1s, background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.card-mode-pill.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-deep);
+}
+
+.card-mode-pill.locked {
+  opacity: 0.6;
+}
+
+.card-mode-pill.locked-tap {
+  animation: lockedShake 0.26s ease;
+}
+
+@keyframes lockedShake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-3px); }
+  75%      { transform: translateX(3px); }
+}
+
+.card-mode-desc {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+/* Scan daily-limit banner */
+.scan-limit-banner[hidden] { display: none; }
+.scan-limit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* Out-of-matches toast (no extra screen) */
+.limit-toast {
+  position: absolute;
+  /* Appended directly to #app (see flashLimitToast() in script.js) — a
+     sibling of .screen/.tab, not a descendant, so it has no inherited
+     safe-area padding of its own. */
+  top: calc(16px + 92px);
+  left: 50%;
+  transform: translate(-50%, -12px);
+  max-width: 86%;
+  text-align: center;
+  background: var(--text);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 99px;
+  box-shadow: 0 10px 24px rgba(28, 25, 23, 0.25);
+  z-index: 700;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.limit-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* iMessage-style timestamps under every chat bubble */
+.msg-timestamp {
+  font-size: 0.62rem;
+  color: var(--text-3);
+  margin-top: 3px;
+  padding: 0 2px;
+}
+
+.msg-row.user .msg-timestamp { text-align: right; padding-right: 2px; }
+.msg-row.ai   .msg-timestamp { text-align: left;  padding-left: 2px; }
+
+
+/* ----------------------------------------------------------------
+   DESKTOP — phone frame
+   ---------------------------------------------------------------- */
+@media (min-width: 480px) and (pointer: fine) and (hover: hover) {
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ece7de;
+  }
+
+  #app {
+    border: 1px solid #ddd5c8;
+    border-radius: 44px;
+    height: min(90dvh, 840px);
+    box-shadow: 0 30px 80px rgba(28, 25, 23, 0.18);
+  }
+}
+
+
+/* ================================================================
+   FIX 1 — BACKGROUND CARD OVERLAY
+   CSS ::after on the data-stack attribute fires automatically on
+   every renderDeck() rebuild — no JS needed, no z-index races.
+   Only cards at position 1 or 2 get the overlay; position 0 (top)
+   is unaffected. The ::after lives in the card's own stacking
+   context so it always sits above all card content.
+   ================================================================ */
+.swipe-card[data-stack="1"]::after,
+.swipe-card[data-stack="2"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--s2);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 100;
+}
+
+
+/* ================================================================
+   FEATURE 1 — TIMESTAMPS
+   ================================================================ */
+.msg-timestamp {
+  font-size: 10px;
+  color: #a09890;
+  margin-top: 3px;
+  padding: 0 2px;
+}
+.msg-row.user .msg-timestamp { text-align: right; }
+.msg-row.ai  .msg-timestamp { text-align: left;  }
+
+
+/* ================================================================
+   FEATURE 2 — SEEN INDICATOR
+   ================================================================ */
+.msg-status {
+  font-size: 11px;
+  color: #a09890;
+  text-align: right;
+  padding-right: 6px;
+  margin-top: 2px;
+}
+.msg-status.seen { color: #a09890; }
+
+
+/* ================================================================
+   FEATURE 3 — AVATARS
+   ================================================================ */
+.msg-avatar {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  align-self: flex-end;
+  flex-shrink: 0;
+}
+.msg-row.user .msg-avatar { margin-left: 6px; }
+.msg-row.ai  .msg-avatar { margin-right: 6px; }
+
+/* Swipe-to-reply indicator — sits at the edge the message pulls away from
+   and fades up with the drag. Its appearing is the confirmation the swipe
+   registered; no icon means the drag was too short or got cancelled. */
+.msg-row { position: relative; }
+.msg-swipe-reply-icon {
+  position: absolute;
+  top: 50%;
+  margin-top: -11px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+}
+/* Clear of the avatar (28px + 6px margin) — sitting at the row edge put it
+   on top of the pfp, where it read as appearing too early. */
+.msg-row.ai   .msg-swipe-reply-icon { left: 6px; }
+.msg-row.user .msg-swipe-reply-icon { right: 6px; }
+.msg-swipe-reply-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+/* A message that's no longer the last of a same-sender run (a double or
+   triple text, either side) drops its own avatar and timestamp so the run
+   reads as one block — see _applyMsgGrouping(). visibility, not display,
+   on the avatar: the slot still has to hold its width or the bubbles in
+   the run would sit at a different indent than the last one. */
+.msg-row--grouped .msg-avatar { visibility: hidden; }
+.msg-row--grouped .msg-timestamp { display: none; }
+
+/* Reaction picked from the long-press menu. Sits in normal flow right
+   after the bubble and is pulled back up onto its bottom corner, so it
+   never has to know the bubble's height the way an absolutely positioned
+   badge would — and the timestamp still flows underneath it. */
+.bubble-reaction {
+  margin-top: -9px;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  padding: 1px 5px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(28, 25, 23, 0.08);
+}
+.msg-row.user .bubble-reaction { margin-right: 10px; }
+.msg-row.ai   .bubble-reaction { margin-left: 10px; }
+
+/* ---- Message long-press menu (Instagram-style) ---------------------
+   Emoji row above the lifted message, actions below it, everything else
+   blurred back. See openMsgMenu() in script.js, and the reference
+   screenshots in assets/icons/chats-page/. */
+/* The overlay itself never fades — the backdrop and the stack animate
+   separately, so the lifted message can travel into place while the blur
+   comes up behind it rather than everything cross-fading as one lump. */
+.msg-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+}
+.msg-menu-overlay[hidden] { display: none; }
+
+.msg-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.26);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  opacity: 0;
+  transition: opacity 0.24s ease;
+}
+.msg-menu-overlay--in .msg-menu-backdrop { opacity: 1; }
+
+.msg-menu-stack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Same side padding as .chat-messages, so the cloned row lands at the
+     exact indent the real one has without any per-side offset math. */
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  opacity: 0;
+  transform-origin: left center;
+  /* 0.24s here is MSG_MENU_TRAVEL_MS in script.js — keep them in step. */
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.14s ease;
+}
+.msg-menu-stack--user { align-items: flex-end; transform-origin: right center; }
+.msg-menu-overlay--in .msg-menu-stack { opacity: 1; }
+/* The stack spans the full width (left:0;right:0) even though its contents
+   are narrow, so without this it swallowed every tap in the empty space
+   beside the pills — taps to the side of the menu did nothing while taps
+   above/below it closed. Only the real controls take pointer events;
+   everything else falls through to the backdrop. */
+.msg-menu-stack { pointer-events: none; }
+.msg-menu-reactions,
+.msg-menu-actions { pointer-events: auto; }
+
+/* Closing: no reverse travel, no bounce — everything drops slightly and
+   fades out together. */
+.msg-menu-overlay--out .msg-menu-stack {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.msg-menu-bubble-slot { width: 100%; }
+.msg-menu-bubble-slot .msg-row { animation: none; margin-bottom: 0; }
+
+/* On top of the stack's own travel, the message and the action card each
+   rise the last stretch into place, the card a beat behind — so it reads as
+   the two of them moving up and settling, rather than one rigid block
+   sliding. The emoji row then pops once they've landed (--settled). */
+.msg-menu-bubble-slot,
+.msg-menu-actions {
+  transform: translateY(12px);
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.msg-menu-overlay--in .msg-menu-bubble-slot { transform: translateY(0); }
+.msg-menu-overlay--in .msg-menu-actions { transform: translateY(0); transition-delay: 0.05s; }
+/* Closing, they drop back with the rest of it rather than lingering. */
+.msg-menu-overlay--out .msg-menu-bubble-slot,
+.msg-menu-overlay--out .msg-menu-actions { transition: transform 0.18s ease; transition-delay: 0s; }
+
+.msg-menu-reactions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 6px 8px;
+  background: var(--s1);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(28, 25, 23, 0.16);
+  /* Invisible (but still holding its height, so the stack's layout and the
+     travel maths stay stable) until the stack has landed — then it pops. */
+  opacity: 0;
+  transform-origin: left center;
+}
+.msg-menu-stack--user .msg-menu-reactions { transform-origin: right center; }
+.msg-menu-overlay--settled .msg-menu-reactions {
+  animation: msgMenuPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes msgMenuPop {
+  0%   { opacity: 0; transform: scale(0.86) translateY(5px); }
+  60%  { opacity: 1; transform: scale(1.04) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.msg-menu-reactions--expanded { flex-wrap: wrap; border-radius: 22px; justify-content: center; }
+.msg-menu-reaction {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 50%;
+  transition: transform 0.12s ease;
+}
+.msg-menu-reaction:active { transform: scale(1.28); }
+.msg-menu-reaction--on { background: var(--accent-soft); }
+.msg-menu-reaction-div {
+  width: 1px;
+  height: 24px;
+  margin: 0 5px;
+  background: var(--border);
+  flex: none;
+}
+.msg-menu-reaction--plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  flex: none;
+}
+.msg-menu-reaction--plus img { width: 17px; height: 17px; object-fit: contain; }
+
+.msg-menu-actions {
+  min-width: 58%;
+  max-width: 80%;
+  background: var(--s1);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 34px rgba(28, 25, 23, 0.18);
+  transform-origin: left top;
+}
+.msg-menu-stack--user .msg-menu-actions { transform-origin: right top; }
+/* Rides in with the message during the travel, then gives one short bounce
+   on arrival alongside the emoji row's pop. */
+.msg-menu-overlay--settled .msg-menu-actions {
+  animation: msgMenuBounce 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes msgMenuBounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+.msg-menu-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 13px 16px;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: var(--text);
+  text-align: left;
+}
+.msg-menu-action img { width: 19px; height: 19px; object-fit: contain; flex: none; }
+/* Only the destructive action is fenced off, matching the reference
+   mockup (and iOS context menus) — Reply/Copy/Delete run together. */
+.msg-menu-action--danger { color: #e5484d; border-top: 1px solid var(--border); }
+.msg-menu-action:active { background: rgba(28, 25, 23, 0.05); }
+
+.chat-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translate(-50%, 8px);
+  z-index: 1500;
+  max-width: 78%;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(28, 25, 23, 0.92);
+  color: #fff;
+  font-size: 0.82rem;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.chat-toast--in { opacity: 1; transform: translate(-50%, 0); }
+.chat-toast[hidden] { display: none; }
+
+/* Hide avatar on bubbles in thread chat (they use a different layout) */
+.thread-chat-bubble .msg-avatar { display: none; }
+
+
+/* ================================================================
+   FEATURE 4 — CARD MODE PILLS
+   ================================================================ */
+.card-mode-section {
+  padding: 10px 0 4px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  margin-top: 8px;
+}
+.card-mode-pills {
+  display: flex;
+  gap: 6px;
+}
+.card-mode-pill {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 20px;
+  border: 1.5px solid #ddd5c8;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b5f56;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.card-mode-pill.active {
+  background: #ec4899;
+  border-color: #ec4899;
+  color: #fff;
+}
+.card-mode-pill.locked { color: #b0a8a0; }
+.card-mode-desc {
+  font-size: 11px;
+  color: #9a8d84;
+  margin: 6px 0 0;
+  min-height: 16px;
+  transition: color 0.2s;
+}
+
+/* Swipe card action buttons */
+.swipe-actions {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.swipe-btn-skip {
+  flex: 1;
+  padding: 12px;
+  border-radius: 28px;
+  border: 2px solid #ec4899;
+  background: transparent;
+  color: #ec4899;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.swipe-btn-interested {
+  flex: 1;
+  padding: 12px;
+  border-radius: 28px;
+  border: none;
+  background: #ec4899;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+/* ================================================================
+   FEATURE 5 — SCAN THREADS
+   ================================================================ */
+.thread-section {
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  margin-top: 20px;
+}
+
+.thread-row-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.thread-row-minus-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.thread-row-inline-del {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  min-width: 72px;
+  padding: 0 18px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(105%);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.thread-row-inline-del.visible {
+  transform: translateX(0);
+}
+
+.thread-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 6px;
+}
+
+.thread-section-header .block-label {
+  padding: 0;
+}
+
+.thread-edit-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent, #e91e8c);
+  padding: 8px 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.thread-edit-new-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px 12px;
+  background: none;
+  border: none;
+  color: var(--accent, #e91e8c);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.thread-edit-bar {
+  padding: 10px 16px 6px;
+  display: flex;
+  justify-content: center;
+}
+
+.thread-edit-delete-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.thread-edit-delete-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.thread-row-cb {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--accent, #e91e8c);
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+.thread-list { padding: 4px 0; }
+
+.thread-list-empty {
+  font-size: 13px;
+  color: #b0a8a0;
+  text-align: center;
+  padding: 16px;
+  margin: 0;
+}
+
+/* + button row — inline at top when list is empty */
+.thread-add-row--top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+/* + button row — at bottom of list when threads exist */
+.thread-add-row--bottom {
+  display: flex;
+  justify-content: center;
+  padding: 14px 16px 24px;
+}
+
+/* Label text next to + button in empty state */
+.thread-empty-label {
+  font-size: 13px;
+  color: #b0a8a0;
+  text-align: left;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.thread-add-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 4px solid #ec4899;
+  background: var(--s1);
+  color: #ec4899;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(236,72,153,0.2);
+  transition: background 0.15s, color 0.15s, transform 0.12s;
+}
+.thread-add-btn:active {
+  background: #ec4899;
+  color: #fff;
+  transform: scale(0.93);
+}
+
+.thread-row-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+.thread-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--s1);
+  cursor: pointer;
+  transition: transform 0.2s;
+  position: relative;
+}
+.thread-row:active { background: #f9f4f0; }
+.thread-row-info { display: flex; flex-direction: column; gap: 2px; }
+.thread-row-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.thread-row-count { font-size: 12px; color: #9a8d84; }
+/* Swipe-to-delete reveal (threads + chats) — covers the full row */
+
+.mini-modal-confirm--danger { background: #ef4444; }
+
+/* Thread save prompt (inside scan result) — 342x94 action card, sitting
+   40-48px below the dots/hint (32px margin here + the content's 12px
+   section gap = 44px), per design: generous whitespace after the carousel. */
+/* Measured from mockup: 151 mockup px tall = 66 at 390w; icon circle 30.
+   The height goes auto when the thread-picker expands inside it, so the
+   fixed measured height never clips the picker UI. */
+.thread-save-prompt {
+  width: 100%;
+  height: 66px;
+  margin-top: auto; /* pins to the bottom of the screen, like the mockup */
+  padding: 12px 14px;
+  background: #FFFDFB;
+  border-radius: 20px;
+  border: 1px solid #E8DDD2;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.thread-save-prompt:has(.thread-picker:not([hidden])) { height: auto; }
+.thread-save-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.thread-save-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #F54B98;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thread-save-icon svg { width: 14px; height: 14px; }
+.thread-save-copy { flex: 1; min-width: 0; }
+.thread-save-q {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1c1917; /* fixed, not var(--text) — .thread-save-prompt's bar is a fixed near-white regardless of theme */
+  line-height: 1.2;
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.thread-save-sub {
+  font-size: 10.5px;
+  color: #8a8175; /* fixed, not var(--text-2) — same fixed near-white bar */
+  line-height: 1.25;
+  margin: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+.thread-save-q.thread-save-success {
+  color: #16a34a;
+  margin: 0;
+}
+.thread-save-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.yr-save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 34px;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #FF4EA1, #EA2C85);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.thread-save-row {
+  display: flex;
+  gap: 8px;
+}
+.thread-save-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #ddd5c8;
+  background: var(--s1);
+  font-size: 16px; /* 16px minimum avoids iOS auto-zoom-on-focus */
+  outline: none;
+}
+.thread-save-input:focus { border-color: #ec4899; }
+.thread-save-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: #ec4899;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.thread-new-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 4px;
+}
+.thread-new-input-row .thread-save-input {
+  flex: 1;
+  color: var(--text, #1a1a1a);
+}
+
+.thread-save-skip {
+  display: block;
+  background: none;
+  border: none;
+  color: #A89584;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Thread picker (inside save prompt, shown after tapping Save) */
+.thread-picker { margin-top: 2px; }
+.thread-pick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  background: var(--s1);
+  border: 1.5px solid #ece7de;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+.thread-pick-row:active { background: #fdf8f4; }
+.thread-pick-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: #9a8d84;
+}
+.thread-pick-new {
+  color: #ec4899;
+  border-color: #ec4899;
+  background: transparent;
+  justify-content: center;
+}
+
+/* Scan-type thread pre-select picker */
+.scan-type-thread-picker {
+  margin-top: 16px;
+}
+.scan-type-thread-empty {
+  font-size: 13px;
+  color: #b0a8a0;
+  line-height: 1.4;
+  margin: 0;
+}
+.scan-type-thread-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9a8d84;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+}
+.scan-type-thread-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  background: var(--s1);
+  border: 1.5px solid #ece7de;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+.scan-type-thread-row.selected {
+  background: rgba(236,72,153,0.07);
+  border-color: #ec4899;
+  color: #ec4899;
+}
+.scan-type-thread-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: #9a8d84;
+}
+.scan-type-thread-row.selected .scan-type-thread-count {
+  color: #ec4899;
+}
+
+/* "Save this scan?" bottom sheet — shared .cine-sheet shell, same pattern
+   as Connect Email / Verify Your Email elsewhere in the app. See
+   showSaveBeforeLeave()/confirmSaveScan()/declineSaveScan() in script.js.
+   The conversation preview reuses .yr-conv/.yr-conv-row/.yr-conv-bubble
+   as-is — same box, same bubbles, just a smaller instance of it. */
+.save-scan-sheet .cine-sheet-card { text-align: center; padding-top: 28px; }
+.save-scan-title { font-size: 1.15rem; font-weight: 800; color: var(--text); margin: 0 0 6px; }
+.save-scan-sub { font-size: 0.86rem; color: var(--text-2); line-height: 1.45; margin: 0 0 18px; }
+.save-scan-sheet .yr-conv { text-align: left; margin-bottom: 18px; max-height: 260px; }
+
+/* Mini modals (add-thread, thread-upgrade) */
+.mini-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+}
+.mini-modal-overlay[hidden] { display: none !important; }
+.mini-modal-card {
+  position: relative;
+  background: var(--s1);
+  border-radius: 18px;
+  padding: 24px 20px;
+  width: calc(100% - 48px);
+  max-width: 320px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+}
+.mini-modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 14px;
+}
+.mini-modal-body {
+  font-size: 15px;
+  color: #44403c;
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+.mini-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.mini-modal-cancel {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid #ddd5c8;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b5f56;
+  cursor: pointer;
+}
+.mini-modal-confirm {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #ec4899;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Thread detail screen */
+.thread-detail-layout {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 56px);
+  overflow: hidden;
+}
+.thread-scans {
+  flex: 0 0 auto;
+  max-height: 40%;
+  overflow-y: auto;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+.thread-scan-entry {
+  background: var(--s2);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.thread-scan-msg   { color: var(--text-2); margin-bottom: 4px; }
+.thread-scan-reply { color: var(--text); font-weight: 500; }
+.thread-scan-time  { color: var(--text-3); font-size: 11px; margin-top: 4px; }
+
+.thread-chat-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+.thread-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.thread-chat-bubble {
+  max-width: 78%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.thread-chat-bubble.user {
+  align-self: flex-end;
+  background: #f3f4f6;
+  color: var(--text);
+  border-bottom-right-radius: 4px;
+}
+.thread-chat-bubble.ai {
+  align-self: flex-start;
+  background: #fce7f3;
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+}
+.thread-ai-limit-msg {
+  font-size: 12px;
+  color: #ec4899;
+  text-align: center;
+  padding: 6px 16px;
+}
+.thread-chat-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(0,0,0,0.07);
+  background: var(--s1);
+}
+.thread-chat-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 24px;
+  border: 1.5px solid #ddd5c8;
+  background: #fdf8f4;
+  font-size: 14px;
+  outline: none;
+}
+.thread-chat-input:focus { border-color: #ec4899; }
+.thread-chat-send {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: #ec4899;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+
+/* ================================================================
+   FEATURE 7 — CHAT ROW SWIPE-DELETE
+   ================================================================ */
+.chat-row-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+/* .chat-row-delete replaced by .swipe-del-reveal above */
+
+

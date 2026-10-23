@@ -1,3 +1,22 @@
+// GENERATED FILE - do not edit.
+// Built from app/ by scripts/build.sh - edit the files in app/ instead,
+// then run: bash scripts/sync.sh
+// What lives where: app/README.md
+
+// ================================================================
+// 01-core.js — app bootstrap, loaded first; everything below assumes it ran
+//
+// Dark/light theme · the shared `state` object · the launch connectivity
+// gate · the crash fallback screen · session-expired · and the main
+// DOMContentLoaded start-up sequence that boots every other file.
+// BUILD_STAMP is at the top of this file — bump it on every change.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // ================================================================
 // ChatPractice — script.js
 // ================================================================
@@ -8,7 +27,7 @@
 // between "pushed" and "what Xcode actually installed" wasted several
 // rounds of back-and-forth). Compare what's on screen to what was just
 // pushed before trusting any "still broken" or "still not showing" report.
-const BUILD_STAMP = "2026-10-23g (AI Coach Upload Screenshot restored; Day Streak page and share use the real streak)";
+const BUILD_STAMP = "2026-10-23h (code reorganised: script.js -> app/, style.css -> css/; app itself unchanged)";
 // Analytics must never be able to break the app: if services/analytics.js didn't load, every ZeloAnalytics call becomes a no-op.
 if (typeof ZeloAnalytics === 'undefined') window.ZeloAnalytics = { track() {}, setOptOut() {} };
 if (typeof ZeloRecords === 'undefined') window.ZeloRecords = { submitChatReport() { return Promise.resolve('queued'); }, flushReports() {}, recordConsent() {}, flushConsents() { return Promise.resolve(); }, saveGeneratedReply() { return null; }, markReplyCopied() {}, savePracticeSession() {}, queueOnboarding() {}, flushOnboarding() {}, setReplyOutcome() {}, logAiRequest() {}, syncPracticeConsent() { return Promise.resolve(); }, status() {} };
@@ -761,6 +780,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 // ================================================================
+// ================================================================
+// 02-navigation.js — moving between tabs and screens
+//
+// showTab(name) swaps the three bottom tabs; pushScreen(name)/popScreen()
+// overlay a full screen on top of whichever tab is active. Also the sliding
+// glass indicator under the tab bar and its drag-across-the-bar gesture.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // NAVIGATION — two modes
 //   showTab(name)    → switch between Assistant / Practice tabs
 //   pushScreen(name) → overlay a full screen (profile, chat)
@@ -1095,6 +1127,18 @@ function popScreen() {
 
 
 // ================================================================
+// ================================================================
+// 03-persona-profile.js — starting and leaving a practice chat, and her profile page
+//
+// startChat()/exitChat(), plus the Instagram-style profile opened by tapping
+// her photo, name or avatar in a chat: posts grid, post feed, followers.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // PRACTICE: START / EXIT CHAT
 // ================================================================
 
@@ -2212,6 +2256,20 @@ function attachAiCoachChatSheetDragClose() {
 }
 
 // ================================================================
+// ================================================================
+// 04-chat-engine.js — the practice conversation itself: what she says and when
+//
+// Sending a message · the Delivered/Seen/Typing/Reply timing · the double-
+// text pacing window · building her AI prompt (voice, threads, hints) ·
+// boundaries and blocking · reply failures · nudges when you go quiet.
+// A change to how she behaves almost always belongs here.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // CHAT: SEND MESSAGE
 // ================================================================
 
@@ -3876,6 +3934,18 @@ function cancelPendingReply() {
 
 
 // ================================================================
+// ================================================================
+// 05-chat-ui.js — drawing the chat: bubbles, menus, banners
+//
+// Appending bubbles, grouping, the long-press message menu, swipe-to-reply,
+// reactions, and the banner shown when she replies while you are elsewhere.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // CHAT: DOM HELPERS
 // ================================================================
 
@@ -4833,6 +4903,18 @@ function createMsgAvatar(isAI) {
 
 
 // ================================================================
+// ================================================================
+// 06-swipe-deck.js — the practice card deck
+//
+// Building and rendering the stack of cards, the photo stepper, and the
+// drag/throw gesture (including rewind and the edge bounce).
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // SWIPE DECK — module-level drag state (outside `state` object)
 // ================================================================
 
@@ -5739,6 +5821,18 @@ function commitSwipe(cardEl, direction) {
 
 
 // ================================================================
+// ================================================================
+// 07-practice-ui.js — the first-run practice screens
+//
+// The practice tutorial, the typed "confirm your profile" conversation, and
+// the profile-detail sheet opened from a card’s (i) button.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // PRACTICE TAB TUTORIAL — replaces the old "who do you want to practice
 // with" mode popup as the first-visit experience. 4 steps: welcome screen
 // (practiceTutorialStart/Skip) → swipe-right lesson → swipe-left lesson →
@@ -6626,6 +6720,19 @@ const TAB_SWIPE_ORDER = ['practice', 'assistant', 'chats'];
 // even algebraically kept in sync — can still live on separate compositor
 // layers that don't necessarily paint in lockstep on real hardware; one
 // element moving as a single unit has no such failure mode.
+// ================================================================
+// 08-gestures.js — the shared gesture engine, used by most screens
+//
+// The slide track two screens are dragged in, scroll-position preservation
+// across a reparent, tab swiping, edge-swipe-back, and drag-to-close for
+// sheets. Change something here and it changes everywhere at once.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 function _getOrCreateSlideTrack(trackId, zIndex) {
   let track = document.getElementById(trackId);
   if (!track) {
@@ -7731,6 +7838,19 @@ function attachProfileDetailDragToClose() {
 }
 
 // ================================================================
+// ================================================================
+// 09-scan.js — Scan: from her message to a generated reply
+//
+// The match overlay, the scan input, Tell Zelo More, reading a screenshot
+// via openai-proxy, which styles are allowed for a situation, the DeepSeek
+// call, the gibberish guard, and generateReplies() that drives it all.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // MATCH OVERLAY
 // ================================================================
 
@@ -8868,6 +8988,19 @@ function shakeInputCard() {
 }
 
 // ================================================================
+// ================================================================
+// 10-activity.js — what counts as using Zelo, and the streak maths
+//
+// A rolling log of real actions, the streak figures (current/best/this week)
+// and the copy for each state. Home’s Activity widget and the Milestones
+// page both read from here.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // ACTIVITY — real counts behind the Home "Your Activity" widget (rolling last 7 days, kept on the phone).
 // Kinds: 'scan' (a scan that produced replies), 'reply' (each reply generated), 'like' (a practice profile liked).
 // ================================================================
@@ -9278,6 +9411,18 @@ function _onReplyRevealed() {
 
 
 // ================================================================
+// ================================================================
+// 11-scan-ui.js — showing the generated replies
+//
+// The reply carousel, the AI Coach topic icons, Home’s widget carousel,
+// and copying or using a reply.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // ASSISTANT: REPLY CAROUSEL
 // Native horizontal scroll-snap carousel (Apple Wallet / App Store Today
 // pattern) — every eligible style gets a real .yr-card sibling, centered
@@ -10439,6 +10584,18 @@ function hideCopyToast() {
 
 
 // ================================================================
+// ================================================================
+// 12-onboarding-intro.js — the first thing a new user sees
+//
+// The streak notification banner, onboarding phase 1 (typewriter → word
+// morph → Zelo logo) and the conversational intro that asks for a name.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // STREAK NOTIFICATION BANNER — PROTOTYPE ONLY (see #streak-notif in
 // index.html). Same reusable single-node drop-down pattern as
 // showCopyToast() above. Not wired to any real streak-increment event
@@ -11538,6 +11695,18 @@ function cineBack(e) {
 }
 
 // ================================================================
+// ================================================================
+// 13-onboarding-steps.js — the onboarding questions and the screens after them
+//
+// Steps 1–16: the questions, the reply-style demo, the referral field, the
+// plan screen, trial and offer, plus the sign-up prompt and welcome-back.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // STEP 1 — name / photo / age (all three genuinely interactive)
 // ================================================================
 
@@ -12798,6 +12967,18 @@ let scanIntroShown = false;
 
 function maybeShowScanIntro() {}
 // ================================================================
+// ================================================================
+// 14-chats-tab.js — the Chats list
+//
+// Rendering the list, saving conversations to localStorage so they survive a
+// relaunch, the hold menu (pin/search/reset/delete) and search.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // CHATS TAB
 // ================================================================
 
@@ -13382,6 +13563,19 @@ function syncChatToStore(text, sender, replyToId, chatId) {
 
 
 // ================================================================
+// ================================================================
+// 15-history.js — Account, what the user has paid for, and saved scans
+//
+// The Account dashboard, the entitlement seam (getEntitlement/isPaidUser —
+// the one place a real subscription plugs in), free-tier limits, saved scan
+// threads, the History screen and the paywall.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // PROFILE / DASHBOARD
 // ================================================================
 
@@ -14670,6 +14864,18 @@ function closeThreadDetail() {
 
 
 // ================================================================
+// ================================================================
+// 16-ai-coach.js — AI Coach
+//
+// The coach chat, adding context (paste, screenshot, link a chat), staged
+// suggestion pills and the saved-conversation history panel.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // AI COACH  (Fix 5/6/7/8 — replaces the old Ask-Zelo-inside-thread)
 // Full-page coach. Real DeepSeek via the Supabase proxy. Counts toward
 // the shared 10/day scan limit. Optionally linked to a saved thread,
@@ -16201,6 +16407,18 @@ function aiCoachHistoryDelete() {
 
 
 // ================================================================
+// ================================================================
+// 17-rewards.js — everything that rewards the user for coming back
+//
+// Leaderboard, Refer Friends (real server-issued codes), Your Journey,
+// XP and levels, Mission Control and the Milestones badge system.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // FEATURE 9 — LEADERBOARD
 // Paid only. Entry from dashboard. Mocked static data.
 // ================================================================
@@ -17258,6 +17476,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ================================================================
+// ================================================================
+// 18-settings.js — Settings, and everything reachable from Account
+//
+// Profile & Login (photo crop, password), personalization, practice
+// preferences, privacy and data, download my data, help and support,
+// the mail sheet and the feature-request board.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // SETTINGS 2.0 — rebuilt against the settings-flow reference, then merged
 // directly into the Account page (screen-dashboard) instead of living
 // behind its own "Settings" tap-through — see the Account markup in
@@ -18972,6 +19203,19 @@ function confirmDeleteAccount() {
 }
 
 // ============================================================
+// ================================================================
+// 19-keyboard.js — keeping the keyboard from breaking a layout
+//
+// Stops iOS zooming on focus, hides the up/down field bar, and lifts only a
+// designated "movable" area when the keyboard opens — native resize is off,
+// so any screen with a text field at the bottom is handled from here.
+//
+// Part of script.js, split by concern. scripts/build.sh joins app/ back
+// into script.js, which is what the app actually loads — see that file
+// for why. The number in the filename is the load order.
+// Map of every module: app/README.md
+// ================================================================
+
 // KEYBOARD: no zoom-on-focus, no up/down "other fields" bar
 // ============================================================
 //

@@ -1,0 +1,786 @@
+/* ================================================================
+   09-history.css — the History screen and the AI Coach entry card on Scan
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   HISTORY SCREEN  (Fix 2/3)
+   Full-screen overlay; tab bar stays visible (bottom inset).
+   ================================================================ */
+.screen--history {
+  bottom: var(--tab-h);
+  background: var(--bg);
+  /* Uses .app-header (16px own top padding) like the tabs, not .screen-header —
+     34px + 16px = 50px total, matching the tabs' header offset so the Zelo
+     wordmark/sparkle sits at the same distance from the Dynamic Island. */
+  padding-top: 34px;
+  /* The screen itself never scrolls — only .history-layout below does. The
+     Zelo wordmark + close button are ordinary (non-scrolling) siblings above
+     it, so they can't ride along with a scroll or an iOS rubber-band pull
+     (sticky/fixed headers inside a scrolling .screen still did on device). */
+  overflow: hidden;
+  /* Opened as an overlay on top of another already-active .screen (e.g.
+     Account) rather than through pushScreen(). Without this, that other
+     screen's position:sticky header creates its own compositing layer and
+     renders ABOVE this one regardless of DOM order — so taps meant for
+     History's own header/close button were hitting the screen underneath
+     instead. Verified with a real browser (elementFromPoint) before fixing. */
+  z-index: 50;
+}
+
+.history-layout {
+  padding: 0 22px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.history-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 6px 0 18px;
+}
+
+.history-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(236, 72, 153, 0.08);
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 18px;
+}
+.history-tab {
+  flex: 1;
+  padding: 11px 0;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-2);
+  transition: background 0.15s, color 0.15s;
+}
+.history-tab.active {
+  background: var(--s1);
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.12);
+}
+
+.history-counter {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  margin: 0 2px 16px;
+}
+.history-counter strong { color: var(--accent); font-weight: 700; }
+
+.history-list { display: flex; flex-direction: column; }
+
+.history-row-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  margin-bottom: 12px;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  background: var(--s1);
+  border-radius: 18px;
+  padding: 14px 16px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 10px rgba(220, 38, 127, 0.05);
+}
+.history-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.history-avatar-dot {
+  position: absolute;
+  bottom: 1px;
+  left: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+}
+.history-row-main { flex: 1; min-width: 0; }
+.history-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.history-row-name {
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--text);
+}
+.history-row-time {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.history-row-preview {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-2);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-row-chevron { flex-shrink: 0; color: var(--text-3); }
+
+/* Scans-tab row icon (chat-bubble, tinted per the scan's reply style) and
+   the reply-style pill below the preview line — see renderHistory()'s
+   Scans branch in script.js. Matches-tab rows are untouched, still using
+   the plain letter .history-avatar above. */
+.history-row-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.history-row-icon-img { display: none; width: 100%; height: 100%; object-fit: contain; }
+.history-row-icon.has-img .history-row-icon-img { display: block; }
+.history-row-icon.has-img .history-row-icon-svg { display: none; }
+/* Real per-topic gem icon (assets/icons/aicoach-topics/{topic}.png, see
+   _aiCoachTopicIconHTML() in script.js) — same has-img toggle, shared
+   across every icon-circle host (.history-row-icon here, plus
+   .aicoach-history-row-icon below) since the class names are distinct
+   enough not to collide between the style-icon and topic-icon variants. */
+.aicoach-topic-icon-img { display: none; width: 100%; height: 100%; object-fit: contain; }
+.has-img .aicoach-topic-icon-img { display: block; }
+.has-img .aicoach-topic-icon-svg { display: none; }
+/* AI Coach's generic brand gem (see _aiCoachBrandIconHTML() in script.js) —
+   same has-img toggle, filling its host span completely rather than
+   floating smaller inside it. The gem crop already carries its own
+   circular backdrop, so any host that also paints its own colored circle
+   (.aicoach-msg-avatar, .aicoach-suggestion-icon, .asst-coach-avatar)
+   clears it once has-img lands, below — otherwise the two rings show
+   through as a small halo around the gem's own edge. */
+.aicoach-brand-icon-img { display: none; width: 100%; height: 100%; object-fit: contain; }
+.has-img .aicoach-brand-icon-img { display: block; }
+.has-img .aicoach-brand-icon-svg { display: none; }
+.history-row-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+.history-row-pill svg { width: 12px; height: 12px; }
+
+/* Limit card (free, at cap) */
+.history-limit-card {
+  border: 1.5px dashed var(--accent-border);
+  border-radius: 20px;
+  padding: 26px 22px;
+  text-align: center;
+  margin-top: 12px;
+}
+.history-limit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.10);
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.history-limit-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 7px;
+}
+.history-limit-sub {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0 auto 18px;
+}
+.history-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.98rem;
+  border-radius: 999px;
+  padding: 14px 32px;
+}
+.history-upgrade-btn:hover { background: var(--accent-deep); }
+
+.history-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+.history-empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.history-empty-title { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.history-empty-sub { color: var(--text-2); font-size: 0.9rem; }
+
+
+/* ================================================================
+   AI COACH — entry card on the Scan page  (Fix 5)
+   ================================================================ */
+.scan-ai-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-2);
+  margin-top: 8px;
+  margin-bottom: 0;
+  padding: 0 4px;
+  line-height: 1.4;
+}
+
+/* ----------------------------------------------------------------
+   SCAN PAGE REDESIGN — bigger brand mark, headline + illustration,
+   "Who's this about?" quick-pick cards, single-row AI Coach teaser,
+   privacy footnote. Same underlying functions/IDs as before — this
+   section only changes how the Scan tab looks.
+   ---------------------------------------------------------------- */
+.scan-page-brand {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+
+/* No longer a flex row of two side-by-side columns — the illustration is now
+   absolutely positioned (see below) so the headline text can flow its full
+   width and intentionally overlap it, with text on top via z-index. */
+.scan-headline-row {
+  position: relative;
+  /* 18px — exactly offsets .widget-card's own top edge having moved up by
+     18px (see its height comment) and .widget-carousel's margin-top being
+     reduced by the same amount, so this content still lands at the exact
+     same absolute page position it always has despite the box around it
+     now starting higher up. */
+  margin-top: 18px;
+  /* Full width — as a flex child of .widget-card (display:flex) this would
+     otherwise shrink to its content width (the headline text), which pulled
+     .scan-hero-illustration's "right: 0" in tight against the text instead
+     of the card's actual right edge. Restoring full width puts the
+     illustration back where "right: 0" originally meant. */
+  width: 100%;
+}
+/* +6px left breathing room beyond the tab's own 22px side padding — the
+   headline/subline read too close to the edge otherwise. */
+.scan-headline-text {
+  position: relative;
+  z-index: 2; /* sits above the illustration (z-index: 1) so text reads cleanly on top */
+  padding-left: 6px;
+}
+.scan-headline {
+  position: relative;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+/* The accent word ("right") — just pink, no underline. */
+.scan-headline-accent {
+  color: var(--accent);
+}
+.scan-headline-sub {
+  margin-top: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+  max-width: 230px;
+}
+/* Decorative separator between the hero text block and the input card below
+   (replaces the old underline-under-"right" treatment). */
+.scan-headline-divider {
+  display: block;
+  width: 48px;
+  height: 3px;
+  border-radius: 2px;
+  background: #EC4899;
+  margin-top: 20px;
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+/* Sits right where the grey border curves round the bottom-left corner —
+   showing both at once reads as the pink line crossing/overlapping the
+   grey one. Since the border only shows when the widget's chrome is
+   revealed anyway, the two now swap: pink shows in the normal idle state,
+   fades out the moment the chrome (and the grey line) appears, and fades
+   back in once it's gone. */
+.widget-carousel.chrome-visible .scan-headline-divider { opacity: 0; }
+
+/* Hero illustration — the real chat-bubble PNG (assets/icons/misc/chat-bubble-hero.png),
+   fixed 110x110 box, never stretched (object-fit: contain), with a few small
+   decorative pink sparkle dots scattered around it (CSS only, no extra assets).
+   Absolutely positioned (behind the text, z-index: 1) so the headline can grow
+   at 28px and intentionally overlap it. */
+.scan-hero-illustration {
+  position: absolute;
+  z-index: 1;
+  top: 2px;
+  right: 0;
+  flex-shrink: 0;
+  width: 130px;
+  height: 130px;
+  background: transparent;
+  /* Box stays this size (headline/subline positions are unaffected either
+     way since this sits behind them at z-index: 1) — the image itself is
+     visually enlarged via transform: scale below and allowed to spill past
+     this box rather than being clipped to it. */
+  overflow: visible;
+}
+.scan-hero-illustration-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: transparent;
+  transform: scale(1.3);
+}
+
+/* ----------------------------------------------------------------
+   SCAN WIDGET CAROUSEL — card 1 is the promo headline above
+   (.scan-headline-row, unchanged), cards 2-4 are dummy-data widgets.
+   Reference: assets/icons/Widget, 1:3.png / 2:3.png / 3:3.png.
+   Native scroll-snap drives touch swipe; mouse-drag is polyfilled in
+   script.js (same technique as .yr-carousel's _initCarouselDrag) since
+   click-drag-to-scroll isn't native browser behavior.
+   ---------------------------------------------------------------- */
+/* margin-top reduced from 24px — 18px of it moved into the card's own
+   height instead (see .widget-card's height comment) so the border has
+   genuine room to breathe above the content. There's 36px of real blank
+   space between the header and here (measured live) before this touches
+   it, so 18px still leaves clear room. */
+.widget-carousel { position: relative; margin-top: 6px; }
+
+.widget-carousel-track {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* overflow:auto alone lets the next card visibly bleed past this
+     element's own right edge — contain:paint is a hard guarantee that
+     nothing paints outside this box (also fixes it; kept as belt-and-braces
+     alongside overflow, which still does the real scrolling/clipping-for-
+     interaction work). */
+  contain: paint;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.widget-carousel-track::-webkit-scrollbar { display: none; }
+.widget-carousel-track.dragging { scroll-snap-type: none; cursor: grabbing; scroll-behavior: auto; }
+
+/* Full-width snap, no partial-card reveal — align:start (not center) since
+   there's no side padding on the track creating a peek gap. */
+.widget-card {
+  position: relative; /* anchors the ::after border overlay below */
+  flex-shrink: 0;
+  width: 100%;
+  scroll-snap-align: start;
+  box-sizing: border-box;
+  /* Card 1's own natural content height is 152px (unstyled/unpadded); the
+     box is 170px — 18px taller — so the border has real breathing room
+     above the content instead of sitting flush against it. That 18px was
+     first tried as a paint-only extension on the ::after border overlay
+     (poking above the card's real box) — but .widget-carousel-track has
+     both overflow-y:hidden and contain:paint, which silently clipped that
+     extension on real devices even though it rendered fine in headless
+     screenshots (the ugly cut-off-corner artifact this replaced). Making
+     the box genuinely 170px tall keeps the border fully inside the
+     track's own bounds instead. .widget-carousel's margin-top was reduced
+     by the same 18px, and .scan-headline-row picked up an 18px margin-top
+     (see there) so card 1's actual content still lands at the exact same
+     absolute position on the page as before — this only moves the box's
+     top edge up into space that was already blank, not the content. */
+  height: 170px;
+  display: flex;
+  align-items: center;
+  background: var(--s1);
+  /* Slightly rounder than the app's standard --r-lg (20px) card corner —
+     a small bump requested specifically for these widget cards, kept
+     local here rather than changing --r-lg since that token is shared by
+     many unrelated components. */
+  border-radius: 34px;
+}
+/* The grey outline, drawn as a separate overlay (not the `border`
+   property) so it can fade in/out independently of the card's own
+   content — see .widget-carousel.chrome-visible below. A real border
+   (not box-shadow) — pixel-sampled a box-shadow attempt here earlier and
+   it rendered as functionally invisible along every straight edge, only
+   showing up near the curved corners; box-shadow's soft edge is too faint
+   at 1px to read as a real line. This overlay uses the same real-border
+   rendering (crisp, full opacity) but as its own paintable layer. */
+.widget-card::after {
+  content: "";
+  position: absolute;
+  /* Plain inset:0 — the extra breathing room above the content now comes
+     from .widget-card's own real height (see its comment), not from this
+     overlay poking outside the card's box. That was tried first and
+     looked fine in screenshots, but .widget-carousel-track's
+     overflow-y:hidden + contain:paint silently clip anything painted
+     outside a card's real box on real devices — this border overlay
+     included — producing a cut-off corner artifact there. */
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid var(--border);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+/* Softened (was 1): the grey outline now reads as a faint hairline. */
+.widget-carousel.chrome-visible .widget-card::after { opacity: 0.4; }
+
+/* Card 1 is reverted as close to its pre-carousel original as the wrapper
+   allows: no side padding (none existed originally), and top-aligned
+   instead of the base .widget-card's align-items:center — centering was
+   pushing the headline/subline/illustration down from where they used to
+   sit. With .scan-headline-row's own margin-top:0 (the carousel's own
+   24px margin-top already provides the equivalent top gap), this content
+   lands at exactly the same position it always has, independent of
+   whatever height .widget-card ends up at. */
+.widget-card--promo { align-items: flex-start; }
+/* Thicker top edge only, card 1 only — left/right/bottom stay the normal
+   1px shared by every other widget. */
+.widget-card--streak,
+.widget-card--activity,
+.widget-card--leaderboard {
+  /* Extra left padding — the prev arrow (38px, left:-6px) visually reaches
+     to about x:32 from the card's left edge, which was overlapping the
+     subtext's second line at the old 20px padding. Top/bottom kept tight —
+     the whole card is only 152px tall (matches card 1's own content
+     height, see .widget-card), so there's no room to spare. */
+  padding: 12px 16px 12px 36px;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.widget-card-left { flex-shrink: 0; width: 48%; }
+/* Activity's right side has two stat boxes side by side + a full banner —
+   needs more room than the streak/leaderboard layouts do. */
+.widget-card--activity .widget-card-left { width: 40%; }
+.widget-card-title { font-size: 15.5px; font-weight: 800; color: var(--text); line-height: 1.2; }
+.widget-card-sub { margin-top: 5px; font-size: 11.5px; line-height: 1.35; color: var(--text-2); }
+
+.widget-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.widget-pill--pink   { background: var(--accent-soft); color: var(--accent-deep); }
+.widget-pill--purple { background: rgba(124,58,237,0.10); color: #7c3aed; }
+.widget-pill-icon { width: 12px; height: 12px; object-fit: contain; display: block; }
+
+/* ---- Card 2: Your Streak ---- */
+/* min-width:0 overrides the flex-item default of min-width:auto, which
+   refuses to shrink a flex item below its content's natural width —
+   without it, a wide row (rank + avatar + name + score) can push this
+   column past the card's own right edge instead of staying inside the
+   allotted space. */
+.widget-card-right { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; }
+.widget-streak-orb {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft) 0%, rgba(236,72,153,0.03) 72%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+.widget-streak-flame { width: 22px; height: 22px; object-fit: contain; margin-bottom: 2px; }
+.widget-streak-num { font-size: 30px; font-weight: 800; line-height: 1; color: var(--accent); }
+.widget-streak-label { margin-top: 2px; font-size: 10px; font-weight: 700; color: var(--accent); }
+
+/* ---- Card 3: Your Activity ---- */
+.widget-card-right--activity { flex-direction: column; align-items: stretch; gap: 5px; }
+.widget-activity-hero { display: flex; flex-direction: column; align-items: center; }
+.widget-activity-num { font-size: 24px; font-weight: 800; line-height: 1; color: #7c3aed; }
+.widget-activity-num-label { margin-top: 1px; font-size: 9.5px; color: var(--text-2); }
+.widget-activity-stats { display: flex; gap: 6px; }
+.widget-activity-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 6px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+.widget-activity-stat--purple { background: rgba(124,58,237,0.08); }
+.widget-activity-stat-row { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 800; color: var(--text); }
+.widget-activity-stat--purple .widget-activity-stat-row { color: #7c3aed; }
+.widget-activity-stat:not(.widget-activity-stat--purple) .widget-activity-stat-row { color: var(--accent); }
+.widget-activity-stat-label { font-size: 9.5px; color: var(--text-2); }
+
+.widget-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.widget-banner--purple { background: rgba(124,58,237,0.08); color: #7c3aed; }
+.widget-banner > span { overflow: hidden; text-overflow: ellipsis; }
+.widget-banner--orange { background: rgba(249,115,22,0.12); color: #ea580c; }
+.widget-banner--pink   { background: var(--accent-soft); color: var(--accent-deep); }
+
+/* ---- Card 4: Leaderboard ---- */
+.widget-card-right--leaderboard { flex-direction: column; align-items: stretch; gap: 2px; }
+.widget-top3-badge { align-self: flex-end; margin: 0 0 2px; }
+.widget-lb-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.widget-lb-rank {
+  flex-shrink: 0;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8.5px; font-weight: 800; color: #fff;
+}
+.widget-lb-rank--gold   { background: #F5B942; }
+.widget-lb-rank--silver { background: #B9B9B9; }
+.widget-lb-rank--bronze { background: #C97A3D; }
+.widget-lb-avatar { flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; background: var(--border-2); }
+.widget-lb-name { flex: 1; font-size: 11.5px; font-weight: 700; color: var(--text); }
+.widget-lb-score { font-size: 11.5px; font-weight: 800; color: var(--accent); }
+/* Extra right clearance — the next arrow stays visible even on this last
+   card (it wraps back to card 1 instead of hiding), so the score column
+   needs the same kind of clearance the left side already has for the
+   prev arrow. */
+.widget-card--leaderboard { padding-right: 34px; }
+
+/* ---- Shared carousel chrome: arrows + dots ---- */
+/* Arrows + dots + the border overlay (.widget-card::after, above) are all
+   idle-fade chrome — hidden by default (nothing to see right after login
+   or swiping into the Scan tab), revealed by tapping/dragging the
+   carousel, then faded back out after 3s of no further interaction. See
+   _showWidgetChrome() in script.js for the timer/reveal logic. */
+.widget-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--s1);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(28,25,23,0.12);
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.widget-carousel.chrome-visible .widget-carousel-arrow:not([hidden]) {
+  opacity: 1;
+  pointer-events: auto;
+}
+.widget-carousel-arrow:active { transform: translateY(-50%) scale(0.92); }
+.widget-carousel-arrow--prev { left: -6px; }
+.widget-carousel-arrow--next { right: -6px; }
+.widget-carousel-arrow[hidden] { display: none; }
+
+/* Absolutely positioned so the dots sit inside the card's own bottom edge
+   (every card is the same height, so "bottom of the carousel" = "bottom
+   of whichever card is showing") instead of as a separate row below it. */
+.widget-carousel-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  /* Always visible now — was opacity:0 by default, only fading in for 3s
+     after a swipe/scroll/tap via .chrome-visible, same as the prev/next
+     arrows. The dots are the only indicator there are 4 cards here at
+     all; hiding them by default made that easy to miss entirely. */
+  opacity: 1;
+  pointer-events: auto;
+}
+.widget-carousel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #D9D9D9;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.widget-carousel-dot.active { background: var(--accent); transform: scale(1.15); }
+
+.scan-who-section { margin-top: 12px; }
+.scan-who-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.scan-who-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+.scan-who-remove[hidden] { display: none; }
+.scan-who-remove {
+  flex: none;
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: none;
+  background: var(--s2);
+  color: var(--text-2);
+  font-size: 0.76rem;
+  font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+}
+.scan-who-remove:active { background: var(--s3); }
+.scan-who-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.scan-who-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  background: var(--s1);
+  border-radius: var(--r-md);
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  text-align: center;
+  transition: box-shadow 0.15s, background 0.15s, transform 0.1s;
+}
+.scan-who-card:active { transform: scale(0.97); }
+.scan-who-card.selected {
+  border: 1.5px solid var(--accent-border);
+  background: var(--accent-soft);
+}
+.scan-who-icon {
+  position: relative;
+  width: 34px; height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scan-who-icon-badge {
+  position: absolute;
+  top: -3px; right: -5px;
+}
+.scan-who-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+/* "Or tell zelo more" card shows a filled state once context is set —
+   updateTellZeloSummary() still runs unchanged; this just restyles the
+   feedback for the new compact card instead of a long subtitle line. */
+.scan-who-card--tellzelo.filled {
+  border: 1.5px solid var(--accent-border);
+  background: var(--accent-soft);
+}
+.scan-who-card--tellzelo.filled .scan-who-label { color: var(--accent-deep); }
+
+/* ---- AI Coach — plain white card matching the other cards on this screen,
+   taps through to the full page (openAiCoach()) ---- */
+.asst-coach-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  margin-top: 14px;
+  background: var(--s1);
+  border-radius: var(--r-lg);
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.asst-coach-banner:active { transform: scale(0.995); }
+.asst-coach-avatar {
+  flex-shrink: 0;
+  /* Big enough to roughly match the title+subtitle text block's own height
+     next to it — was 40px, read as small/undersized against the copy. */
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: #FFE1F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.asst-coach-avatar.has-img { background: transparent; }
+.asst-coach-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.asst-coach-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.asst-coach-sub    { font-size: 13px; line-height: 1.3; color: var(--text-2); }
+
+.scan-privacy-note[hidden] { display: none; } /* the class's own display:flex below otherwise beats the browser's default [hidden] styling */
+.scan-privacy-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* Plain document flow, same as everything above it — reachable with a
+     normal small scroll, same native overflow-y:auto behavior as the
+     Account screen. No absolute positioning, no scroll-triggered logic. */
+  margin-top: 50px;
+  padding-top: 14px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}

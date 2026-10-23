@@ -1,0 +1,1642 @@
+/* ================================================================
+   02-scan.css — the Scan page: input card, Generate button, and the generated-reply results
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   SCAN PAGE — guided steps
+   ---------------------------------------------------------------- */
+
+/* Conversation-first: ZELO sits near the top (no large empty gap above it),
+   the message + actions cluster tightly beneath, and the area below stays open
+   as the natural place the generated reply appears. */
+.scan-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 12px 0 4px;
+}
+
+/* Brand hero — anchored at top of the page */
+.scan-hero {
+  text-align: center;
+  padding: 24px 0 0;
+  flex-shrink: 0;
+}
+
+.scan-brand {
+  display: inline-flex;
+  align-items: flex-start;
+  font-size: 2.8rem;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.scan-tagline {
+  margin-top: 6px;
+  font-size: 0.88rem;
+  color: var(--text-2);
+  letter-spacing: 0.01em;
+}
+
+/* Sparkle tucked at the top-right of the wordmark */
+.scan-spark {
+  display: inline-flex;
+  margin-left: 2px;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.scan-step {
+  margin-bottom: 18px;
+}
+
+.scan-step:first-of-type { margin-top: 4px; }
+
+.scan-step-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.scan-step-help {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-left: auto;
+}
+
+
+/* ----------------------------------------------------------------
+   INPUT CARD  (Reply tab)
+   ---------------------------------------------------------------- */
+.input-card {
+  background: var(--s1);
+  border-radius: var(--r-lg);
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  overflow: hidden;
+  margin-top: 36px; /* + .scan-main's 12px flex gap = 48px total below the subline */
+}
+
+.msg-textarea {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 16px 18px 14px;
+  /* 16px minimum — iOS Safari/WKWebView auto-zooms the page on focus for any
+     computed font-size under 16px. */
+  font-size: 16px;
+  color: var(--text);
+  line-height: 1.6;
+  resize: none;
+  min-height: 90px;
+}
+
+.msg-textarea::placeholder { color: var(--text-3); }
+
+/* Or divider */
+.input-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.divider-label {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* Card footer / action row — upload (left) + CTA (right). No border-top of its
+   own: the divider is owned by .scan-inline-textarea's border-bottom instead,
+   so the thumbnail (which lands in this row) reads as sitting seamlessly
+   against the zone above it rather than behind a second, redundant line. */
+.msg-footer {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  transition: padding 0.12s;
+}
+
+/* Vertical separator between Upload Screenshot and Get Suggestions. Explicit
+   margins (not space-between distribution — with 3 flex children and little
+   free width, that squeezed the divider flush against both neighbors). */
+.msg-footer-divider {
+  width: 1px;
+  height: 20px;
+  flex-shrink: 0;
+  margin: 0 12px;
+  background: #E8DDD2;
+}
+
+/* Upload — a quiet, accent-tinted affordance inside the footer */
+.upload-row {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 5px 2px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  color: var(--accent);
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.upload-row:hover { background: var(--accent-soft); }
+
+/* Primary CTA — compact pill, lives beside Upload Screenshot in the same
+   footer row (not a full-width button). Own class, deliberately NOT sharing
+   .generate-btn (that class is reused as-is by other screens' continue/next
+   buttons — full width, different padding — forking here avoids touching them). */
+.asst-suggest-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1; /* takes remaining space in the footer row; text centers inside it */
+  min-width: 0; /* flex items default to min-width: auto, which blocks shrinking
+    below their own content width even with flex: 1 — this override is required
+    for the button to actually fill only the remaining space as specified. */
+  gap: 6px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #FF4FA0, #EC4899);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.asst-suggest-btn:active { transform: scale(0.97); }
+/* Found during the cross-device audit (not part of the original request, but
+   surfaced by testing the same 4-size matrix as the paywall): at narrow
+   widths this button's label ("Get Suggestions" + icon, white-space: nowrap)
+   doesn't fit next to "Upload Screenshot" in the same row and visibly clips
+   — confirmed via measured scrollWidth vs box width at 375px (clips ~3px)
+   and 360px (clips ~8px). 390px/414px already fit at the full size above, so
+   this is a breakpoint override rather than a single fluid clamp() (a clamp
+   tuned to shrink enough by 360px would also shrink the already-fitting
+   390px/414px sizes, since both ends of one clamp scale off the same rate). */
+@media (max-width: 380px) {
+  .asst-suggest-btn {
+    gap: 3px;
+    padding: 10px 7px;
+    font-size: 12px;
+  }
+}
+/* Always stays full pink/glowing — never dims, regardless of input state.
+   Tapping it with no input shakes .input-card instead (see generateReplies()
+   / shakeInputCard() in script.js); it never visually disables. */
+
+/* Quick shake on the input card when Get Suggestions is tapped with nothing
+   to submit — signals "add something first" without navigating anywhere. */
+.input-card.shake {
+  animation: inputCardShake 0.35s ease;
+}
+@keyframes inputCardShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-7px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(3px); }
+}
+.asst-suggest-btn-icon { flex-shrink: 0; }
+
+.upload-row[hidden] { display: none; }
+
+.char-count {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px;
+}
+
+.upload-icon-sm {
+  color: inherit;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.upload-icon-sm[hidden] { display: none; }
+
+.upload-label-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: inherit;
+}
+
+/* Message card — the conversation area. Important by position, not by size:
+   sized for pasting a message or two, never paragraph-length writing. */
+.msg-textarea--primary {
+  min-height: 60px;
+}
+
+/* Inline message textarea on the main Scan page — tall enough for 3-4
+   comfortable lines. Owns the divider (border-bottom) between itself and the
+   action row below, so the footer never carries a second/redundant border. */
+.scan-inline-textarea {
+  min-height: 84px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  /* iOS Safari/WKWebView auto-zooms the whole page on focus when a
+     focused field's computed font-size is under 16px — .msg-textarea's
+     base 0.92rem (14.72px) triggers it. Override to exactly 16px here
+     (scoped to this field only, not the shared .msg-textarea class used
+     elsewhere) and trim line-height slightly so the box doesn't grow. */
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.scan-inline-textarea:focus { outline: none; }
+
+/* Screenshot preview — lives in the action row (.msg-footer), replacing
+   Upload Screenshot in that same flex row once a file is picked. The textarea
+   above stays visible and empty; only this footer row's content changes. */
+.scan-thumb-preview {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.scan-thumb-preview[hidden] { display: none; }
+
+.scan-thumb-preview-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
+/* Small close button, top-right corner of the preview — tapping it clears
+   the attached screenshot completely and restores the upload row. */
+.scan-thumb-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(28, 25, 23, 0.7);
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Note: the "Tell Zelo More" entry now lives inside the Scan page redesign
+   below as one of the "Who's this about?" cards (.scan-who-card--tellzelo).
+   The #tellzelo-sub span it still writes to is hidden — no styling needed. */
+
+
+/* ----------------------------------------------------------------
+   GENERATE BUTTON
+   ---------------------------------------------------------------- */
+.generate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 21px 24px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: 99px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.35);
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+.generate-btn-icon { flex-shrink: 0; }
+
+.generate-btn:hover  { background: var(--accent-deep); }
+.generate-btn:active { transform: scale(0.99); }
+
+.generate-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  box-shadow: none;
+}
+
+
+/* ----------------------------------------------------------------
+   RESULTS  (content now lives in .scan-result-layout, its own screen)
+   ---------------------------------------------------------------- */
+
+/* Block label */
+.block-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+}
+
+/* ================================================================
+   "YOUR REPLY" — REPLAY LAYOUT (#screen-scan-result.is-replay)
+   A saved reply opened from a thread/History (openScanReplay()) gets its own
+   layout, built from the supplied reference and then scaled down so the
+   whole thing — including "Other actions" — fits an iPhone 11 (414x896)
+   without scrolling: a boxed conversation card with the label inside it,
+   two "Add her / your message" boxes, a full-width suggestion card, and an
+   "Other actions" row. A freshly generated scan never gets .is-replay, so
+   its carousel layout below is untouched. Light/dark both come from the
+   normal tokens (accent tints are mixed against --s1, not hard-coded).
+   ================================================================ */
+#screen-scan-result.is-replay {
+  --yr-tile-bg: color-mix(in srgb, var(--accent) 7%, var(--s1));
+  --yr-field-bg: color-mix(in srgb, var(--accent) 4%, var(--s1));
+  padding-top: 38px;
+}
+#screen-scan-result.is-replay .screen-header { padding: 12px 16px; border-bottom-color: transparent; }
+/* Keeps the title centred over the (invisible) right-hand button's space. */
+.is-replay #scan-result-history-btn { visibility: hidden; pointer-events: none; }
+.is-replay .scan-result-layout { padding: 2px 16px 28px; }
+.is-replay .scan-result-content { gap: 17px; }
+.is-replay .yr-label { font-size: 11px; letter-spacing: 1.5px; margin-bottom: 8px; }
+
+/* Label sits at the top-left INSIDE the conversation card */
+.is-replay .preview-block {
+  border-radius: 20px;
+  background: var(--s1);
+  padding: 13px 8px 13px 14px;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); /* same no-border/shadow card treatment as the Scan page */
+}
+.is-replay .preview-block .yr-label { margin-bottom: 10px; }
+.is-replay .yr-conv {
+  padding: 0;
+  border: none;
+  background: transparent;
+  gap: 11px;
+  max-height: 200px;
+}
+.is-replay .yr-conv-avatar { width: 34px; height: 34px; }
+.is-replay .yr-conv-avatar svg { width: 17px; height: 17px; }
+.is-replay .yr-conv-bubble { border-radius: 18px; padding: 9px 13px; font-size: 14px; }
+.is-replay .yr-conv-bubble--her { border-bottom-left-radius: 18px; }
+.is-replay .yr-conv-bubble--me  { border-bottom-right-radius: 18px; }
+.is-replay .yr-message-thumb-row { min-height: 0; }
+/* Hold-to-delete feedback: the pressed bubble shrinks slightly; no text
+   selection / iOS callout while holding. */
+.yr-conv-row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Hold-to-delete feedback (works on the replay AND a fresh scan's own bubble
+   conversation — see _holdDeletableConvo()). transition is set inline by
+   attachReplayBubbleHold() itself, not here: 'none' the instant a finger goes
+   down (so the row snaps in with zero lag, matching how the sheet
+   drag-to-close gestures — e.g. "Link a thread"'s own handle — track a touch
+   with no easing while it's actually being held), then a springy ease-back
+   is applied only on release/cancel. Purely a class here would either lag on
+   press or bounce on press instead of on release. */
+.yr-conv-row--pressing { transform: scale(0.95); }
+.yr-conv-row--pressing .yr-conv-bubble { filter: brightness(0.94); }
+/* A message the user just added pops in */
+.yr-conv-row--pop { animation: yrBubblePop 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.25); }
+@keyframes yrBubblePop {
+  from { opacity: 0; transform: translateY(10px) scale(0.92); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---- "Add a message" composer — 1:1 from the user's own reference
+   (assets/icons/reply-styles/"New message box in your reply.png"): a Her/You
+   segmented toggle (a sliding pink pill behind whichever tab is active — same
+   live-rect-driven technique as the bottom tab bar's #tab-glass-pill, see
+   _slideAddTogglePill() in script.js) with a small "Add her/your message"
+   label to its right, then one single input below with the send button
+   always visible (not gated on having typed something — the reference always
+   shows it). Whichever side is active decides who a sent message is added as. ---- */
+.yr-other-actions { display: none; }
+.is-replay .yr-other-actions { display: block; }
+
+.yr-add-toggle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.yr-add-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--yr-field-bg);
+  flex-shrink: 0;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); /* no border, same shadow-card treatment as the Scan page */
+}
+.yr-add-toggle-pill {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 64px; /* a reasonable default in case this paints before _slideAddTogglePill() ever measures the real tab */
+  height: calc(100% - 6px);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #FF4FA0, #EC2C86);
+  box-shadow: 0 3px 10px rgba(236, 44, 134, 0.28);
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), width 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s ease;
+  z-index: 0;
+}
+.yr-add-toggle-pill--ready { opacity: 1; }
+.yr-add-tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: none;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--text-2);
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.yr-add-tab--active { color: #fff; }
+.yr-add-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.yr-add-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 4px 4px 4px 16px;
+  /* Transparent at rest (no grey outline — same no-border/shadow treatment
+     as the Scan page's own cards) but a real border, not none: focus still
+     needs to draw a colored one in without the box's size jumping by 1px. */
+  border: 1px solid transparent;
+  border-radius: 23px;
+  background: var(--yr-field-bg);
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  transition: border-color 0.15s, opacity 0.14s ease, transform 0.14s ease;
+}
+.yr-add-box--switching { opacity: 0.45; transform: scale(0.99); }
+.yr-add-box:focus-within { border-color: var(--accent-border); }
+.yr-add-field { flex: 1; min-width: 0; display: flex; }
+.yr-add-field[hidden] { display: none; }
+.yr-add-box textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 84px;
+  padding: 8px 0;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px; /* 16px: iOS zooms the page on focus below this */
+  line-height: 1.3;
+}
+.yr-add-box textarea::placeholder { color: var(--text-3); }
+.yr-add-send {
+  flex-shrink: 0;
+  align-self: flex-end;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #FF4FA0, #EC2C86);
+  box-shadow: 0 4px 12px rgba(236, 44, 134, 0.28);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+.yr-add-send:active { transform: scale(0.92); }
+
+/* Zelo suggests row + Copy pill */
+.is-replay .yr-suggests-group { margin-top: 0; }
+.is-replay .yr-suggests-label { font-size: 12px; letter-spacing: 1.6px; }
+.is-replay .copy-btn {
+  height: 28px;
+  padding: 0 12px;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 14px;
+  color: var(--text-2);
+  background: color-mix(in srgb, var(--accent) 9%, var(--s1));
+}
+.is-replay .copy-btn svg { width: 14px; height: 14px; }
+
+/* Full-width suggestion card */
+.is-replay .yr-carousel { margin: 9px 0 0; padding: 0; overflow: visible; cursor: default; }
+.is-replay .yr-card {
+  height: auto;
+  min-height: 246px;
+  border-radius: 22px;
+  padding: 16px 14px 14px;
+  transform: none;
+}
+.is-replay .yr-card-top { padding: 0 6px; }
+.is-replay .yr-card-badge { font-size: 12px; letter-spacing: 2px; }
+.is-replay .yr-best-match { font-size: 10.5px; padding: 3px 9px; }
+.is-replay .yr-card-spark { width: 14px; height: 14px; }
+.is-replay .yr-card-illustration { width: 70px; height: 68px; margin: 8px auto 8px; }
+.is-replay .yr-card-quote { width: 20px; height: 15px; margin: 0 0 5px 10px; }
+.is-replay .yr-card-text {
+  margin: 0 30px 12px 10px;
+  font-size: 16.5px;
+  line-height: 1.32;
+  font-weight: 500;
+  -webkit-line-clamp: 5;
+}
+.is-replay .yr-card-loading { margin: 6px 10px 14px; }
+.is-replay .yr-card-error { margin: 0 10px 12px; }
+.is-replay .yr-card-btn {
+  height: 36px;
+  border-radius: 18px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: auto;
+}
+.is-replay .yr-carousel-footer { display: none; }
+
+/* Other actions */
+.yr-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0 -4px;
+}
+.yr-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 3px;
+  background: none;
+  border: none;
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+}
+.yr-action:active .yr-action-icon { transform: scale(0.95); }
+.yr-action-icon {
+  width: 72px;
+  height: 44px;
+  border-radius: 16px;
+  background: var(--yr-tile-bg);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s;
+}
+.yr-action-icon svg { width: 21px; height: 21px; }
+.yr-action-label {
+  max-width: 96px;
+  font-size: 12.5px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text);
+}
+
+/* Change-tone sheet: slides up from the bottom */
+.yr-tone-overlay { animation: yrFade 0.22s ease-out; }
+.yr-tone-overlay .thread-link-card { animation: yrSheetUp 0.32s cubic-bezier(0.22, 0.9, 0.3, 1); }
+@keyframes yrFade { from { background-color: rgba(28, 25, 23, 0); } }
+@keyframes yrSheetUp { from { transform: translateY(100%); } to { transform: none; } }
+.yr-tone-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.yr-tone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 2px 9px;
+  border-radius: 16px;
+  /* Transparent at rest (no grey outline) — .selected below still needs a
+     real border to color in, not none, so the tile doesn't resize by 1px. */
+  border: 1px solid transparent;
+  background: var(--s1);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  transition: transform 0.12s;
+}
+.yr-tone:active { transform: scale(0.96); }
+.yr-tone.selected { border-color: var(--accent); background: var(--accent-soft); }
+.yr-tone img { width: 46px; height: 42px; object-fit: contain; display: block; }
+
+/* ================================================================
+   "YOUR REPLY" SCREEN — rebuilt to exact spec (see PR/commit notes).
+   Canvas 390px / 24px horizontal padding / background #FFFDFC.
+   ================================================================ */
+/* .screen-header here overrides to 12px own top padding (see below),
+   so 38px + 12px = 50px total, matching the other screens' header offset. */
+#screen-scan-result { background: var(--bg); padding-top: 38px; }
+
+/* Nav bar — 69px total height per mockup measurement (44px circular
+   buttons + 12px top/bottom padding + 1px border). */
+#screen-scan-result .screen-header {
+  padding: 12px 24px;
+  border-bottom-color: var(--border); /* was hard-coded #EFE5DA — a bright line in dark mode */
+}
+#screen-scan-result .back-btn { border-color: var(--border); }
+#screen-scan-result .screen-title {
+  flex: 1;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text); /* was a hard-coded near-black — invisible in dark mode */
+  letter-spacing: -0.2px;
+}
+
+/* HER MESSAGE label + box */
+.yr-label {
+  display: block;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 600;
+  color: #B8A99B;
+  text-transform: uppercase;
+  letter-spacing: 1.8px;
+  margin-bottom: 12px; /* measured: label -> box gap 27 mockup px = 12 */
+}
+
+/* "Her message" — the same .yr-conv bordered box + avatar + bubble
+   treatment a screenshot's parsed conversation uses (see index.html),
+   just with one "her" bubble that's an editable textarea instead of
+   static text. No icons beyond the avatar: tapping the box itself opens
+   the file picker (onMessageBoxTap). A screenshot, once attached, replaces
+   this with the real multi-message conversation instead (see
+   .yr-message-thumb-row / .has-shot rules) — .yr-message-combined only
+   adds sizing on top of the shared .yr-conv box chrome it already carries
+   as a second class in the markup. */
+.yr-message-combined {
+  position: relative;
+  width: 100%;
+  min-height: 84px;
+  box-sizing: border-box;
+}
+.yr-message-combined .yr-conv-row { align-items: flex-start; }
+.yr-message-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  /* .yr-conv-bubble (defined later in this file) sets max-width:76% and
+     font-size:15px for a DISPLAY bubble — both wrong for a focusable input
+     (a typing field needs the room a display bubble doesn't, and 15px
+     triggers iOS's auto-zoom-on-focus), so both need !important to win
+     regardless of source order. */
+  max-width: none !important;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 16px !important;
+  font-weight: 400;
+  line-height: 1.4;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.yr-message-input::placeholder { color: var(--text-3); }
+
+/* Reserved row BELOW the compact box. Text reply → "Zelo's read" fills it.
+   Screenshot reply → the parsed conversation (.yr-conv) fills it instead,
+   up to a normal capped height (~2-4 messages); a longer conversation
+   scrolls inside the box instead of growing it, auto-scrolled to the
+   bottom so the most recent messages are what's visible by default (see
+   _showResultConversation() in script.js) — scroll up for earlier ones. */
+.yr-message-thumb-row {
+  display: flex;
+  margin-top: 10px;
+  min-height: 104px;
+  align-items: stretch;
+}
+.yr-conv-wrap {
+  display: none;         /* revealed only when a screenshot is attached */
+  width: 100%;
+  flex-shrink: 0;
+}
+.preview-block.has-shot .yr-conv-wrap { display: block; }
+.preview-block.has-shot .yr-message-combined { display: none; }
+.preview-block.has-shot .yr-message-thumb-row { margin-top: 0; }
+
+/* ---- Conversation bubbles — see renderHerMessagePreview()/
+   _showResultConversation() in script.js. Exact colors sampled from
+   assets/icons/reply-styles/Her messages, box.png (the reference). ---- */
+.yr-conv {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-height: 230px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  padding: 20px 18px;
+  border-radius: 18px;
+  background: var(--s1);
+  /* Same "no border, soft shadow" card treatment as the Scan page's own
+     cards (.input-card, .scan-who-card, .asst-coach-banner) — a plain grey
+     outline read as a lot of visual noise stacked with the other boxes on
+     this screen; a shadow keeps the card readable without a hard line. */
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+}
+.yr-conv-row { display: flex; align-items: flex-end; gap: 10px; }
+.yr-conv-row--me { justify-content: flex-end; }
+.yr-conv-avatar {
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.yr-conv-avatar svg { width: 20px; height: 20px; }
+/* The one avatar that's actually a button — "her message" box's own avatar,
+   the sole trigger for attaching a screenshot instead of typing (see the
+   onclick move in index.html). Every other .yr-conv-avatar stays plain/inert. */
+.yr-conv-avatar--tap { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 0.1s; }
+.yr-conv-avatar--tap:active { transform: scale(0.92); }
+.yr-conv-bubble {
+  max-width: 76%;
+  padding: 13px 17px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* Quote of the message this one replied to, inside the replay bubble. */
+.yr-conv-quote {
+  display: block;
+  margin-bottom: 5px;
+  padding: 3px 8px;
+  border-left: 2px solid currentColor;
+  border-radius: 0 6px 6px 0;
+  background: rgba(127, 127, 127, 0.14);
+  font-size: 12px;
+  line-height: 1.3;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.yr-conv-bubble--her { background: var(--s2); color: var(--text); border-bottom-left-radius: 6px; }
+.yr-conv-bubble--me  { background: #F73990; color: #fff; border-bottom-right-radius: 6px; }
+.yr-conv-loading { margin: 6px 0; font-size: 14px; color: var(--text-3); text-align: center; }
+
+/* Zelo's read — a quick coaching take on her message, filling the reserved gap
+   for a TEXT reply. Hidden in screenshot mode (the conversation fills the area there). */
+.yr-zelo-read {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow: hidden;
+}
+.is-replay .yr-read-block { display: none; }
+.yr-zelo-read-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+}
+.yr-zelo-read-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;      /* never overflow the card — clamp long reads */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* ZELO SUGGESTS row */
+.yr-suggests-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.yr-suggests-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  color: #F53E95;
+  text-transform: uppercase;
+}
+.yr-suggests-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Copy button — secondary pill. Measured: 139x55 mockup px = 60x24 at 390w */
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: var(--s2);
+  border-radius: 12px;
+  transition: background 0.12s, color 0.12s;
+}
+.copy-btn svg { width: 12px; height: 12px; }
+.copy-btn:hover  { background: var(--s3); color: var(--text); }
+
+/* Streak notification banner — PROTOTYPE (see showStreakNotif() in
+   script.js). Same reusable single-node drop-down mechanics as
+   .copy-toast right below, just a richer card: title+week row on the
+   left, flame+rolling digit on the right. */
+.streak-notif[hidden] { display: none; } /* same [hidden] gotcha as .copy-toast below — its own display:flex would otherwise win */
+.streak-notif {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  /* Fixed + a top offset that clears just the status bar/notch, same
+     convention as .cine-terms-warn — drops in from the very top of the
+     screen like a native OS banner, above the Zelo header (not tucked
+     below it, which is where .copy-toast's absolute+120px sits). */
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  top: calc(10px + env(safe-area-inset-top));
+  z-index: 2100;
+  background: var(--s1);
+  border-radius: 20px;
+  padding: 16px 18px;
+  box-shadow: 0 14px 32px rgba(28,25,23,0.18), 0 2px 10px rgba(28,25,23,0.08);
+  opacity: 0;
+  transform: translateY(-140%);
+  transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.34,1.1,0.64,1);
+  pointer-events: none;
+}
+.streak-notif.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+.streak-notif-left { min-width: 0; }
+.streak-notif-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+.streak-notif-title-num { color: var(--accent); }
+.streak-notif-week { display: flex; gap: 8px; }
+.streak-notif-day { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.streak-notif-day-label { font-size: 0.62rem; font-weight: 600; color: var(--text-3); }
+.streak-notif-day-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ececec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.streak-notif-day-dot--done { background: var(--accent); }
+.streak-notif-day-dot--pop { animation: streakNotifDotPop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes streakNotifDotPop {
+  0%   { transform: scale(0.5); }
+  60%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+.streak-notif-right {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.streak-notif-flame { width: 56px; height: 56px; object-fit: contain; }
+.streak-notif-num-roll {
+  position: relative;
+  width: 34px;
+  height: 30px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.streak-notif-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.streak-notif-num--old { transform: translateY(0); opacity: 1; }
+.streak-notif-num--new { transform: translateY(100%); opacity: 0; }
+/* The "digit roll" — old value slides+shrinks up and out (like it's
+   getting pulled into a vanishing point above), new value simultaneously
+   slides+grows up into place. Both run at once, per spec. */
+.streak-notif-num-roll--rolling .streak-notif-num--old {
+  animation: streakNotifNumOut 0.45s cubic-bezier(0.55,0,1,0.45) forwards;
+}
+.streak-notif-num-roll--rolling .streak-notif-num--new {
+  animation: streakNotifNumIn 0.45s cubic-bezier(0,0.55,0.45,1) forwards;
+}
+@keyframes streakNotifNumOut {
+  0%   { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-130%) scale(0.4); opacity: 0; }
+}
+@keyframes streakNotifNumIn {
+  0%   { transform: translateY(100%) scale(0.6); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Streak popup — see openStreakPopup()/closeStreakPopup() in script.js.
+   Same centered white-card-over-scrim pattern as the other overlays
+   (.thread-link-overlay etc.), just its own classes since none of the
+   sizing here needs to match a bottom sheet. */
+/* Soft pink background blobs — hand-drawn SVG shapes, not a photo crop:
+   a rectangular crop's own bounding box showed through as a visible white
+   seam wherever it overlapped other content, so these are vector fills
+   instead, free to blend into the card with no edge at all. Sit behind
+   everything else — absolutely-positioned elements paint above static
+   ones regardless of DOM order, so every other direct child needs its own
+   stacking context to actually land on top of these. */
+
+
+
+
+
+
+/* Copy confirmation toast — see showCopyToast()/hideCopyToast() in
+   script.js. A single reusable node appended once in index.html (not
+   created/destroyed per call like .limit-toast) so repeated taps just
+   restart it in place instead of stacking. */
+/* XP gain / Level-up panels — see showXPPanel()/showLevelUpPanel() in
+   script.js. Reference: design-refs/xp-levels/xp-notif-panels-reference.png. Same single-
+   reusable-node pattern as .copy-toast below; both panels share one
+   .xp-panel base (icon differs by which node it is, via its own <img>). */
+.xp-panel[hidden] { display: none; }
+.xp-panel {
+  /* Fixed + a top offset that clears just the status bar/notch, same
+     convention as .streak-notif — drops in from the very top of the
+     screen like a native OS banner, above the Zelo header rather than
+     tucked below it (that's where the now-unused screen-specific offsets
+     this used to need were fighting per-screen content right under the
+     header — sitting above the header instead sidesteps that entirely). */
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  top: calc(10px + env(safe-area-inset-top));
+  z-index: 2150;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--s1);
+  border-radius: 22px;
+  padding: 16px 40px 16px 16px;
+  box-shadow: 0 8px 20px rgba(236,72,153,0.16), 0 2px 30px rgba(236,72,153,0.12);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-14px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  pointer-events: none;
+}
+.xp-panel.visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+
+.xp-panel-icon { width: 62px; height: 62px; object-fit: contain; flex-shrink: 0; z-index: 1; }
+.xp-panel-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; z-index: 1; }
+.xp-panel-title { font-size: 1.15rem; font-weight: 800; color: var(--text); line-height: 1.2; }
+.xp-panel-sub { font-size: 0.86rem; color: var(--text-2); }
+.xp-panel-tertiary { font-size: 0.8rem; color: var(--text-3); margin-top: 1px; }
+
+.xp-panel-bar-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.xp-panel-bar { flex: 1; height: 7px; border-radius: 999px; background: var(--s2); overflow: hidden; }
+.xp-panel-bar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-deep)); transition: width 0.4s ease; }
+.xp-panel-bar-text { flex-shrink: 0; font-size: 0.72rem; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+
+.xp-panel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--s2);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Confetti burst — plain CSS shapes, not a crop (too small/simple to be
+   worth cropping individually, same call as the streak popup's background
+   stripes). Multi-coloured pieces sit just above the panel and fall +
+   fade through it once, triggered off .xp-panel.visible so it plays
+   exactly once per popup rather than looping. */
+.xp-panel-confetti {
+  position: absolute;
+  top: -6px;
+  width: 6px;
+  height: 10px;
+  border-radius: 2px;
+  opacity: 0;
+}
+.xp-panel-confetti--1 { left: 16%; background: var(--accent); }
+.xp-panel-confetti--2 { left: 33%; background: #fbbf24; }
+.xp-panel-confetti--3 { left: 52%; background: #60a5fa; }
+.xp-panel-confetti--4 { left: 69%; background: #34d399; }
+.xp-panel-confetti--5 { left: 86%; background: var(--s2); }
+.xp-panel.visible .xp-panel-confetti--1 { animation: xpConfettiFall 0.95s ease-in 0.05s forwards; }
+.xp-panel.visible .xp-panel-confetti--2 { animation: xpConfettiFall 1.05s ease-in 0.12s forwards; }
+.xp-panel.visible .xp-panel-confetti--3 { animation: xpConfettiFall 0.9s ease-in 0s forwards; }
+.xp-panel.visible .xp-panel-confetti--4 { animation: xpConfettiFall 1.1s ease-in 0.18s forwards; }
+.xp-panel.visible .xp-panel-confetti--5 { animation: xpConfettiFall 1s ease-in 0.08s forwards; }
+@keyframes xpConfettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateY(64px) rotate(300deg); opacity: 0; }
+}
+
+/* Level-up's before -> after ICON, reusing the streak notif's digit-roll
+   keyframes (streakNotifNumOut/In — see .streak-notif-num-roll above)
+   applied to a pair of <img> instead of two number spans: starts on the
+   old level's tier icon, rolls to the fixed "star" icon. */
+.xp-panel-icon-roll {
+  position: relative;
+  width: 62px;
+  height: 62px;
+  flex-shrink: 0;
+  overflow: hidden;
+  z-index: 1;
+}
+.xp-panel-icon-roll .xp-panel-icon { position: absolute; inset: 0; }
+.xp-panel-icon--old { transform: translateY(0) scale(1); opacity: 1; }
+.xp-panel-icon--new { transform: translateY(100%) scale(0.6); opacity: 0; }
+.xp-panel-icon-roll--rolling .xp-panel-icon--old {
+  animation: streakNotifNumOut 0.45s cubic-bezier(0.55,0,1,0.45) forwards;
+}
+.xp-panel-icon-roll--rolling .xp-panel-icon--new {
+  animation: streakNotifNumIn 0.45s cubic-bezier(0,0.55,0.45,1) forwards;
+}
+
+/* ================================================================
+   "HOW TO LEVEL UP" INFO MODAL — see openLevelUpInfo() in script.js.
+   Reference: design-refs/xp-levels/how-to-level-up-modal-reference.png.
+   ================================================================ */
+.levelup-modal-overlay[hidden] { display: none; }
+.levelup-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: rgba(28, 25, 23, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.levelup-modal-card {
+  position: relative;
+  background: var(--s1);
+  border-radius: 26px 26px 0 0;
+  width: 100%;
+  max-width: 430px;
+  max-height: calc(var(--app-vh) * 88);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.levelup-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.levelup-modal-scroll {
+  overflow-y: auto;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/* Belt-and-suspenders alongside .levelup-hero's own flex-shrink:0: no
+   direct child of this column-flex scroller should ever be compressed
+   below its real content height (see .levelup-hero's own comment for the
+   exact bug this avoids) — this content should always just scroll
+   instead, never silently shrink and clip itself. */
+.levelup-modal-scroll > * { flex-shrink: 0; }
+
+.levelup-hero {
+  position: relative;
+  background: var(--accent-soft);
+  border-radius: 18px;
+  padding: 18px 110px 18px 18px;
+  overflow: hidden;
+  /* .levelup-modal-scroll (its flex parent) is column-flex with several
+     tall siblings and a capped max-height — a flex item with a non-visible
+     overflow value gets an automatic minimum size of 0 instead of its real
+     content size (a real, if obscure, flexbox spec rule), so this was the
+     one item eligible to be squeezed below its own content height whenever
+     the column ran short on space. That's what made the title/subtitle
+     render below this box's shrunk bounds and get clipped by its own
+     overflow:hidden — flex-shrink:0 opts this item out of shrinking at
+     all, which is the actual fix (not a min-height guess). */
+  flex-shrink: 0;
+}
+/* ---- This panel keeps its pink identity in dark mode ----
+   Requested directly: "keep the whole pink look that doesn't change".
+   Both this hero and the weekly-leaderboard section below carry artwork
+   (the rocket, the trophy) painted for a pale pink page. Holding the
+   backdrop fixed lets those illustrations stay exactly as drawn instead
+   of needing a dark variant that washes their pink out to white — so
+   these two blocks, and the text sitting on them, are pinned to their
+   light-mode colours rather than following the theme. */
+.levelup-hero { background: #fdeef5; }
+.levelup-hero-pill {
+  display: inline-block;
+  background: #ffffff;
+  color: var(--accent-deep);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 5px 11px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+/* Fixed colours, not var(--text)/var(--text-2) — .levelup-hero above keeps
+   a pale pink background in both themes, so theme text would go near-white
+   on pink and vanish. */
+.levelup-hero-title { font-size: 1.35rem; font-weight: 800; color: #1c1917; margin: 0; }
+.levelup-hero-sub { font-size: 0.82rem; color: #8a8175; line-height: 1.4; margin: 6px 0 0; max-width: 70%; }
+/* The white plate this used to carry is gone: the rocket now ships a
+   dark-mode sibling (xp-rocket-hero-dark.png) that already has its white
+   backing baked in and clipped to the artwork's own outline, so it no
+   longer needs a visible square behind it. See ICONS_WITH_DARK_VARIANT
+   in script.js. */
+.levelup-hero-img {
+  position: absolute; right: 6px; bottom: 8px; width: 92px; height: auto;
+}
+
+.levelup-section-title { font-size: 1.02rem; font-weight: 800; color: var(--text); margin: 0; }
+.levelup-section-sub { font-size: 0.8rem; color: var(--text-2); margin: 2px 0 12px; }
+.levelup-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+}
+.levelup-row-icon { width: 34px; height: 34px; flex-shrink: 0; }
+.levelup-row-label { flex: 1; min-width: 0; font-size: 0.88rem; font-weight: 600; color: var(--text); display: flex; flex-direction: column; }
+.levelup-row-note { font-size: 0.74rem; font-weight: 400; color: var(--text-2); margin-top: 1px; }
+.levelup-row-xp { flex-shrink: 0; font-size: 0.86rem; font-weight: 800; color: var(--accent); }
+
+.levelup-section--leaderboard {
+  position: relative;
+  overflow: hidden;
+  /* Opaque pink -> white, not var(--accent-soft) -> #fff. accent-soft is a
+     10%-alpha pink, so on a dark modal it composited down to near-black and
+     the section lost its pink identity; this keeps the same look in both
+     themes (as requested) and keeps the trophy sitting on the pale page it
+     was drawn for. */
+  background: linear-gradient(180deg, #fbe3ee, #ffffff);
+  border-radius: 18px;
+  padding: 16px 18px;
+}
+/* Wider + bottom-anchored (was 84px, top-right) — at that size the
+   mountain range behind the trophy compressed down to a single vague
+   blob instead of the distinct multi-peak shape the source crop actually
+   has (see assets/icons/xp-levels/xp-trophy-hero.png, a wide ~2.3:1
+   image) — this size actually gives it room to read. overflow:hidden on
+   the section above clips it cleanly against the rounded corners now
+   that it's big enough to reach them. */
+.levelup-leaderboard-img { position: absolute; bottom: -8px; right: -10px; width: 168px; height: auto; }
+.levelup-section--leaderboard .levelup-section-title { max-width: 60%; color: #1c1917; }
+.levelup-section--leaderboard .levelup-section-sub { max-width: 60%; color: #8a8175; }
+/* Tighter than the title/sub above — this row sits lower, right where
+   the bottom-anchored trophy image reaches furthest into the section.
+   Fixed dark colors here too, not the inherited var(--text)/var(--text-2)
+   — the gradient above ends in a hardcoded #fff at this point regardless
+   of theme, so light-mode-style dark text is what's actually needed in
+   both themes; var(--text) alone would go near-white and wash out. */
+.levelup-section--leaderboard .levelup-row-label { max-width: 52%; color: #1c1917; }
+.levelup-section--leaderboard .levelup-row-note { color: #8a8175; }
+.levelup-section--leaderboard .levelup-row { padding-top: 4px; }
+
+.levelup-got-it {
+  width: 100%;
+  padding: 15px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.96rem;
+  margin-top: 4px;
+}
+
+.copy-toast[hidden] { display: none; } /* .copy-toast's own display:flex below otherwise beats the browser's default [hidden] styling */
+.copy-toast {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* Same drop-in as .streak-notif: fixed to the very top (just clearing the
+     status bar/notch), sliding down from above the screen with the same
+     spring easing — not tucked under the screen header. */
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  top: calc(10px + env(safe-area-inset-top));
+  z-index: 2100;
+  background: var(--s1);
+  border-radius: 20px;
+  padding: 14px 14px 17px;
+  box-shadow: 0 14px 32px rgba(28,25,23,0.18), 0 2px 10px rgba(28,25,23,0.08);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-140%);
+  transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.34,1.1,0.64,1);
+  pointer-events: none;
+}
+.copy-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+.copy-toast-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f472b6, var(--accent-deep));
+}
+.copy-toast-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.copy-toast-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.copy-toast-sub {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.copy-toast-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+}
+.copy-toast-close:active { transform: scale(0.9); }
+/* Countdown bar — showCopyToast() sets an explicit transition-duration and
+   flips this to 0 width, so it visually drains right-to-left over exactly
+   the toast's auto-dismiss delay. */
+.copy-toast-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--accent);
+}
+
+/* Carousel — native horizontal scroll-snap, rebuilt to the mockup's
+   MEASURED proportions: card = 49.7% of canvas width (447/899 mockup px =
+   194px at 390w), peeks 85px each side, 12px card<->peek gap. The track
+   escapes the layout's 26px side padding (negative margin) because in the
+   mockup the peeks bleed to the very screen edge. Side padding here is a
+   percentage of the parent's content width (390-52=338 at 390w): 98px
+   gutter / 338 = 29% — one value that holds the measured ratio at any
+   canvas width. Margin-top = measured suggests-row -> card gap (34). */
+.yr-carousel {
+  display: flex;
+  gap: 12px;
+  margin: 34px -26px 0;
+  padding: 0 29%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.yr-carousel::-webkit-scrollbar { display: none; }
+/* While the pointer is dragging the track, snap must not fight the hand —
+   it's restored on release, when the drag handler animates to the nearest
+   card itself. */
+.yr-carousel.dragging { scroll-snap-type: none; cursor: grabbing; scroll-behavior: auto; }
+
+/* Measured: 447x613 mockup px = 194x286 at 390w. Radius 24 — the earlier
+   pixel-scan said 10 but that undermeasured (the soft border's faint arc
+   evaded the color tolerance); visually the mockup corners are a clear
+   "curved square". Non-centered cards scale down slightly (.is-center is
+   maintained by the scroll listener) so the middle card reads taller than
+   its neighbors, exactly like the reference. */
+.yr-card {
+  flex-shrink: 0;
+  scroll-snap-align: center;
+  width: 100%; /* fills the carousel's content-box = the measured 194px at 390w */
+  height: 286px; /* restored to the reference's measured 194:286 ratio
+                    (width 194 stays fixed by the carousel). Reduced from the
+                    prior 423px stretch so the card reads in proportion again;
+                    the enlarged combined message box above now takes the extra
+                    vertical space. Internal content stays centered (below). */
+  border-radius: 24px;
+  border: 1px solid; /* hairline; each card's border-color is set inline at 70% opacity via color-mix — see _cardHTML() */
+  padding: 24px 14px 18px; /* measured: top->label 24, button side pad 14, button->bottom 18 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  transform: scale(0.92);
+  transition: transform 0.22s ease;
+}
+.yr-card.is-center { transform: scale(1); }
+
+.yr-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.yr-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.yr-card-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.yr-best-match {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: #FFE1F0;
+  color: #E54391;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.yr-card-spark {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  color: #F54B98;
+  opacity: 0.8;
+}
+.yr-card-spark svg { width: 100%; height: 100%; }
+
+/* Measured: illustration 132 mockup px = 57 at 390w; icon->quote gap 3.
+   margin-top is `auto` (not the old fixed 26px): paired with the button's
+   own margin-top:auto below, the two auto margins split the card's free
+   space evenly, so the icon+quote+text read as one group centered between
+   the style label (top) and the button (bottom). When the card grows, the
+   extra height distributes equally above and below this group rather than
+   pooling into a single gap. Icon size itself is unchanged (57px). */
+.yr-card-illustration {
+  width: 57px;
+  height: 57px;
+  border-radius: 17px;
+  margin: auto auto 3px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.yr-card-illustration svg { width: 26px; height: 26px; }
+
+/* Real per-style image (assets/icons/{style}.png) swapped in for the drawn
+   SVG. Same 57x57 container, no size/position change — only the source.
+   Fills the container (object-fit keeps aspect). Hidden until it actually
+   loads; on success .has-img reveals it, hides the SVG fallback, and clears
+   the colored square so a self-contained icon shows cleanly. If the file is
+   missing the <img> removes itself (onerror) and the SVG-on-color stays. */
+.yr-card-illustration-img {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* When a real (transparent-background) badge image is present, the container
+   must NOT paint any shape of its own — the badge PNG's own rounded-square
+   edge is the only box. So clear both the colored fill and the container's
+   17px radius, leaving the image as the single clean shape. */
+.yr-card-illustration.has-img { background: transparent !important; border-radius: 0; }
+.yr-card-illustration.has-img .yr-card-illustration-img  { display: block; }
+.yr-card-illustration.has-img .yr-card-illustration-svg  { display: none; }
+
+/* Decorative quote — measured in flow between icon and text: 19px tall,
+   soft but visible (measured blend vs card fill ≈ 35% alpha), 15px below
+   it to the text. */
+.yr-card-quote {
+  display: block;
+  width: 25px;
+  height: 19px;
+  margin-bottom: 15px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.yr-card-text[hidden] { display: none; }
+.yr-card-text {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 17px; /* measured: 3-line block 118 mockup px = 51 at 390w */
+  color: var(--text);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+.yr-card-loading[hidden] { display: none; }
+.yr-card-loading {
+  display: flex;
+  gap: 5px;
+  padding: 6px 0;
+}
+.yr-card-loading span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  animation: cardDotPulse 1s ease-in-out infinite;
+}
+.yr-card-loading span:nth-child(2) { animation-delay: 0.15s; }
+.yr-card-loading span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes cardDotPulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50%      { opacity: 0.9;  transform: scale(1); }
+}
+
+.yr-card-error[hidden] { display: none; }
+.yr-card-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+}
+.yr-card-error-text {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 17px;
+  color: var(--text-2);
+}
+.yr-card-error-retry {
+  padding: 6px 16px;
+  border-radius: 99px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+}
+.yr-card-error-retry:active { transform: scale(0.95); }
+
+/* Measured: 383x66 mockup px = 166x29 at 390w (full card content width). */
+.yr-card-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 29px;
+  flex-shrink: 0;
+  margin-top: auto; /* pins to the bottom; card padding-bottom (18px) keeps it off the border */
+  border-radius: 15px;
+  background: linear-gradient(135deg, #FF4FA0, #EC2C86);
+  box-shadow: 0 6px 16px rgba(236, 44, 134, 0.20);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Dots + swipe hint, between carousel and the save card. Measured gaps:
+   card bottom -> dots 14; dots -> hint 12 here (measured 18 with a 4px-tall
+   hint glyph row; our hint line is 11px tall, so 12 keeps the measured
+   dots -> save total of ~48 once the content's 26px section gap follows). */
+.yr-carousel-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+.reply-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.reply-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border-2);
+  transition: width 0.2s ease, background 0.2s ease;
+}
+.reply-dot.active {
+  width: 18px;
+  background: #F54296;
+}
+.reply-swipe-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--text-3);
+  transition: opacity 0.3s ease;
+}
+.reply-swipe-hint.hidden { opacity: 0; }
+

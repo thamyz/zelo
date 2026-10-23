@@ -1,0 +1,358 @@
+/* ================================================================
+   10-paywall.css — the trial explainer and paywall (presentation only - there is no payment code)
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   PAYWALL — trial-explainer format. UI mock only, no payment logic.
+   Cream bg (distinct from the app's white --bg) per spec. Must fit
+   390x844 with zero scroll — this screen intentionally omits any
+   money-back-guarantee text. All vertical gaps are fixed values (no
+   flexible/auto-margin spacer) so section spacing stays predictable.
+   ================================================================ */
+#screen-paywall { background: var(--bg); }
+
+.paywall-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  /* Fluid vertical padding — full-size on tall viewports (iPhone 14/15, 11),
+     compresses on short ones (SE, common Android) so the whole screen fits
+     with zero scroll without a single hard breakpoint. dvh (not vh) so it
+     tracks Safari's real, currently-visible viewport as the address bar
+     collapses/expands, not the theoretical full-screen height. Horizontal
+     padding is untouched — width isn't the constrained dimension here. */
+  padding: clamp(4px, calc(var(--app-vh) * 1.3), 14px) 20px calc(clamp(5px, calc(var(--app-vh) * 1.9), 22px) + 34px);
+}
+
+.paywall-topbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  flex-shrink: 0;
+  margin-bottom: clamp(2px, calc(var(--app-vh) * 0.6), 6px);
+}
+.paywall-brand.scan-page-brand {
+  font-size: 1.5rem;
+}
+
+.paywall-hero {
+  align-self: center;
+  /* Full 156px on tall viewports, shrinks on short ones (see .paywall-layout
+     comment) — the box (not the scaled image below) is what reclaims space. */
+  width: clamp(96px, calc(var(--app-vh) * 15), 156px);
+  height: clamp(96px, calc(var(--app-vh) * 15), 156px);
+  margin: 0 0 2px;
+  flex-shrink: 0;
+  /* Box stays this size for layout purposes (nothing below shifts) — the
+     image itself is visually enlarged via transform: scale below and is
+     allowed to spill outside this box. */
+  overflow: visible;
+}
+.paywall-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  transform: scale(1.5);
+}
+
+.paywall-headline {
+  font-size: clamp(19px, calc(var(--app-vh) * 3.0), 28px);
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  text-align: center;
+  /* More breathing room above "Complete Sign-up" — was clamp(4px,1dvh,8px). */
+  margin-bottom: clamp(12px, calc(var(--app-vh) * 2.4), 22px);
+  flex-shrink: 0;
+}
+.paywall-headline-accent { color: #EC4899; }
+
+.paywall-timeline {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: clamp(4px, calc(var(--app-vh) * 1.5), 24px); /* full gap on tall viewports, ~20-30px per spec; compresses on short ones */
+  flex-shrink: 0;
+}
+.paywall-step {
+  display: flex;
+  gap: 12px;
+}
+.paywall-step-icon-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 26px;
+  flex-shrink: 0;
+}
+.paywall-step-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.paywall-step-icon--done { background: #EC4899; color: #fff; }
+.paywall-step-icon--muted { background: #FFE1F0; color: var(--text-2); }
+.paywall-step-line {
+  width: 2px;
+  flex: 1;
+  min-height: clamp(6px, calc(var(--app-vh) * 1.9), 34px);
+  background: #EC4899;
+  margin: 3px 0;
+  transform-origin: top;
+}
+.paywall-step-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: clamp(3px, calc(var(--app-vh) * 1.6), 32px);
+}
+.paywall-step:last-child .paywall-step-body { padding-bottom: 0; }
+
+/* Entry animation — "completing a checklist" reveal. Elements start in
+   their normal, fully-visible state so the screen degrades gracefully if
+   the JS trigger (playPaywallTimelineIntro()) never runs; .tl-hidden is
+   only ever added briefly, right before being removed on a stagger.
+   Durations here must match the JS schedule in playPaywallTimelineIntro()
+   (260ms icons / 340ms lines) so the full sequence lands at ~2s. */
+.paywall-step-icon {
+  transition: opacity 0.26s ease, transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.paywall-step-line {
+  transition: transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.paywall-step-icon.tl-hidden {
+  opacity: 0;
+  transform: scale(0.4);
+}
+.paywall-step-line.tl-hidden {
+  transform: scaleY(0);
+}
+
+/* Step 1's checkmark reveal — a decoupled overlay pops in large & centered
+   on screen (point A), then travels + scales down into the real step-1
+   icon's actual position (point B), handing off seamlessly. See
+   playPaywallCheckmarkIntro() in script.js. #screen-paywall (.screen) is
+   already position:absolute, so this positions relative to the screen. */
+.paywall-checkmark-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  background: #EC4899;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  z-index: 20;
+  pointer-events: none;
+  transform: translate(0, 0) scale(1);
+}
+@keyframes paywallCheckmarkPop {
+  0%   { transform: scale(0.7); }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.paywall-checkmark-overlay--pop {
+  animation: paywallCheckmarkPop 0.14s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Real step-1 icon stays hidden (plain opacity, no bounce transition of its
+   own) until playPaywallCheckmarkIntro()'s travel beat hands off to it —
+   avoids a visible "double pop" on top of the overlay's own pop-in. */
+.paywall-checkmark-pending {
+  opacity: 0;
+  transition: opacity 0.08s ease;
+}
+.paywall-step-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+.paywall-step-sub {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+.paywall-plans {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, calc(var(--app-vh) * 1.2), 10px);
+  margin-top: 0; /* gap to the timeline above is fixed via .paywall-timeline's
+    margin-bottom instead, per spec (~20-30px, not a flexible/collected gap). */
+  flex-shrink: 0;
+}
+.paywall-plan {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--s1);
+  border: 1px solid #E8DDD2;
+  border-radius: var(--r-lg);
+  text-align: left;
+}
+.paywall-plan--selected {
+  border-color: #EC4899;
+  box-shadow: 0 0 0 1px #EC4899 inset;
+}
+/* Uniform scale pop — draws the eye to the pre-selected Yearly card. Scale
+   only (no glow/border pulsing), grows then settles back. Single-bounce
+   keyframe; the 1-pause-2-pause-1 sequence and its start delay (after the
+   timeline reveal fully finishes) live in playPaywallYearlyBouncePattern()
+   in script.js, which re-triggers this class on a schedule. */
+@keyframes paywallYearlyBounce {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.045); }
+  60%  { transform: scale(0.98); }
+  80%  { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+.paywall-plan--bounce {
+  animation: paywallYearlyBounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.paywall-plan-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #E8DDD2;
+  flex-shrink: 0;
+}
+.paywall-plan-check {
+  display: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #EC4899;
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.paywall-plan--selected .paywall-plan-radio { display: none; }
+.paywall-plan--selected .paywall-plan-check { display: flex; }
+.paywall-plan-badge {
+  position: absolute;
+  top: -9px;
+  left: 14px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #fff;
+  background: #EC4899;
+  border-radius: 999px;
+}
+/* Left column — plan name ("Monthly" / "Yearly") + secondary price info */
+.paywall-plan-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.paywall-plan-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.paywall-plan-strike-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.paywall-plan-strike {
+  font-size: 12px;
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+.paywall-plan-strike-price {
+  font-size: 12px;
+  font-weight: 600;
+  color: #EC4899;
+}
+
+/* Right column — the actual price, right-aligned */
+.paywall-plan-price-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.paywall-plan-price {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+}
+.paywall-plan-price small { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.paywall-plan-price--accent { color: #EC4899; }
+.paywall-plan-note {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.paywall-plan-permo-pill {
+  font-size: 10px;
+  font-weight: 600;
+  color: #8a8175; /* fixed, not var(--text-2) — background is a fixed pale pink regardless of theme */
+  background: #FFE1F0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* One-off exception per spec — every other CTA in the app keeps the
+   pill-shaped .asst-suggest-btn treatment; this one is explicitly
+   60px tall / 30px radius and must stay a dead button (no onclick). */
+.paywall-cta {
+  margin-top: clamp(8px, calc(var(--app-vh) * 1.5), 14px);
+  width: 100%;
+  height: 60px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #FF4FA0, #EC4899);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(236, 72, 153, 0.35);
+}
+.paywall-cta:active { transform: scale(0.98); }
+
+/* Relocated from the top-left X — now a text decline next to the CTA it's
+   declining, and only revealed once the entrance animation (checkmark +
+   timeline reveal) has fully finished playing (see showPaywallNow()). */
+.paywall-decline {
+  margin-top: 14px;
+  align-self: center;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #9a8f86;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.paywall-decline[hidden] { display: none; }
+

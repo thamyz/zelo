@@ -1,0 +1,573 @@
+/* ================================================================
+   03-screens.css — the shared screen header, Profile, Tell Zelo More, and the Scan sub-pages
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   PRACTICE TAB — DIFFICULTY CARDS
+   ---------------------------------------------------------------- */
+.diff-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diff-card {
+  display: flex;
+  align-items: center;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 18px 16px;
+  text-align: left;
+  width: 100%;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.diff-card:hover  { background: var(--s2); border-color: var(--border-2); }
+.diff-card:active { background: var(--s3); }
+
+.diff-card-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diff-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.diff-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.diff-chip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  color: var(--cc, #fff);
+  background: color-mix(in srgb, var(--cc, #fff) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cc, #fff) 28%, transparent);
+}
+
+.diff-desc {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.diff-arrow {
+  font-size: 1.3rem;
+  color: var(--text-3);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+
+/* ----------------------------------------------------------------
+   SCREEN HEADER  (profile / chat)
+   ---------------------------------------------------------------- */
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 10;
+}
+
+/* Account (#screen-dashboard) swaps its header to position:fixed instead of
+   the sticky above — scoped to just this screen since it's the one with a
+   long enough settings list to actually be scrolled far, where WebKit's
+   known sticky-vs-elastic-overscroll rendering bug (the header visibly
+   detaching/lagging during the rubber-band bounce past the top) is
+   reachable. See the matching #tab-assistant/#tab-practice/#tab-chats
+   .app-header override above for the fuller rationale — same mechanism,
+   same fix. 109px = .screen's own 36px padding-top + this header's ~73px
+   height, now that the header no longer occupies flow space of its own. */
+#screen-dashboard {
+  padding-top: 109px;
+}
+
+/* top:0 + padding-top absorbing the 36px gap (same reasoning as the
+   .app-header override above) — the header's own white background has to
+   reach the real top of the screen or that strip is left uncovered and can
+   flash through on scroll/bounce. padding-top: 50px = 36px gap + this
+   header's original 14px own padding, so the back button/title stay put. */
+#screen-dashboard .screen-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-width: 430px;
+  margin: 0 auto;
+  padding-top: 50px;
+}
+
+/* Close/back button on the right instead of the left — used only for
+   Settings and History (both entered via a top-right tap on their
+   respective screens), scoped so no other .screen-header/.app-header
+   is affected. .screen-header is flex (title first, button pushes to
+   the far side via space-between); .app-header (History) is a fixed
+   3-column grid (38px/1fr/38px) instead, so its button is placed via
+   explicit grid-column rather than relying on source order. */
+#screen-history .app-header .home-brand { grid-column: 2; }
+#screen-history .app-header .back-btn   { grid-column: 3; justify-self: end; }
+
+.screen-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Standard header icon-button size app-wide — back/close chevrons and
+   X's, plus the other circular header icons that sit alongside them
+   (history, profile, settings) — one consistent tap target everywhere,
+   not just on this class. See .auth-back-btn, .auth-dismiss-btn,
+   .aicoach-back-btn/.aicoach-menu-btn, .history-btn, .profile-btn,
+   .settings-btn, .header-spacer, .aicoach-hiw-close. */
+.back-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+
+.back-btn:hover { background: var(--s2); }
+
+
+/* ----------------------------------------------------------------
+   SCREEN: PROFILE
+   ---------------------------------------------------------------- */
+.profile-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.profile-name { font-size: 1.05rem; font-weight: 700; }
+.profile-age  { font-size: 0.85rem; color: var(--text-2); }
+.profile-occ  { font-size: 0.77rem; color: var(--text-2); }
+
+.profile-bio {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.interest-tag {
+  font-size: 0.7rem;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+}
+
+/* Start button */
+.start-btn {
+  width: 100%;
+  padding: 15px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.93rem;
+  font-weight: 700;
+  border-radius: var(--r-md);
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 16px rgba(236, 72, 153, 0.25);
+  transition: background 0.12s, transform 0.1s;
+}
+
+.start-btn:hover  { background: var(--accent-deep); }
+.start-btn:active { transform: scale(0.99); }
+
+
+/* ----------------------------------------------------------------
+   SCREEN: TELL ZELO MORE  (quick context flow — choices, not a form)
+   ---------------------------------------------------------------- */
+.tz-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  /* Fluid vertical padding — see the .paywall-layout comment for why dvh
+     (not vh/fixed px): tracks Safari's real visible viewport as the address
+     bar collapses/expands. Unchanged at 390px+ height where it already fit;
+     compresses on short viewports (SE, common Android) where 7 stacked
+     options genuinely didn't fit at full size. */
+  padding: clamp(10px, calc(var(--app-vh) * 2.6), 22px) 20px clamp(12px, calc(var(--app-vh) * 3.3), 28px);
+}
+
+/* Segmented step progress (one segment per step) */
+.tz-progress {
+  display: flex;
+  gap: 8px;
+  margin-bottom: clamp(10px, calc(var(--app-vh) * 3), 26px);
+}
+
+.tz-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--s3);
+  transition: background 0.25s;
+}
+
+.tz-seg.done { background: var(--accent); }
+
+.tz-question {
+  font-size: clamp(18px, calc(var(--app-vh) * 2.75), 1.45rem);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.tz-help {
+  margin-top: 7px;
+  margin-bottom: 22px;
+  font-size: 0.88rem;
+  color: var(--text-2);
+}
+
+/* Quick-select options */
+.tz-options {
+  display: flex;
+  flex-direction: column;
+  /* Steps 1/2 stack 7 options each — this gap and each option's own padding/
+     icon size below are the biggest levers for fitting short viewports
+     (see .tz-layout comment); unchanged at 390px+ height where 7 rows at
+     full size already fit. */
+  gap: clamp(4px, calc(var(--app-vh) * 1.2), 11px);
+}
+
+.tz-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: clamp(6px, calc(var(--app-vh) * 1.7), 15px) 16px;
+  background: var(--s1);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.tz-option:hover { border-color: var(--border-2); }
+
+.tz-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(24px, calc(var(--app-vh) * 4.3), 38px);
+  height: clamp(24px, calc(var(--app-vh) * 4.3), 38px);
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: var(--s2);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.tz-option-label {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Radio indicator */
+.tz-option-radio {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.tz-option-radio svg { opacity: 0; transform: scale(0.6); transition: opacity 0.12s, transform 0.12s; color: #fff; }
+
+.tz-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tz-option.selected .tz-option-radio {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.tz-option.selected .tz-option-radio svg { opacity: 1; transform: scale(1); }
+
+/* Pushes the Next button to the bottom of the viewport */
+.tz-spacer { flex: 1; min-height: clamp(6px, calc(var(--app-vh) * 1.7), 24px); }
+
+.tz-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 0;
+}
+
+.tz-next-arrow { flex-shrink: 0; }
+
+/* Free-text input step (step 4) */
+.tz-freetext {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  min-height: 110px;
+  padding: 14px 16px;
+  font-size: 16px; /* 16px minimum avoids iOS auto-zoom-on-focus */
+  width: 100%;
+  resize: none;
+}
+.tz-freetext:focus { border-color: var(--accent-border); outline: none; }
+
+.tz-foot-note {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+
+/* ----------------------------------------------------------------
+   SCREEN: SCAN — TYPE MESSAGE
+   ---------------------------------------------------------------- */
+.scan-type-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 18px 20px 28px;
+}
+
+/* Same look as the main-page textarea, sized for 2-3 lines — not a
+   full-page writing surface. */
+.scan-type-textarea {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  min-height: 110px;
+}
+
+.scan-type-textarea:focus { border-color: var(--accent-border); outline: none; }
+
+.scan-type-spacer { flex: 1; min-height: 24px; }
+
+
+/* ----------------------------------------------------------------
+   SCREEN: SCAN — UPLOAD SCREENSHOT
+   ---------------------------------------------------------------- */
+.scan-upload-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 18px 20px 28px;
+}
+
+.scan-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  width: 100%;
+  padding: 48px 24px;
+  background: var(--s1);
+  border: 2px dashed var(--border-2);
+  border-radius: var(--r-lg);
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.scan-dropzone:hover { border-color: var(--accent-border); background: var(--accent-soft); }
+
+.scan-dropzone-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--s2);
+  color: var(--text-3);
+}
+
+.scan-dropzone-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.scan-dropzone-sub {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  max-width: 240px;
+}
+
+.scan-dropzone-icon[hidden],
+.scan-dropzone-title[hidden],
+.scan-dropzone-sub[hidden] { display: none; }
+
+/* Uploaded state — the thumbnail itself is the confirmation, no label/filename */
+.scan-dropzone.has-file {
+  border-color: var(--accent-border);
+  border-style: solid;
+  background: var(--accent-soft);
+  padding: 14px;
+}
+
+.scan-dropzone-thumb {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: var(--r-md);
+}
+
+.scan-dropzone-thumb[hidden] { display: none; }
+
+/* Wrapper so the minus button can be positioned just outside the photo */
+.scan-dropzone-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+/* Minus button — sits just outside the top-right corner of the uploaded
+   photo (not on top of it), so it never covers any part of the picture.
+   Only visible when has-file. */
+.scan-photo-minus-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(28, 25, 23, 0.65);
+  color: #fff;
+  border: none;
+  font-size: 17px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scan-photo-minus-btn[hidden] { display: none; }
+
+/* Shown only if Analyze's silent background OCR extraction fails */
+.scan-ocr-error {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--red);
+  text-align: center;
+}
+
+.scan-ocr-error[hidden] { display: none; }
+
+
+/* ----------------------------------------------------------------
+   SCREEN: SCAN — RESULT
+   ---------------------------------------------------------------- */
+/* Side inset 26px = measured msg-box inset (59 mockup px); top 8px =
+   measured nav -> HER MESSAGE gap. */
+.scan-result-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 26px 28px; /* bottom 28 = measured save-card -> canvas-bottom inset */
+}
+
+/* Loading state — sparkle pulse while the reply "thinks" */
+.scan-result-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex: 1;
+  padding: 60px 0;
+}
+
+.scan-result-loading[hidden] { display: none; }
+
+.scan-result-loading-spark {
+  display: flex;
+  color: var(--accent);
+  animation: sparklePulse 1.3s ease-in-out infinite;
+}
+
+@keyframes sparklePulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.55; }
+  50%      { transform: scale(1.15); opacity: 1;    }
+}
+
+.scan-result-loading-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.scan-result-content[hidden] { display: none; }
+
+/* 26px section gap = measured swipe-hint -> save-card whitespace. The
+   other measured gaps inside the suggests group are set as explicit
+   margins on the carousel/footer, not a shared gap value. */
+.scan-result-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* fills the screen so the save card's margin-top:auto can pin it to the bottom */
+  gap: 26px;
+  animation: fadeUp 0.32s ease;
+}
+
+.yr-suggests-group {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+

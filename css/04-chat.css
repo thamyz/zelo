@@ -1,0 +1,655 @@
+/* ================================================================
+   04-chat.css — the practice conversation screen, the chat-mode modal, the bottom tab bar and shared animations
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   SCREEN: CHAT
+   ---------------------------------------------------------------- */
+#screen-chat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* .chat-back-bar has 12px own top padding, so 38px + 12px = 50px total,
+     matching the other screens' header offset. */
+  padding-top: 38px;
+}
+
+#screen-chat.active { display: flex; }
+
+/* Minimal always-visible bar — just the back button plus the settings
+   affordances that used to live at the right of the old .chat-header.
+   The name/photo/status content that used to fill the middle now lives in
+   .chat-profile-block instead, inside the scrollable thread. */
+.chat-back-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+/* Centered independently of the two unequal-width side groups (back
+   button vs. mode-pill + settings button), same absolute-center-over-a
+   -relative-header technique already used by #screen-leaderboard's title. */
+/* Same size/weight as .home-brand (the Chats tab's own header wordmark) —
+   matching "the normal chat header" rather than a scaled-down one-off. */
+.chat-back-bar-brand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.chat-back-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+/* Messages area */
+.chat-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scroll-behavior: smooth;
+}
+
+/* Large Instagram-DM-style profile block — the first item in the
+   scrollable thread (see startChat()/openChatFromStore() in script.js),
+   not a fixed/sticky header. Scrolls away naturally with the rest of the
+   content; no animation or scroll-position tracking involved. */
+.chat-profile-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px 28px;
+  text-align: center;
+}
+
+.chat-profile-photo {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.chat-profile-name { font-size: 1.25rem; font-weight: 800; color: var(--text); }
+
+.msg-row {
+  display: flex;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.msg-row.user { justify-content: flex-end; }
+.msg-row.ai   { justify-content: flex-start; }
+
+.msg-wrap {
+  display: flex;
+  flex-direction: column;
+  max-width: 72%;
+}
+
+.msg-row.user .msg-wrap { align-items: flex-end; }
+.msg-row.ai   .msg-wrap { align-items: flex-start; }
+
+.bubble {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.bubble.user {
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  font-weight: 500;
+}
+
+.bubble.ai {
+  background: var(--s1);
+  border: none;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+}
+
+.msg-status {
+  font-size: 0.62rem;
+  color: var(--text-3);
+  margin-top: 3px;
+  padding-right: 2px;
+  transition: color 0.2s;
+}
+
+.msg-status.seen { color: var(--accent); }
+
+/* Typing indicator */
+.typing-row {
+  display: flex;
+  width: 100%;
+}
+
+.typing-bubble {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  border-bottom-left-radius: 4px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-3);
+  animation: typeBounce 1.3s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.18s; }
+.typing-dot:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes typeBounce {
+  0%, 60%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
+  30%           { transform: translateY(-7px) scale(1.15); opacity: 1; }
+}
+
+/* Jump-to-latest button — a child of .chat-input-bar (which is already
+   position:relative), anchored to ITS top edge via bottom:100% rather than
+   any fixed pixel offset from the screen. That means it automatically
+   rides along whenever the bar itself moves for the keyboard — no separate
+   entry in the keyboard-nudge move list needed, and no fragile assumption
+   about the bar's own height. */
+.chat-scroll-bottom-btn {
+  position: absolute;
+  right: 14px;
+  bottom: 100%;
+  margin-bottom: 10px;
+  z-index: 4;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+/* Grows into a labelled pill when messages arrived while you were reading
+   further up — so they're announced instead of yanking you down to them. */
+.chat-scroll-bottom-btn--count {
+  width: auto;
+  height: 34px;
+  gap: 7px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chat-scroll-bottom-label { font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+.chat-scroll-bottom-btn:not(.chat-scroll-bottom-btn--count) .chat-scroll-bottom-label { display: none; }
+.chat-scroll-bottom-btn[hidden] { display: none; }
+.chat-scroll-bottom-btn:active { transform: scale(0.92); }
+
+/* Input bar */
+.chat-input-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 16px;
+  background: var(--bg);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* Reply-to-message: staged preview above the input row, cleared on send
+   or via its own cancel button. See script.js's _stageReplyTo()/
+   _clearStagedReply(). */
+/* Instagram shows this as a single rule above the composer, not a boxed
+   card. Negative side margins cancel .chat-input-bar's own 14px padding so
+   the line runs edge to edge the way it does there. */
+.chat-reply-staged {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 -14px 2px;
+  padding: 9px 14px 3px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+/* Without this the strip never actually hides: the `hidden` attribute only
+   carries a UA-level `display:none`, which the author-level `display:flex`
+   above outranks — so it sat above the composer permanently with no way to
+   dismiss it. */
+.chat-reply-staged[hidden] { display: none; }
+.chat-reply-staged-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-reply-staged-cancel {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chat-reply-staged-cancel svg { width: 18px; height: 18px; stroke-width: 3; }
+
+/* A bubble replying to an earlier message shows a compact quoted strip
+   above its own text — tapping it scrolls to and briefly highlights the
+   original row (see _scrollToMessage() in script.js). */
+.msg-reply-quote {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--text-2);
+  border-left: 2px solid var(--border);
+  background: rgba(28, 25, 23, 0.05);
+  border-radius: 0 6px 6px 0;
+  padding: 3px 8px;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* Your own bubble is solid pink, so the default muted grey-on-pink was
+   unreadable — you couldn't see what of hers you were replying to. */
+.bubble.user .msg-reply-quote {
+  color: rgba(255, 255, 255, 0.95);
+  border-left-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.18);
+}
+.msg-row--highlight .bubble {
+  animation: msgReplyHighlight 1.2s ease;
+}
+@keyframes msgReplyHighlight {
+  0%, 100% { box-shadow: none; }
+  25% { box-shadow: 0 0 0 2px var(--accent); }
+}
+
+.message-input {
+  flex: 1;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 13px 18px;
+  color: var(--text);
+  font-size: 16px; /* 16px minimum avoids iOS auto-zoom-on-focus */
+  outline: none;
+  transition: border-color 0.12s;
+  min-width: 0;
+}
+
+.message-input:focus   { border-color: var(--border-2); }
+.message-input::placeholder { color: var(--text-3); }
+/* The grey "Message…" placeholder must never sit under what is being typed / the keyboard's composition
+   text (it can stay drawn behind marked text, e.g. with the Thai keyboard) — invisible as soon as the field is focused. */
+.message-input:focus::placeholder { color: transparent; }
+
+.send-btn,
+.aicoach-entry-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.12s, transform 0.1s;
+}
+
+.send-btn img,
+.aicoach-entry-btn img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.send-btn:hover, .aicoach-entry-btn:hover  { opacity: 0.85; }
+.send-btn:active, .aicoach-entry-btn:active { transform: scale(0.93); }
+.send-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+
+/* ----------------------------------------------------------------
+   CHAT MODE MODAL — one-time, no skip. Light/rounded = instant,
+   bold/dark = realistic. Visual weight carries the meaning, no
+   difficulty wording anywhere.
+   ---------------------------------------------------------------- */
+.chat-mode-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 960;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 26px;
+  background: rgba(28, 25, 23, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.chat-mode-modal[hidden] { display: none; }
+
+.chat-mode-card {
+  width: 100%;
+  max-width: 320px;
+  background: var(--s1);
+  border-radius: var(--r-xl);
+  padding: 26px 22px 22px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(28, 25, 23, 0.3);
+  animation: modalPop 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.chat-mode-modal-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.chat-mode-modal-sub {
+  margin-top: 6px;
+  margin-bottom: 20px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.chat-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px;
+  text-align: left;
+  transition: transform 0.1s;
+}
+
+.chat-mode-option:active { transform: scale(0.98); }
+
+.chat-mode-option-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-mode-option-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.chat-mode-option-label { font-size: 0.92rem; font-weight: 700; }
+.chat-mode-option-desc  { font-size: 0.74rem; }
+
+/* Instant replies — light, friendly, rounded */
+.chat-mode-option--light {
+  background: var(--accent-soft);
+  border: 1.5px solid var(--accent-border);
+  border-radius: var(--r-lg);
+}
+
+.chat-mode-option--light .chat-mode-option-icon {
+  background: rgba(236, 72, 153, 0.18);
+  color: var(--accent-deep);
+}
+
+.chat-mode-option--light .chat-mode-option-label { color: var(--accent-deep); }
+.chat-mode-option--light .chat-mode-option-desc  { color: var(--accent-deep); opacity: 0.75; }
+
+/* Realistic timing — bold, heavier, transparent red tone */
+.chat-mode-option--bold {
+  background: rgba(239, 68, 68, 0.10);
+  border: 1.5px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--r-md);
+}
+
+.chat-mode-option--bold .chat-mode-option-icon {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--red);
+}
+
+.chat-mode-option--bold .chat-mode-option-label { color: #991b1b; }
+.chat-mode-option--bold .chat-mode-option-desc  { color: #991b1b; opacity: 0.75; }
+
+/* Armed state — first tap flipped this card into a confirmation prompt.
+   Thicker border + subtle scale so it reads as "waiting for a second tap". */
+.chat-mode-option.confirming {
+  border-width: 2px;
+  transform: scale(1.015);
+}
+
+.chat-mode-option--light.confirming { border-color: var(--accent); }
+.chat-mode-option--bold.confirming  { border-color: var(--red); }
+
+
+/* ----------------------------------------------------------------
+   TAB BAR
+   ---------------------------------------------------------------- */
+.tab-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  /* Grows to include the safe area (env() is 0 today, so this is identical
+     to the old fixed 64px — see the .screen comment above) rather than
+     shrinking the 64px of actual tap area to make room for it. */
+  height: calc(var(--tab-h) + 34px);
+  padding-bottom: 34px;
+  /* Real frosted-glass bar (Apple "Liquid Glass" look) — translucent
+     surface + backdrop-filter blur, not a solid fill, so whatever's
+     scrolling underneath shows through, softened. */
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 100;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tab-bar { background: rgba(26, 23, 18, 0.68); }
+}
+:root[data-theme="dark"] .tab-bar { background: rgba(26, 23, 18, 0.68); }
+
+.tab-bar.hidden { display: none; }
+
+/* Sliding glass "pill" behind the active Practice/Chats tab — positioned
+   and animated from JS (updateTabGlassPill() in script.js), which reads
+   the target button's own rect rather than hardcoding tab widths, so it
+   stays correct if the bar's layout ever changes. Hidden (opacity 0) when
+   Scan is active — that tab already has its own dedicated FAB treatment,
+   doubling up a pill under it would just compete with it visually. */
+.tab-glass-pill {
+  position: absolute;
+  top: 6px;
+  height: 52px;
+  width: 64px;
+  transform: translateX(0);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 3px rgba(28, 25, 23, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* The fade is slower than it looks: it runs over most of the travel, so
+     the indicator visibly moves toward Scan while dissolving rather than
+     blinking out in place. See updateTabGlassPill(). */
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.3s ease;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tab-glass-pill {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  }
+}
+:root[data-theme="dark"] .tab-glass-pill {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.tab-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #8d8d8d;
+  transition: color 0.15s;
+}
+
+.tab-btn.active { color: var(--accent); }
+
+.tab-icon { display: block; flex-shrink: 0; }
+.tab-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.04em; }
+
+/* Practice tab — raster icon pair (assets/icons/practice-tab-*.png) instead
+   of an inline stroke SVG, so it can't use currentColor for its
+   active/inactive swap like the other tabs; two stacked <img>s, toggled by
+   .tab-btn.active, do the same job. */
+.tab-icon-img { width: 20px; height: 20px; object-fit: contain; }
+/* Chats' source art is wider than tall (two overlapping bubbles vs
+   Practice's near-square heart) — a shared 20x20 box's object-fit:contain
+   constrains it by width, rendering it visibly shorter than Practice's
+   icon. Widening the box (height unchanged) lets it reach the same height
+   at its own natural aspect ratio, instead of stretching or cropping it. */
+#tabbtn-chats .tab-icon-img { width: 28px; }
+.tab-btn .tab-icon-active { display: none; }
+.tab-btn.active .tab-icon-inactive { display: none; }
+.tab-btn.active .tab-icon-active { display: block; }
+
+/* ---- Center SCAN floating action button ---- */
+.tab-btn--scan {
+  overflow: visible;
+  gap: 4px;
+}
+
+.scan-fab {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -34px;             /* floats above the bar's top edge */
+  border: 4px solid #ffffff;      /* white ring — docked FAB cutout look */
+  box-shadow: 0 8px 24px rgba(236, 72, 153, 0.45), 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease, background 0.15s;
+}
+
+.tab-btn--scan:hover .scan-fab  { transform: translateY(-2px); }
+.tab-btn--scan:active .scan-fab { transform: scale(0.94); }
+
+.tab-btn--scan.active .scan-fab {
+  background: var(--accent-deep);
+  transform: scale(1.05);
+}
+
+
+/* ----------------------------------------------------------------
+   ANIMATIONS
+   ---------------------------------------------------------------- */
+/* Entrance animation is applied as a ONE-SHOT class by the append helpers
+   and stripped once it's played — it must never live permanently on the
+   element. A permanent `animation` restarts every time the subtree is
+   reparented, which is what made every message replay its fade on each
+   swipe-nav gesture (see _slideMountEl). */
+.msg-row--in,
+.typing-row--in { animation: msgIn 0.16s ease; }
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+

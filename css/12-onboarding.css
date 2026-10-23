@@ -1,0 +1,1826 @@
+/* ================================================================
+   12-onboarding.css — the two-phase first-launch flow, every onboarding screen, and the practice tutorial
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   CINEMATIC ONBOARDING  (two-phase first-launch flow)
+   Phase 1: auto intro (typewriter -> word morph -> logo).
+   Phase 2: scan -> reply -> swipe/match -> tracking.
+   Cream base, pink accents, spring easing. No black screens.
+   Legacy onboarding/tour CSS archived in archive/legacy-onboarding.js
+   ================================================================ */
+.cine {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg);
+  overflow: hidden;
+  transition: opacity 0.36s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine[hidden] { display: none !important; }
+.cine.cine-out { opacity: 0; }
+
+.cine-hidden { display: none !important; }
+
+/* Brief white hold before Phase 1 starts — see startCineOnboarding(). */
+.cine-preblack {
+  position: absolute;
+  inset: 0;
+  z-index: 2000;
+  background: var(--s1);
+  opacity: 1;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.cine-preblack.cine-preblack-out { opacity: 0; }
+
+/* ---- Skip (X) — top right, present on every Phase 2 screen ---- */
+/* Back (left) + segmented progress (right of it), one row.
+   position:fixed (not absolute) so it stays pinned to the real screen when
+   the keyboard opens — mobile WebKit keeps fixed-position elements glued to
+   the visual viewport during the native keyboard-avoidance scroll, where
+   absolute-positioned ones get dragged along with it.
+   .cine (id="cine-onboarding") is a top-level sibling of .screen/.tab under
+   #app, not a descendant — it has no safe-area padding of its own, so this
+   needs it applied directly or it renders under the status bar/notch. */
+.cine-topbar {
+  position: fixed;
+  top: calc(15px + env(safe-area-inset-top) + 20px); left: 20px; right: 20px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.cine-back {
+  flex: none;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: var(--s1);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(28,25,23,0.07);
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-back:active { transform: scale(0.92); }
+/* Single continuous track + fill — width set from cineStep/CINE_LAST in
+   cineGoTo(), not a row of individual dashes. */
+.cine-progress {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--border-2);
+  overflow: hidden;
+}
+.cine-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.cine-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  /* Top padding clears the fixed back+progress row (.cine-topbar — 52px
+     button starting 35px down, so 90px clears it with a little air), bottom
+     padding clears the fixed CTA (.cine-next) — so neither can ever overlap
+     screen content; long screens scroll inside .cine-scroll instead. */
+  padding: calc(90px + env(safe-area-inset-top)) 24px calc(104px + env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+.cine-screen:not(.active) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.cine-head {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  text-align: left;
+  color: var(--text);
+  margin: 0 0 10px;
+  max-width: 320px;
+  align-self: flex-start;
+}
+.cine-head .hl { color: var(--accent); }
+.cine-sub {
+  margin: 0;
+  max-width: 300px;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--text-2);
+  align-self: flex-start;
+}
+
+/* Vertically centers a screen's answer/content block in whatever space is
+   left below the top-left head/sub, instead of it sitting glued directly
+   under them — applied per-screen to the actual content element (not a
+   blanket :last-child rule, since several screens end in a hidden input or
+   an empty error/warn <p> that would wrongly become the centered element). */
+.cine-vcenter { margin-top: auto; margin-bottom: auto; align-self: flex-start; }
+
+/* ---- PHASE 1 — typewriter -> word morph -> logo (unchanged) ----
+   .cine-phase1 is still a .cine-screen, so it inherits that class's base
+   alignment/padding — which now serves the top-left headers on the Phase 2
+   screens (align-items:center; justify-content:flex-start; top-padding for
+   the back/progress row). Phase 1 has none of that chrome and was always
+   meant to sit dead-centre on the screen, so it needs its own override back
+   to the original centered layout instead of inheriting the Phase 2 one. */
+.cine-phase1 { align-items: center; justify-content: center; padding: 26px; }
+.cine-p1-stage { text-align: center; margin-bottom: 50px; }
+.cine-p1-type[hidden],
+.cine-p1-word[hidden],
+.cine-p1-logo[hidden] { display: none; }
+.cine-p1-type {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.15;
+  color: var(--text);
+  margin: 0;
+  max-width: 320px;
+}
+.cine-p1-word {
+  font-size: 2.7rem;
+  font-weight: 800;
+  letter-spacing: -1.2px;
+  color: #ec4899;     /* pink text on the light base — never black */
+}
+@keyframes cineP1Morph {
+  0%   { opacity: 0; filter: blur(10px); transform: scale(1.12); }
+  28%  { opacity: 1; filter: blur(0);    transform: scale(1); }
+  72%  { opacity: 1; filter: blur(0);    transform: scale(1); }
+  100% { opacity: 0; filter: blur(8px);  transform: scale(0.92); }
+}
+.cine-p1-word--in { animation: cineP1Morph 0.62s ease both; }
+.cine-p1-logo {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  color: var(--text);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+.cine-p1-spark {
+  color: #ec4899;
+  display: inline-flex;
+  position: relative;
+  top: -10px;   /* lifts it toward the top-right of "Zelo" instead of mid-height */
+}
+@keyframes cineP1LogoIn {
+  0%   { opacity: 0; transform: scale(0.8); }
+  60%  { transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes cineP1SparkIn {
+  0%   { opacity: 0; transform: scale(0) rotate(-60deg); }
+  60%  { opacity: 1; transform: scale(1.3) rotate(10deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.cine-p1-logo--in { animation: cineP1LogoIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.cine-p1-logo--in .cine-p1-spark { animation: cineP1SparkIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.28s both; }
+
+
+/* ================================================================
+   SHOWCASE — Cal AI style landing (between Phase 1 and Phase 2)
+   ================================================================ */
+.cine-showcase {
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 48px 28px 58px;
+  gap: 0;
+}
+/* TESTING ONLY — see the HTML comment above this button. Deliberately
+   understated (small, muted, no label) so it doesn't read as real product
+   UI — remove this whole rule along with the button before release. */
+.cine-showcase-skip {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  right: 14px;
+  z-index: 5;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(28,25,23,0.08);
+  color: rgba(28,25,23,0.45);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-showcase-skip:active { transform: scale(0.92); }
+.cine-showcase-top {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.cine-showcase-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+/* Real cropped iPhone 15 Pro photo (transparent screen cutout), not a
+   drawn mockup — see assets/icons/onboarding/onb-showcase-phone-frame.png
+   (free, commercial use + modification/cropping permitted, no attribution
+   required — webmobilefirst.com). -dark variant is the same photo relit
+   lighter/silver so it still reads against a dark background instead of
+   nearly disappearing (swapped automatically by the existing
+   ICONS_WITH_DARK_VARIANT mechanism in script.js). 391:800 is that image's
+   own real proportions. */
+.cine-phone {
+  width: auto;
+  height: min(420px, 100%);
+  aspect-ratio: 391 / 800;
+  position: relative;
+  will-change: transform;
+  backface-visibility: hidden;
+  filter: drop-shadow(0 20px 40px rgba(28,25,23,0.30));
+}
+.cine-phone-frame-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  display: block;
+}
+/* The frame image's transparent screen cutout, as a percentage box
+   measured from the actual PNG (screen box 19,15 -> 372,784 of 391x800) —
+   the video sits in this slot, and the opaque bezel above it (z-index 2)
+   naturally masks the video's square corners to the screen's real
+   rounded-corner shape, no extra clipping needed on the slot itself. */
+.cine-phone-screen-slot {
+  position: absolute;
+  /* Re-measured after eroding the frame photo's antialiased cut-edge
+     fringe (see fix_fringe.js) — the old box stopped short of the fringe
+     ring, leaving a sliver of translucent bezel-grey visible as a "crack"
+     between the video and the frame at the top/left. This box now matches
+     the hole's real flood-filled bounds exactly. */
+  left: 4.0921%;
+  top: 1.5%;
+  width: 92.0716%;
+  height: 96.875%;
+  overflow: hidden;
+  z-index: 1;
+  background: #000;
+  /* The screen cutout's real corners are rounded (measured ~44px radius on
+     the source 391x800 photo, i.e. ~12.4% of this slot's own width / ~5.7%
+     of its height) — without this, the video's square corners poked past
+     the frame image's antialiased hole edge at each corner. Kept slightly
+     under the measured radius so the video stays safely inside the true
+     hole rather than exposing this slot's own background at the edge. */
+  border-radius: 12.4% / 5.7%;
+}
+/* Fly-in from bottom-left -> settle at center (its normal flex-centered
+   spot, from .cine-showcase-top) -> hold while the video plays -> fly out
+   bottom-right -> ~1s invisible pause -> loops. Scoped to
+   .cine-showcase.active rather than plain .cine-phone: a CSS animation on
+   an element keeps advancing even while that element is invisible
+   (.cine-screen:not(.active) only sets opacity:0, not display:none) — so
+   an unscoped animation here would already be several cycles deep by the
+   time the showcase screen actually becomes visible, and the "entrance"
+   a viewer sees would just be whatever random phase it landed on. Scoping
+   it to .active means the animation only exists (and so only starts, fresh
+   from 0%) once this screen is actually shown. Playback of
+   #cine-showcase-video is driven in lockstep by _armCineShowcaseCycle() in
+   script.js (called from cineGoToShowcase(), same moment .active is
+   added) — see that function for why (video needs to start exactly when
+   the phone settles, not the instant this cycle begins). Timing: 10.8s
+   total = 1.5s entrance + 6.72s hold (matches the video's own length) +
+   1.58s exit + ~1s gap; percentages below are each phase's end time / 10.8s. */
+.cine-showcase.active .cine-phone {
+  /* 10.35s total = 1.5s entrance + 6.267s hold (matches the video's own
+     length — see assets/video/onboarding-showcase-demo.mp4) + 1.58s exit
+     + ~1s gap. */
+  animation: cinePhoneFly 10.35s cubic-bezier(0.45, 0, 0.15, 1) infinite;
+}
+@keyframes cinePhoneFly {
+  0% {
+    transform: translate3d(-55vw, calc(var(--app-vh) * 24), 0) scale(0.7) rotate(-8deg);
+    opacity: 0;
+  }
+  4.7% {
+    opacity: 1;
+  }
+  14.5% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  75% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  90.3% {
+    transform: translate3d(calc(var(--app-vw) * 55), calc(var(--app-vh) * 24), 0) scale(0.75) rotate(6deg);
+    opacity: 0;
+  }
+  100% {
+    /* Holds off-screen/invisible for the gap before the next loop. */
+    transform: translate3d(calc(var(--app-vw) * 55), calc(var(--app-vh) * 24), 0) scale(0.75) rotate(6deg);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cine-showcase.active .cine-phone { animation-duration: 0.01ms; animation-iteration-count: 1; }
+}
+/* No Dynamic Island/camera cutout anymore (removed from the frame photo —
+   see its own comment) — the video plays edge to edge at its natural
+   cover-fit scale, no extra zoom/crop needed. The recording's own real
+   status bar (from the original uncropped source) is baked into the top
+   of the video itself now, so no drawn stand-in is needed here. */
+.cine-phone-video { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+.cine-showcase-head {
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+  line-height: 1.12;
+  text-align: center;
+  color: var(--text);
+  margin: 0 0 28px;
+}
+.cine-showcase-cta {
+  width: 100%;
+  padding: 19px;
+  border: none;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.12rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(236, 72, 153, 0.30);
+}
+.cine-showcase-cta:active { transform: scale(0.99); }
+.cine-showcase-signin {
+  margin-top: 18px;
+  background: none;
+  border: none;
+  font-size: 0.92rem;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.cine-showcase-signin span { color: var(--accent); font-weight: 700; }
+
+/* ================================================================
+   ONBOARDING SCREENS 1-12 — rebuilt against the reference mockups.
+   Shared rules first, then per-screen. Two consistency rules are
+   enforced here rather than per screen, because the reference art is
+   inconsistent about both:
+     · every primary CTA is .cine-btn / .cine-next — one size, one
+       radius, one PINK fill (var(--accent)); the black buttons in some
+       reference frames are ignored on purpose.
+     · the top bar is one component (.cine-topbar) on every screen.
+   ================================================================ */
+
+/* Scroll body — each screen owns a scroll area that starts below the
+   fixed top bar and ends above the fixed CTA, so long screens scroll
+   instead of colliding with either. */
+.cine-scroll {
+  position: relative; /* containing block for the ::after overflow-forcer below */
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-bottom: 8px;
+}
+.cine-scroll::-webkit-scrollbar { display: none; }
+.cine-scroll--center { justify-content: center; }
+/* Screen 1's keyboard-nudge clip boundary — plain pass-through box in normal
+   use (mirrors .cine-scroll's own centering so nothing shifts visually),
+   gets overflow:hidden + a locked height added via JS only while the nudge
+   is active. See MOVABLE_OVERRIDE['cine-name-input'] in script.js. */
+.cine-name-clip {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* Guarantees scrollHeight is always a few px taller than the box, even on
+   screens whose real content is much shorter than the available space —
+   without this, iOS WebKit only allows the elastic rubber-band drag when
+   content genuinely overflows, so short screens felt like a dead, still
+   frame instead of a page you can nudge like the Scan tab. Absolutely
+   positioned (not a normal flex child) so it sits 6px below .cine-scroll's
+   own bottom edge without affecting real content's layout or its centering
+   on --center screens — invisible, purely a scroll-physics enabler. */
+.cine-scroll::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 1px;
+  height: 6px;
+  pointer-events: none;
+}
+
+.cine-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1.12;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+.cine-title--plain { font-size: 1.8rem; }
+.cine-title .hl { color: var(--accent); }
+.cine-lede {
+  margin: 0 0 24px;
+  font-size: 1.08rem;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.cine-legal {
+  margin: 18px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+.cine-legal-link { color: var(--accent); font-weight: 700; }
+.cine-footnote {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: 16px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+.cine-footnote--plain { display: block; line-height: 1.45; }
+.cine-tick {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 16px 0 0;
+  font-size: 0.92rem; font-weight: 700; color: var(--text);
+}
+
+/* ---- Step 1 — name / photo / age ---- */
+.cine-avatar-wrap { position: relative; margin: 6px 0 26px; }
+.cine-avatar {
+  position: relative;
+  width: 148px; height: 148px;
+  border-radius: 50%;
+  border: 5px solid #fbd9e8;
+  background: var(--s2);
+  color: var(--text-3);
+  display: flex; align-items: center; justify-content: center;
+  /* Deliberately NOT overflow:hidden — the camera badge overhangs the
+     circle's edge (as in the reference) and would be clipped. The photo is
+     clipped by its own border-radius instead. */
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+}
+.cine-avatar:active { transform: scale(0.98); }
+/* position:absolute (not a plain flex-item width/height:100%) — .cine-avatar
+   is a row flex container with align-items:center, not stretch, so a
+   replaced element's percentage height there resolves to auto instead of
+   the box's real height, letting the <img> fall back to its own intrinsic
+   aspect ratio (a tall photo rendered as a half-filled circle instead of a
+   full one). Absolute positioning against .cine-avatar's own box sidesteps
+   that flex sizing entirely and always fills the full circle. */
+.cine-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+/* These three are toggled via the `hidden` attribute in JS, but each also has
+   an explicit `display` below/above, which beats the UA stylesheet's
+   [hidden]{display:none}. Without this they render even when hidden — which
+   showed the delete X on an empty avatar and both green ticks on a blank
+   form. */
+.cine-avatar-img[hidden],
+.cine-avatar-del[hidden],
+.cine-avatar-ph[hidden],
+.cine-field-check[hidden] { display: none !important; }
+.cine-avatar-cam {
+  position: absolute; right: -2px; bottom: 4px;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  border: 4px solid var(--bg);
+}
+/* Sits on the circle's edge, opposite the camera badge. Only rendered once
+   a photo is actually set (toggled in cineRenderPhoto). */
+.cine-avatar-del {
+  position: absolute; top: 0; right: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: #16130f;
+  color: #fff;
+  border: 3px solid var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-avatar-del:active { transform: scale(0.9); }
+
+.cine-field {
+  width: 100%;
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--s1);
+  box-shadow: 0 2px 10px rgba(28,25,23,0.03);
+  text-align: left;
+}
+.cine-field--btn { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cine-field--btn:active { transform: scale(0.995); }
+.cine-field-ic { flex: none; color: var(--accent); display: flex; }
+.cine-field-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cine-field-label { font-size: 0.86rem; color: var(--text-2); }
+.cine-field-input {
+  border: none; background: none; padding: 0;
+  font-size: 1.3rem; font-weight: 700; color: var(--text);
+  caret-color: var(--accent);
+  outline: none;
+  -webkit-appearance: none; appearance: none;
+  width: 100%;
+}
+.cine-field-input::placeholder { color: var(--text-3); font-weight: 600; }
+.cine-field-value { font-size: 1.3rem; font-weight: 700; color: var(--text); }
+.cine-field-value--empty { color: var(--text-3); font-weight: 600; font-size: 1.05rem; }
+.cine-field-check { flex: none; color: #22c55e; display: flex; }
+.cine-field-error { margin: -6px 0 8px; font-size: 0.82rem; color: #ef4444; min-height: 1em; }
+
+/* Shared bottom-sheet shell — the practice tutorial's Name / Attracted-to
+   edit sheets (index.html's ped-name-sheet/ped-attracted-sheet). z-index
+   1050 sits comfortably above the full-screen practice-tutorial overlay
+   (1010) that Edit Details opens these sheets from. */
+.cine-sheet { position: fixed; inset: 0; z-index: 1050; display: flex; align-items: flex-end; }
+.cine-sheet[hidden] { display: none !important; }
+.cine-sheet-scrim { position: absolute; inset: 0; background: rgba(28,25,23,0.45); }
+.cine-sheet-card {
+  position: relative;
+  width: 100%;
+  background: var(--bg);
+  border-radius: 26px 26px 0 0;
+  padding: 22px 24px calc(24px + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.16);
+}
+.cine-sheet-title { margin: 0 0 14px; text-align: center; font-size: 1.05rem; font-weight: 800; color: var(--text); }
+.cine-sheet-card .cine-btn { margin-top: 16px; }
+
+/* ---- Steps 2-4 — option lists ---- */
+.cine-opts { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.cine-opt {
+  position: relative;
+  width: 100%;
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--s1);
+  box-shadow: 0 2px 10px rgba(28,25,23,0.03);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.14s ease;
+}
+.cine-opt:active { transform: scale(0.99); }
+.cine-opt.selected { border-color: var(--accent); background: var(--accent-soft); }
+.cine-opt--desc { align-items: flex-start; }
+/* Same 54x54 footprint as .cine-opt-tile (used by the gender/source/help
+   option lists) — without this, a plain emoji glyph (~32px, its own
+   intrinsic size at 2rem, left untouched below) sits in a visibly smaller
+   box than the square/round icon tiles elsewhere, so this list's rows (step
+   4 — "overthink") render shorter than every other simple option list even
+   though both share the same label+radio row structure. Centering the
+   unchanged emoji inside a same-size box equalizes the ROW height across
+   lists without touching how the emoji itself looks. */
+.cine-opt-emoji {
+  flex: none;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.7rem; line-height: 1;
+}
+.cine-opt-tile {
+  flex: none;
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  background: #fce3ee;
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.cine-opt-tile--emoji { font-size: 1.7rem; background: #f7efe9; }
+.cine-opt-tile--round { border-radius: 50%; }
+/* Step 5 — attracted-to: each option gets its own tint (reference shows
+   pink/blue/purple per row) instead of the single shared pink used by every
+   other option list in this flow. */
+.cine-opt-tile--pink   { background: #fce3ee; color: #ec4899; }
+.cine-opt-tile--blue   { background: #dfebfc; color: #3b82f6; }
+.cine-opt-tile--purple { background: #ece6fb; color: #8b5cf6; }
+/* Step 3 — "where did you hear about Zelo": each row's icon is a real
+   cropped brand mark (Instagram/TikTok/YouTube/Google) or app icon
+   (Friends, Other) with its own background already baked into the crop —
+   no separate tint wrapper needed, just fill the tile with the image. */
+.cine-opt-tile--img { background: none; padding: 0; overflow: hidden; }
+.cine-opt-tile--img img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+/* Step 5 — "What would you like Zelo to help with": real glyph-only crops
+   (assets/icons/onboarding/onb-help-*.png — cropped from "What would you
+   like zelo to help with.png", background removed) sitting on this
+   existing tile's own CSS pale-pink fill, same as the plain (non-tile-img)
+   icon variants above — object-fit:contain since these 5 crops aren't a
+   uniform aspect ratio and shouldn't be stretched/cropped to force one. */
+.cine-opt-tile img { width: 26px; height: 26px; object-fit: contain; }
+/* Step 2 — gender: real cropped illustration (see onb-gender-icon.png),
+   not a redrawn mockup. */
+.cine-gender-icon { width: 128px; height: auto; margin: 4px 0 18px; }
+.cine-opt-label { flex: 1; font-size: 1.05rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+.cine-opt-textcol { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cine-opt-name { font-size: 1.18rem; font-weight: 800; color: var(--text); }
+.cine-opt.selected .cine-opt-name { color: var(--accent); }
+.cine-opt-desc { font-size: 0.94rem; line-height: 1.4; color: var(--text-2); }
+.cine-radio {
+  flex: none;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid #e6ddd5;
+  background: var(--s1);
+  position: relative;
+}
+.cine-opt.selected .cine-radio { border-color: var(--accent); background: var(--accent); }
+.cine-opt.selected .cine-radio::after {
+  content: '';
+  position: absolute; left: 7.5px; top: 5px;
+  width: 7px; height: 12px;
+  border: solid #fff; border-width: 0 2.6px 2.6px 0;
+  transform: rotate(45deg);
+}
+
+/* ---- Hero-illustration screens (9, 10, 13, 14, 16) ---- */
+.cine-hero-img {
+  width: 225px; max-width: 66%; height: auto; margin: 4px 0 20px;
+  /* Was hardcoded #ffffff — stayed a stark white box in dark mode instead
+     of adapting, which is also why swapping in a real glowing dark-mode
+     icon crop looked wrong (pasted into a white card). --s1 is the same
+     card-surface token .cine-note-card/.cine-plan-card etc. already use on
+     these exact screens, so this card now genuinely darkens instead of
+     just showing the same light-mode look with a different icon file. */
+  background: var(--s1);
+  border-radius: 20px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.cine-hero-img--sm { width: 172px; }
+.cine-note-card, .cine-list-card, .cine-mini-card, .cine-plan-card {
+  width: 100%;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--s1);
+  box-shadow: 0 2px 12px rgba(28,25,23,0.03);
+}
+.cine-note-card { padding: 22px 20px; margin-top: 6px; }
+.cine-note-ic {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #fce3ee; color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  margin: -44px auto 12px;
+  border: 4px solid var(--bg);
+}
+.cine-note-title { margin: 0 0 6px; font-size: 1rem; font-weight: 800; color: var(--text); }
+.cine-note-sub { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--text-2); }
+
+.cine-list-card { padding: 4px 18px; }
+.cine-list-row { display: flex; align-items: flex-start; gap: 14px; padding: 18px 0; text-align: left; }
+.cine-list-row + .cine-list-row { border-top: 1px solid var(--border); }
+.cine-list-ic {
+  flex: none; width: 46px; height: 46px; border-radius: 50%;
+  background: #fce3ee; color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+/* These two badges (steps 9 "Thanks for trusting us" / 10 "See what you
+   can achieve") read as distorted/muddy in dark mode — a light pink circle
+   sitting on a dark card. Dark mode gets its own treatment here: a plain
+   dark-surface circle with a white icon, instead of the pink tint. Light
+   mode is untouched. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cine-note-ic,
+  :root:not([data-theme="light"]) .cine-list-ic { background: var(--s2); color: var(--text); }
+}
+:root[data-theme="dark"] .cine-note-ic,
+:root[data-theme="dark"] .cine-list-ic { background: var(--s2); color: var(--text); }
+.cine-list-txt { display: flex; flex-direction: column; gap: 3px; }
+.cine-list-txt b { font-size: 1rem; font-weight: 800; color: var(--text); }
+.cine-list-txt span { font-size: 0.9rem; line-height: 1.45; color: var(--text-2); }
+
+.cine-mini-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; margin-top: 12px; text-align: left; }
+.cine-mini-ic { flex: none; color: var(--accent); display: flex; }
+.cine-mini-txt { display: flex; flex-direction: column; gap: 3px; }
+.cine-mini-txt b { font-size: 0.92rem; font-weight: 800; color: var(--text); }
+.cine-mini-txt span { font-size: 0.84rem; line-height: 1.45; color: var(--text-2); }
+
+/* ---- Step 7 — notification permission (illustrative system prompt) ---- */
+.cine-sysprompt {
+  position: relative;
+  width: 100%;
+  margin-top: 26px;
+  padding: 22px 20px 26px;
+  border-radius: 20px;
+  background: var(--s2);
+  text-align: left;
+}
+.cine-sysprompt-txt { margin: 0 0 18px; font-size: 1rem; font-weight: 600; line-height: 1.35; color: var(--text); }
+.cine-sysprompt-btns { display: flex; gap: 12px; }
+.cine-sysprompt-btn {
+  flex: 1; text-align: center;
+  padding: 12px 8px;
+  border: none;
+  border-radius: 99px;
+  background: var(--s3);
+  font-size: 0.95rem; color: var(--text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-sysprompt-btn--go { background: var(--border-2); }
+.cine-sysprompt-hand {
+  position: absolute; right: 34px; bottom: -26px; font-size: 2rem;
+  animation: sysPromptHandBob 1.1s ease-in-out infinite;
+}
+@keyframes sysPromptHandBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+/* Brief disabled look while the real native request is in flight, so a
+   second tap during that async gap can't fire it twice. */
+.cine-sysprompt--busy .cine-sysprompt-btn { opacity: 0.5; pointer-events: none; }
+
+/* ---- Step 8 — setting everything up ---- */
+.cine-pct { margin: 10px 0 6px; font-size: 4rem; font-weight: 800; line-height: 1; color: var(--accent); letter-spacing: -2px; }
+.cine-pct-sym { font-size: 2.2rem; vertical-align: super; }
+.cine-setup-bar { width: 100%; height: 8px; border-radius: 99px; background: #f7dcea; margin: 20px 0 14px; overflow: hidden; }
+:root:not([data-theme="light"]) .cine-setup-bar,
+:root[data-theme="dark"] .cine-setup-bar { background: rgba(255,255,255,0.16); }
+.cine-setup-fill { height: 100%; width: 0%; border-radius: 99px; background: var(--accent); transition: width 0.12s linear; }
+.cine-setup-cap { margin: 0 0 18px; font-size: 0.95rem; font-weight: 600; color: var(--accent); }
+/* Near-white instead of --s2's warm beige (#f3ede4) -- the last two fixes
+   here only touched the dark-mode override below, which never mattered
+   since this screen is normally viewed in light mode. */
+.cine-setup-card { width: 100%; border-radius: 20px; background: #eeece8; padding: 6px 16px; }
+/* In dark mode, --s2 (#2a2520) reads as almost the same near-black as the
+   page behind it -- barely a visible box at all. Scoped lighter override
+   just for this card, not the shared --s2 token (used all over the app
+   for other cards/surfaces that weren't reported as an issue). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cine-setup-card { background: #d6d3cd; }
+  /* Card background just flipped from dark to light grey in this mode --
+     the row label's normal dark-mode text color (near-white, meant for a
+     dark card) would be unreadable on it, so pin it dark here too. */
+  :root:not([data-theme="light"]) .cine-setup-card .cine-setup-txt { color: #1c1917; }
+}
+:root[data-theme="dark"] .cine-setup-card { background: #d6d3cd; }
+:root[data-theme="dark"] .cine-setup-card .cine-setup-txt { color: #1c1917; }
+.cine-setup-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; text-align: left; }
+/* Each row's icon is a real cropped tile from the reference screenshot
+   (assets/icons/onboarding/onb-setup-*.png — see New ver onb 3.png),
+   including that tile's own colored rounded-square background baked in
+   from the source crop, not a hand-drawn SVG on a CSS-painted tile. The
+   -dark siblings aren't just a recolor of the same art in every case —
+   the reference itself uses a genuinely different icon for "Fine-tuning
+   suggestions" between light (two sparkles) and dark (a bar chart), so
+   swap in whatever that row's own dark crop shows rather than assuming
+   symmetry. object-fit:cover + matching border-radius fills this tile
+   with the crop's own square edge to edge, clipping only its very own
+   antialiased boundary. */
+.cine-setup-ic { flex: none; width: 40px; height: 40px; border-radius: 12px; overflow: hidden; }
+/* The crop (assets/icons/onboarding/onb-setup-*.png) is a square 160x160
+   window centered on each icon's own glyph, sized generously enough to
+   guarantee the glyph stays centered when off-center within its source
+   tile — but since it's square like this container, object-fit:cover has
+   no excess to crop away, so the crop's own edges (which run slightly past
+   the source tile's true bounds on some sides — up to ~24px on the worst
+   edge, measured) show as a sliver of the surrounding card background
+   instead of solid tile color. transform:scale zooms in around the image's
+   own center (this container's overflow:hidden then clips the now-oversized
+   edges), trimming exactly that sliver away without touching the crop files
+   themselves or shifting the glyph's centering — do not "fix" this by
+   re-cropping the source images instead. 1.3 wasn't quite enough (still
+   left a thin visible rim, only obvious once actually zoomed in — see
+   CLAUDE.md); 1.5 is the smallest factor confirmed clean on every icon in
+   both themes, checked at high zoom, not just at true rendered size where
+   a thin rim can be too subtle to notice. */
+.cine-setup-ic img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.5); }
+.cine-setup-txt { flex: 1; font-size: 0.95rem; color: var(--text); }
+.cine-setup-dot { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-2); position: relative; transition: background 0.2s ease, border-color 0.2s ease; }
+.cine-setup-row.done .cine-setup-dot { background: var(--accent); border-color: var(--accent); }
+.cine-setup-row.done .cine-setup-dot::after {
+  content: ''; position: absolute; left: 6px; top: 4px;
+  width: 5px; height: 9px; border: solid #fff; border-width: 0 2.2px 2.2px 0; transform: rotate(45deg);
+}
+
+/* ---- Step 13 — Zelo Plan ----
+   4 cards + a banner to show real personalization. Uses the same default
+   title/lede/hero sizing as every other hero screen -- do NOT shrink these
+   to force-fit one viewport; .cine-scroll already scrolls (verified) if
+   content runs long, so there's no reason to fight for a no-scroll fit.
+   The hero card also drops the shared boxed background/padding here only
+   -- the reference mockup shows the clipboard art floating directly on
+   the page (it already has its own baked-in shadow), not inside a card. */
+.cine-screen[data-screen="13"] .cine-hero-img { background: none; padding: 0; border-radius: 0; }
+/* Top-to-bottom staggered reveal, toggled (with a forced reflow so it
+   replays every visit, not just the first) by cineRunPlanEntrance() in
+   script.js. Same fadeUp keyframe already used elsewhere in this file. */
+.cine-screen[data-screen="13"].plan-entrance .cine-hero-img,
+.cine-screen[data-screen="13"].plan-entrance .cine-title,
+.cine-screen[data-screen="13"].plan-entrance .cine-lede,
+.cine-screen[data-screen="13"].plan-entrance .cine-ready-step,
+.cine-screen[data-screen="13"].plan-entrance .cine-ready-foot {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.cine-screen[data-screen="13"].plan-entrance .cine-hero-img { animation-delay: 0s; }
+.cine-screen[data-screen="13"].plan-entrance .cine-title { animation-delay: 0.09s; }
+.cine-screen[data-screen="13"].plan-entrance .cine-lede { animation-delay: 0.15s; }
+.cine-screen[data-screen="13"].plan-entrance .cine-ready-step:nth-child(1) { animation-delay: 0.24s; }
+.cine-screen[data-screen="13"].plan-entrance .cine-ready-step:nth-child(2) { animation-delay: 0.33s; }
+.cine-screen[data-screen="13"].plan-entrance .cine-ready-step:nth-child(3) { animation-delay: 0.42s; }
+.cine-screen[data-screen="13"].plan-entrance .cine-ready-foot { animation-delay: 0.52s; }
+/* ---- Step 13 card v2 — see cineRunPlanEntrance() in script.js for what
+   actually fills these in. Icon tiles follow the same real-cropped-image
+   pattern as .cine-setup-ic (assets/icons/onboarding/onb-plan-tone-*.png,
+   onb-plan-brain.png): object-fit:cover + transform:scale inside an
+   overflow:hidden tile, not a CSS-painted background behind a transparent
+   PNG — see that class's own comment in this file for why (the crop can't
+   perfectly match its own tile edge, and scaling in trims the difference
+   instead of leaving a background-color sliver at the corners). */
+.cine-plan2-card {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 92px;
+  box-sizing: border-box;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-top: 7px;
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--s1);
+  box-shadow: 0 2px 10px rgba(28,25,23,0.03);
+}
+.cine-plan2-ic {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #fce3ee;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* No zoom -- these onb-plan-tone-playful/chill/direct/onb-plan-brain crops
+   already fill their frame cleanly with no bleed edge to hide (checked all
+   4 individually at large size). A prior 1.08 zoom "tuned to look clean"
+   was actually clipping the direct/bolt icon's bottom tip -- it wasn't
+   re-checked per icon after being set from the other 3, and the shave was
+   too subtle to catch at true 38px size. */
+.cine-plan2-ic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The AI gem (.cine-plan2-ic--bare) isn't cropped-with-bleed like the
+   others — it's used as-is everywhere else in the app — so it gets no
+   zoom-to-hide-bleed treatment at all. */
+.cine-plan2-ic--bare img { transform: none; }
+/* .cine-plan2-ic--flat: for glyph-only transparent crops (target/sparkle,
+   cropped straight out of the reference mockup) that already come tightly
+   padded to their own bbox -- unlike the tone/brain crops above, they have
+   no bleed edge to hide, so the 1.08 zoom would just needlessly clip their
+   points/corners. Keeps the tile background (unlike --bare, which strips
+   it for the self-contained AI gem specifically). */
+.cine-plan2-ic--flat img { transform: none; }
+/* .cine-plan2-ic--glyph: for the challenge card when it swaps to one of
+   the reused step-5 help-topic icons (transparent, non-square glyph crops)
+   instead of the opaque brain art -- object-fit:contain at less than full
+   size so the glyph shows whole instead of being cropped by `cover`. */
+.cine-plan2-ic--glyph img { width: 68%; height: 68%; object-fit: contain; transform: none; }
+/* The AI brand gem (assets/icons/aicoach-topics/interest.png, used
+   everywhere else in the app as a self-contained round badge) already has
+   its own circular pale-pink backdrop baked in — sitting it inside ANOTHER
+   square colored tile like this class normally provides doubled up into a
+   pale-pink circle awkwardly inset inside a pale-pink square. Strips this
+   one icon's own tile background/padding so the gem is the only visible
+   shape, matching how it looks literally everywhere else it's used. */
+.cine-plan2-ic--bare { background: none; }
+:root:not([data-theme="light"]) .cine-plan2-ic--bare,
+:root[data-theme="dark"] .cine-plan2-ic--bare { background: none; }
+.cine-plan2-body { flex: 1; min-width: 0; }
+.cine-plan2-toprow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cine-plan2-eyebrow { margin: 0; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
+.cine-plan2-badge { flex: none; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--accent); background: #fce3ee; padding: 4px 10px; border-radius: 99px; }
+.cine-plan2-value { margin: 2px 0 1px; font-size: 0.98rem; font-weight: 800; color: var(--text); }
+.cine-plan2-desc { margin: 0; font-size: 0.8rem; line-height: 1.3; color: var(--text-2); }
+.cine-plan2-bullets { list-style: none; margin: 3px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cine-plan2-bullets li { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: var(--text); }
+.cine-plan2-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.cine-plan2-adapt { display: flex; margin-top: 8px; }
+.cine-plan2-adapt-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  padding: 0 6px;
+  border-left: 1px solid var(--border);
+}
+.cine-plan2-adapt-col:first-child { border-left: none; }
+.cine-plan2-adapt-ic { flex: none; width: 32px; height: 32px; color: var(--accent); display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; }
+/* Goals/practice-level are glyph-only crops straight out of the reference
+   mockup -- object-fit:contain + no zoom shows each glyph whole regardless
+   of its own natural (non-square) aspect. */
+.cine-plan2-adapt-ic img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* Tone reuses onb-setup-chat.png (the same branded icon as the "setting
+   everything up" list and the original ask), which carries its own baked
+   tile background/bleed like .cine-setup-ic does elsewhere -- needs the
+   same scale(1.5)+cover treatment to hide that bleed, unlike the plain
+   glyph crops above. */
+.cine-plan2-adapt-ic--bleed img { object-fit: cover; transform: scale(1.5); }
+.cine-plan2-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 7px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fce3ee;
+  text-align: left;
+}
+.cine-plan2-banner-ic { flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; }
+.cine-plan2-banner-ic img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cine-plan2-banner p { margin: 0; font-size: 0.85rem; line-height: 1.35; color: var(--text-2); }
+/* Dark mode — pale-pink CSS tints (the badge/banner fills, and .cine-plan2-ic's
+   OWN background for the one SVG-based icon, Card 2's target) read as a
+   jarring bright-pink patch on a dark card; swap to the neutral dark-surface
+   tokens used elsewhere on this screen's cards instead. NOTE: this
+   background rule on .cine-plan2-ic is invisible for every icon EXCEPT
+   Card 2's inline SVG — the other three (onb-plan-tone-*, onb-plan-brain,
+   onb-setup-chat) are fully opaque cropped images that completely cover
+   their container, so their container's own CSS background never shows
+   through regardless of this rule. Those needed real separate -dark.png
+   crops instead (see onb-plan-tone-*-dark.png / onb-plan-brain-dark.png,
+   cropped from "Dark mode icons onb.png") — assuming a vibrant/saturated
+   crop would "read fine on either tile color" without one was wrong and
+   caused a real bug (a light-mode-only crop's own baked-in pale
+   background showing as a mismatched light patch in dark mode, see
+   CLAUDE.md). Wired through the existing ICONS_WITH_DARK_VARIANT swap. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cine-plan2-ic,
+  :root:not([data-theme="light"]) .cine-plan2-badge { background: var(--s3); }
+  :root:not([data-theme="light"]) .cine-plan2-ic { color: var(--text); }
+  :root:not([data-theme="light"]) .cine-plan2-banner { background: var(--s2); }
+}
+:root[data-theme="dark"] .cine-plan2-ic,
+:root[data-theme="dark"] .cine-plan2-badge { background: var(--s3); }
+:root[data-theme="dark"] .cine-plan2-ic { color: var(--text); }
+:root[data-theme="dark"] .cine-plan2-banner { background: var(--s2); }
+
+/* ---- Step 10 — providers (inert) ---- */
+.cine-provider {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--s1);
+  font-size: 1rem; font-weight: 700; color: var(--text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-provider:active { transform: scale(0.99); }
+/* Apple's own sign-in button stays fixed black/white regardless of theme
+   — that's Apple's own brand mark, not app chrome. */
+.cine-provider--apple { background: #0f0f0f; border-color: #0f0f0f; color: #fff; }
+.cine-or { position: relative; width: 100%; height: 1px; margin: 8px 0 14px; background: var(--border); }
+.cine-check { width: 100%; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; text-align: left; cursor: pointer; }
+.cine-check input { position: absolute; opacity: 0; width: 0; height: 0; }
+.cine-check-box { flex: none; width: 24px; height: 24px; border-radius: 7px; border: 1.6px solid var(--border-2); background: var(--s1); position: relative; }
+.cine-check input:checked + .cine-check-box { background: var(--accent); border-color: var(--accent); }
+.cine-check input:checked + .cine-check-box::after {
+  content: ''; position: absolute; left: 8px; top: 4px;
+  width: 5px; height: 10px; border: solid #fff; border-width: 0 2.4px 2.4px 0; transform: rotate(45deg);
+}
+.cine-check-txt { font-size: 0.85rem; line-height: 1.45; color: var(--text); }
+.cine-check-txt b { color: var(--accent); font-weight: 700; }
+/* Drops down from the top of the screen when a provider button is tapped
+   before terms are agreed to — see cineProviderTap(). Dark backing (not a
+   plain yellow-on-white banner) so the yellow text itself stays legible. */
+.cine-terms-warn {
+  position: fixed;
+  left: 16px; right: 16px;
+  top: calc(10px + env(safe-area-inset-top));
+  z-index: 45;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: #16130f;
+  color: #f6c945;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(22,19,15,0.28);
+  transform: translateY(-140%);
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.34, 1.2, 0.4, 1), opacity 0.25s ease;
+  pointer-events: none;
+}
+.cine-terms-warn--show { transform: translateY(0); opacity: 1; }
+
+/* ---- Step 11 — trial pitch ----
+   Same real cropped iPhone photo + screen recording as the showcase step
+   (see .cine-phone's comment). Gets the same fly-in entrance as the
+   showcase's .cine-phone (bottom-left -> settle center), just once per
+   visit rather than looping — this is a normal forward-scrolled step the
+   user lingers on, not a repeating landing hero, so there's no matching
+   fly-out/hold/loop here, only the entrance. Scoped to
+   `.cine-screen.active` for the same reason as .cine-showcase.active: a
+   CSS animation on an element keeps advancing even while invisible, so
+   scoping to .active means it only starts (fresh from 0%) once this step
+   actually becomes the active screen — including every time the user
+   returns to it via Back/Next, since .active is removed and re-added on
+   every screen change. */
+.cine-trial-phone-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 230px;
+  aspect-ratio: 391 / 800;
+  margin: 4px 0 0;
+}
+.cine-screen[data-screen="15"].active .cine-trial-phone-wrap {
+  animation: cineTrialPhoneFlyIn 1.5s cubic-bezier(0.45, 0, 0.15, 1) 1;
+}
+@keyframes cineTrialPhoneFlyIn {
+  0% {
+    transform: translate3d(-55vw, calc(var(--app-vh) * 24), 0) scale(0.7) rotate(-8deg);
+    opacity: 0;
+  }
+  31.3% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+.cine-trial-phone-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  display: block;
+}
+.cine-trial-phone-screen-slot {
+  position: absolute;
+  /* Same re-measured box as .cine-phone-screen-slot — see its comment. */
+  left: 4.0921%;
+  top: 1.5%;
+  width: 92.0716%;
+  height: 96.875%;
+  overflow: hidden;
+  z-index: 1;
+  background: #000;
+  border-radius: 12.4% / 5.7%;
+}
+/* Same as .cine-phone-video — no island/camera cutout, no drawn status bar;
+   the video's own real one (baked into its source) shows through now. */
+.cine-trial-phone-video { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+
+/* ================================================================
+   Shared bottom CTA — ONE size/shape/colour for every primary button
+   ================================================================ */
+.cine-btn,
+.cine-next {
+  display: block;
+  width: 100%;
+  padding: 19px 16px;
+  border: none;
+  border-radius: 18px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.12rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 10px 26px rgba(236, 72, 153, 0.30);
+}
+/* Was a deliberate black variant for trial/subscription-confirmation
+   screens — per direct request, every CTA in the flow is Zelo pink now
+   (the base .cine-btn/.cine-next styling above), so this class no longer
+   overrides anything. Left applied in index.html/script.js (harmless) so
+   nothing needs touching there. */
+.cine-next-arrow { margin-left: 2px; }
+.cine-next {
+  position: fixed; /* stays pinned during keyboard-open shift */
+  left: 24px; right: 24px; width: auto;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 30;
+}
+.cine-btn:active,
+.cine-next:active { transform: scale(0.99); }
+.cine-next--disabled { opacity: 0.4; pointer-events: none; }
+
+/* ================================================================
+   STEP 8 — Referral code (optional) — see cineReferralApply()/
+   cineReferralContinue() in script.js. noCta:true — Continue/Skip are
+   their own fixed footer (.cine-referral-actions) instead of the shared
+   .cine-next, positioned the same way .cine-next is so they land in the
+   same normal bottom spot as every other screen's CTA.
+   ================================================================ */
+.cine-referral-hero {
+  display: flex; justify-content: center;
+  margin: 20px 0 34px;
+}
+/* Fixed light plate, regardless of theme — this art has a big soft pink
+   halo baked in behind the ticket, tuned to fade into a white page. */
+.cine-referral-hero img { width: 220px; height: auto; }
+.cine-referral-field {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--s2);
+  border-radius: 16px;
+  padding: 6px 6px 6px 18px;
+  margin-bottom: 10px;
+}
+.cine-referral-input {
+  flex: 1; min-width: 0;
+  border: none; background: none;
+  font-size: 1rem; font-family: inherit; color: var(--text);
+  padding: 14px 0;
+}
+.cine-referral-input:focus { outline: none; }
+.cine-referral-input::placeholder { color: var(--text-3); }
+.cine-referral-apply {
+  flex: none;
+  border: none;
+  background: #f6c9dd;
+  color: #fff;
+  font-size: 0.92rem; font-weight: 700;
+  padding: 13px 22px;
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-referral-apply--active { background: var(--accent); }
+.cine-referral-msg { min-height: 18px; font-size: 0.86rem; color: var(--accent); margin: 0; }
+/* Fixed footer — same left/right/bottom placement as the shared .cine-next
+   so this screen's CTAs sit exactly where every other screen's does,
+   instead of wherever the scrollable content happens to end. Extra bottom
+   padding on .cine-screen--referral (below) reserves room for it, same
+   idea as the base .cine-screen padding reserving room for .cine-next. */
+.cine-referral-actions {
+  position: fixed;
+  left: 24px; right: 24px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cine-referral-actions .cine-btn { margin: 0; }
+.cine-screen--referral { padding-bottom: calc(178px + env(safe-area-inset-bottom)); }
+/* Skip — same shape/size as the pink Continue button, muted colour */
+.cine-btn--light {
+  background: #fce3ee;
+  color: var(--accent);
+  box-shadow: none;
+}
+
+/* ================================================================
+   SCREEN 13 — "Start your 3-day FREE trial to continue"
+   (own .screen overlay, own back button; hero photo is a real crop —
+   see assets/icons/onb-trial-start.png — everything below it is markup)
+   ================================================================ */
+.cine-trial-start {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  background: var(--s1);
+  overflow-y: auto;
+}
+.cine-trial-back {
+  position: absolute;
+  top: calc(15px + env(safe-area-inset-top) + 20px); left: 20px;
+  z-index: 5;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  color: var(--text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-trial-back:active { transform: scale(0.92); }
+.cine-trial-hero { position: relative; width: 100%; flex: none; }
+.cine-trial-hero-img { display: block; width: 100%; height: auto; }
+.cine-trial-headline {
+  position: absolute;
+  left: 24px; right: 24px; bottom: 20px;
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.5px;
+  color: #fff;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.35);
+}
+.cine-trial-headline .hl { color: var(--accent); }
+.cine-trial-sheet {
+  /* flex:1 so the white sheet always reaches the bottom of the screen even
+     when its content is shorter than the remaining space below the hero
+     photo — otherwise the dark page background shows through beneath it. */
+  flex: 1;
+  width: 100%;
+  background: var(--s1);
+  border-radius: 26px 26px 0 0;
+  margin-top: -22px;
+  padding: 22px 22px calc(26px + env(safe-area-inset-bottom));
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+/* Terms/Privacy/Restore pins to the true bottom of the sheet, separate
+   from the pricing fine print that stays grouped with the plan cards. */
+.cine-trial-sheet .cine-offer-legal { margin-top: auto; padding-top: 14px; }
+.cine-trial-plan {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 16px 16px;
+  border-radius: 16px;
+  border: 1.5px solid var(--border);
+  background: var(--s1);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-trial-plan--selected { border-color: var(--accent); background: var(--accent-soft); }
+.cine-trial-plan-badge {
+  position: absolute;
+  top: -13px; left: 16px; right: 16px;
+  padding: 5px 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-align: center;
+}
+.cine-trial-radio {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid #d9cec4;
+  position: relative;
+}
+/* CSS-only checkmark (not an inline SVG in the markup) so both plan
+   buttons share one definition — a per-button hardcoded SVG only showed up
+   on whichever plan happened to have it written in, leaving the other
+   plan's selected state as a blank filled dot. */
+.cine-trial-plan--selected .cine-trial-radio { background: var(--accent); border-color: var(--accent); }
+.cine-trial-plan--selected .cine-trial-radio::after {
+  content: '';
+  position: absolute; left: 7px; top: 4px;
+  width: 6px; height: 11px;
+  border: solid #fff; border-width: 0 2.4px 2.4px 0;
+  transform: rotate(45deg);
+}
+.cine-trial-plan-col { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cine-trial-plan-name { font-size: 0.98rem; font-weight: 800; color: var(--text); }
+.cine-trial-plan-note { font-size: 0.8rem; color: var(--text-2); }
+.cine-trial-plan-price { flex: none; font-size: 0.95rem; font-weight: 800; color: var(--accent); }
+.cine-trial-plan-price--muted { color: var(--text-2); }
+.cine-trial-sheet .cine-btn { margin-top: 10px; }
+.cine-trial-legal { margin: 14px 0 4px; font-size: 0.8rem; line-height: 1.5; text-align: center; color: var(--text-2); }
+
+/* ---- Short phones (iPhone SE/8, 667pt; 13 mini is 812 and unaffected) ----
+   .cine-trial-hero-img is `width:100%; height:auto`, so its height follows the
+   image's ASPECT, not the screen: on a 375pt-wide SE it renders 429px tall —
+   64% of the viewport — and pushes the plan picker and Continue button 148px
+   below the fold. (The screen does scroll, so this was reachable, just badly
+   cut off.) This is the same failure mode as the iPad trial hero in 2026-10-20c:
+   a full-bleed height:auto hero sized by aspect rather than available height.
+
+   Scoped by max-height, NOT by width, so it only touches genuinely short
+   screens and leaves the designed proportions on an iPhone 14/15/Pro Max
+   exactly as they were. object-fit: cover crops rather than squashes. */
+@media (max-height: 740px) {
+  .cine-trial-hero-img {
+    max-height: calc(var(--app-vh) * 40);
+    object-fit: cover;
+  }
+  /* The paywall's own comment says it should "fit with zero scroll" on an SE;
+     it was still 46px over. Padding BELOW the CTA cannot help — only things
+     stacked above it move it up. Measured on a 375x667 SE, the three levers
+     below give back ~46px. Note the hero's clamp FLOOR (96px) is NOT what
+     binds here — at 667pt the vh term already computes to 100px, so only
+     lowering the vh term moves it. 9.5vh = 63px on an SE. */
+  .paywall-hero {
+    width: clamp(56px, calc(var(--app-vh) * 9.5), 156px);
+    height: clamp(56px, calc(var(--app-vh) * 9.5), 156px);
+  }
+  .paywall-headline { margin-bottom: 10px; }
+  .paywall-timeline { margin-bottom: 4px; }
+}
+
+/* ================================================================
+   SCREEN 14 — one-time offer (own .screen overlay, own X close)
+   ================================================================ */
+.cine-offer {
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(78px + env(safe-area-inset-top)) 24px calc(26px + env(safe-area-inset-bottom));
+  background: var(--s1);
+  text-align: center;
+}
+.cine-offer-x {
+  position: absolute;
+  top: calc(15px + env(safe-area-inset-top) + 20px); left: 20px;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: var(--s2);
+  color: var(--text);
+  cursor: pointer;
+  z-index: 5;
+  -webkit-tap-highlight-color: transparent;
+}
+.cine-offer-x:active { transform: scale(0.92); }
+.cine-offer-body {
+  flex: 1;
+  width: 100%;
+  max-width: 340px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.cine-offer-badge-wrap { position: relative; margin: 26px 0 22px; }
+.cine-offer-badge {
+  width: 240px; max-width: calc(var(--app-vw) * 76);
+  padding: 44px 0;
+  border-radius: 26px;
+  background: linear-gradient(150deg, #ff4d94, var(--accent));
+  color: #fff;
+  font-size: 2.6rem; font-weight: 800; letter-spacing: -1px;
+  box-shadow: 0 16px 44px rgba(236,72,153,0.34);
+}
+.cine-offer-spark { position: absolute; color: var(--accent); line-height: 1; pointer-events: none; }
+.cine-offer-spark--a { top: -18px; left: -26px; font-size: 2.1rem; }
+.cine-offer-spark--b { top: 22px; left: -44px; font-size: 1.2rem; }
+.cine-offer-spark--c { bottom: -6px; right: -34px; font-size: 2.3rem; }
+.cine-offer-spark--d { bottom: -30px; right: -6px; font-size: 1.3rem; }
+/* Both halves stay on one line — the reference shows the old price struck
+   through immediately before the new one, not wrapped onto two rows. */
+.cine-offer-price { margin: 0 0 8px; font-size: 1.12rem; font-weight: 800; white-space: nowrap; }
+.cine-offer-price s { color: var(--text); margin-right: 8px; }
+.cine-offer-price b { color: var(--accent); white-space: nowrap; }
+.cine-offer-sub { margin: 0; font-size: 1rem; color: var(--text-2); }
+.cine-offer-foot { width: 100%; max-width: 340px; }
+.cine-offer-legal { margin: 14px 0 0; font-size: 0.86rem; color: var(--text-2); text-align: center; }
+/* Real links now (Apple requires Terms/Privacy/Restore to work on a
+   subscription screen), so they need a tap target and the accent colour. */
+.cine-offer-legal a { color: var(--text-2); text-decoration: underline; padding: 4px 2px; }
+
+/* ================================================================
+   PRACTICE TAB TUTORIAL — welcome screen + swipe/photo-nav lesson
+   overlays (see script.js: startPracticeTutorial and friends)
+   ================================================================ */
+.practice-tutorial-welcome {
+  position: absolute;
+  inset: 0;
+  z-index: 1010;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px;
+  text-align: center;
+}
+.practice-tutorial-welcome[hidden] { display: none !important; }
+
+.ptw-icon-wrap {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft) 0%, rgba(236,72,153,0.03) 72%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.ptw-icon-wrap::before,
+.ptw-icon-wrap::after {
+  content: "";
+  position: absolute;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+}
+.ptw-icon-wrap::before { top: 10px; left: 18px; width: 18px; height: 18px; }
+.ptw-icon-wrap::after  { bottom: 18px; right: 6px; width: 13px; height: 13px; }
+/* The white plate this used to carry is gone — the waving hand now ships
+   a dark-mode sibling with its white backing baked in and clipped to the
+   hand's own outline, so no visible square is needed behind it. */
+.ptw-icon {
+  width: 130px; height: 130px; object-fit: contain; position: relative; z-index: 1;
+  /* Pivot near the wrist (the hand sits bottom-right within its own
+     padded frame, fingers spreading up-left) so the rotation reads as a
+     wrist-driven wave, not the whole hand spinning around its center. */
+  transform-origin: 78% 95%;
+  animation: ptwWave 2.4s ease-in-out infinite;
+}
+@keyframes ptwWave {
+  0%   { transform: rotate(0deg); }
+  8%   { transform: rotate(18deg); }
+  16%  { transform: rotate(-10deg); }
+  24%  { transform: rotate(18deg); }
+  32%  { transform: rotate(-10deg); }
+  40%  { transform: rotate(12deg); }
+  48%, 100% { transform: rotate(0deg); }
+}
+
+.ptw-title {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.ptw-accent { color: var(--accent); }
+.ptw-sub {
+  font-size: 0.95rem;
+  color: var(--text-2);
+  margin: 0 0 28px;
+}
+.ptw-start-btn {
+  width: 100%;
+  max-width: 340px;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 8px 22px rgba(236,72,153,0.3);
+}
+.ptw-start-btn:active { transform: scale(0.98); }
+.ptw-skip-btn {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+/* ----------------------------------------------------------------
+   PRACTICE TUTORIAL — "Let's confirm your profile" + "Edit Details".
+   Slotted between the swipe-left lesson and the photo-nav lesson (see
+   _handlePracticeTutorialSwipe in script.js). Both reuse the
+   .practice-tutorial-welcome full-screen shell (same z-index/positioning)
+   and .ptw-title/.ptw-sub/.ptw-start-btn/.ptw-skip-btn for headline/body/CTA
+   styling, so they sit visually consistent with the welcome screen either
+   side of them.
+   ---------------------------------------------------------------- */
+/* Zelo banner on these two screens is pinned to the actual top of the
+   screen (not part of the centered flex flow — .practice-tutorial-welcome
+   centers its content vertically, and pulling this out of flow keeps the
+   rest of that centering unaffected) instead of stacking inline above the
+   rest of the content. */
+/* NOTE: confirm-profile's content moved inside .practice-sheet-card when it
+   became a sheet, so a direct-child selector no longer reaches its wordmark.
+   Matched by descendant instead, and its `top` is relative to the sheet
+   card (which is already inset from the status bar) rather than the screen. */
+#practice-confirm-profile .home-brand {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.5rem;
+  margin: 0;
+}
+#practice-edit-details .home-brand {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.pcp-avatar-wrap {
+  position: relative;
+  margin: 6px 0 20px;
+}
+/* Same 4-pointed clip-path sparkle already used around .ptw-icon, scattered
+   at a few more positions/sizes around the profile photo instead. */
+.pcp-sparkle {
+  position: absolute;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  opacity: 0.55;
+}
+.pcp-sparkle--1 { width: 20px; height: 20px; top: -6px;  left: -14px; }
+.pcp-sparkle--2 { width: 13px; height: 13px; top: 46%;   right: -20px; }
+.pcp-sparkle--3 { width: 16px; height: 16px; bottom: -2px; right: 8px; opacity: 0.35; }
+
+.pcp-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.pcp-meta {
+  font-size: 0.92rem;
+  color: var(--text-2);
+  margin: 0 0 28px;
+}
+.pcp-meta .pcp-accent { color: var(--accent); font-weight: 700; }
+
+/* ---- Edit Details ---- */
+/* Inside .practice-sheet-card now, so this is relative to the sheet rather
+   than the screen — the safe-area inset belongs to the sheet's own top
+   offset and would double up here. */
+.ped-back-btn { position: absolute; top: 22px; left: 18px; }
+/* .cine-avatar-cam is already an edit-photo badge (Step 1 reuses it as-is);
+   here it's purely decorative-triggered — the avatar itself carries the tap
+   handler (see #ped-avatar onclick) so the whole circle, not just the badge,
+   is tappable, matching the rest of this app's avatar-edit affordances. */
+.ped-rows { width: 100%; max-width: 340px; margin-bottom: 22px; }
+.ped-rows .settings2-row-text { gap: 3px; }
+.ped-rows .settings2-row-text span:first-child { font-size: 0.82rem; color: var(--text-2); }
+.ped-rows .settings2-row-text b { font-size: 1.02rem; }
+
+/* ---- Small bottom sheets for the Name / Attracted-to rows — reuse the
+   shared .cine-sheet/.cine-sheet-scrim/.cine-sheet-card shell, just a
+   simpler body. Opened from Edit Details (z-index 1010), not just from
+   #cine-onboarding (1000) — see the bumped .cine-sheet z-index below. ---- */
+.ped-name-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--s2);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+  margin-bottom: 4px;
+}
+.ped-attracted-sheet .cine-opts { gap: 10px; }
+.ped-attracted-sheet .cine-opt { padding: 14px 16px; }
+
+/* ---- Swipe-right / swipe-left lesson overlay, shown on the top card's
+   own photo (see _showPracticeTutorialStep in script.js) ---- */
+.ptw-dim::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1;
+}
+/* The "Card N" placeholder label sits at the same z-index as this dim
+   overlay's ::before, and (being a real later DOM sibling) paints on top of
+   it rather than being covered — hide it outright during the swipe-right/
+   swipe-left lessons instead. */
+.ptw-dim .swipe-photo-label { display: none; }
+.ptw-swipe-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 28px;
+  text-align: center;
+  pointer-events: none;
+}
+/* Sizes measured from the reference sheets these were cropped out of
+   (design-refs/unused-icons-archive/"New practice outline, swipe right|left"),
+   not picked by eye: the hand is 11.2% of the card's width in the right-swipe
+   reference and 9.4% of the frame's width in the left one. At the old 64/46
+   they rendered at 14.3% / 12.5% — ~30% oversized, which read as "zoomed in"
+   and also pushed an 84x109 and a 50x53 source well past 1:1 on a 3x screen. */
+.ptw-swipe-hand { width: 50px; height: 50px; object-fit: contain; margin-bottom: 22px; }
+.ptw-swipe-hand--left { width: 35px; height: 35px; }
+.ptw-swipe-title {
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 10px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--accent);
+}
+.ptw-swipe-sub {
+  color: rgba(255,255,255,0.9);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ---- Photo-nav lesson overlay (tap either side to dismiss — no real
+   multi-photo data exists yet, this just teaches the gesture) ---- */
+.ptw-photo-nav-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+.ptw-photo-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  border-left: 2px dashed rgba(255,255,255,0.6);
+}
+.ptw-photo-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ptw-photo-zone img { width: 44px; height: 44px; object-fit: contain; }
+.ptw-photo-zone span { color: #fff; font-size: 0.82rem; font-weight: 700; }
+
+/* ================================================================
+   HOME TAB — first-visit practice-mode popup
+   ================================================================ */
+.home-mode-popup {
+  position: fixed;
+  inset: 0;
+  /* Must render above .cine (#cine-onboarding, z-index:1000) — this popup
+     is also shown mid-onboarding (internal step 6, still layered on top of
+     the onboarding overlay, not behind it), and .cine's own background is
+     opaque, so a lower z-index here rendered as a blank screen. */
+  z-index: 1100;
+  background: rgba(28,25,23,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px;
+}
+.home-mode-popup[hidden] { display: none !important; }
+.home-mode-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--s1);
+  border-radius: 26px;
+  padding: 30px 24px;
+  box-shadow: 0 30px 70px rgba(28,25,23,0.35);
+}
+.home-mode-head {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+  margin: 0 0 22px;
+  line-height: 1.3;
+}
+.home-mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+/* Shared by two places — the one-time first-visit popup (.home-mode-popup)
+   and the permanent "Home Settings" screen's own copy of the same
+   Women/Men/Both picker — both now follow the same light/dark tokens. */
+.home-mode-card-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  background: var(--s1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.home-mode-card-btn:active { transform: scale(0.97); }
+.home-mode-card-btn.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.home-mode-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.home-mode-card-btn.selected .home-mode-check { display: flex; }
+.home-mode-orb {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text);
+}
+.home-mode-orb.both svg + svg { margin-left: -5px; }
+.home-mode-main { font-size: 1rem; font-weight: 800; color: var(--text); }
+.home-mode-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.home-mode-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  color: var(--text-2);
+}
+.home-mode-hint svg { flex-shrink: 0; }
+.home-mode-hint span { font-size: 0.74rem; font-weight: 600; }
+
+.settings-skipped-upgrade-btn { margin-top: 12px; width: 100%; }
+
+/* ================================================================
+   WELCOME BACK — typewriter overlay for returning users
+   ================================================================ */
+.welcome-back {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  transition: opacity 0.4s ease;
+}
+.welcome-back[hidden] { display: none !important; }
+.welcome-back.welcome-back--out { opacity: 0; }
+.welcome-back-type {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  text-align: center;
+  margin: 0;
+  max-width: 320px;
+}
+
+/* Onboarding -> Scan handoff loader — see cineFinishOnboardingLanding() in
+   script.js. Same fixed-overlay/fade-out pattern as .welcome-back above. */
+.cine-landing-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  transition: opacity 0.3s ease;
+}
+.cine-landing-loader[hidden] { display: none !important; }
+.cine-landing-loader--out { opacity: 0; }
+.cine-landing-bar { width: 100%; max-width: 220px; margin: 26px 0 14px; }

@@ -1,0 +1,1720 @@
+/* ================================================================
+   13-settings.css — Settings 2.0, Refer Friends, Profile & Login, and the standard notification banner
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   SETTINGS 2.0 — rebuilt against the settings-flow reference. Two
+   independent concerns, kept in one block for locality:
+
+   1) .btn2-* — the shared button system (polish pass): primary/
+      secondary/destructive/text/link, each with a real pressed state
+      (compress + shadow-collapse + color-shift on :active), flat brand
+      colors only — no gradients, no purple, restrained shadow. Used
+      across every Settings 2.0 screen for consistency.
+
+   2) .settings2-* — the screen/card/row component system every new
+      Settings screen is built from. Icon slots (.settings2-icon) are
+      deliberately empty — no glyph, no generated icon art — real icon
+      assets land in a follow-up pass; the --tint-* modifiers only set a
+      background tint so the row rhythm matches the reference, nothing
+      more.
+   ================================================================ */
+
+/* ---- Button system ---- */
+.btn2 {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  font-size: 0.96rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+}
+.btn2-sm { width: auto; padding: 11px 18px; font-size: 0.86rem; border-radius: var(--r-md); }
+
+.btn2-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(236,72,153,0.28), 0 1px 0 rgba(255,255,255,0.18) inset;
+}
+@media (hover: hover) { .btn2-primary:hover { background: var(--accent-deep); } }
+.btn2-primary:active {
+  background: var(--accent-deep);
+  transform: scale(0.98) translateY(1px);
+  box-shadow: 0 1px 3px rgba(236,72,153,0.24);
+}
+
+.btn2-secondary {
+  background: var(--s1);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+@media (hover: hover) { .btn2-secondary:hover { background: var(--s2); } }
+.btn2-secondary:active {
+  background: var(--s2);
+  transform: scale(0.98) translateY(1px);
+}
+
+.btn2-destructive {
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.26), 0 1px 0 rgba(255,255,255,0.18) inset;
+}
+@media (hover: hover) { .btn2-destructive:hover { background: #dc2626; } }
+.btn2-destructive:active {
+  background: #dc2626;
+  transform: scale(0.98) translateY(1px);
+  box-shadow: 0 1px 3px rgba(239,68,68,0.22);
+}
+
+.btn2-text {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-weight: 600;
+  padding: 10px;
+}
+.btn2-text:active { opacity: 0.55; }
+
+.btn2-link {
+  display: inline-block;
+  width: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+.btn2-link:active { opacity: 0.55; }
+
+/* ---- Screen layout shell ---- */
+.settings2-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 48px;
+  flex: 1;
+}
+/* Profile & Login specifically is meant to fit without scrolling (see
+   #screen-settings-profile-login below) — tighter gap/bottom padding than the shared default. */
+#screen-settings-profile-login .settings2-layout { gap: 10px; padding-bottom: 20px; }
+.settings2-layout--centered { align-items: center; text-align: center; padding-top: 32px; }
+/* Download My Data hero — real 3D icon (light + -dark file, swapped by the app's
+   dark-icon mechanism) instead of the old empty pink circle. Sized from the
+   reference screenshot: visible artwork ~88pt wide; the crop has ~12% padding. */
+.settings2-data-hero {
+  display: block; width: 112px; height: 112px; object-fit: contain;
+  /* Negative margins cancel the crop's own ~12% padding + the shared layout's
+     padding-top/gap, so the VISIBLE artwork lands where the reference has it:
+     ~21pt below the header line and ~24pt above the text. Scoped to this img —
+     .settings2-layout--centered is shared with other screens. */
+  margin: -23px 0 -10px;
+}
+
+/* ---- Download My Data flow steps (confirm / preparing / submitted / ready) ----
+   Same hero icon rule as step 1; cards use the accent tint so dark mode follows
+   the tokens. [hidden] needs an explicit rule because .settings2-layout sets display. */
+.settings2-layout[hidden] { display: none; }
+.dd-title { font-size: 1.4rem; margin: 10px 0 0; }
+.dd-sub { margin: -6px 0 2px; }
+.dd-email {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; padding: 15px 16px; border-radius: var(--r-lg);
+  background: var(--accent-soft); color: var(--text);
+  font-size: 0.95rem; font-weight: 700;
+}
+.dd-email--sm { width: auto; min-width: 62%; padding: 10px 18px; font-size: 0.86rem; color: var(--accent-deep); }
+.dd-email-ico { color: var(--accent); flex: none; }
+.dd-include-label { align-self: flex-start; margin: 6px 0 -4px; font-size: 0.86rem; color: var(--text-2); }
+.settings2-bullet-list--sm li { font-size: 0.82rem; }
+.dd-error { margin: 0; font-size: 0.8rem; color: #ef4444; line-height: 1.4; }
+.dd-error[hidden] { display: none; }
+.dd-cta { margin-top: 6px; }
+.dd-cta:disabled { opacity: 0.45; box-shadow: none; cursor: default; transform: none; }
+.dd-under-chip { margin: -4px 0 0; }
+.dd-email[hidden], .dd-email-input[hidden] { display: none; }
+.dd-email-input {
+  width: 100%; box-sizing: border-box; padding: 15px 16px; border-radius: var(--r-lg);
+  border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--text);
+  font: inherit; font-size: 16px; font-weight: 700; text-align: center; outline: none;
+  -webkit-appearance: none; appearance: none;
+}
+.dd-email-input::placeholder { color: var(--text-3); font-weight: 500; }
+.dd-link {
+  background: none; border: none; padding: 6px 10px; margin: -4px 0 0;
+  font: inherit; font-size: 0.86rem; font-weight: 700; color: var(--accent-deep);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.dd-link:active { opacity: 0.6; }
+.dd-cooldown-note { margin-top: -6px; font-weight: 600; }
+.dd-checklist {
+  list-style: none; margin: 4px 0 0; padding: 4px 16px; width: 100%; text-align: left;
+  background: var(--accent-soft); border-radius: var(--r-lg);
+}
+.dd-checklist li {
+  display: flex; align-items: center; gap: 12px; padding: 13px 0;
+  font-size: 0.86rem; color: var(--text);
+}
+.dd-checklist li + li { border-top: 1px solid var(--accent-soft); }
+.dd-checklist li::before {
+  content: ''; flex: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 12.5 10.5 17 18 8'/%3E%3C/svg%3E") center / 14px no-repeat;
+}
+.dd-progress {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 18px;
+  background: var(--accent-soft); border-radius: var(--r-lg);
+  font-size: 0.86rem; font-weight: 700; color: var(--accent-deep);
+}
+.dd-spinner {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; box-sizing: border-box;
+  border: 3px solid var(--accent-soft); border-top-color: var(--accent);
+  animation: dd-spin 0.9s linear infinite;
+}
+@keyframes dd-spin { to { transform: rotate(360deg); } }
+.dd-tip {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 18px;
+  text-align: left; background: var(--s1); border-radius: var(--r-lg);
+  box-shadow: 0 1px 6px rgba(28,25,23,0.06);
+}
+.dd-tip-ico { color: var(--accent); flex: none; }
+.dd-tip-text { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--text-2); line-height: 1.4; }
+.dd-tip-text b { font-size: 0.82rem; color: var(--text); }
+
+/* ---- Help Zelo get smarter: settings screen + first-practice-chat modal ---- */
+.hs-toggle-row { border-bottom: none; align-items: flex-start; padding-bottom: 8px; }
+.hs-toggle-row .settings2-row-text span { line-height: 1.45; }
+.hs-points {
+  list-style: none; margin: 4px 14px 14px; padding: 6px 14px;
+  /* reference bullet box measures (254,247,251) on a white card: ~4% pink, not --accent-soft's 10% */
+  background: color-mix(in srgb, var(--accent) 4%, var(--s1)); border-radius: var(--r-lg);
+}
+.hs-points li { display: flex; align-items: center; gap: 14px; padding: 9px 0; font-size: 0.86rem; color: var(--text); }
+.hs-points img { flex: none; width: 38px; height: 38px; margin: -2px; object-fit: contain; }
+.hs-off-note {
+  display: flex; align-items: flex-start; gap: 14px; padding: 16px;
+  background: var(--s2); border-radius: var(--r-lg);
+}
+.hs-off-note[hidden] { display: none; }
+.hs-off-check { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--text-3); display: flex; align-items: center; justify-content: center; }
+.hs-off-text { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; line-height: 1.45; color: var(--text-2); }
+.hs-off-text b { font-size: 0.92rem; color: var(--text); }
+
+.pr-modal {
+  position: absolute; inset: 0; z-index: 965;
+  display: flex; align-items: center; justify-content: center;   /* centred on screen */
+  padding: 0 20px;
+  background: rgba(28, 25, 23, 0.5);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+}
+.pr-modal[hidden] { display: none; }
+.pr-sheet {
+  position: relative; width: 100%; box-sizing: border-box;
+  background: var(--s1); border-radius: 28px;
+  padding: 26px 22px 22px;
+  text-align: center;
+  max-width: 380px;
+  box-shadow: 0 24px 60px rgba(28, 25, 23, 0.28);
+  animation: prPop 0.3s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+@keyframes prPop { from { transform: translateY(14px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Dark mode: the card has to read as a floating layer, not a hole in the page. An elevated,
+   slightly warmer surface, a light-catching hairline (bright on the top-left edge, fading out, a
+   trace of pink at the bottom-right — a gradient edge, not a flat grey border), a deep shadow
+   and a faint pink bloom underneath. Two-part dark pattern, as everywhere in this file. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pr-modal { background: rgba(0, 0, 0, 0.62); }
+  :root:not([data-theme="light"]) .pr-sheet {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--s1) 90%, #fff) 0%, var(--s1) 100%) padding-box,
+      linear-gradient(150deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.07) 30%, rgba(236,72,153,0.06) 62%, rgba(236,72,153,0.40) 100%) border-box;
+    box-shadow: 0 34px 90px rgba(0,0,0,0.7), 0 0 70px rgba(236,72,153,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+}
+:root[data-theme="dark"] .pr-modal { background: rgba(0, 0, 0, 0.62); }
+:root[data-theme="dark"] .pr-sheet {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--s1) 90%, #fff) 0%, var(--s1) 100%) padding-box,
+    linear-gradient(150deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.07) 30%, rgba(236,72,153,0.06) 62%, rgba(236,72,153,0.40) 100%) border-box;
+  box-shadow: 0 34px 90px rgba(0,0,0,0.7), 0 0 70px rgba(236,72,153,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+.pr-close {
+  position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 50%;
+  border: none; background: transparent; color: var(--text); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+/* chat-bubble-hero.png is 1024x1536 with the art in x147-922 / y384-1045 (rest transparent):
+   scaled so the ART is 140px wide, positioned so the art fills this 140x120 box. */
+.pr-hero { position: relative; width: 140px; height: 120px; margin: 4px auto 6px; }
+.pr-hero img { position: absolute; width: 185px; height: 277px; left: -26px; top: -69px; max-width: none; }
+.pr-title { margin: 8px 0 10px; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.3px; color: var(--text); }
+.pr-body { margin: 0 6px 14px; font-size: 0.95rem; line-height: 1.5; color: var(--text-2); }
+.pr-note { margin: 0 0 18px; font-size: 0.85rem; color: var(--text-3); }
+.pr-later {
+  display: block; width: 100%; margin-top: 8px; padding: 12px; background: none; border: none;
+  font: inherit; font-size: 0.95rem; font-weight: 600; color: var(--accent-deep); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+.settings2-title { font-size: 1.5rem; font-weight: 800; color: var(--text); margin: 4px 0 0; letter-spacing: -0.3px; }
+.settings2-title--sm { font-size: 1.15rem; margin-top: 0; }
+.settings2-lede { font-size: 0.88rem; color: var(--text-2); line-height: 1.5; margin: 0 0 4px; }
+.settings2-footnote { font-size: 0.78rem; color: var(--text-3); line-height: 1.5; text-align: center; margin: 0; }
+.settings2-footlink { display: inline-block; text-align: center; width: 100%; font-size: 0.86rem; font-weight: 700; color: var(--accent-deep); margin: 4px 0; }
+.settings2-footlink:active { opacity: 0.6; }
+
+.settings2-section { display: flex; flex-direction: column; gap: 8px; }
+.settings2-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 6px 0 0;
+}
+
+/* ---- Icon placeholder slots — intentionally empty, see block comment ---- */
+.settings2-icon {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--s2);
+  object-fit: cover; /* only matters once this is an <img> (main settings page) — no-op on the still-empty <span> placeholders sub-pages use */
+}
+/* Appearance rows (System/Light/Dark) — a real inline icon, not one of the
+   empty color-tint placeholders above; unlike them, this isn't a stand-in
+   for a follow-up icon-asset pass. */
+.settings2-icon--appearance { display: flex; align-items: center; justify-content: center; color: var(--accent); }
+.settings2-icon--xl { width: 64px; height: 64px; border-radius: 50%; background: var(--accent-border, #fbe0ec); margin-bottom: 4px; }
+.settings2-icon--danger { background: rgba(239,68,68,0.12); }
+.settings2-icon--tint-a { background: #fbe4d8; }
+.settings2-icon--tint-b { background: #fdf0c8; }
+.settings2-icon--tint-c { background: #fbe0ec; }
+.settings2-icon--tint-d { background: #f1e6fb; }
+.settings2-icon--tint-e { background: #e3ecfb; }
+.settings2-icon--pro { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; }
+.settings2-icon--pro-lg { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.25); margin-bottom: 6px; display: flex; align-items: center; justify-content: center; }
+.settings2-icon--pro img, .settings2-icon--pro-lg img { width: 72%; height: 72%; object-fit: contain; }
+
+/* ---- Cards + rows ---- */
+.settings2-card {
+  background: var(--s1);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  /* Same no-border/shadow card treatment as the Scan page's own cards
+     (.input-card etc.) and Your Reply's boxes — a grey outline around every
+     single settings card/group read as a lot of clutter stacked down the
+     whole screen. Row dividers inside a card (.settings2-row's own
+     border-bottom) are untouched — those separate list items, not frame a
+     card, and are a different, intentional thing. */
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+}
+.settings2-card--full { width: 100%; text-align: left; }
+
+.settings2-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+.settings2-card > .settings2-row:last-child,
+.settings2-card > a.settings2-row:last-child { border-bottom: none; }
+@media (hover: hover) { .settings2-row:hover { background: var(--s2); } }
+.settings2-row:active { background: var(--s2); }
+.settings2-row--noborder { border-bottom: none; padding: 12px 0; }
+.settings2-row--danger .settings2-row-text b { color: var(--red); }
+.settings2-row--danger .settings2-row-text span { color: var(--red); opacity: 0.75; }
+.settings2-row--link .settings2-row-text b { color: var(--accent-deep); }
+
+.settings2-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings2-row-text b { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.settings2-row-text span { font-size: 0.8rem; color: var(--text-2); }
+.settings2-row-value { font-size: 0.86rem; color: var(--text-2); }
+
+.settings2-chevron { flex: none; color: var(--text-3); font-size: 1.2rem; line-height: 1; }
+.settings2-extlink { flex: none; color: var(--text-3); display: flex; }
+
+/* ---- Radio-select rows (tone, who-practice, age, retention) ---- */
+.settings2-radio-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings2-card > .settings2-radio-row:last-child { border-bottom: none; }
+.settings2-radio-row:active { background: var(--s2); }
+.settings2-radio {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border-2, #d9cec4);
+  position: relative;
+}
+.settings2-radio-row.selected .settings2-radio { border-color: var(--accent); background: var(--accent); }
+.settings2-radio-row.selected .settings2-radio::after {
+  content: '';
+  position: absolute; left: 6px; top: 3px;
+  width: 6px; height: 11px;
+  border: solid #fff; border-width: 0 2.4px 2.4px 0;
+  transform: rotate(45deg);
+}
+.settings2-radio-row.selected .settings2-row-text b { color: var(--accent-deep); }
+
+/* ---- Check rows (multi-select, "what Zelo helps with") ---- */
+.settings2-check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings2-card > .settings2-check-row:last-child { border-bottom: none; }
+.settings2-check-row:active { background: var(--s2); }
+.settings2-check {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border-2, #d9cec4);
+  position: relative;
+}
+.settings2-check-row.selected .settings2-check { border-color: var(--accent); background: var(--accent); }
+.settings2-check-row.selected .settings2-check::after {
+  content: '';
+  position: absolute; left: 6px; top: 3px;
+  width: 6px; height: 11px;
+  border: solid #fff; border-width: 0 2.4px 2.4px 0;
+  transform: rotate(45deg);
+}
+
+/* ---- Toggle rows (reuses .settings-toggle-slider's mechanics, own class
+   name so it can sit inside a .settings2-card without needing the old
+   bordered-standalone-row look) ---- */
+.settings2-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.settings2-card > .settings2-toggle-row:last-child { border-bottom: none; }
+.settings2-toggle { position: relative; flex: none; display: inline-block; width: 44px; height: 26px; }
+.settings2-toggle input { opacity: 0; width: 0; height: 0; }
+.settings2-toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--border);
+  border-radius: 999px;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.settings2-toggle-slider::before {
+  content: '';
+  position: absolute; width: 20px; height: 20px; left: 3px; top: 3px;
+  background: var(--s1); border-radius: 50%;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.settings2-toggle input:checked + .settings2-toggle-slider { background: var(--accent); }
+.settings2-toggle input:checked + .settings2-toggle-slider::before { transform: translateX(18px); }
+
+/* ---- Age Range filter card (dual-handle range slider + strict toggle) ----
+   Two overlapping native <input type=range>, sharing one visual track — the
+   standard accessible dual-range technique: pointer-events is off on each
+   input's own hit area and re-enabled only on its thumb, so both handles
+   stay independently draggable without a hand-rolled pointer/drag
+   implementation. See onAgeFilterSliderInput()/openSettingsAgeRangeSub()
+   in script.js for the value math + live label/toggle wiring. */
+.settings2-agefilter-card { padding: 16px; }
+.settings2-agefilter-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.settings2-agefilter-label { font-weight: 800; color: var(--text); font-size: 0.98rem; }
+.settings2-agefilter-value { font-weight: 800; color: var(--accent); font-size: 0.98rem; }
+.settings2-agefilter-slider { position: relative; height: 24px; margin: 0 11px; cursor: pointer; }
+.settings2-agefilter-track {
+  position: absolute; left: 0; right: 0; top: 50%; height: 3px; transform: translateY(-50%);
+  background: repeating-linear-gradient(to right, var(--border-2, #d9cec4) 0 4px, transparent 4px 8px);
+  border-radius: 2px;
+}
+.settings2-agefilter-range {
+  position: absolute; top: 50%; height: 3px; transform: translateY(-50%);
+  background: var(--accent); border-radius: 2px;
+}
+.settings2-agefilter-input {
+  position: absolute; left: -11px; right: -11px; top: 0;
+  width: calc(100% + 22px);
+  margin: 0; height: 24px;
+  background: transparent;
+  -webkit-appearance: none; appearance: none;
+  pointer-events: none;
+}
+.settings2-agefilter-input::-webkit-slider-runnable-track { -webkit-appearance: none; background: transparent; height: 24px; }
+.settings2-agefilter-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  cursor: pointer;
+  pointer-events: auto;
+  margin-top: 1px;
+}
+.settings2-agefilter-input::-moz-range-track { background: transparent; height: 24px; border: none; }
+.settings2-agefilter-input::-moz-range-thumb {
+  width: 22px; height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  cursor: pointer;
+  pointer-events: auto;
+}
+/* Grouped ruler ticks: a labeled dot every 5 years (18/25/30/35/40+),
+   with the in-between years drawn as small unlabeled dots — a real
+   "how many years apart" ruler instead of five bare, unevenly-spaced
+   text labels. Positioned via each tick's own inline left:X%, on the
+   same 0%–100% == 18–40 scale as the slider's own fill math (pct() in
+   _renderAgeFilterSlider()), so a tick always sits exactly where its
+   age would land on the track above it. */
+.settings2-agefilter-ticks { position: relative; height: 26px; margin: 10px 11px 0; cursor: pointer; }
+.agefilter-tick {
+  position: absolute; top: 0; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.agefilter-tick--first { transform: translateX(0); align-items: flex-start; }
+.agefilter-tick--last { transform: translateX(-100%); align-items: flex-end; }
+.agefilter-tick i {
+  display: block; width: 3px; height: 3px; border-radius: 50%;
+  background: var(--border-2, #d9cec4);
+}
+.agefilter-tick b {
+  font-size: 0.68rem; font-weight: 800; color: var(--text-3); white-space: nowrap;
+}
+.agefilter-tick--major i { width: 5px; height: 5px; background: var(--text-3); }
+.settings2-agefilter-divider { height: 1px; background: var(--border); margin: 16px 0 12px; }
+.settings2-agefilter-toggle-row { padding: 0; }
+
+/* ---- Info cards (AI & Transparency — static, non-interactive) ---- */
+.settings2-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--s1);
+  border-radius: var(--r-lg);
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); /* same no-border/shadow treatment as the Scan page's own cards */
+}
+
+/* ---- Profile / Pro cards on Settings Home ---- */
+.settings2-avatar {
+  flex: none;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 800;
+}
+.settings2-avatar--sm { width: 36px; height: 36px; font-size: 0.95rem; }
+
+.settings2-pro-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  border: none;
+  border-radius: var(--r-lg);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 6px 20px rgba(236,72,153,0.28);
+}
+.settings2-pro-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings2-pro-title { font-size: 0.98rem; font-weight: 800; color: #fff; }
+.settings2-pro-sub { font-size: 0.8rem; color: rgba(255,255,255,0.85); line-height: 1.4; }
+.settings2-pro-card .settings2-chevron { color: rgba(255,255,255,0.8); align-self: flex-start; }
+.settings2-manage-link {
+  position: absolute;
+  right: 16px; bottom: 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.settings2-pro-hero {
+  padding: 22px 18px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  border-radius: var(--r-lg);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(236,72,153,0.28);
+}
+.settings2-pro-hero-title { font-size: 1.15rem; font-weight: 800; margin: 0 0 4px; }
+.settings2-pro-hero-sub { font-size: 0.86rem; color: rgba(255,255,255,0.88); margin: 0 0 14px; }
+.settings2-pro-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.settings2-pro-list li { font-size: 0.86rem; font-weight: 600; padding-left: 22px; position: relative; }
+.settings2-pro-list li::before {
+  content: '✓';
+  position: absolute; left: 0; top: 0;
+  font-weight: 800;
+}
+.settings2-plan-card { padding: 14px 16px; }
+.settings2-plan-name { font-size: 0.88rem; font-weight: 700; color: var(--accent-deep); margin: 0 0 2px; }
+.settings2-plan-price { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 0 0 2px; }
+.settings2-plan-renew { font-size: 0.78rem; color: var(--text-3); margin: 0; }
+.settings2-signout-btn { margin-top: 8px; }
+
+/* ================================================================
+   REFER FRIENDS — see openReferFriends()/shareReferral() in script.js.
+   Reference: design-refs/refer-friends/refer-friends-page-reference.png.
+   ================================================================ */
+.refer-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 22px 22px 48px;
+}
+.refer-hero-img { width: 220px; height: auto; margin-bottom: 6px; }
+.refer-headline { font-size: 1.7rem; font-weight: 800; color: var(--text); line-height: 1.2; margin: 0; }
+.refer-headline-accent { color: var(--accent); }
+.refer-sub { font-size: 0.9rem; color: var(--text-2); line-height: 1.45; margin: 6px 0 20px; max-width: 320px; }
+
+.refer-link-box {
+  width: 100%;
+  background: #f0f0f0; /* a neutral light grey, distinct from --s2's warm beige tone used before */
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); /* same no-border/shadow treatment as the Scan page's own cards */
+}
+.refer-link-label { font-size: 0.78rem; font-weight: 700; color: var(--text-2); margin: 0 0 8px; }
+.refer-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 10px 14px;
+}
+.refer-link-text { flex: 1; min-width: 0; text-align: left; font-size: 0.95rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.refer-link-copy {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refer-share-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 15px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.96rem;
+  box-shadow: 0 6px 16px rgba(219, 39, 119, 0.3);
+  margin-bottom: 18px;
+}
+
+
+.refer-howitworks { width: 100%; text-align: left; margin-bottom: 18px; }
+.refer-howitworks-title { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 0 0 14px; }
+.refer-step { position: relative; display: flex; gap: 12px; padding-bottom: 22px; }
+.refer-step:last-child { padding-bottom: 0; }
+.refer-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 28px;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-soft);
+}
+.refer-step-num {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+.refer-step-text { display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+.refer-step-text b { font-size: 0.9rem; color: var(--text); }
+.refer-step-text span { font-size: 0.82rem; color: var(--text-2); line-height: 1.4; }
+
+.refer-tip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent-soft);
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: left;
+}
+.refer-tip-icon { font-size: 1.4rem; flex-shrink: 0; }
+.refer-tip p { font-size: 0.84rem; color: var(--accent-deep); font-weight: 600; line-height: 1.35; margin: 0; }
+
+/* ---- Fields (email/password/display-name inputs) ---- */
+.settings2-field { display: flex; flex-direction: column; gap: 6px; padding: 12px 4px; }
+.settings2-card > .settings2-field { padding: 14px 16px; }
+.settings2-field-label { font-size: 0.76rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.settings2-field-row { display: flex; gap: 8px; align-items: center; }
+.settings2-field-msg { font-size: 0.76rem; color: var(--text-2); min-height: 1em; margin: 0; }
+.settings2-input {
+  flex: 1; min-width: 0;
+  padding: 13px 14px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  background: var(--s1);
+  font-size: 16px; /* avoids iOS auto-zoom-on-focus */
+  color: var(--text);
+  font-family: inherit;
+}
+.settings2-input:focus { border-color: var(--accent); outline: none; }
+.settings2-textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  background: var(--s1);
+  font-size: 16px;
+  color: var(--text);
+  font-family: inherit;
+  resize: none;
+  box-sizing: border-box;
+}
+.settings2-textarea:focus { border-color: var(--accent); outline: none; }
+.settings2-char-count { font-size: 0.76rem; color: var(--text-3); text-align: right; margin: 0; }
+
+/* ---- Tone preview chat bubbles ---- */
+.settings2-bubble { max-width: 88%; padding: 12px 14px; border-radius: 16px; font-size: 0.88rem; line-height: 1.45; }
+.settings2-bubble--you { align-self: flex-start; background: var(--s2); color: var(--text); border-bottom-left-radius: 4px; }
+.settings2-bubble--zelo { align-self: flex-start; background: #dbeafe; color: #1e3a5f; border-bottom-left-radius: 4px; }
+
+/* ---- Bullet lists (delete account / download data) ---- */
+.settings2-bullet-list { list-style: none; margin: 6px 0; padding: 0; text-align: left; width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.settings2-bullet-list li { font-size: 0.86rem; color: var(--text-2); padding-left: 18px; position: relative; }
+.settings2-bullet-list li::before { content: '•'; position: absolute; left: 2px; color: var(--text-3); }
+
+/* ---- FAQ rows (Help & Support) ---- */
+.settings2-faq-row { border-bottom: 1px solid var(--border); }
+.settings2-faq-row:last-child { border-bottom: none; }
+.settings2-faq-answer { margin: 0 0 14px; padding: 0 16px; font-size: 0.82rem; color: var(--text-2); line-height: 1.5; }
+.settings2-faq-row .settings2-row { padding: 14px 16px; }
+
+/* ---- About Zelo mark ---- */
+.settings2-about-mark {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+}
+.settings2-about-name { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 0; }
+
+/* ================================================================
+   PROFILE & LOGIN (rebuilt) — see openSettingsProfileLogin() and the
+   pl*() functions in script.js. Reference: assets/icons/settings/
+   Profile setting page.png. This screen deliberately has NO .screen-header
+   — the hero itself carries the back button and reaches the true top of
+   the screen (behind the status bar), matching the reference instead of
+   sitting below a separate plain header bar. Because there's no
+   .screen-header/.app-header here, the header-swipe-position fix's
+   :scope > .app-header, .screen-header selector simply finds nothing to
+   special-case for this screen — harmless, since the back button (.back-btn
+   inside .pl-hero, position:relative) is an ordinary in-flow element, not
+   position:fixed/sticky, so it already moves correctly with any
+   transform applied during a swipe with no special handling needed. See
+   #screen-settings-profile-login's padding-top:0 override further down —
+   there's no .screen-header any more to reserve space for. */
+.pl-hero {
+  position: relative;
+  flex: none;
+  padding: calc(16px + env(safe-area-inset-top)) 24px 54px;
+  /* Large elliptical bottom corners — each corner's ellipse spans half the
+     width, so together they read as one smooth convex curve across the
+     whole bottom edge ("curve out") instead of a rectangle with small
+     rounded-off corners ("curve in"). */
+  border-radius: 0 0 50% 50% / 0 0 46px 46px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #f0126e, #ec4899 55%, #f472b6);
+}
+.pl-hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Standard .back-btn now (user: match every other page's back button) — was a custom translucent-white
+   circle specific to this hero. Scoped margin-bottom here since .back-btn itself has none (most screens
+   put it in a flex header row that supplies its own gap). z-index:1 keeps it above .pl-hero-bg. */
+.pl-hero .back-btn { position: relative; z-index: 1; margin: 0 0 16px; }
+.pl-hero-title { position: relative; font-size: 1.5rem; font-weight: 800; color: #fff; margin: 0 0 4px; }
+.pl-hero-sub { position: relative; font-size: 0.86rem; color: rgba(255,255,255,0.85); line-height: 1.4; max-width: 78%; margin: 0; }
+
+.pl-avatar-wrap { display: flex; flex-direction: column; align-items: center; text-align: center; margin: -44px 0 4px; }
+.pl-avatar-btn { position: relative; border: none; background: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* Redesigned: bigger, a gradient matching the hero it sits on (was a flat accent fill — read as a
+   generic placeholder), a thicker ring with more lift, so it reads as a real framed photo spot rather
+   than a plain colored circle with a letter in it. Self-contained now (no longer piggybacks on
+   .settings2-avatar, which only ever wanted a 44px icon-row size — that mismatch is part of what made
+   this read as a generic placeholder: it was literally reusing a small row-icon style at 2x the size). */
+.pl-avatar {
+  width: 104px; height: 104px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #f0126e, #ec4899 55%, #f472b6);
+  border: 5px solid var(--bg);
+  box-shadow: 0 8px 22px rgba(236,72,153,0.4);
+}
+/* A real person-silhouette placeholder (shown with no photo set) instead of a letter initial —
+   standard "no photo yet" convention, not something specific to this one user's name. */
+.pl-avatar--placeholder svg { width: 52px; height: 52px; color: rgba(255,255,255,0.92); }
+.pl-avatar[hidden], .pl-avatar-photo[hidden] { display: none; }   /* the actual bug: .pl-avatar's own display:flex was beating [hidden]'s UA display:none, so the placeholder never actually hid behind a real photo */
+.pl-avatar-photo { width: 104px; height: 104px; border-radius: 50%; object-fit: cover; border: 5px solid var(--bg); box-shadow: 0 8px 22px rgba(236,72,153,0.4); }
+.pl-avatar-remove { display: block; margin: 6px auto 0; padding: 4px; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 0.82rem; font-weight: 700; }
+.pl-avatar-remove[hidden] { display: none; }
+
+/* ---- Photo crop/reposition sheet (plPickPhoto -> plPhotoSelected -> this -> plCropConfirm) ---- */
+/* The white background belongs on the SHEET only (.pl-crop-sheet, already var(--bg)) — the overlay
+   itself has to stay transparent, or it paints opaque white across the full fixed inset:0 box,
+   including the area ABOVE the sheet where Profile & Login should still show through underneath,
+   same as any other bottom sheet in this app. */
+.pl-crop-overlay {
+  position: fixed; inset: 0; z-index: 4600;
+  background: transparent;
+  display: flex; align-items: flex-end;
+  pointer-events: none;   /* only the sheet itself (re-enabled below) should actually catch touches */
+}
+.pl-crop-overlay[hidden] { display: none; }
+.pl-crop-sheet { width: 100%; background: var(--bg); border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom); pointer-events: auto; }
+.pl-crop-bar { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; }
+.pl-crop-bar b { font-size: 1rem; color: var(--text); }
+.pl-crop-cancel, .pl-crop-use { border: 0; background: transparent; font: inherit; font-size: 0.95rem; padding: 4px; }
+.pl-crop-cancel { color: var(--text-2); }
+.pl-crop-use { color: var(--accent); font-weight: 700; }
+.pl-crop-stage {
+  position: relative;
+  width: 280px; height: 280px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--s2);
+  touch-action: none;   /* drag is handled manually — this stops the page/sheet behind it from also scrolling */
+  /* A plain ring marks the crop boundary instead of darkening everything outside it — that previous
+     "0 0 0 9999px" trick isn't clipped by this element's own overflow:hidden (a shadow is never
+     clipped by the element that casts it), so it was painting dark across the ENTIRE viewport, not
+     just around the circle. That, plus the overlay's own dark backdrop above, is what "the whole page
+     turns dark" was — nothing to do with the zoom interaction itself, it was there the whole time the
+     sheet was open. */
+  box-shadow: 0 0 0 1px var(--border);
+}
+.pl-crop-stage img { position: absolute; top: 0; left: 0; max-width: none; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; }
+.pl-crop-zoom { display: block; width: 240px; margin: 0 auto 24px; accent-color: var(--accent); }
+/* Inverted from the old flat-pink-circle badge (looked flat/placeholder-ish against the now-gradient
+   avatar): white disc, accent-colored icon, its own soft shadow instead of leaning on the border alone
+   for separation — same visual language as the app's other white icon-on-card treatments. */
+.pl-camera-badge {
+  position: absolute; right: -2px; bottom: 2px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid var(--bg);
+  box-shadow: 0 3px 8px rgba(28,25,23,0.18);
+}
+.pl-camera-badge svg { width: 15px; height: 15px; }
+.pl-avatar-label { font-size: 0.95rem; font-weight: 800; color: var(--text); margin: 8px 0 0; }
+.pl-avatar-sub { font-size: 0.78rem; color: var(--text-3); margin: 2px 0 0; }
+
+.pl-card {
+  background: var(--s1);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); /* same no-border/shadow treatment as the Scan page's own cards */
+}
+.pl-field-row { display: flex; align-items: flex-start; gap: 12px; }
+.pl-field-icon { flex: none; width: 38px; height: 38px; border-radius: 12px; object-fit: cover; }
+.pl-field-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.pl-field-label { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+.pl-field-sub { font-size: 0.78rem; color: var(--text-3); margin: -5px 0 0; }
+.pl-input-wrap { position: relative; flex: 1; min-width: 0; }
+.pl-input-wrap .settings2-input { width: 100%; box-sizing: border-box; }
+.pl-eye-btn {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border: none; background: none;
+  color: var(--text-3); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.pl-eye-btn--active { color: var(--accent); }
+
+.pl-signin-rows { display: flex; flex-direction: column; margin: 0 -16px -14px; }
+.pl-signin-row {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 12px 16px;
+  border: none; border-top: 1px solid var(--border);
+  background: none; text-align: left; font-family: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pl-signin-icon { flex: none; width: 34px; height: 34px; border-radius: 10px; object-fit: cover; display: flex; align-items: center; justify-content: center; background: var(--s2); }
+.pl-signin-icon svg { width: 19px; height: 19px; }
+.pl-signin-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pl-signin-text b { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.pl-signin-text span { font-size: 0.78rem; color: var(--text-3); }
+.pl-signin-status { flex: none; font-size: 0.82rem; font-weight: 700; }
+.pl-signin-status--connected { color: #22c55e; }
+.pl-signin-status--connect { color: var(--accent); }
+
+.pl-signout-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 15px;
+  background: none;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--r-lg);
+  color: var(--accent);
+  font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.pl-signout-icon { width: 18px; height: 18px; }
+
+/* ---- Modal CONTENT (icon/title/sub/code-row/resend/cancel) — shared by
+   the "Verify Your Email" bottom sheet below. The old centered-popup shell
+   (.pl-modal-overlay/-card/-close) that used to wrap these, plus the whole
+   "Change Password" OTP modal, is gone — replaced by the real
+   AUTH.sendPasswordReset() email-link flow (see the Forgot Password
+   screens below), so there's no in-app 6-digit reauth step to modal any
+   more on that side. ---- */
+.pl-modal-icon { width: 56px; height: 56px; border-radius: 50%; background: #fce3ee; color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.pl-modal-title { font-size: 1.15rem; font-weight: 800; color: var(--text); margin: 0 0 6px; }
+.pl-modal-sub { font-size: 0.86rem; color: var(--text-2); line-height: 1.45; margin: 0 0 18px; }
+.pl-modal-code-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.pl-modal-resend { font-size: 0.82rem; color: var(--text-3); margin: 0 0 4px; }
+.pl-modal-resend b { color: var(--accent); font-weight: 700; cursor: pointer; }
+.pl-modal-resend b.pl-resend--disabled { color: var(--text-3); cursor: default; }
+.pl-modal-cancel { margin-top: 10px; background: none; border: none; color: var(--text-3); font-size: 0.92rem; font-weight: 600; padding: 6px; cursor: pointer; }
+
+/* ---- Bottom sheets (Connect Email / Verify Your Email) — both reuse the
+   shared .cine-sheet shell, covering roughly the bottom half of the
+   screen rather than a small centered popup. ---- */
+.pl-connect-sheet .cine-sheet-card,
+.pl-verify-sheet .cine-sheet-card { text-align: center; padding-top: 36px; }
+.pl-connect-close,
+.pl-verify-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%; background: var(--s2); color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+.pl-connect-icon { width: 56px; height: 56px; border-radius: 50%; background: #fce3ee; color: var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+.pl-connect-sub { font-size: 0.88rem; color: var(--text-2); line-height: 1.5; margin: 0 0 20px; }
+
+/* ---- Add Your Email / Email Connected / Forgot Password / Reset Sent
+   pages (all reuse the .auth-* shell) ---- */
+.pl-authpage-label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--text); margin: 2px 0 6px; text-align: left; }
+.pl-pwreq-list { list-style: none; margin: 6px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.pl-pwreq-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-3); }
+.pl-pwreq-dot { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border-2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: transparent; }
+.pl-pwreq-item--met { color: #22c55e; }
+.pl-pwreq-item--met .pl-pwreq-dot { border-color: #22c55e; background: #22c55e; color: #fff; }
+.pl-success-icon-wrap { position: relative; width: 128px; height: 128px; margin: 0 auto 22px; }
+.pl-success-icon-wrap img { width: 100%; height: 100%; object-fit: contain; }
+/* Plain envelope icon for "Forgot your password?" — same visual language
+   as .pl-modal-icon/.pl-connect-icon (pink circle + accent icon), just
+   sized to match this page's more prominent hero icon in the reference. */
+.pl-icon-circle-lg { width: 92px; height: 92px; border-radius: 50%; background: #fce3ee; color: var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 22px; }
+.pl-resend-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; background: var(--s1); border-radius: var(--r-lg); margin: 4px 0 28px; box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06); } /* same no-border/shadow treatment as the Scan page's own cards */
+.pl-resend-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; background: #fce3ee; color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.pl-resend-text { flex: 1; min-width: 0; }
+.pl-resend-text b { display: block; font-size: 0.86rem; font-weight: 700; color: var(--text); }
+.pl-resend-text span { font-size: 0.76rem; color: var(--text-3); }
+.pl-resend-btn { flex: none; font-size: 0.84rem; font-weight: 700; color: var(--accent); background: none; border: none; cursor: pointer; padding: 6px 4px; }
+.pl-resend-btn:disabled { color: var(--text-3); cursor: default; }
+.pl-divider { display: flex; align-items: center; gap: 12px; width: 100%; margin: 6px 0 18px; color: var(--text-3); font-size: 0.82rem; }
+.pl-divider::before, .pl-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+/* Sits above a tappable icon+title+sub row instead of an input+Save — the
+   whole card is the tap target (see plOpenForgotPassword() in script.js),
+   matching the reference's chevron-terminated navigation row exactly. */
+.pl-card--link { width: 100%; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pl-card--link .pl-field-row { align-items: center; }
+/* These screens use the .auth-card shell (its own safe-area-aware top
+   padding) instead of a .screen-header, so the base .screen padding-top
+   would just add unwanted extra space above it. */
+#screen-settings-add-email,
+#screen-settings-email-connected,
+#screen-settings-forgot-password,
+#screen-settings-reset-sent { padding-top: 0; }
+/* No .screen-header on Profile & Login itself — see the .pl-hero comment
+   above for why. */
+/* The white that shows when the content is pulled past the top is THIS element's own background (the
+   screen is the scroller; html/body/#app are overflow:hidden and never bounce). So the top half of its
+   box is the header pink (colors sampled from Background icon.png's top edge) and the bottom half is the
+   page color, for the bottom bounce. At rest all of it is covered: the hero covers the top, and the
+   white layout below (tucked 46px up behind the hero's curved corners) covers the rest. */
+#screen-settings-profile-login {
+  padding-top: 0; overflow-y: auto;
+  background:
+    linear-gradient(to bottom, transparent 88%, var(--bg) 88%),
+    linear-gradient(90deg, #fb448c 0%, #fa3786 70%, #fa82ae 100%);
+}
+/* Easter egg: the mascot hangs just above the top of the screen and is lowered by script.js in step with
+   how far the content is pulled down (see _plMascotTick). Fixed, so it stays at the top of the phone. */
+.pl-mascot-peek {
+  position: fixed; top: 0; left: 50%; width: 120px; height: 120px; margin-left: -60px;
+  z-index: 0; pointer-events: none; transform: translateY(-200px); will-change: transform;
+}
+#screen-settings-profile-login .pl-hero { z-index: 1; }
+#screen-settings-profile-login .settings2-layout { position: relative; background: var(--bg); margin-top: -46px; padding-top: 64px; flex: 1 0 auto; }
+#screen-settings-profile-login .pl-avatar-wrap { position: relative; z-index: 2; }
+/* Pink extension above the hero: normal iOS bounce is allowed, and anything pulled past the top
+   reveals this instead of white. Colors sampled from the top edge of Background icon.png. It is
+   out of flow (absolute, above the content), so it shifts nothing. */
+.pl-hero-extend {
+  position: absolute; left: 0; right: 0; top: -2500px; height: 2500px; pointer-events: none;
+  background: linear-gradient(90deg, #fb448c 0%, #fa3786 70%, #fa82ae 100%);
+}
+
+/* ================================================================
+   DARK MODE — visible edges
+   On the dark palette a --s1 card (#201c17) sits only a shade above the
+   page (#15130f), and the soft drop shadows these cards rely on for
+   separation simply don't read against a dark background. Cards that
+   already carry a border are fine; these are the ones that were leaning
+   on shadow alone, so they get a grey outline in dark mode only. The
+   header rules give Mission Control and the Level Up panel the divider
+   line asked for, so their top edge stops blending into the page.
+   ================================================================ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .journey-progress-card,
+  :root:not([data-theme="light"]) .streak-notif,
+  :root:not([data-theme="light"]) .xp-panel,
+  :root:not([data-theme="light"]) .levelup-modal-card,
+  :root:not([data-theme="light"]) .chat-mode-card,
+  :root:not([data-theme="light"]) .scan-modal-card,
+  :root:not([data-theme="light"]) .mini-modal-card,
+  :root:not([data-theme="light"]) .lb-settings-panel,
+  :root:not([data-theme="light"]) .history-row,
+  :root:not([data-theme="light"]) .aicoach-context-row,
+  :root:not([data-theme="light"]) .aicoach-suggestion,
+  :root:not([data-theme="light"]) .aicoach-hiw-card,
+  :root:not([data-theme="light"]) .gib-confirm-card,
+  :root:not([data-theme="light"]) .thread-link-card { border: 1px solid var(--border-2); }
+  :root:not([data-theme="light"]) .mission-header,
+  :root:not([data-theme="light"]) .lb-header { border-bottom: 1px solid var(--border-2); }
+}
+:root[data-theme="dark"] .journey-progress-card,
+:root[data-theme="dark"] .streak-notif,
+:root[data-theme="dark"] .streak-popup-card,
+:root[data-theme="dark"] .xp-panel,
+:root[data-theme="dark"] .levelup-modal-card,
+:root[data-theme="dark"] .chat-mode-card,
+:root[data-theme="dark"] .scan-modal-card,
+:root[data-theme="dark"] .mini-modal-card,
+:root[data-theme="dark"] .lb-settings-panel,
+:root[data-theme="dark"] .history-row,
+:root[data-theme="dark"] .aicoach-context-row,
+:root[data-theme="dark"] .aicoach-suggestion,
+:root[data-theme="dark"] .aicoach-hiw-card,
+:root[data-theme="dark"] .gib-confirm-card,
+:root[data-theme="dark"] .thread-link-card { border: 1px solid var(--border-2); }
+:root[data-theme="dark"] .mission-header,
+:root[data-theme="dark"] .lb-header { border-bottom: 1px solid var(--border-2); }
+
+/* ---- Back arrows, chevrons and close buttons: one colour everywhere ----
+   Mission Control's back arrow was hardcoded pink while every other
+   screen's used currentColor, and the Level Up close button put a
+   --text-2 glyph on a near-white circle, which left it near-invisible in
+   dark mode. Chevrons were on --text-3, the dimmest token, which reads
+   fine on white and disappears on the dark page. */
+.mission-icon-btn { color: var(--text); }
+/* Sits on the permanently pale pink hero, so it stays dark in both themes. */
+.levelup-modal-close { color: #1c1917; }
+
+/* ---- Back/close circles: one look everywhere in dark mode ----
+   .back-btn and .mission-icon-btn already read as a dark circle with a
+   light icon (var(--s1) + var(--text)) — that's the look asked for
+   ("black circle, white icon, like Mission Control"). Several other close
+   buttons were built with a different token (a muted --s2/--text-2/
+   --text-3 combo, a literal pink accent colour, or a light translucent
+   circle meant only for a light backdrop) and read as washed-out or
+   invisible on the dark page. This brings them all onto the same pattern.
+   .journey-back-btn was the worst of these: a translucent WHITE circle
+   with var(--text) (near-white in dark mode) on top — a white icon on a
+   white circle, functionally invisible. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .levelup-modal-close,
+  :root:not([data-theme="light"]) .aicoach-history-close,
+  :root:not([data-theme="light"]) .journey-back-btn,
+  :root:not([data-theme="light"]) .xp-panel-close,
+  :root:not([data-theme="light"]) .aicoach-hiw-close,
+  :root:not([data-theme="light"]) .pl-verify-close,
+  :root:not([data-theme="light"]) .auth-back-btn {
+    background: var(--s1);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+}
+:root[data-theme="dark"] .levelup-modal-close,
+:root[data-theme="dark"] .aicoach-history-close,
+:root[data-theme="dark"] .journey-back-btn,
+:root[data-theme="dark"] .xp-panel-close,
+:root[data-theme="dark"] .aicoach-hiw-close,
+:root[data-theme="dark"] .pl-verify-close,
+:root[data-theme="dark"] .auth-back-btn {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* ---- Dark-mode podium: custom artwork, recalibrated coordinates ----
+   The dark variant of hero-podium-blank.png is a different illustration
+   (not just a recolor), with its own pedestal proportions. Every number
+   below (name/score/badge/unit/rank-bg left/top, and the wrap's own
+   aspect-ratio) was re-measured directly against that file's actual pixel
+   geometry, the same way the light-mode numbers were originally measured
+   against hero-podium-blank.png — so text still lands in the blank area
+   below each pedestal's avatar circle, just at this image's own
+   coordinates instead of the light image's. Nothing about how these
+   elements are built or positioned (still plain left/top %, still the
+   same renderLeaderboard() markup) changes, only where they land.
+   The background rank number is dropped here: this art's blank zone
+   below each circle is noticeably shorter than the light image's, and at
+   the light-mode font sizes the big number would run into the name/score
+   text right next to it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lb-podium-wrap { aspect-ratio: 971 / 672; }
+  :root:not([data-theme="light"]) .lb-podium-rank-bg { display: none; }
+  :root:not([data-theme="light"]) .lb-podium-badge--first  { left: 50.2%; top: 66.0%; }
+  :root:not([data-theme="light"]) .lb-podium-badge--second { left: 18.3%; top: 71.2%; }
+  :root:not([data-theme="light"]) .lb-podium-badge--third  { left: 79.4%; top: 73.5%; }
+  :root:not([data-theme="light"]) .lb-podium-name--first,
+  :root:not([data-theme="light"]) .lb-podium-score--first,
+  :root:not([data-theme="light"]) .lb-podium-unit--first  { left: 50.2%; }
+  :root:not([data-theme="light"]) .lb-podium-name--second,
+  :root:not([data-theme="light"]) .lb-podium-score--second,
+  :root:not([data-theme="light"]) .lb-podium-unit--second { left: 18.3%; }
+  :root:not([data-theme="light"]) .lb-podium-name--third,
+  :root:not([data-theme="light"]) .lb-podium-score--third,
+  :root:not([data-theme="light"]) .lb-podium-unit--third  { left: 79.4%; }
+  :root:not([data-theme="light"]) .lb-podium-name--first  { top: 58.5%; }
+  :root:not([data-theme="light"]) .lb-podium-score--first { top: 63.9%; }
+  :root:not([data-theme="light"]) .lb-podium-unit--first  { top: 71.2%; }
+  :root:not([data-theme="light"]) .lb-podium-name--second  { top: 67.5%; }
+  :root:not([data-theme="light"]) .lb-podium-score--second { top: 72.1%; }
+  :root:not([data-theme="light"]) .lb-podium-unit--second  { top: 78.8%; }
+  :root:not([data-theme="light"]) .lb-podium-name--third  { top: 69.6%; }
+  :root:not([data-theme="light"]) .lb-podium-score--third { top: 74.4%; }
+  :root:not([data-theme="light"]) .lb-podium-unit--third  { top: 80.7%; }
+}
+:root[data-theme="dark"] .lb-podium-wrap { aspect-ratio: 971 / 672; }
+:root[data-theme="dark"] .lb-podium-rank-bg { display: none; }
+:root[data-theme="dark"] .lb-podium-badge--first  { left: 50.2%; top: 66.0%; }
+:root[data-theme="dark"] .lb-podium-badge--second { left: 18.3%; top: 71.2%; }
+:root[data-theme="dark"] .lb-podium-badge--third  { left: 79.4%; top: 73.5%; }
+:root[data-theme="dark"] .lb-podium-name--first,
+:root[data-theme="dark"] .lb-podium-score--first,
+:root[data-theme="dark"] .lb-podium-unit--first  { left: 50.2%; }
+:root[data-theme="dark"] .lb-podium-name--second,
+:root[data-theme="dark"] .lb-podium-score--second,
+:root[data-theme="dark"] .lb-podium-unit--second { left: 18.3%; }
+:root[data-theme="dark"] .lb-podium-name--third,
+:root[data-theme="dark"] .lb-podium-score--third,
+:root[data-theme="dark"] .lb-podium-unit--third  { left: 79.4%; }
+:root[data-theme="dark"] .lb-podium-name--first  { top: 58.5%; }
+:root[data-theme="dark"] .lb-podium-score--first { top: 63.9%; }
+:root[data-theme="dark"] .lb-podium-unit--first  { top: 71.2%; }
+:root[data-theme="dark"] .lb-podium-name--second  { top: 67.5%; }
+:root[data-theme="dark"] .lb-podium-score--second { top: 72.1%; }
+:root[data-theme="dark"] .lb-podium-unit--second  { top: 78.8%; }
+:root[data-theme="dark"] .lb-podium-name--third  { top: 69.6%; }
+:root[data-theme="dark"] .lb-podium-score--third { top: 74.4%; }
+:root[data-theme="dark"] .lb-podium-unit--third  { top: 80.7%; }
+
+
+/* ================================================================
+   ONE STANDARD NOTIFICATION BANNER
+   .copy-toast is the reference size; every other transient banner now shares
+   its geometry — fixed to the top (clearing the notch), 16px side insets,
+   20px radius, 14px padding, same shadow, same spring drop-in, a 44px icon,
+   1rem/.8rem type. Height then only differs where a banner carries extra
+   content (streak's week dots, XP's progress bar). Keep new banners on this
+   block instead of inventing another size.
+   ================================================================ */
+.streak-notif, .xp-panel, .limit-toast, .cine-terms-warn {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  top: calc(10px + env(safe-area-inset-top));
+  border-radius: 20px;
+  background: var(--s1);
+  color: var(--text);
+  box-shadow: 0 14px 32px rgba(28,25,23,0.18), 0 2px 10px rgba(28,25,23,0.08);
+  transform: translateY(-140%);
+  opacity: 0;
+  transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.34,1.1,0.64,1);
+  pointer-events: none;
+}
+.streak-notif.visible, .xp-panel.visible, .limit-toast.visible, .cine-terms-warn--show {
+  transform: translateY(0);
+  opacity: 1;
+}
+.streak-notif { padding: 14px 16px; gap: 14px; }
+.streak-notif-title { font-size: 1rem; margin: 0 0 7px; }
+.streak-notif-week { gap: 8px; }
+.streak-notif-day { gap: 3px; }
+.streak-notif-day-label { font-size: 0.58rem; }
+.streak-notif-day-dot { width: 20px; height: 20px; }
+.streak-notif-day-dot svg { width: 11px; height: 11px; }
+.streak-notif-flame { width: 44px; height: 44px; }
+.streak-notif-num-roll { width: 30px; height: 22px; margin-top: 2px; }
+.streak-notif-num { font-size: 1.15rem; }
+
+.xp-panel { padding: 14px 44px 14px 14px; gap: 14px; z-index: 2150; }
+.xp-panel-icon { width: 44px; height: 44px; }
+.xp-panel-icon-roll { width: 44px; height: 44px; }
+.xp-panel-title { font-size: 1rem; line-height: 1.2; }
+.xp-panel-sub { font-size: 0.8rem; }
+.xp-panel-tertiary { font-size: 0.72rem; }
+.xp-panel-bar-row { margin-top: 4px; }
+.xp-panel-bar { height: 6px; }
+.xp-panel-bar-text { font-size: 0.68rem; }
+.xp-panel-close { top: 10px; right: 10px; }
+
+/* flashLimitToast(): was a small dark pill 108px down; now the same card */
+.limit-toast {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 14px 17px; /* = .copy-toast, so a one-line banner is the same 75px */
+  max-width: none;
+  text-align: left;
+  z-index: 2100;
+}
+.limit-toast-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f472b6, var(--accent-deep));
+}
+.limit-toast-text { flex: 1; min-width: 0; font-size: 0.95rem; font-weight: 700; line-height: 1.3; color: var(--text); }
+
+/* Onboarding's "accept the terms" warning: same card, amber icon */
+.cine-terms-warn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: left;
+  color: var(--text);
+}
+.cine-terms-warn-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+/* Replay card: no "Best Match" badge and no corner sparkle */
+.is-replay .yr-best-match, .is-replay .yr-card-spark { display: none; }
+/* Replay conversation card keeps a fixed size — new messages scroll instead */
+.is-replay .yr-conv { height: 132px; max-height: none; }
+
+
+/* ================================================================
+   "YOUR REPLY" — FRESH SCAN (not a replay): compact her-message card, the
+   same Add her / Add your message boxes as the replay, Zelo's read moved
+   below them. Everything has to fit an iPhone 11 (414x896) with no scrolling.
+   ================================================================ */
+#screen-scan-result:not(.is-replay) {
+  --yr-field-bg: color-mix(in srgb, var(--accent) 4%, var(--s1));
+}
+#screen-scan-result:not(.is-replay) .scan-result-content { gap: 13px; }
+#screen-scan-result:not(.is-replay) .yr-label { font-size: 11px; letter-spacing: 1.5px; margin-bottom: 8px; }
+#screen-scan-result:not(.is-replay) .yr-message-combined { min-height: 0; }
+#screen-scan-result:not(.is-replay) .yr-message-combined.yr-conv { align-items: stretch; justify-content: flex-start; }
+#screen-scan-result:not(.is-replay) .yr-conv {
+  padding: 12px 12px;
+  gap: 10px;
+  /* Fixed: room for two messages, even when only a short "hi" is in it — more
+     than two scroll (newest in view) instead of growing the card. */
+  height: 136px;
+  max-height: none;
+  border-radius: 20px;
+}
+#screen-scan-result:not(.is-replay) .yr-conv-avatar { width: 34px; height: 34px; }
+#screen-scan-result:not(.is-replay) .yr-conv-avatar svg { width: 17px; height: 17px; }
+#screen-scan-result:not(.is-replay) .yr-conv-bubble { padding: 9px 14px; border-radius: 18px; font-size: 14px; }
+#screen-scan-result:not(.is-replay) .yr-conv-bubble--her { border-bottom-left-radius: 18px; }
+#screen-scan-result:not(.is-replay) .yr-conv-bubble--me  { border-bottom-right-radius: 18px; }
+/* Typed message: the bubble hugs its text (width set by _fitHerMessageBubble) */
+#screen-scan-result:not(.is-replay) .yr-message-input {
+  min-height: 0;
+  padding: 9px 14px;
+  border-radius: 18px;
+  border-bottom-left-radius: 18px;
+  font-size: 15px !important;
+  line-height: 1.3;
+  overflow: hidden;
+}
+#screen-scan-result:not(.is-replay) .yr-message-combined .yr-conv-row { align-items: center; }
+#screen-scan-result:not(.is-replay) .yr-message-thumb-row { min-height: 0; margin-top: 0; }
+#screen-scan-result:not(.is-replay) .preview-block.has-shot .yr-conv-wrap { margin: 0; }
+#screen-scan-result:not(.is-replay) .yr-zelo-read { height: auto; padding: 11px 14px; }
+#screen-scan-result:not(.is-replay) .yr-zelo-read-text { font-size: 13px; }
+#screen-scan-result:not(.is-replay) .yr-suggests-group { margin-top: 0; }
+/* The "Ask AI Coach" card that used to sit here is gone — that entry point
+   moved into the header (see #scan-result-history-btn) — so the suggestions
+   block now sits directly under the add-message boxes, a bit higher up. */
+#screen-scan-result:not(.is-replay) .yr-carousel { margin-top: 10px; }
+.yr-message-combined .yr-conv-row--pop, .yr-conv-row--pop { animation: yrBubblePop 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.25); }
+
+/* fresh typed-message row sits at the TOP of the fixed-height box, not centred */
+#screen-scan-result:not(.is-replay) .yr-message-combined .yr-conv-row { align-items: flex-start; }
+
+.match-row-card { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.match-row-card:active { transform: scale(0.99); }
+.match-row-unread {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+  background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* TEMP dev row on Settings > Zelo Pro — needs an explicit [hidden] rule because .settings2-card sets display. */
+#dev-subscription-row[hidden] { display: none; }
+
+/* "How did your reply land?" card: same floating card as the practice-review modal, but app-wide. */
+.pr-modal--global { position: fixed; z-index: 3100; }
+.rf-second { margin-top: 10px; }
+
+/* ---- Locked screen (expired subscription): screen recording, then Continue -> onboarding paywall ---- */
+.locked-close {
+  position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 16px; z-index: 3;
+  width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--s2); color: var(--text);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.locked-body {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: calc(64px + env(safe-area-inset-top)) 24px 110px;
+}
+.locked-title { margin-bottom: 18px; }
+.locked-phone { margin-top: 0; }
+.locked-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 14px 24px calc(22px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, var(--bg) 32%);
+}
+
+/* ---- AI Coach: "Add your conversation" card (replaces the thread empty state) ---- */
+.aicoach-context-row--add {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+.aicoach-add-card {
+  background: var(--s1);
+  border-radius: 20px;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  padding: 18px 16px 16px;
+}
+.aicoach-add-title { font-size: 17px; font-weight: 700; color: var(--text); }
+.aicoach-add-sub { font-size: 13.5px; line-height: 1.45; color: var(--text-2); margin-top: 4px; }
+.aicoach-add-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+.aicoach-add-tile {
+  position: relative;
+  min-height: 118px;
+  box-shadow: 0 1px 6px rgba(28, 25, 23, 0.06);
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.aicoach-add-tile:active { transform: scale(0.97); }
+.aicoach-add-tile img { width: 36px; height: 36px; object-fit: contain; }
+.aicoach-add-info {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+}
+.aicoach-add-info img { width: 20px; height: 20px; object-fit: contain; }
+
+/* Held for one frame while a swipe-back track is torn down — unmounting
+   resets inline opacity/position on both pages and re-hides the tab bar,
+   and .screen/.tab/.tab-bar's own opacity transitions would otherwise
+   animate those corrections as a visible flash. See cleanupTrack(). */
+#app.slide-cleanup .screen,
+#app.slide-cleanup .tab,
+#app.slide-cleanup .tab-bar,
+#app.slide-cleanup .app-header,
+#app.slide-cleanup .screen-header { transition: none !important; }
+
+/* Held only while a swipe-nav gesture has transiently revealed the bar.
+   Toggling a backdrop-filter element in and out of the render tree makes
+   WebKit rebuild its compositing layer, which can flash the area behind
+   it — see armReveal() in script.js. */
+.tab-bar--gesture-reveal {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Held for the whole of a swipe-nav gesture. Reparenting a subtree into the
+   slide track restarts every CSS animation inside it, so each message row
+   replays its `msgIn` entrance fade — on mount AND again on teardown. That
+   re-animation IS the blink users see on swipe, and it scales with how many
+   messages are on screen (an empty chat has nothing to replay, which is
+   exactly the symptom that identified it). Freezing animations for the
+   gesture's duration is transient and invisible. See _slideMountEl(). */
+#app.slide-animating *,
+#app.slide-cleanup * { animation: none !important; }
+/* NOTE: this only CANCELS a running animation — removing the rule lets it
+   start fresh a frame later. It's a safety net for anything else with a
+   permanent entrance animation, not the fix; see .msg-row--in above. */
+
+
+/* ======================================================================
+   FULL-BLEED CARD LAYOUT  (.swipe-card--full, see CARD_FULL_BLEED in script.js)
+   Photo fills the whole card; name, info button and the Skip/Interested
+   row sit over it behind a gradient scrim instead of on a white panel
+   below it.
+   ====================================================================== */
+
+/* In the panel layout this wrapper must not exist as far as layout is
+   concerned, so the original flex column is untouched. */
+.swipe-card-overlay { display: contents; }
+
+.swipe-card--full .swipe-card-photo {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+}
+
+.swipe-card--full .swipe-card-overlay {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  /* Long ramp. A short one has to climb steeply, and a steep alpha ramp is
+     exactly what reads as a hard edge. */
+  padding-top: 190px;
+  /* Eased, not linear. A 4-stop linear ramp puts a constant-slope onset at
+     the top, and the eye picks that discontinuity out as a line across the
+     photo — the "barrier". These stops follow a smoothstep, so the curve
+     leaves zero with (almost) zero slope and there's no detectable start.
+     Alpha-0 stops repeat the same RGB on purpose: interpolating to bare
+     `transparent` goes through transparent-black and greys the ramp. */
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--card-scrim-rgb), 0)     0%,
+    rgba(var(--card-scrim-rgb), 0.012) 8%,
+    rgba(var(--card-scrim-rgb), 0.047) 16%,
+    rgba(var(--card-scrim-rgb), 0.10)  24%,
+    rgba(var(--card-scrim-rgb), 0.17)  32%,
+    rgba(var(--card-scrim-rgb), 0.26)  40%,
+    rgba(var(--card-scrim-rgb), 0.37)  48%,
+    rgba(var(--card-scrim-rgb), 0.49)  56%,
+    rgba(var(--card-scrim-rgb), 0.62)  64%,
+    rgba(var(--card-scrim-rgb), 0.76)  72%,
+    rgba(var(--card-scrim-rgb), 0.88)  80%,
+    rgba(var(--card-scrim-rgb), 0.96)  87%,
+    rgb(var(--card-scrim-rgb))         93%);
+}
+
+/* Blur that ramps in with the scrim rather than being uniform — masked so
+   it starts at zero up top and reaches full strength where the text sits.
+   NOTE: backdrop-filter inside a card that is transformed every frame
+   during a drag is the expensive part of this design; if the deck feels
+   heavy on device, delete this one block first. */
+.swipe-card--full .swipe-card-overlay::before {
+  content: '';
+  position: absolute;
+  /* Extends well above the overlay so the blur element's own hard box edge
+     sits far up inside the fully-masked region — otherwise that edge is a
+     second, separate line on top of the gradient's. */
+  inset: -80px 0 0 0;
+  pointer-events: none;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  /* Eased to match the scrim; a linear mask has the same visible-onset
+     problem the linear gradient did. */
+  -webkit-mask-image: linear-gradient(to bottom,
+    rgba(0,0,0,0) 0%, rgba(0,0,0,0.02) 22%, rgba(0,0,0,0.08) 34%,
+    rgba(0,0,0,0.20) 46%, rgba(0,0,0,0.38) 58%, rgba(0,0,0,0.60) 70%,
+    rgba(0,0,0,0.82) 82%, rgba(0,0,0,0.95) 90%, rgba(0,0,0,1) 96%);
+          mask-image: linear-gradient(to bottom,
+    rgba(0,0,0,0) 0%, rgba(0,0,0,0.02) 22%, rgba(0,0,0,0.08) 34%,
+    rgba(0,0,0,0.20) 46%, rgba(0,0,0,0.38) 58%, rgba(0,0,0,0.60) 70%,
+    rgba(0,0,0,0.82) 82%, rgba(0,0,0,0.95) 90%, rgba(0,0,0,1) 96%);
+}
+.swipe-card--full .swipe-card-body,
+.swipe-card--full .swipe-card-actions { position: relative; z-index: 1; }
+
+/* The scrim is decorative, and its 190px padding-top (the fade ramp) makes
+   its BOX cover the middle of the card even though nothing is drawn there.
+   Sitting at z-index 2, later in the DOM than .swipe-card-photo, it was
+   winning hit-testing over everything inside the photo — including the
+   practice tutorial's photo-nav lesson, whose tap then never arrived.
+   Only the real controls need to receive input; taps anywhere else fall
+   through to the card, which is what drives tap-to-change-photo anyway. */
+.swipe-card--full .swipe-card-overlay { pointer-events: none; }
+.swipe-card--full .swipe-card-info-btn,
+.swipe-card--full .swipe-action-btn { pointer-events: auto; }
+
+.swipe-card--full .swipe-card-body { background: none; overflow: visible; }
+/* The scrim already separates the text from the photo. */
+.swipe-card--full .swipe-card-divider { display: none; }
+.swipe-card--full .swipe-card-actions { padding-top: 2px; }
+
+/* ---- Uncropped photo mode (.swipe-card--uncropped) -------------------
+   The card is much narrower than a 4:5 photo, so `cover` was cropping
+   ~25% off the sides. Here the photo is `contain`ed — nothing is cut off —
+   and a blurred, scaled-up copy of the same image fills what's left,
+   rather than leaving empty bars.
+   Top-aligned on purpose: it pushes all the leftover space to the bottom,
+   where the scrim already sits, so in practice the blurred filler is
+   barely visible on a tall card. */
+.swipe-card--uncropped .swipe-card-photo-bg,
+.swipe-card--uncropped .swipe-card-photo-main {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.swipe-card--uncropped .swipe-card-photo-bg {
+  object-fit: cover;
+  object-position: 50% 50%;
+  /* scaled past the edges so the blur has pixels to sample and doesn't
+     fade out at the card's border */
+  /* Was 1.18 — dialled back on request. The scale only exists to push the
+     blur's soft edge outside the card (blur samples past the image border
+     and goes transparent there). Safe to lower here because the backdrop is
+     almost entirely hidden under the scrim anyway — measured as 0px visible
+     on every device except the SE's 11px side bars. */
+  transform: scale(1.08);
+  filter: blur(24px) saturate(1.25);
+}
+.swipe-card--uncropped .swipe-card-photo-main {
+  object-fit: contain;
+  object-position: 50% 0%;
+}
+
+/* Cropped mode keeps the single full-bleed image; the backdrop layer is
+   redundant there, so it's hidden rather than painted under an opaque
+   photo for nothing. */
+.swipe-card:not(.swipe-card--uncropped) .swipe-card-photo-bg { display: none; }
+
+/* Edge-of-photos rubber band: tapping past the first or last photo nudges
+   the card a quarter of a swipe and springs it back. See _bounceCardEdge().
+   Transform only, so it composites on the GPU and can't fight the drag
+   handler's own transform (the drag clears these classes by overwriting
+   the inline transform anyway). */
+@keyframes cardEdgeBounceRight {
+  0%   { transform: translateX(0)    rotate(0deg); }
+  38%  { transform: translateX(26px) rotate(1.1deg); }
+  100% { transform: translateX(0)    rotate(0deg); }
+}
+@keyframes cardEdgeBounceLeft {
+  0%   { transform: translateX(0)     rotate(0deg); }
+  38%  { transform: translateX(-26px) rotate(-1.1deg); }
+  100% { transform: translateX(0)     rotate(0deg); }
+}
+.swipe-card--edge-right { animation: cardEdgeBounceRight 0.34s cubic-bezier(0.33, 1, 0.5, 1); }
+.swipe-card--edge-left  { animation: cardEdgeBounceLeft  0.34s cubic-bezier(0.33, 1, 0.5, 1); }
+
+
+/* ======================================================================
+   EXPERIMENT — FLOATING PILL TAB BAR  (.tab-bar--floating, see
+   TAB_BAR_FLOATING in script.js). Modelled on LINE's bottom nav: a
+   detached rounded bar inset from the screen edges, solid rather than
+   frosted, with a soft grey chip behind the active tab.
+   Every rule here is scoped to the modifier class, so flipping the
+   constant off restores the frosted bar byte-for-byte.
+   ====================================================================== */
+.tab-bar--floating {
+  left: 14px;
+  right: 14px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  height: var(--tab-h);
+  padding-bottom: 0;
+  border-top: none;
+  border-radius: 999px;
+  /* Solid, not translucent. The frosted version's backdrop-filter is also
+     what this session traced a swipe-flash to (2026-10-09i) — a detached
+     bar has a hard edge where that churn would be most visible, so this
+     variant opts out of it entirely rather than managing it. */
+  background: var(--s1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 6px 22px rgba(28, 25, 23, 0.16),
+              0 1px 3px  rgba(28, 25, 23, 0.10);
+}
+
+/* The sliding indicator becomes the chip behind the active tab. It is
+   already positioned from live rects (updateTabGlassPill), so it follows
+   the narrower bar with no JS change. */
+.tab-bar--floating .tab-glass-pill {
+  top: 6px;
+  height: 52px;
+  border-radius: 26px;
+  background: rgba(28, 25, 23, 0.06);
+  border: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* Dark mode — two-part pattern (media query + explicit [data-theme]), as
+   used everywhere else in this file. --s1 flips on its own, so only the
+   chip tint needs stating. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tab-bar--floating .tab-glass-pill {
+    background: rgba(255, 255, 255, 0.10);
+  }
+  :root:not([data-theme="light"]) .tab-bar--floating {
+    /* --s1 is translucent in dark, which only worked because the frosted
+       bar blurred what showed through. A solid bar needs a solid fill. */
+    background: #211e18;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  }
+}
+:root[data-theme="dark"] .tab-bar--floating .tab-glass-pill {
+  background: rgba(255, 255, 255, 0.10);
+}
+:root[data-theme="dark"] .tab-bar--floating {
+  background: #211e18;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+}
+
+
+/* A card mid-fly-off is taken out of the stack's numbering (its data-stack
+   is removed) so the deck can be rebuilt underneath it while it animates
+   out — see commitSwipe/renderDeck. It still needs to paint above the
+   cards that replace it, and must not take any input on its way off. */
+.swipe-card--flying {
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ======================================================================
+   "Let's confirm your profile" as a bottom sheet
+   The element keeps .practice-tutorial-welcome (so its own content styles
+   are untouched) but now acts as the SCRIM, with .practice-sheet-card as
+   the sheet itself. Geometry matches the AI Coach chat sheet: top 11%,
+   rounded top corners, drag down to dismiss.
+   ====================================================================== */
+.practice-sheet {
+  background: rgba(0, 0, 0, 0.45);
+  padding: 0;
+  justify-content: flex-end;
+  align-items: stretch;
+}
+.practice-sheet-card {
+  position: absolute;
+  top: 11%;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg);
+  border-radius: 26px 26px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 30px 40px;
+  text-align: center;
+  overflow: hidden;
+  animation: practiceSheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes practiceSheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+/* Same grab pill as the other sheets in this app. */
+.practice-sheet-handle {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border-2);
+}
+

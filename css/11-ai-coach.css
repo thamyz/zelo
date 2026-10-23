@@ -1,0 +1,1121 @@
+/* ================================================================
+   11-ai-coach.css — the full AI Coach page, its chat history panel and the thread picker
+
+   Part of style.css, split by concern. scripts/build.sh joins css/ back
+   into style.css. The number in the filename is the cascade order: a rule
+   here can be overridden by any file numbered after it.
+   ================================================================ */
+
+/* ================================================================
+   AI COACH — full page  (Fix 6)
+   ================================================================ */
+/* No background override — uses the normal .screen background (var(--bg)),
+   same as every other screen in the app. */
+/* .aicoach-header has 16px own top padding, so 34px + 16px = 50px total,
+   matching the other screens' header offset. */
+/* overflow:hidden so .aicoach-messages (its own overflow-y:auto) is the
+   only scrollable area — same reasoning as #screen-chat above. Without
+   this, the outer .screen's own overflow-y:auto competes with it, and the
+   header/input-bar can get dragged along when the keyboard opens instead
+   of staying put. */
+#screen-ai-coach { padding-top: 34px; overflow: hidden; }
+
+.aicoach-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  flex-shrink: 0;
+  /* Own stacking layer + opaque background — the keyboard-open nudge (see
+     MOVABLE_OVERRIDE['aicoach-input'] in script.js) now shifts
+     #aicoach-messages up along with the input bar, and a transformed
+     element paints above plain in-flow siblings by default; without this,
+     the sliding messages would visibly ride up over the header instead of
+     disappearing behind it. */
+  position: relative;
+  z-index: 1;
+  background: var(--bg);
+}
+.aicoach-back-btn,
+.aicoach-menu-btn {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Back arrow matches every other .back-btn: --text is near-black in light
+   mode and near-white in dark mode, never the pink accent. */
+.aicoach-back-btn { color: var(--text); }
+.aicoach-back-btn:hover,
+.aicoach-menu-btn:hover { background: var(--s2); }
+.aicoach-header-titles { flex: 1; min-width: 0; }
+.aicoach-header-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.aicoach-header-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* ---- Chat-sheet presentation (openAiCoachFromChat()) --------------------
+   AI Coach opened from inside a chat's own composer shows as a bottom sheet
+   over that still-visible chat, instead of the normal full-page push (Home
+   tab / History entry) — see openAiCoachFromChat()/closeAiCoachChatSheet()
+   in script.js. Header swaps its back arrow + history-menu button for a
+   brand icon + close (X), since there's no "back" screen underneath to name
+   and no separate history panel worth surfacing in this transient view. */
+.aicoach-header-sheet-icon,
+.aicoach-close-btn { display: none; }
+#screen-ai-coach.aicoach-sheet-open .aicoach-back-btn,
+#screen-ai-coach.aicoach-sheet-open .aicoach-menu-btn { display: none; }
+#screen-ai-coach.aicoach-sheet-open .aicoach-header-sheet-icon,
+#screen-ai-coach.aicoach-sheet-open .aicoach-close-btn { display: flex; }
+.aicoach-header-sheet-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.aicoach-header-sheet-icon img { width: 100%; height: 100%; object-fit: cover; }
+.aicoach-close-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--text);
+  align-items: center;
+  justify-content: center;
+}
+
+.aicoach-chat-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 80; /* below #screen-ai-coach.aicoach-sheet-open's own z-index:90, above the plain chat screen (z-index:auto) it dims */
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+.aicoach-chat-sheet-backdrop.aicoach-sheet-visible { opacity: 1; }
+
+.aicoach-chat-sheet-handle {
+  display: none;
+  flex-shrink: 0;
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border-2);
+  margin: 10px auto 2px;
+}
+#screen-ai-coach.aicoach-sheet-open .aicoach-chat-sheet-handle { display: block; }
+#screen-ai-coach.aicoach-sheet-open { padding-top: 0; }
+
+#screen-ai-coach.aicoach-sheet-open {
+  top: 11%;
+  z-index: 90;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.22);
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+#screen-ai-coach.aicoach-sheet-open.aicoach-sheet-visible { transform: translateY(0); }
+
+/* "Analyzing this conversation" card + live replay, shown instead of the
+   normal greeting/linked-thread row while in chat-sheet mode — see
+   _aiCoachAnalyzingCard() in script.js. Reuses the existing "Linked
+   conversation" pink-card look (.aicoach-context-row.linked, white icon
+   circle unchanged) and the conversation-bubble box already used for Your
+   Reply's "Her message" preview (.yr-conv/.yr-conv-row/.yr-conv-bubble, see
+   _convRowsHTML()) — same visual language, just a different label and no
+   "View full chat" action, since the real chat is already sitting right
+   behind this sheet. Icon is the same cropped speech-bubble sticker as the
+   reply-style cards (assets/icons/reply-styles/smooth.png), not a redrawn one.
+ */
+.aicoach-analyzing-icon img { width: 20px; height: 20px; object-fit: contain; }
+.aicoach-live-conv-label { margin: 16px 0 10px; }
+.aicoach-live-conv-box { max-height: 260px; }
+/* Extra breathing room below the conversation box, above the "Analyzing this
+   conversation" card that now sits under it (see _aiCoachAnalyzingCard()) —
+   the shared 12px .aicoach-messages gap doesn't reach in here since both live
+   inside the same wrapped element, not as separate message-list children. */
+.aicoach-analyzing-card { margin-top: 18px; }
+
+.aicoach-context-row {
+  background: var(--s1);
+  border-radius: 14px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(220, 38, 127, 0.05);
+}
+/* Linked state — pink card matching the "Linked conversation" reference,
+   see renderAiCoachContext() in script.js. Unlinked state keeps the plain
+   white card above untouched. Lives inline in the messages flow (right
+   below the "Got it!" greeting, built by renderAiCoachChat()) rather than
+   as a fixed strip, kept deliberately compact with its own embedded
+   conversation preview capped short and scrollable rather than growing
+   with a long conversation. */
+.aicoach-context-row.linked {
+  background: var(--accent-soft);
+  box-shadow: none;
+  padding-bottom: 10px;
+}
+.aicoach-context-head { display: flex; align-items: center; gap: 9px; }
+.aicoach-context-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aicoach-context-row.linked .aicoach-context-icon { background: var(--s1); }
+.aicoach-context-info { flex: 1; min-width: 0; }
+.aicoach-context-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: var(--text);
+}
+.aicoach-context-row.linked .aicoach-context-title { color: var(--text); }
+.aicoach-context-linked {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.aicoach-context-meta {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.74rem;
+  color: var(--text-2);
+}
+.aicoach-change-btn {
+  flex-shrink: 0;
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.72rem;
+  border-radius: 999px;
+  padding: 6px 11px;
+  white-space: nowrap;
+  background: var(--s1);
+}
+.aicoach-change-btn:hover { background: var(--accent-soft); }
+/* Embedded conversation preview — same bubble rows/colors as .yr-conv (see
+   _convRowsHTML() in script.js), just without its own bordered box (sits
+   directly on this card's pink background) and scaled down + height-capped
+   so a real conversation doesn't turn this into a second, competing chat
+   area — it's a glance-able preview, "View full chat" is the real view. */
+.aicoach-context-conv {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(236,72,153,0.15);
+  max-height: 78px;
+  overflow-y: auto;
+}
+.aicoach-context-conv .yr-conv-avatar { width: 24px; height: 24px; }
+.aicoach-context-conv .yr-conv-avatar svg { width: 13px; height: 13px; }
+.aicoach-context-conv .yr-conv-bubble { padding: 7px 11px; font-size: 0.74rem; line-height: 1.3; max-width: 80%; }
+
+.aicoach-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 18px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+.aicoach-messages::-webkit-scrollbar { width: 0; }
+
+.aicoach-msg { display: flex; flex-direction: column; }
+.aicoach-msg--zelo {
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 9px;
+}
+.aicoach-msg--user { align-items: flex-end; }
+
+.aicoach-msg-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+/* The brand gem fills this circle completely and brings its own circular
+   backdrop — the host's own tint would otherwise show through as a
+   second, mismatched ring around it. */
+.aicoach-msg-avatar.has-img { background: transparent; }
+.aicoach-bubble {
+  max-width: 80%;
+  padding: 13px 15px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  border-radius: 18px;
+}
+.aicoach-bubble--zelo {
+  background: var(--s1);
+  color: var(--text);
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 10px rgba(220, 38, 127, 0.05);
+}
+.aicoach-bubble--user {
+  background: rgba(236, 72, 153, 0.16);
+  color: var(--text);
+  border-bottom-right-radius: 6px;
+}
+.aicoach-bubble-hi { color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+.aicoach-bubble-text { white-space: pre-wrap; }
+.aicoach-bubble-img { display: block; width: 100%; max-width: 220px; border-radius: 12px; margin-bottom: 6px; }
+/* Same bouncing dots as the main chat's .typing-bubble (.typing-dot /
+   @keyframes typeBounce are already global) — just laid out inline here
+   since this sits inside .aicoach-bubble--zelo's own shape, not a
+   separate bubble of its own. */
+.aicoach-typing-dots { display: flex; gap: 4px; align-items: center; padding: 3px 0; }
+
+.aicoach-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 86%;
+  text-align: left;
+  background: var(--s1);
+  border-radius: 16px;
+  padding: 13px 15px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text);
+  box-shadow: 0 2px 10px rgba(220, 38, 127, 0.05);
+  transition: transform 0.12s;
+}
+.aicoach-suggestion:active { transform: scale(0.98); }
+.aicoach-suggestion-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+.aicoach-suggestion-icon.has-img { background: transparent; }
+
+.aicoach-action-pills { display: flex; gap: 10px; margin-top: 2px; }
+.aicoach-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--s1);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  padding: 10px 16px;
+}
+.aicoach-action-pill:hover { background: var(--accent-soft); }
+
+/* ---- Zelo availability pill (under a failed AI Coach reply) ----
+   Small tinted card: red = unavailable, green = available again, neutral
+   while checking. Tints are alpha-based so the same rules read correctly in
+   both light and dark mode. */
+.aicoach-status {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 84%;
+  margin-top: -2px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--st-border);
+  background: var(--st-bg);
+  transition: background 0.35s, border-color 0.35s;
+  --st-color: var(--red);
+  --st-bg: rgba(239, 68, 68, 0.08);
+  --st-border: rgba(239, 68, 68, 0.26);
+}
+.aicoach-status--up {
+  --st-color: var(--green);
+  --st-bg: rgba(34, 197, 94, 0.09);
+  --st-border: rgba(34, 197, 94, 0.30);
+}
+.aicoach-status--checking {
+  --st-color: var(--text-3);
+  --st-bg: var(--s1);
+  --st-border: var(--border);
+}
+.aicoach-status-dot {
+  position: relative;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--st-color);
+  transition: background 0.35s;
+}
+.aicoach-status-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: var(--st-color);
+  opacity: 0.22;
+}
+.aicoach-status--down .aicoach-status-dot::after,
+.aicoach-status--checking .aicoach-status-dot::after { animation: aicoachStatusPulse 1.8s ease-in-out infinite; }
+@keyframes aicoachStatusPulse {
+  0%, 100% { transform: scale(0.75); opacity: 0.28; }
+  50%      { transform: scale(1.15); opacity: 0.08; }
+}
+.aicoach-status-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.aicoach-status-title { font-size: 0.78rem; font-weight: 700; color: var(--text); line-height: 1.25; }
+.aicoach-status-sub { font-size: 0.72rem; color: var(--text-2); line-height: 1.3; }
+.aicoach-status-btn {
+  flex-shrink: 0;
+  margin-left: 2px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--st-border);
+  background: var(--s1);
+  color: var(--st-color);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.aicoach-status-btn:active { transform: scale(0.96); }
+@media (prefers-reduced-motion: reduce) {
+  .aicoach-status-dot::after { animation: none !important; }
+}
+
+/* ---- Collapsible suggestions panel (categories + quick actions) ---- */
+.aicoach-suggest-panel {
+  position: relative;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--s1);
+}
+.aicoach-suggest-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 18px;
+}
+.aicoach-suggest-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+.aicoach-suggest-toggle-icon { flex-shrink: 0; width: 14px; height: 14px; }
+.aicoach-suggest-toggle-chevron {
+  color: var(--text-3);
+  transition: transform 0.35s ease;
+  transform: rotate(180deg); /* collapsed: points up */
+}
+.aicoach-suggest-toggle-chevron--open { transform: rotate(0deg); } /* expanded: points down */
+
+/* Collapsed by default; expanding animates height instead of an instant
+   display:none/block swap, for a slow dropdown/dropup slide. */
+.aicoach-suggest-body {
+  max-height: 0;
+  overflow-y: hidden;
+  padding: 0 18px;
+  transition: max-height 0.35s ease, padding 0.35s ease;
+}
+.aicoach-suggest-panel.open .aicoach-suggest-body {
+  max-height: calc(var(--app-vh) * 42);
+  overflow-y: auto;
+  padding: 0 18px 16px;
+}
+
+.aicoach-suggest-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+.aicoach-suggest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.aicoach-suggest-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 92px;
+  padding: 16px 8px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  text-align: center;
+  transition: transform 0.1s, border-color 0.15s;
+}
+.aicoach-suggest-card:active { transform: scale(0.97); }
+.aicoach-suggest-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+}
+.aicoach-suggest-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.aicoach-suggest-quick { display: flex; flex-wrap: wrap; gap: 10px; }
+.aicoach-quick-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 15px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+  transition: transform 0.1s;
+}
+.aicoach-quick-pill:active { transform: scale(0.97); }
+.aicoach-quick-ic { flex-shrink: 0; }
+
+.aicoach-limit {
+  margin: 0 18px 8px;
+  padding: 12px 14px;
+  background: rgba(236, 72, 153, 0.10);
+  border-radius: 12px;
+  color: var(--accent-deep);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Attachments row — staged suggestion + photo preview sit side by side
+   here (not stacked) when both are present. Empty (both hidden) collapses
+   to nothing since it has no padding/border of its own. */
+.aicoach-attachments-row {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin: 8px 18px 0;
+}
+
+/* Staged suggestion — PROTOTYPE (see aiCoachStagePrompt() in script.js).
+   Same box: same size/material as .aicoach-photo-preview beside it — a
+   plain preview, not a send button. Tapping it removes it (see
+   aiCoachDismissStagedPill()); it only actually goes out once the user
+   hits send/Enter (see sendAiCoachMessage()), same as the photo does. */
+.aicoach-staged-pill[hidden] { display: none; }
+.aicoach-staged-pill {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  flex-shrink: 0;
+}
+.aicoach-staged-pill-text {
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--accent-deep);
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+/* Purely a visual cue — the whole box is the real dismiss target (see the
+   button's own comment in index.html), so this never needs its own
+   handler and stays out of the way of taps. */
+.aicoach-staged-pill-x {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.aicoach-input-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* More top clearance than before (was 4px) — same var(--s1) background as
+     .aicoach-suggest-panel right above it meant a 4px gap read as barely
+     separated at all, with the send button looking like it belonged to the
+     suggestions box rather than its own composer bar. */
+  margin: 14px 18px 0;
+  background: var(--s1);
+  border-radius: 18px;
+  padding: 8px 8px 8px 12px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(220, 38, 127, 0.06);
+}
+.aicoach-input {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 16px; /* 16px minimum avoids iOS auto-zoom-on-focus */
+  color: var(--text);
+  outline: none;
+}
+.aicoach-input::placeholder { color: var(--text-3); }
+.aicoach-send-btn {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aicoach-send-btn:hover { background: var(--accent-deep); }
+
+.aicoach-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 18px 16px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   AI COACH — CHAT HISTORY PANEL
+   .aicoach-main wraps every existing child of #screen-ai-coach so this
+   panel's push effect has its own transform to animate, independent of
+   #screen-ai-coach's own transform (already used by the swipe-back-to-
+   close gesture — see attachEdgeSwipeBack in script.js).
+   ================================================================ */
+.aicoach-main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+  background: var(--bg);
+  transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+}
+.aicoach-main--pushed { transform: translateX(-78%); }
+
+.aicoach-history-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+  z-index: 2;
+}
+.aicoach-history-scrim.open { opacity: 1; pointer-events: auto; }
+
+.aicoach-history-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 78%;
+  max-width: 320px;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 28px rgba(0,0,0,0.16);
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 14px);
+}
+.aicoach-history-panel.open { transform: translateX(0); }
+
+.aicoach-history-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.aicoach-history-headtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.aicoach-history-title { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+.aicoach-history-subtitle { font-size: 0.78rem; color: var(--text-3); }
+.aicoach-history-footnote { flex-shrink: 0; margin: 10px 0 0; font-size: 0.72rem; color: var(--text-3); text-align: center; line-height: 1.4; }
+.aicoach-history-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.aicoach-history-list {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+}
+.aicoach-history-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  margin: 14px 4px 6px;
+}
+.aicoach-history-section-label:first-child { margin-top: 0; }
+.aicoach-history-empty {
+  color: var(--text-2);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 28px 8px;
+}
+
+.aicoach-history-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 8px;
+  border-radius: 12px;
+  text-align: left;
+}
+.aicoach-history-row:active { background: var(--s1); }
+.aicoach-history-row.selected { background: var(--accent-soft); }
+.aicoach-history-row.selected .aicoach-history-row-title { color: var(--accent-deep); }
+/* Topic icon (reply/interest/flirty/advice — see AICOACH_TOPIC_ICONS in
+   script.js) — bg/color set inline per-row from AICOACH_TOPIC_COLORS. */
+.aicoach-history-row-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Real per-style image (assets/icons/reply-styles/{style}.png), same
+   swap-in-on-load/remove-on-error technique as .yr-card-illustration. */
+.aicoach-history-row-icon-img { display: none; width: 100%; height: 100%; object-fit: contain; }
+.aicoach-history-row-icon.has-img .aicoach-history-row-icon-img { display: block; }
+.aicoach-history-row-icon.has-img .aicoach-history-row-icon-svg { display: none; }
+.aicoach-history-row-main { flex: 1; min-width: 0; }
+.aicoach-history-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.aicoach-history-row-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aicoach-history-row-time {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+.aicoach-history-row-preview {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aicoach-history-row-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.aicoach-history-pin-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: 6px;
+}
+
+.aicoach-history-new-btn {
+  flex-shrink: 0;
+  margin-top: 10px;
+  padding: 13px;
+  border-radius: 14px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+/* Row-actions bottom sheet (long-press a chat in AI Coach history) — icon
+   crops (row-action-pin/rename/delete.png) taken pixel-for-pixel from the
+   user's own reference mockup, not redrawn, per its "Icons" panel. Each
+   row is its own bordered rounded card (title + description stacked)
+   instead of the shared, plain .thread-link-row/.thread-link-avatar used
+   by the actual thread-link picker elsewhere — that one just needs a small
+   avatar + a single name, this one needs a bigger centered icon plus a
+   two-line label, so it gets its own classes rather than overloading that
+   shared pair for a visually different job. Also carries its own drag
+   zone (below) — a real, visible grab affordance per the user's own
+   reference, wired to attachAiCoachRowActionsDragClose() in script.js so
+   dragging down from anywhere in that top strip (not just the thin grey
+   bar itself, and not the rows below, which are real tap targets)
+   dismisses it live, finger-tied. */
+.aicoach-row-actions-drag-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Extends to the card's own top/side edges (cancels .thread-link-card's
+     24px/22px padding) so the draggable area covers the sheet's entire
+     top strip, not just a thin bar's worth of hit-testing. */
+  margin: -24px -22px 0;
+  padding: 14px 0 20px;
+}
+.aicoach-row-actions-handle {
+  width: 44px;
+  height: 5px;
+  border-radius: 999px;
+  background: #bdb5ba; /* sampled from the reference mockup's own handle */
+}
+.aicoach-row-actions-list { display: flex; flex-direction: column; gap: 12px; }
+.aicoach-row-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 16px;
+  text-align: left;
+}
+.aicoach-row-actions-icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aicoach-row-actions-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.aicoach-row-actions-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.aicoach-row-actions-label { font-size: 1rem; font-weight: 700; color: var(--text); }
+.aicoach-row-actions-desc { font-size: 0.85rem; color: var(--text-2); }
+.aicoach-row-actions-row--danger { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); }
+.aicoach-row-actions-row--danger .aicoach-row-actions-label { color: #ef4444; }
+
+.aicoach-rename-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--s1);
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.aicoach-rename-save {
+  background: var(--accent) !important;
+  color: #fff !important;
+  margin-top: 0 !important;
+}
+
+/* ================================================================
+   AI COACH — "How it works" popup  (Fix 5)
+   ================================================================ */
+.aicoach-hiw-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Sibling of .screen/.tab under #app — keeps the close button (top-right
+     of the card) clear of the notch if the card ever grows tall enough
+     to reach the top edge. */
+  padding: max(24px, 92px) 24px max(24px, 34px);
+}
+.aicoach-hiw-overlay[hidden] { display: none; }
+.aicoach-hiw-card {
+  position: relative;
+  background: var(--s1);
+  border-radius: 22px;
+  padding: 30px 26px;
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+}
+.aicoach-hiw-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.aicoach-hiw-close:hover { background: var(--border); color: var(--text); }
+.aicoach-hiw-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 8px; }
+.aicoach-hiw-text { color: var(--text-2); font-size: 0.92rem; }
+
+
+/* ================================================================
+   SCAN — random-text confirmation popup
+   ================================================================ */
+.gib-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Sibling of .screen/.tab under #app — see .aicoach-hiw-overlay above. */
+  padding: max(24px, 92px) 24px max(24px, 34px);
+}
+.gib-confirm-overlay[hidden] { display: none; }
+
+.gib-confirm-card {
+  background: var(--s1);
+  border-radius: 22px;
+  padding: 26px 22px;
+  width: 100%;
+  max-width: 300px;
+  text-align: center;
+}
+
+.gib-confirm-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+.gib-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gib-confirm-proceed-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 12px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gib-confirm-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.gib-confirm-report-link {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 0.76rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+
+
+/* ================================================================
+   THREAD LINK PICKER  (Fix 7)
+   ================================================================ */
+.thread-link-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.thread-link-overlay[hidden] { display: none; }
+.thread-link-card {
+  background: var(--s1);
+  border-radius: 24px 24px 0 0;
+  padding: 24px 22px calc(24px + 34px);
+  width: 100%;
+  max-width: 430px;
+  max-height: 70%;
+  overflow-y: auto;
+}
+/* The row-actions sheets (Reset/Delete/Mute, Rename/Delete) never have
+   enough content to need their own scroll — always just a couple of fixed
+   rows — but inheriting .thread-link-card's overflow-y:auto let a touch
+   register as "scroll this card's own content" at the same time as the
+   drag-to-close gesture attached to the overlay, competing with it and
+   showing a scrollbar track that had nothing to actually scroll. Turned
+   off just for these two, not the thread-link-card the real long-list
+   thread picker (#thread-link-overlay) still legitimately needs. */
+#history-row-actions-overlay .thread-link-card,
+#aicoach-row-actions-overlay .thread-link-card {
+  overflow: visible;
+  max-height: none;
+}
+.thread-link-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.thread-link-head-text { min-width: 0; }
+.thread-link-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 5px; }
+.thread-link-sub { color: var(--text-2); font-size: 0.88rem; margin-bottom: 18px; }
+/* .aicoach-close-btn is display:none by default (only shown inside AI
+   Coach's own sheet-open state) — this reuses its visual styling here but
+   needs to actually be visible unconditionally. */
+.thread-link-close { display: flex; margin-top: 2px; }
+.thread-link-list { display: flex; flex-direction: column; gap: 10px; }
+.thread-link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.thread-link-row.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.thread-link-avatar {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(236, 72, 153, 0.12);
+  color: var(--accent);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thread-link-name { flex: 1; font-weight: 600; color: var(--text); }
+.thread-link-count { color: var(--text-2); font-size: 0.82rem; }
+.thread-link-empty { color: var(--text-2); font-size: 0.9rem; text-align: center; padding: 16px 0; }
+.thread-link-row--remove { border-color: rgba(239,68,68,0.25); }
+.thread-link-row--remove .thread-link-avatar { background: rgba(239,68,68,0.1); color: #ef4444; font-size: 0.85rem; }
+.thread-link-row--remove .thread-link-name { color: #ef4444; }
+.thread-link-cancel {
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--s2);
+  color: var(--text-2);
+  font-weight: 600;
+}
+

@@ -87,23 +87,30 @@ once" already failed to stop the repeat.
   overrides the general "act autonomously" instinct specifically for asset/
   folder identity — the cost of a wrong guess here (re-cropping, re-syncing,
   re-verifying) is much higher than the cost of one clarifying question.
-- Every change: bump `style.css?v=`/`script.js?v=` in `index.html` AND `BUILD_STAMP`
-  in `script.js`, then sync and `diff -q` against both `www/` and
-  `ios/App/App/public/` to confirm byte-identical.
+- **WHERE THE CODE LIVES (changed 2026-10-23).** `script.js` and `style.css`
+  are now GENERATED. The source is split by concern:
+  `app/01-core.js` … `app/19-keyboard.js` → `script.js`, and
+  `css/01-base.css` … `css/14-later-additions.css` → `style.css`.
+  The number in each filename is the load order. **Edit the small files, never
+  the two bundles** — the build refuses to overwrite a hand-edited bundle and
+  tells you. `app/README.md` maps every module and indexes all 523 public
+  functions to their file. The split is line-for-line: no code changed.
+  Why joined rather than 33 `<script>` tags: top-level data references
+  functions declared further down (`CINE_STEPS` → `cineRunIntroEntrance`),
+  which only works inside ONE script because of hoisting. Tried it split; it
+  threw at load. The join hands the browser the identical file it always had.
+- **Every change: `bash scripts/sync.sh`.** That is now the whole sync step. It
+  builds both bundles, copies every web file into `www/` and
+  `ios/App/App/public/`, purges `._*`, and fails loudly if the copies or the
+  file counts do not match. Also bump `?v=` in `index.html` and `BUILD_STAMP`
+  (top of `app/01-core.js`).
 - **DO NOT run `npx cap copy ios` for a web-only change.** It deletes and rewrites
   the whole `public/` folder (~470 files, ~55s) and, on this exFAT drive, creates
   hundreds of `._*` AppleDouble files as it goes — which is what makes Xcode fail
   with `copy(... /public/assets/...)` or "no such file" on a file that is plainly
-  there. A build landing anywhere in that window breaks. Instead copy the changed
-  files straight into both trees:
-  ```
-  for f in script.js index.html style.css personas.js; do
-    cp "$f" "www/$f"; cp "$f" "ios/App/App/public/$f"
-  done
-  find . -name '._*' -not -path './node_modules/*' -delete     # ALWAYS, same step
-  ```
-  That is what `cap copy` would have done for those files, minus the wipe — it is
-  sub-second and cannot race a build.
+  there. A build landing anywhere in that window breaks. `scripts/sync.sh` does
+  the same job for web files in under a second and cannot race a build.
+  `cap copy`/`cap sync` stay for assets, native plugins and capacitor config.
 - **`._*` files cannot be prevented on this drive — only purged.** Tested: both
   `COPYFILE_DISABLE=1 cp` and a plain `cat > dest` still produce one AppleDouble
   stub per file written, because the volume materialises them for any new file,
@@ -2995,3 +3002,42 @@ class is shared with other screens). Dark swap verified (`src` → `-dark.png`).
 - Still a stub, by design: **a successful referral grants nothing.** `redeem_referral_code` only inserts a `referrals` row (`status 'signup_completed'`) and the app tells the friend "You and your friend are both set". Nothing credits scans or Pro until there is an entitlement system (see `getEntitlement()`); the Invite screen's copy was already changed to promise no reward.
 - Noticed, not changed: the domain's SPF record contains a typo, `include:://improvmx.com` (invalid mechanism; should be Namecheap's forwarding include now that MX moved to it) and there is still no DMARC record.
 - Tests 38/38; build 2026-10-23a; migration file added for Bug 1.
+
+### 2026-10-23h — script.js and style.css split into app/ and css/ (no behaviour change)
+- **What changed:** `script.js` (19,586 lines) and `style.css` (15,026) were the
+  two files everything lived in. They are now **generated** by
+  `scripts/build.sh` from `app/01-core.js … app/19-keyboard.js` and
+  `css/01-base.css … css/14-later-additions.css`. The split is line-for-line —
+  the only text added is a header comment per file. `app/README.md` holds the
+  map and a function → file index (523 public functions).
+- **Why joined, not 33 `<script>`/`<link>` tags.** Tried that first; it broke on
+  load with `Can't find variable: cineRunIntroEntrance` and `Cannot access
+  'cineAnswers' before initialization`. Cause: top-level data structures
+  reference functions declared further down the file (`CINE_STEPS[4].entrance`),
+  which only works because a function declaration hoists to the top of **its own
+  script**. Split into separate tags, each tag hoists only itself, and the
+  earlier file evaluates before the later one exists. **Lesson: a single-script
+  codebase cannot be split into multiple `<script>` tags without a dependency
+  pass — but it can always be split into FILES that are joined back at build.**
+- **A second real bug the verification caught:** the first CSS split cut at the
+  banner's *title* line, which sits INSIDE `/* … */`. Inserting a header there
+  put a `*/` inside an open comment, silently killing rules — `document.styleSheets`
+  went from 2,973 rules to 2,381. Fixed by cutting at the `/*` opener instead.
+  **Lesson: when splitting CSS, check the cut is outside a comment, not just
+  outside a rule — a brace-depth check does not catch this.** Also: files need a
+  trailing newline or `cat` glues the last line onto the next file's first line.
+- **How it was verified (all green):** the per-file bodies rejoin byte-for-byte
+  to the committed originals; the bundle parses; 1,834 window functions before
+  and after with none added or removed; 2,973 CSS rules before and after; 43
+  screens driven with zero page errors; and 9 of 10 screens pixel-identical in
+  both light and dark (the 10th is the paywall, which differs from *itself*
+  between runs because it animates).
+- **Workflow now:** `bash scripts/sync.sh` — builds both bundles, copies every
+  web file into `www/` and `ios/App/App/public/`, purges `._*`, checks counts.
+  `scripts/build.sh` refuses to overwrite a bundle that was edited by hand
+  (checksums in `.build-checksums`), so a stray edit to `script.js` is reported
+  instead of silently lost. A new smoke test fails if the bundles are stale.
+- **Dead code:** there was none to remove — a zero-reference scan over all 980
+  functions came back empty (the 2026-10-22c pass had already cleared it), and
+  the 24% comment share is the "why" documentation this file depends on, so it
+  was left alone. The win here is organisation, not deletion.
